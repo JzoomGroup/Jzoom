@@ -10,6 +10,10 @@ export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
     .addApiKey({ type: "apiKey", in: "header", name: "X-CSRF-Token" }, "csrf")
     .addTag("health", "Process and dependency health checks")
     .addTag("authentication", "Authentication, sessions, and authorization")
+    .addTag(
+      "admin-monthly-catalog",
+      "Admin-only monthly services, items, categories, and package levels",
+    )
     .build();
 
   return SwaggerModule.createDocument(app, configuration, {

@@ -1,6 +1,7 @@
 export const AUTH_ENVIRONMENT = Symbol("AUTH_ENVIRONMENT");
 export const IS_PUBLIC_KEY = "jzoom.auth.public";
 export const REQUIRED_PERMISSIONS_KEY = "jzoom.auth.permissions";
+export const REQUIRED_ROLES_KEY = "jzoom.auth.roles";
 export const REQUIRED_SCOPE_KEY = "jzoom.auth.scope";
 
 export const ADMIN_ROLE_CODE = "ROLE-ADMIN";

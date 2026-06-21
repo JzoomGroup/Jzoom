@@ -337,20 +337,20 @@ model User {
 }
 
 model AuthSession {
-  id            String    @id @default(uuid()) @db.Uuid
-  userId        String    @db.Uuid
-  tokenHash     String    @unique
-  csrfTokenHash String
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @db.Uuid
+  tokenHash      String    @unique
+  csrfTokenHash  String
   sessionVersion Int
-  expiresAt     DateTime
-  lastSeenAt    DateTime  @default(now())
-  revokedAt     DateTime?
-  revokeReason  String?
-  ipAddress     String?
-  userAgent     String?   @db.Text
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt      DateTime
+  lastSeenAt     DateTime  @default(now())
+  revokedAt      DateTime?
+  revokeReason   String?
+  ipAddress      String?
+  userAgent      String?   @db.Text
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt, expiresAt])
   @@index([expiresAt])
@@ -513,8 +513,26 @@ model ServiceLevel {
   @@map("service_levels")
 }
 
+model MonthlyServiceCategory {
+  id          String           @id @default(uuid()) @db.Uuid
+  code        String           @unique
+  nameAr      String
+  nameEn      String
+  description String?          @db.Text
+  status      RecordStatus     @default(ACTIVE)
+  sortOrder   Int              @default(0)
+  archivedAt  DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  services    MonthlyService[]
+
+  @@index([status, sortOrder])
+  @@map("monthly_service_categories")
+}
+
 model MonthlyService {
   id         String                   @id @default(uuid()) @db.Uuid
+  categoryId String                   @db.Uuid
   code       String                   @unique
   externalId String?
   status     RecordStatus             @default(ACTIVE)
@@ -522,10 +540,12 @@ model MonthlyService {
   archivedAt DateTime?
   createdAt  DateTime                 @default(now())
   updatedAt  DateTime                 @updatedAt
+  category   MonthlyServiceCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   revisions  MonthlyServiceRevision[]
   items      ServiceItem[]
 
   @@index([status, sortOrder])
+  @@index([categoryId, status, sortOrder])
   @@map("monthly_services")
 }
 

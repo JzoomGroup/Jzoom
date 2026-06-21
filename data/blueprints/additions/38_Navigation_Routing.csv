@@ -23,3 +23,8 @@ ROUTE-039,/files,Files,Scoped authenticated roles,Yes,More,Private scoped,/403,F
 ROUTE-040,/notifications,Notifications,All authenticated,Yes,Bottom Tab or More,Private,/login,Notifications
 ROUTE-041,/profile,Profile and Personal Settings,All authenticated,Profile,More,Private,/login,Profile
 ROUTE-042,/client/documents,Client Documents,Client,Yes,More,Client only,/403,Client Portal
+ROUTE-043,/admin/catalog,Catalog Administration,Admin,Yes,More,Admin only,/403,Admin Console
+ROUTE-044,/admin/catalog/categories,Monthly Service Categories,Admin,Yes,More,Admin only,/403,Admin Console
+ROUTE-045,/admin/catalog/monthly-services,Monthly Services Admin,Admin,Yes,More,Admin only,/403,Admin Console
+ROUTE-046,/admin/catalog/service-items,Service Items Admin,Admin,Yes,More,Admin only,/403,Admin Console
+ROUTE-047,/admin/catalog/service-levels,Service Levels Admin,Admin,Yes,More,Admin only,/403,Admin Console

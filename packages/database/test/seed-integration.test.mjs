@@ -23,6 +23,7 @@ test(
         imports: await database.blueprintImport.count(),
         sheets: await database.blueprintSheetSnapshot.count(),
         monthly: await database.monthlyService.count(),
+        monthlyCategories: await database.monthlyServiceCategory.count(),
         monthlyRevisions: await database.monthlyServiceRevision.count(),
         items: await database.serviceItem.count(),
         itemRevisions: await database.serviceItemRevision.count(),
@@ -37,6 +38,7 @@ test(
         imports: await database.blueprintImport.count(),
         sheets: await database.blueprintSheetSnapshot.count(),
         monthly: await database.monthlyService.count(),
+        monthlyCategories: await database.monthlyServiceCategory.count(),
         monthlyRevisions: await database.monthlyServiceRevision.count(),
         items: await database.serviceItem.count(),
         itemRevisions: await database.serviceItemRevision.count(),
@@ -51,6 +53,10 @@ test(
       assert.equal(first.blueprintImportId, second.blueprintImportId);
       assert.equal(countsAfterSecond.sheets, blueprint.workbook.sheets.length);
       assert.equal(countsAfterSecond.items, blueprint.serviceItems.length);
+      assert.equal(
+        countsAfterSecond.monthlyCategories,
+        new Set(blueprint.monthlyServices.map((service) => service.domain)).size,
+      );
       assert.equal(countsAfterSecond.routes, blueprint.routes.length);
       assert.equal(countsAfterSecond.actions, blueprint.actions.length);
       assert.equal(await database.user.count(), 0);

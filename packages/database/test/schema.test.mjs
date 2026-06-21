@@ -75,3 +75,24 @@ test("PR 3 schema stores revocable sessions and one-time auth tokens", async () 
   assert.match(migration, /CREATE TABLE "auth_tokens"/);
   assert.match(migration, /ON DELETE CASCADE/);
 });
+
+test("PR 4 schema adds editable monthly categories without destructive catalog deletes", async () => {
+  const schema = await readFile(
+    path.join(workspaceRoot, "packages/database/prisma/schema.prisma"),
+    "utf8",
+  );
+  const migration = await readFile(
+    path.join(
+      workspaceRoot,
+      "packages/database/prisma/migrations/202606210003_pr4_monthly_catalog/migration.sql",
+    ),
+    "utf8",
+  );
+
+  assert.match(schema, /model MonthlyServiceCategory \{/);
+  assert.match(schema, /categoryId\s+String\s+@db\.Uuid/);
+  assert.match(migration, /Backfill editable categories/);
+  assert.match(migration, /ON DELETE RESTRICT/);
+  assert.match(migration, /monthly_services_code_ci_key/);
+  assert.doesNotMatch(migration, /ON DELETE CASCADE[\s\S]*monthly_service_categories/);
+});

@@ -21,11 +21,12 @@ import {
 import type { Response } from "express";
 import { AdminAccessService } from "./admin-access.service.js";
 import {
+  ADMIN_ROLE_CODE,
   AUTH_ENVIRONMENT,
   MANAGE_USERS_PERMISSION,
   MODIFY_PERMISSIONS_PERMISSION,
 } from "./auth.constants.js";
-import { Public, RequirePermissions, RequireScope } from "./auth.decorators.js";
+import { Public, RequirePermissions, RequireRoles, RequireScope } from "./auth.decorators.js";
 import {
   AcceptInvitationDto,
   InviteUserDto,
@@ -167,6 +168,7 @@ export class AuthController {
 
   @Post("admin/invitations")
   @HttpCode(202)
+  @RequireRoles(ADMIN_ROLE_CODE)
   @RequirePermissions(MANAGE_USERS_PERMISSION)
   @ApiCookieAuth()
   @ApiOperation({ summary: "Create or rotate an invitation for an eligible user" })
@@ -186,6 +188,7 @@ export class AuthController {
 
   @Post("admin/users/:userId/invalidate-sessions")
   @HttpCode(200)
+  @RequireRoles(ADMIN_ROLE_CODE)
   @RequirePermissions(MANAGE_USERS_PERMISSION)
   @ApiCookieAuth()
   async invalidateSessions(@Param("userId") userId: string, @Req() request: RequestWithId) {
@@ -194,6 +197,7 @@ export class AuthController {
   }
 
   @Patch("admin/users/:userId/status")
+  @RequireRoles(ADMIN_ROLE_CODE)
   @RequirePermissions(MANAGE_USERS_PERMISSION)
   @ApiCookieAuth()
   async updateStatus(
@@ -206,6 +210,7 @@ export class AuthController {
   }
 
   @Put("admin/users/:userId/roles")
+  @RequireRoles(ADMIN_ROLE_CODE)
   @RequirePermissions(MODIFY_PERMISSIONS_PERMISSION)
   @ApiCookieAuth()
   async replaceUserRoles(
@@ -223,6 +228,7 @@ export class AuthController {
   }
 
   @Put("admin/roles/:roleCode/permissions")
+  @RequireRoles(ADMIN_ROLE_CODE)
   @RequirePermissions(MODIFY_PERMISSIONS_PERMISSION)
   @ApiCookieAuth()
   async replaceRolePermissions(
@@ -240,6 +246,7 @@ export class AuthController {
   }
 
   @Get("access/admin")
+  @RequireRoles(ADMIN_ROLE_CODE)
   @RequirePermissions(MANAGE_USERS_PERMISSION)
   @ApiCookieAuth()
   @ApiOkResponse({ description: "The current user has Admin access" })
