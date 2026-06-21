@@ -46,6 +46,11 @@ enum UserStatus {
   ARCHIVED
 }
 
+enum AuthTokenType {
+  PASSWORD_RESET
+  INVITATION
+}
+
 enum PermissionEffect {
   ALLOW
   DENY
@@ -304,6 +309,10 @@ model User {
   preferredLocale     String                   @default("ar")
   userType            UserType
   status              UserStatus               @default(INVITED)
+  failedLoginCount    Int                      @default(0)
+  lockedUntil         DateTime?
+  passwordChangedAt   DateTime?
+  sessionVersion      Int                      @default(1)
   lastLoginAt         DateTime?
   archivedAt          DateTime?
   createdAt           DateTime                 @default(now())
@@ -318,9 +327,51 @@ model User {
   timeEntries         TimeEntry[]
   notifications       Notification[]
   auditLogs           AuditLog[]
+  authSessions        AuthSession[]
+  authTokens          AuthToken[]              @relation("AuthTokenUser")
+  createdAuthTokens   AuthToken[]              @relation("AuthTokenCreator")
 
   @@index([status])
+  @@index([lockedUntil])
   @@map("users")
+}
+
+model AuthSession {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @db.Uuid
+  tokenHash     String    @unique
+  csrfTokenHash String
+  sessionVersion Int
+  expiresAt     DateTime
+  lastSeenAt    DateTime  @default(now())
+  revokedAt     DateTime?
+  revokeReason  String?
+  ipAddress     String?
+  userAgent     String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt, expiresAt])
+  @@index([expiresAt])
+  @@map("auth_sessions")
+}
+
+model AuthToken {
+  id          String        @id @default(uuid()) @db.Uuid
+  userId      String        @db.Uuid
+  type        AuthTokenType
+  tokenHash   String        @unique
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdById String?       @db.Uuid
+  createdAt   DateTime      @default(now())
+  user        User          @relation("AuthTokenUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy   User?         @relation("AuthTokenCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([userId, type, consumedAt, expiresAt])
+  @@index([createdById])
+  @@map("auth_tokens")
 }
 
 model UserRole {

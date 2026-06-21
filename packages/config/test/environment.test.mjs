@@ -14,6 +14,8 @@ test("API environment applies safe non-production defaults", () => {
 
   assert.equal(environment.port, 4000);
   assert.equal(environment.openApiEnabled, true);
+  assert.equal(environment.auth.cookieName, "jzoom_session");
+  assert.equal(environment.auth.cookieSecure, false);
 });
 
 test("Swagger UI is disabled by default in production", () => {
@@ -23,6 +25,30 @@ test("Swagger UI is disabled by default in production", () => {
   });
 
   assert.equal(environment.openApiEnabled, false);
+  assert.equal(environment.auth.cookieSecure, true);
+});
+
+test("bootstrap Admin credentials must be explicitly paired", () => {
+  assert.throws(
+    () =>
+      parseApiEnvironment({
+        DATABASE_URL: "postgresql://user:password@localhost:5432/jzoom",
+        BOOTSTRAP_ADMIN_EMAIL: "admin@example.com",
+      }),
+    EnvironmentValidationError,
+  );
+});
+
+test("test auth tokens cannot be exposed in production", () => {
+  assert.throws(
+    () =>
+      parseApiEnvironment({
+        DATABASE_URL: "postgresql://user:password@localhost:5432/jzoom",
+        NODE_ENV: "production",
+        AUTH_EXPOSE_TEST_TOKENS: "true",
+      }),
+    EnvironmentValidationError,
+  );
 });
 
 test("invalid environment configuration fails clearly", () => {

@@ -17,6 +17,16 @@ const environment: ApiEnvironment = {
   port: 4000,
   databaseUrl: "postgresql://user:password@localhost:5432/jzoom",
   openApiEnabled: false,
+  webOrigin: "http://localhost:3000",
+  auth: {
+    sessionTtlMinutes: 480,
+    cookieName: "jzoom_session",
+    csrfCookieName: "jzoom_csrf",
+    cookieSecure: false,
+    exposeTestTokens: false,
+    maxLoginAttempts: 5,
+    lockoutMinutes: 15,
+  },
 };
 
 describe("PR 1 API foundation", () => {
