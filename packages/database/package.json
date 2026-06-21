@@ -1,0 +1,35 @@
+{
+  "name": "@jzoom/database",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "pnpm generate && tsc -p tsconfig.build.json",
+    "generate": "prisma generate",
+    "lint": "eslint src prisma.config.ts",
+    "migrate:deploy": "prisma migrate deploy",
+    "migrate:status": "prisma migrate status",
+    "seed": "pnpm build && node dist/seed.js",
+    "seed:run": "node dist/seed.js",
+    "test": "node --test --test-isolation=none test/*.test.mjs",
+    "typecheck": "pnpm generate && tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.0.0",
+    "@prisma/client": "^7.0.0",
+    "fast-xml-parser": "^5.0.0",
+    "fflate": "^0.8.2",
+    "pg": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.0.0",
+    "dotenv": "^17.0.0",
+    "prisma": "^7.0.0"
+  }
+}

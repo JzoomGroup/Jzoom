@@ -1,0 +1,25 @@
+route_id,route,page,roles,sidebar,mobile_nav,access_type,redirect_if_forbidden,module
+ROUTE-019,/admin/clients/:id,Client Profile,"Admin, assigned Account Manager, permitted Management read-only",Deep link,More,Scoped private,/403,Admin Console
+ROUTE-020,/admin/subscriptions,Subscriptions,"Admin, scoped Account Manager",Yes,More,Scoped private,/403,Admin Console
+ROUTE-021,/admin/pricing-rules,Pricing Rules,Admin,Yes,More,Admin only,/403,Admin Console
+ROUTE-022,/admin/workflows,Workflow Builder,Admin,Yes,More,Admin only,/403,Admin Console
+ROUTE-023,/admin/hours-rules,Hours Rules,Admin,Yes,More,Admin only,/403,Admin Console
+ROUTE-024,/admin/import-export,Import and Export,Admin,Yes,More,Admin only,/403,Admin Console
+ROUTE-025,/admin/pdf-templates,PDF Templates,Admin,Yes,More,Admin only,/403,Admin Console
+ROUTE-026,/admin/notification-templates,Notification Templates,Admin,Yes,More,Admin only,/403,Admin Console
+ROUTE-027,/admin/localization,Localization Labels,Admin,Yes,More,Admin only,/403,Admin Console
+ROUTE-028,/pricing,Pricing Workspace,"Admin, Account Manager",Yes,More,Commercial roles,/403,Pricing Studio
+ROUTE-029,/pricing/:quoteId/client-setup,Pricing Client Setup,"Admin, Account Manager",Deep link,Full-screen mobile,Commercial roles,/403,Pricing Studio
+ROUTE-030,/pricing/:quoteId/monthly-services,Pricing Monthly Services,"Admin, Account Manager",Deep link,Full-screen mobile,Commercial roles,/403,Pricing Studio
+ROUTE-031,/pricing/:quoteId/one-time-services,Pricing One-Time Services,"Admin, Account Manager",Deep link,Full-screen mobile,Commercial roles,/403,Pricing Studio
+ROUTE-032,/pricing/:quoteId/review,Pricing Review,"Admin, Account Manager",Deep link,Full-screen mobile,Commercial roles,/403,Pricing Studio
+ROUTE-033,/pricing/:quoteId/issue,Pricing Issue,"Admin, Account Manager",Deep link,Full-screen mobile,Commercial roles,/403,Pricing Studio
+ROUTE-034,/client/requests/new,New Client Request,Client,Deep link,Full-screen mobile,Client only,/403,Client Portal
+ROUTE-035,/specialist,Specialist Workspace,Specialist,Yes,Bottom Tab,Assigned scope,/403,Operating Portal
+ROUTE-036,/review,Review Queue,"Supervisor, permitted Admin",Yes,Bottom Tab,Team or global scope,/403,Operating Portal
+ROUTE-037,/projects/:id,Project Detail,Scoped roles,Deep link,Full-screen mobile,Private scoped,/403,Projects
+ROUTE-038,/hours,Hours Ledger,"Scoped internal roles; Client when enabled",Yes,Bottom Tab or More,Private scoped,/403,Hours
+ROUTE-039,/files,Files,Scoped authenticated roles,Yes,More,Private scoped,/403,Files
+ROUTE-040,/notifications,Notifications,All authenticated,Yes,Bottom Tab or More,Private,/login,Notifications
+ROUTE-041,/profile,Profile and Personal Settings,All authenticated,Profile,More,Private,/login,Profile
+ROUTE-042,/client/documents,Client Documents,Client,Yes,More,Client only,/403,Client Portal

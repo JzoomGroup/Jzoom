@@ -1,0 +1,92 @@
+name: Jzoom Platform CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: jzoom
+          POSTGRES_PASSWORD: ci_only
+          POSTGRES_USER: jzoom
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jzoom -d jzoom"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://jzoom:ci_only@127.0.0.1:5432/jzoom?schema=public
+      DATABASE_INTEGRATION: "true"
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:4000/api/v1
+      NEXT_TELEMETRY_DISABLED: "1"
+      NODE_ENV: test
+      OPENAPI_ENABLED: "false"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.8.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply database migrations
+        run: pnpm --filter @jzoom/database migrate:deploy
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type-check
+        run: pnpm typecheck
+
+      - name: Build and test
+        run: pnpm test
+
+      - name: Generate OpenAPI document
+        run: pnpm openapi:generate
+
+      - name: Upload OpenAPI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jzoom-openapi
+          path: apps/api/openapi.json
+          if-no-files-found: error
+
+  containers:
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build --file apps/api/Dockerfile --tag jzoom-api:ci .
+
+      - name: Build web image
+        run: docker build --file apps/web/Dockerfile --tag jzoom-web:ci .
+
+      - name: Build worker image
+        run: docker build --file apps/worker/Dockerfile --tag jzoom-worker:ci .

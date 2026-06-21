@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+.next/
+coverage/
+dist/
+out/
+*.tsbuildinfo
+
+# Generated sources and artifacts
+apps/api/openapi.json
+packages/database/src/generated/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs and local tooling
+*.log
+.DS_Store
+.idea/
+.vscode/
+.agents/

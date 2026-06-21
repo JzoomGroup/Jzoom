@@ -1,0 +1,1708 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RecordStatus {
+  DRAFT
+  ACTIVE
+  DISABLED
+  ARCHIVED
+}
+
+enum RevisionStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum BlueprintImportStatus {
+  PENDING
+  VALIDATED
+  APPLIED
+  APPLIED_WITH_WARNINGS
+  FAILED
+}
+
+enum BlueprintIssueSeverity {
+  INFO
+  WARNING
+  ERROR
+}
+
+enum UserType {
+  INTERNAL
+  EXTERNAL
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+  ARCHIVED
+}
+
+enum PermissionEffect {
+  ALLOW
+  DENY
+}
+
+enum DataScopeType {
+  OWN_CLIENT
+  ASSIGNED_CLIENTS
+  ASSIGNED_WORK
+  TEAM_DOMAIN
+  GLOBAL
+}
+
+enum WorkflowType {
+  REQUEST
+  PROJECT
+}
+
+enum QuoteStatus {
+  DRAFT
+  CALCULATED
+  NEEDS_APPROVAL
+  ISSUED
+  APPROVED
+  EXPIRED
+  CANCELLED
+  ACTIVATED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  VOID
+}
+
+enum SubscriptionStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+  CANCELLED
+}
+
+enum ProjectStatus {
+  DRAFT
+  ACTIVE
+  CLIENT_REVIEW
+  COMPLETED
+  CLOSED
+  ARCHIVED
+}
+
+enum OutputStatus {
+  DRAFT
+  INTERNAL_REVIEW
+  APPROVED_INTERNAL
+  SHARED
+  REVISION_REQUESTED
+  APPROVED
+  LOCKED
+}
+
+enum TimeEntryStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  REVERSED
+}
+
+enum LedgerTransactionType {
+  CREDIT
+  DEBIT
+  REVERSAL
+  ADJUSTMENT
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  RETURNED
+  REJECTED
+  CANCELLED
+}
+
+enum FileVisibility {
+  INTERNAL
+  CLIENT_VISIBLE
+}
+
+enum NotificationStatus {
+  PENDING
+  DELIVERED
+  FAILED
+  CANCELLED
+}
+
+enum JobStatus {
+  PENDING
+  VALIDATING
+  READY
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum AuditSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum SettingValueType {
+  STRING
+  NUMBER
+  BOOLEAN
+  JSON
+  SECRET_REFERENCE
+}
+
+enum TranslationRevisionStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model BlueprintImport {
+  id                   String                        @id @default(uuid()) @db.Uuid
+  blueprintCode        String
+  version              String
+  sourceFileName       String
+  sha256               String                        @unique
+  manifest             Json
+  status               BlueprintImportStatus         @default(PENDING)
+  warningCount         Int                           @default(0)
+  errorCount           Int                           @default(0)
+  importedAt           DateTime                      @default(now())
+  appliedAt            DateTime?
+  createdAt            DateTime                      @default(now())
+  updatedAt            DateTime                      @updatedAt
+  sheetSnapshots       BlueprintSheetSnapshot[]
+  issues               BlueprintIssue[]
+  monthlyRevisions     MonthlyServiceRevision[]
+  itemRevisions        ServiceItemRevision[]
+  oneTimeRevisions     OneTimeServiceRevision[]
+  pricingRevisions     PricingRuleRevision[]
+  workflowVersions     WorkflowVersion[]
+  pdfVersions          PdfTemplateVersion[]
+  notificationVersions NotificationTemplateVersion[]
+  validationRevisions  ValidationRuleRevision[]
+  settingRevisions     PlatformSettingRevision[]
+  translationRevisions TranslationRevision[]
+
+  @@unique([blueprintCode, version, sha256])
+  @@map("blueprint_imports")
+}
+
+model BlueprintSheetSnapshot {
+  id                String          @id @default(uuid()) @db.Uuid
+  blueprintImportId String          @db.Uuid
+  sheetName         String
+  tableName         String?
+  rowCount          Int
+  headers           Json
+  rows              Json
+  sha256            String
+  createdAt         DateTime        @default(now())
+  blueprintImport   BlueprintImport @relation(fields: [blueprintImportId], references: [id], onDelete: Cascade)
+
+  @@unique([blueprintImportId, sheetName])
+  @@index([sheetName])
+  @@map("blueprint_sheet_snapshots")
+}
+
+model BlueprintIssue {
+  id                String                 @id @default(uuid()) @db.Uuid
+  blueprintImportId String                 @db.Uuid
+  severity          BlueprintIssueSeverity
+  code              String
+  sheetName         String?
+  rowReference      String?
+  entityCode        String?
+  message           String                 @db.Text
+  normalizedDefault Json?
+  createdAt         DateTime               @default(now())
+  blueprintImport   BlueprintImport        @relation(fields: [blueprintImportId], references: [id], onDelete: Cascade)
+
+  @@index([blueprintImportId, severity])
+  @@map("blueprint_issues")
+}
+
+model Role {
+  id              String           @id @default(uuid()) @db.Uuid
+  code            String           @unique
+  name            String
+  nameAr          String?
+  nameEn          String?
+  userType        UserType
+  description     String?          @db.Text
+  dataScope       String?          @db.Text
+  capabilities    String?          @db.Text
+  restrictions    String?          @db.Text
+  isSystem        Boolean          @default(false)
+  status          RecordStatus     @default(ACTIVE)
+  sortOrder       Int              @default(0)
+  archivedAt      DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@index([status, sortOrder])
+  @@map("roles")
+}
+
+model Permission {
+  id              String                   @id @default(uuid()) @db.Uuid
+  code            String                   @unique
+  name            String
+  module          String
+  action          String
+  description     String?                  @db.Text
+  status          RecordStatus             @default(ACTIVE)
+  sortOrder       Int                      @default(0)
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  rolePermissions RolePermission[]
+  userOverrides   UserPermissionOverride[]
+
+  @@index([module, action])
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String           @db.Uuid
+  permissionId String           @db.Uuid
+  effect       PermissionEffect @default(ALLOW)
+  scopeRule    String?
+  constraints  Json?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  role         Role             @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission       @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model User {
+  id                  String                   @id @default(uuid()) @db.Uuid
+  email               String                   @unique
+  passwordHash        String?
+  displayName         String
+  preferredLocale     String                   @default("ar")
+  userType            UserType
+  status              UserStatus               @default(INVITED)
+  lastLoginAt         DateTime?
+  archivedAt          DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  roles               UserRole[]
+  permissionOverrides UserPermissionOverride[]
+  scopes              UserScope[]
+  clientAssignments   ClientAssignment[]
+  comments            Comment[]
+  internalNotes       InternalNote[]
+  uploadedFiles       FileMetadata[]
+  timeEntries         TimeEntry[]
+  notifications       Notification[]
+  auditLogs           AuditLog[]
+
+  @@index([status])
+  @@map("users")
+}
+
+model UserRole {
+  userId    String   @db.Uuid
+  roleId    String   @db.Uuid
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model UserPermissionOverride {
+  id           String           @id @default(uuid()) @db.Uuid
+  userId       String           @db.Uuid
+  permissionId String           @db.Uuid
+  effect       PermissionEffect
+  scopeRule    String?
+  reason       String           @db.Text
+  expiresAt    DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   Permission       @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+  @@map("user_permission_overrides")
+}
+
+model UserScope {
+  id        String        @id @default(uuid()) @db.Uuid
+  userId    String        @db.Uuid
+  scopeType DataScopeType
+  clientId  String?       @db.Uuid
+  domain    String?
+  teamCode  String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client    Client?       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([userId, scopeType])
+  @@index([clientId])
+  @@map("user_scopes")
+}
+
+model Client {
+  id                     String                  @id @default(uuid()) @db.Uuid
+  code                   String                  @unique
+  name                   String
+  legalName              String?
+  commercialRegistration String?
+  sector                 String
+  city                   String?
+  employeesCount         Int                     @default(0)
+  branchesCount          Int                     @default(0)
+  transactionVolume      String?
+  operationalComplexity  String?
+  dataReadiness          String?
+  urgency                String?
+  billingContact         String?
+  authorizedApprover     String
+  status                 RecordStatus            @default(ACTIVE)
+  archivedAt             DateTime?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  contacts               ClientContact[]
+  assignments            ClientAssignment[]
+  scopes                 UserScope[]
+  subscriptions          Subscription[]
+  quotes                 Quote[]
+  invoices               Invoice[]
+  requests               Request[]
+  projects               Project[]
+  hourTransactions       HourLedgerTransaction[]
+
+  @@index([status])
+  @@index([sector])
+  @@map("clients")
+}
+
+model ClientContact {
+  id        String       @id @default(uuid()) @db.Uuid
+  clientId  String       @db.Uuid
+  name      String
+  email     String?
+  phone     String?
+  role      String?
+  isPrimary Boolean      @default(false)
+  status    RecordStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  client    Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, email])
+  @@index([clientId, status])
+  @@map("client_contacts")
+}
+
+model ClientAssignment {
+  id        String    @id @default(uuid()) @db.Uuid
+  clientId  String    @db.Uuid
+  userId    String    @db.Uuid
+  roleCode  String
+  startsAt  DateTime  @default(now())
+  endsAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([clientId, userId, roleCode, startsAt])
+  @@index([userId, startsAt, endsAt])
+  @@map("client_assignments")
+}
+
+model ServiceLevel {
+  id                   String                      @id @default(uuid()) @db.Uuid
+  code                 String                      @unique
+  labelAr              String
+  labelEn              String?
+  purpose              String?                     @db.Text
+  hoursSource          String?
+  slaRule              String?                     @db.Text
+  scopeRule            String?                     @db.Text
+  governanceRule       String?                     @db.Text
+  isCustom             Boolean                     @default(false)
+  status               RecordStatus                @default(ACTIVE)
+  sortOrder            Int                         @default(0)
+  archivedAt           DateTime?
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  monthlyConfigs       MonthlyServiceLevelConfig[]
+  itemInclusions       ServiceItemLevelInclusion[]
+  subscriptionServices SubscriptionService[]
+
+  @@index([status, sortOrder])
+  @@map("service_levels")
+}
+
+model MonthlyService {
+  id         String                   @id @default(uuid()) @db.Uuid
+  code       String                   @unique
+  externalId String?
+  status     RecordStatus             @default(ACTIVE)
+  sortOrder  Int                      @default(0)
+  archivedAt DateTime?
+  createdAt  DateTime                 @default(now())
+  updatedAt  DateTime                 @updatedAt
+  revisions  MonthlyServiceRevision[]
+  items      ServiceItem[]
+
+  @@index([status, sortOrder])
+  @@map("monthly_services")
+}
+
+model MonthlyServiceRevision {
+  id                      String                      @id @default(uuid()) @db.Uuid
+  monthlyServiceId        String                      @db.Uuid
+  sourceBlueprintImportId String?                     @db.Uuid
+  version                 Int
+  status                  RevisionStatus              @default(DRAFT)
+  effectiveFrom           DateTime?
+  effectiveTo             DateTime?
+  nameAr                  String
+  nameEn                  String
+  paymentType             String                      @default("Monthly")
+  serviceLine             String                      @default("Operate")
+  domain                  String
+  description             String                      @db.Text
+  visibleInPricing        Boolean                     @default(true)
+  sellingHourlyRateSar    Decimal                     @db.Decimal(18, 2)
+  internalHourlyCostSar   Decimal                     @db.Decimal(18, 2)
+  setupFeePct             Decimal                     @db.Decimal(7, 4)
+  defaultSlaHours         Int
+  deductHours             Boolean                     @default(true)
+  requiresSupervisor      Boolean                     @default(false)
+  requiresManagement      Boolean                     @default(false)
+  clientApprovalRequired  Boolean                     @default(false)
+  cardConfiguration       Json?
+  createdAt               DateTime                    @default(now())
+  updatedAt               DateTime                    @updatedAt
+  monthlyService          MonthlyService              @relation(fields: [monthlyServiceId], references: [id], onDelete: Cascade)
+  sourceBlueprintImport   BlueprintImport?            @relation(fields: [sourceBlueprintImportId], references: [id], onDelete: SetNull)
+  levelConfigs            MonthlyServiceLevelConfig[]
+  subscriptionServices    SubscriptionService[]
+  quoteItems              QuoteItem[]
+
+  @@unique([monthlyServiceId, version])
+  @@index([monthlyServiceId, status, effectiveFrom])
+  @@map("monthly_service_revisions")
+}
+
+model MonthlyServiceLevelConfig {
+  id                       String                 @id @default(uuid()) @db.Uuid
+  monthlyServiceRevisionId String                 @db.Uuid
+  serviceLevelId           String                 @db.Uuid
+  hours                    Decimal                @db.Decimal(10, 2)
+  slaHours                 Int?
+  priorityRule             String?
+  isEnabled                Boolean                @default(true)
+  sortOrder                Int                    @default(0)
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  monthlyServiceRevision   MonthlyServiceRevision @relation(fields: [monthlyServiceRevisionId], references: [id], onDelete: Cascade)
+  serviceLevel             ServiceLevel           @relation(fields: [serviceLevelId], references: [id], onDelete: Restrict)
+
+  @@unique([monthlyServiceRevisionId, serviceLevelId])
+  @@map("monthly_service_level_configs")
+}
+
+model ServiceItem {
+  id               String                @id @default(uuid()) @db.Uuid
+  code             String                @unique
+  monthlyServiceId String                @db.Uuid
+  status           RecordStatus          @default(ACTIVE)
+  sortOrder        Int                   @default(0)
+  archivedAt       DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  monthlyService   MonthlyService        @relation(fields: [monthlyServiceId], references: [id], onDelete: Restrict)
+  revisions        ServiceItemRevision[]
+
+  @@index([monthlyServiceId, status, sortOrder])
+  @@map("service_items")
+}
+
+model ServiceItemRevision {
+  id                      String                         @id @default(uuid()) @db.Uuid
+  serviceItemId           String                         @db.Uuid
+  sourceBlueprintImportId String?                        @db.Uuid
+  version                 Int
+  status                  RevisionStatus                 @default(DRAFT)
+  effectiveFrom           DateTime?
+  effectiveTo             DateTime?
+  nameAr                  String
+  nameEn                  String
+  expectedOutput          String?                        @db.Text
+  visibleInQuote          Boolean                        @default(true)
+  requiresFile            Boolean                        @default(false)
+  deductHours             Boolean                        @default(true)
+  requestType             String?
+  createdAt               DateTime                       @default(now())
+  updatedAt               DateTime                       @updatedAt
+  serviceItem             ServiceItem                    @relation(fields: [serviceItemId], references: [id], onDelete: Cascade)
+  sourceBlueprintImport   BlueprintImport?               @relation(fields: [sourceBlueprintImportId], references: [id], onDelete: SetNull)
+  levelInclusions         ServiceItemLevelInclusion[]
+  quoteSnapshots          QuoteItemServiceItemSnapshot[]
+  requests                Request[]
+
+  @@unique([serviceItemId, version])
+  @@index([serviceItemId, status, effectiveFrom])
+  @@map("service_item_revisions")
+}
+
+model ServiceItemLevelInclusion {
+  serviceItemRevisionId String              @db.Uuid
+  serviceLevelId        String              @db.Uuid
+  included              Boolean             @default(true)
+  sortOrder             Int                 @default(0)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  serviceItemRevision   ServiceItemRevision @relation(fields: [serviceItemRevisionId], references: [id], onDelete: Cascade)
+  serviceLevel          ServiceLevel        @relation(fields: [serviceLevelId], references: [id], onDelete: Restrict)
+
+  @@id([serviceItemRevisionId, serviceLevelId])
+  @@index([serviceLevelId, included])
+  @@map("service_item_level_inclusions")
+}
+
+model OneTimeService {
+  id          String                   @id @default(uuid()) @db.Uuid
+  code        String                   @unique
+  serviceLine String
+  status      RecordStatus             @default(ACTIVE)
+  sortOrder   Int                      @default(0)
+  archivedAt  DateTime?
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  revisions   OneTimeServiceRevision[]
+
+  @@index([serviceLine, status, sortOrder])
+  @@map("one_time_services")
+}
+
+model OneTimeServiceRevision {
+  id                      String                      @id @default(uuid()) @db.Uuid
+  oneTimeServiceId        String                      @db.Uuid
+  sourceBlueprintImportId String?                     @db.Uuid
+  version                 Int
+  status                  RevisionStatus              @default(DRAFT)
+  effectiveFrom           DateTime?
+  effectiveTo             DateTime?
+  nameAr                  String
+  nameEn                  String
+  paymentType             String                      @default("One-Time")
+  basePriceSar            Decimal                     @db.Decimal(18, 2)
+  estimatedHours          Decimal                     @db.Decimal(10, 2)
+  durationDays            Int
+  visibleInPricing        Boolean                     @default(true)
+  createsProject          Boolean                     @default(true)
+  description             String                      @db.Text
+  createdAt               DateTime                    @default(now())
+  updatedAt               DateTime                    @updatedAt
+  oneTimeService          OneTimeService              @relation(fields: [oneTimeServiceId], references: [id], onDelete: Cascade)
+  sourceBlueprintImport   BlueprintImport?            @relation(fields: [sourceBlueprintImportId], references: [id], onDelete: SetNull)
+  phases                  OneTimeServicePhase[]
+  deliverables            OneTimeServiceDeliverable[]
+  quoteItems              QuoteItem[]
+  projects                Project[]
+
+  @@unique([oneTimeServiceId, version])
+  @@index([oneTimeServiceId, status, effectiveFrom])
+  @@map("one_time_service_revisions")
+}
+
+model OneTimeServicePhase {
+  id                       String                 @id @default(uuid()) @db.Uuid
+  oneTimeServiceRevisionId String                 @db.Uuid
+  code                     String
+  nameAr                   String?
+  nameEn                   String
+  description              String?                @db.Text
+  sortOrder                Int
+  isRequired               Boolean                @default(true)
+  status                   RecordStatus           @default(ACTIVE)
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  oneTimeServiceRevision   OneTimeServiceRevision @relation(fields: [oneTimeServiceRevisionId], references: [id], onDelete: Cascade)
+
+  @@unique([oneTimeServiceRevisionId, code])
+  @@index([oneTimeServiceRevisionId, sortOrder])
+  @@map("one_time_service_phases")
+}
+
+model OneTimeServiceDeliverable {
+  id                       String                 @id @default(uuid()) @db.Uuid
+  oneTimeServiceRevisionId String                 @db.Uuid
+  code                     String
+  nameAr                   String?
+  nameEn                   String
+  description              String?                @db.Text
+  sortOrder                Int
+  isRequired               Boolean                @default(true)
+  requiresClientApproval   Boolean                @default(true)
+  status                   RecordStatus           @default(ACTIVE)
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  oneTimeServiceRevision   OneTimeServiceRevision @relation(fields: [oneTimeServiceRevisionId], references: [id], onDelete: Cascade)
+
+  @@unique([oneTimeServiceRevisionId, code])
+  @@index([oneTimeServiceRevisionId, sortOrder])
+  @@map("one_time_service_deliverables")
+}
+
+model PricingRule {
+  id         String                @id @default(uuid()) @db.Uuid
+  code       String                @unique
+  name       String
+  status     RecordStatus          @default(ACTIVE)
+  sortOrder  Int                   @default(0)
+  archivedAt DateTime?
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+  revisions  PricingRuleRevision[]
+
+  @@index([status, sortOrder])
+  @@map("pricing_rules")
+}
+
+model PricingRuleRevision {
+  id                      String           @id @default(uuid()) @db.Uuid
+  pricingRuleId           String           @db.Uuid
+  sourceBlueprintImportId String?          @db.Uuid
+  version                 Int
+  status                  RevisionStatus   @default(DRAFT)
+  effectiveFrom           DateTime?
+  effectiveTo             DateTime?
+  formulaOrRule           String           @db.Text
+  appliesTo               String
+  implementationOwner     String?
+  visibility              String?          @db.Text
+  configuration           Json?
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+  pricingRule             PricingRule      @relation(fields: [pricingRuleId], references: [id], onDelete: Cascade)
+  sourceBlueprintImport   BlueprintImport? @relation(fields: [sourceBlueprintImportId], references: [id], onDelete: SetNull)
+
+  @@unique([pricingRuleId, version])
+  @@index([pricingRuleId, status, effectiveFrom])
+  @@map("pricing_rule_revisions")
+}
+
+model ValidationRule {
+  id         String                   @id @default(uuid()) @db.Uuid
+  code       String                   @unique
+  entity     String
+  field      String
+  status     RecordStatus             @default(ACTIVE)
+  sortOrder  Int                      @default(0)
+  archivedAt DateTime?
+  createdAt  DateTime                 @default(now())
+  updatedAt  DateTime                 @updatedAt
+  revisions  ValidationRuleRevision[]
+
+  @@index([entity, field, status])
+  @@map("validation_rules")
+}
+
+model ValidationRuleRevision {
+  id                      String           @id @default(uuid()) @db.Uuid
+  validationRuleId        String           @db.Uuid
+  sourceBlueprintImportId String?          @db.Uuid
+  version                 Int
+  status                  RevisionStatus   @default(DRAFT)
+  rule                    String           @db.Text
+  errorMessageAr          String?
+  errorMessageEn          String?
+  enforcedIn              String
+  failureBehavior         String           @db.Text
+  configuration           Json?
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+  validationRule          ValidationRule   @relation(fields: [validationRuleId], references: [id], onDelete: Cascade)
+  sourceBlueprintImport   BlueprintImport? @relation(fields: [sourceBlueprintImportId], references: [id], onDelete: SetNull)
+
+  @@unique([validationRuleId, version])
+  @@map("validation_rule_revisions")
+}
+
+model WorkflowDefinition {
+  id         String            @id @default(uuid()) @db.Uuid
+  code       String            @unique
+  name       String
+  type       WorkflowType
+  status     RecordStatus      @default(ACTIVE)
+  sortOrder  Int               @default(0)
+  archivedAt DateTime?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  versions   WorkflowVersion[]
+
+  @@index([type, status])
+  @@map("workflow_definitions")
+}
+
+model WorkflowVersion {
+  id                      String               @id @default(uuid()) @db.Uuid
+  workflowDefinitionId    String               @db.Uuid
+  sourceBlueprintImportId String?              @db.Uuid
+  version                 Int
+  status                  RevisionStatus       @default(DRAFT)
+  effectiveFrom           DateTime?
+  effectiveTo             DateTime?
+  configuration           Json?
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  workflowDefinition      WorkflowDefinition   @relation(fields: [workflowDefinitionId], references: [id], onDelete: Cascade)
+  sourceBlueprintImport   BlueprintImport?     @relation(fields: [sourceBlueprintImportId], references: [id], onDelete: SetNull)
+  states                  WorkflowState[]
+  transitions             WorkflowTransition[]
+  requests                Request[]
+  projects                Project[]
+  events                  WorkflowEvent[]
+
+  @@unique([workflowDefinitionId, version])
+  @@index([workflowDefinitionId, status, effectiveFrom])
+  @@map("workflow_versions")
+}
+
+model WorkflowState {
+  id                  String               @id @default(uuid()) @db.Uuid
+  workflowVersionId   String               @db.Uuid
+  code                String
+  labelAr             String?
+  labelEn             String
+  stateType           String?
+  isInitial           Boolean              @default(false)
+  isTerminal          Boolean              @default(false)
+  sortOrder           Int                  @default(0)
+  configuration       Json?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  workflowVersion     WorkflowVersion      @relation(fields: [workflowVersionId], references: [id], onDelete: Cascade)
+  outgoingTransitions WorkflowTransition[] @relation("WorkflowTransitionFrom")
+  incomingTransitions WorkflowTransition[] @relation("WorkflowTransitionTo")
+  currentRequests     Request[]            @relation("RequestCurrentState")
+  currentProjects     Project[]            @relation("ProjectCurrentState")
+  eventsFrom          WorkflowEvent[]      @relation("WorkflowEventFromState")
+  eventsTo            WorkflowEvent[]      @relation("WorkflowEventToState")
+
+  @@unique([workflowVersionId, code])
+  @@index([workflowVersionId, sortOrder])
+  @@map("workflow_states")
+}
+
+model WorkflowTransition {
+  id                String          @id @default(uuid()) @db.Uuid
+  workflowVersionId String          @db.Uuid
+  code              String
+  fromStateId       String          @db.Uuid
+  toStateId         String          @db.Uuid
+  actorRoles        Json
+  condition         String?         @db.Text
+  sideEffect        String?         @db.Text
+  validations       Json?
+  reasonRequired    Boolean         @default(false)
+  notificationEvent String?
+  sortOrder         Int             @default(0)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  workflowVersion   WorkflowVersion @relation(fields: [workflowVersionId], references: [id], onDelete: Cascade)
+  fromState         WorkflowState   @relation("WorkflowTransitionFrom", fields: [fromStateId], references: [id], onDelete: Restrict)
+  toState           WorkflowState   @relation("WorkflowTransitionTo", fields: [toStateId], references: [id], onDelete: Restrict)
+  events            WorkflowEvent[]
+
+  @@unique([workflowVersionId, code])
+  @@index([fromStateId, toStateId])
+  @@map("workflow_transitions")
+}
+
+model PdfTemplate {
+  id           String               @id @default(uuid()) @db.Uuid
+  code         String               @unique
+  name         String
+  documentType String
+  status       RecordStatus         @default(ACTIVE)
+  sortOrder    Int                  @default(0)
+  archivedAt   DateTime?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  versions     PdfTemplateVersion[]
+
+  @@index([documentType, status])
+  @@map("pdf_templates")
+}
+
+model PdfTemplateVersion {
+  id                      String            @id @default(uuid()) @db.Uuid
+  pdfTemplateId           String            @db.Uuid
+  sourceBlueprintImportId String?           @db.Uuid
+  version                 Int
+  status                  RevisionStatus    @default(DRAFT)
+  audience                String
+  mustInclude             Json
+  mustExclude             Json
+  languageDirection       String
+  technicalRule           String?
+  contentSchema           Json?
+  effectiveFrom           DateTime?
+  effectiveTo             DateTime?
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  pdfTemplate             PdfTemplate       @relation(fields: [pdfTemplateId], references: [id], onDelete: Cascade)
+  sourceBlueprintImport   BlueprintImport?  @relation(fields: [sourceBlueprintImportId], references: [id], onDelete: SetNull)
+  fieldMappings           PdfFieldMapping[]
+
+  @@unique([pdfTemplateId, version])
+  @@index([pdfTemplateId, status, effectiveFrom])
+  @@map("pdf_template_versions")
+}
+
+model PdfFieldMapping {
+  id                   String             @id @default(uuid()) @db.Uuid
+  pdfTemplateVersionId String             @db.Uuid
+  section              String
+  field                String
+  source               String
+  showClient           Boolean            @default(false)
+  showInternal         Boolean            @default(false)
+  forbidden            Boolean            @default(false)
+  documentScope        String?
+  notes                String?            @db.Text
+  sortOrder            Int                @default(0)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  pdfTemplateVersion   PdfTemplateVersion @relation(fields: [pdfTemplateVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([pdfTemplateVersionId, section, field])
+  @@map("pdf_field_mappings")
+}
+
+model NotificationTemplate {
+  id         String                        @id @default(uuid()) @db.Uuid
+  code       String                        @unique
+  event      String                        @unique
+  status     RecordStatus                  @default(ACTIVE)
+  sortOrder  Int                           @default(0)
+  archivedAt DateTime?
+  createdAt  DateTime                      @default(now())
+  updatedAt  DateTime                      @updatedAt
+  versions   NotificationTemplateVersion[]
+
+  @@index([status, sortOrder])
+  @@map("notification_templates")
+}
+
+model NotificationTemplateVersion {
+  id                      String               @id @default(uuid()) @db.Uuid
+  notificationTemplateId  String               @db.Uuid
+  sourceBlueprintImportId String?              @db.Uuid
+  version                 Int
+  status                  RevisionStatus       @default(DRAFT)
+  recipients              Json
+  messageAr               String?              @db.Text
+  messageEn               String?              @db.Text
+  description             String?              @db.Text
+  deepLink                String
+  channels                Json
+  cadence                 String?
+  reminderRule            String?
+  placeholders            Json?
+  effectiveFrom           DateTime?
+  effectiveTo             DateTime?
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  notificationTemplate    NotificationTemplate @relation(fields: [notificationTemplateId], references: [id], onDelete: Cascade)
+  sourceBlueprintImport   BlueprintImport?     @relation(fields: [sourceBlueprintImportId], references: [id], onDelete: SetNull)
+
+  @@unique([notificationTemplateId, version])
+  @@index([notificationTemplateId, status, effectiveFrom])
+  @@map("notification_template_versions")
+}
+
+model AuditEventDefinition {
+  id                  String        @id @default(uuid()) @db.Uuid
+  code                String        @unique
+  eventId             String?       @unique
+  entity              String
+  actor               String
+  trigger             String        @db.Text
+  beforeAfterRequired Boolean       @default(false)
+  auditRequired       Boolean       @default(true)
+  severity            AuditSeverity
+  notification        String?
+  retention           String
+  status              RecordStatus  @default(ACTIVE)
+  sortOrder           Int           @default(0)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  @@index([entity, status])
+  @@map("audit_event_definitions")
+}
+
+model RouteDefinition {
+  id                  String       @id @default(uuid()) @db.Uuid
+  code                String       @unique
+  route               String       @unique
+  page                String
+  roles               Json
+  sidebar             String?
+  mobileNavigation    String?
+  accessType          String
+  redirectIfForbidden String?
+  module              String
+  source              String
+  status              RecordStatus @default(ACTIVE)
+  sortOrder           Int          @default(0)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([module, status, sortOrder])
+  @@map("route_definitions")
+}
+
+model ActionDefinition {
+  id                   String       @id @default(uuid()) @db.Uuid
+  code                 String       @unique
+  screen               String
+  buttonLabel          String
+  roles                Json
+  visibleWhen          String       @db.Text
+  actionDescription    String       @db.Text
+  apiEffect            String
+  expectedResult       String       @db.Text
+  auditRequired        Boolean      @default(false)
+  confirmationRequired Boolean      @default(false)
+  confirmationRule     String?
+  reasonRequired       Boolean      @default(false)
+  reasonRule           String?
+  notification         String?
+  errorState           String?      @db.Text
+  priority             String
+  source               String
+  status               RecordStatus @default(ACTIVE)
+  sortOrder            Int          @default(0)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@index([screen, status, sortOrder])
+  @@map("action_definitions")
+}
+
+model ScreenStateDefinition {
+  id               String       @id @default(uuid()) @db.Uuid
+  code             String       @unique
+  screen           String
+  state            String
+  whatUserSees     String       @db.Text
+  allowedActions   Json
+  forbiddenActions Json
+  trigger          String       @db.Text
+  priority         String
+  status           RecordStatus @default(ACTIVE)
+  sortOrder        Int          @default(0)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([screen, status, sortOrder])
+  @@map("screen_state_definitions")
+}
+
+model FormFieldDefinition {
+  id             String       @id @default(uuid()) @db.Uuid
+  formCode       String
+  fieldCode      String
+  labelAr        String
+  labelEn        String
+  type           String
+  required       Boolean      @default(false)
+  validation     String?
+  defaultValue   String?
+  source         String?
+  editableBy     Json
+  visibilityNote String?      @db.Text
+  status         RecordStatus @default(ACTIVE)
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([formCode, fieldCode])
+  @@index([formCode, status, sortOrder])
+  @@map("form_field_definitions")
+}
+
+model DefinitionOfDone {
+  id        String       @id @default(uuid()) @db.Uuid
+  code      String       @unique
+  feature   String
+  doneWhen  String       @db.Text
+  priority  String
+  module    String
+  status    RecordStatus @default(ACTIVE)
+  sortOrder Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([module, status])
+  @@map("definition_of_done")
+}
+
+model PlatformSetting {
+  id          String                    @id @default(uuid()) @db.Uuid
+  key         String                    @unique
+  category    String
+  valueType   SettingValueType
+  isSensitive Boolean                   @default(false)
+  status      RecordStatus              @default(ACTIVE)
+  sortOrder   Int                       @default(0)
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  revisions   PlatformSettingRevision[]
+
+  @@index([category, status, sortOrder])
+  @@map("platform_settings")
+}
+
+model PlatformSettingRevision {
+  id                      String           @id @default(uuid()) @db.Uuid
+  platformSettingId       String           @db.Uuid
+  sourceBlueprintImportId String?          @db.Uuid
+  version                 Int
+  status                  RevisionStatus   @default(DRAFT)
+  value                   Json
+  effectiveFrom           DateTime?
+  effectiveTo             DateTime?
+  reason                  String?          @db.Text
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+  platformSetting         PlatformSetting  @relation(fields: [platformSettingId], references: [id], onDelete: Cascade)
+  sourceBlueprintImport   BlueprintImport? @relation(fields: [sourceBlueprintImportId], references: [id], onDelete: SetNull)
+
+  @@unique([platformSettingId, version])
+  @@index([platformSettingId, status, effectiveFrom])
+  @@map("platform_setting_revisions")
+}
+
+model TranslationRevision {
+  id                      String                    @id @default(uuid()) @db.Uuid
+  sourceBlueprintImportId String?                   @db.Uuid
+  version                 Int                       @unique
+  status                  TranslationRevisionStatus @default(DRAFT)
+  publishedAt             DateTime?
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  sourceBlueprintImport   BlueprintImport?          @relation(fields: [sourceBlueprintImportId], references: [id], onDelete: SetNull)
+  values                  TranslationValue[]
+
+  @@map("translation_revisions")
+}
+
+model TranslationKey {
+  id          String             @id @default(uuid()) @db.Uuid
+  key         String             @unique
+  namespace   String
+  description String?            @db.Text
+  status      RecordStatus       @default(ACTIVE)
+  sortOrder   Int                @default(0)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  values      TranslationValue[]
+
+  @@index([namespace, status])
+  @@map("translation_keys")
+}
+
+model TranslationValue {
+  translationRevisionId String              @db.Uuid
+  translationKeyId      String              @db.Uuid
+  locale                String
+  value                 String              @db.Text
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  translationRevision   TranslationRevision @relation(fields: [translationRevisionId], references: [id], onDelete: Cascade)
+  translationKey        TranslationKey      @relation(fields: [translationKeyId], references: [id], onDelete: Cascade)
+
+  @@id([translationRevisionId, translationKeyId, locale])
+  @@index([locale])
+  @@map("translation_values")
+}
+
+model Subscription {
+  id        String                @id @default(uuid()) @db.Uuid
+  clientId  String                @db.Uuid
+  status    SubscriptionStatus    @default(DRAFT)
+  startsAt  DateTime
+  endsAt    DateTime?
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  client    Client                @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  services  SubscriptionService[]
+
+  @@index([clientId, status, startsAt])
+  @@map("subscriptions")
+}
+
+model SubscriptionService {
+  id                       String                       @id @default(uuid()) @db.Uuid
+  subscriptionId           String                       @db.Uuid
+  monthlyServiceRevisionId String                       @db.Uuid
+  serviceLevelId           String                       @db.Uuid
+  hoursAllocated           Decimal                      @db.Decimal(10, 2)
+  startsAt                 DateTime
+  endsAt                   DateTime?
+  status                   RecordStatus                 @default(ACTIVE)
+  scopeSnapshot            Json
+  createdAt                DateTime                     @default(now())
+  updatedAt                DateTime                     @updatedAt
+  subscription             Subscription                 @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  monthlyServiceRevision   MonthlyServiceRevision       @relation(fields: [monthlyServiceRevisionId], references: [id], onDelete: Restrict)
+  serviceLevel             ServiceLevel                 @relation(fields: [serviceLevelId], references: [id], onDelete: Restrict)
+  history                  SubscriptionServiceHistory[]
+  requests                 Request[]
+
+  @@index([subscriptionId, status])
+  @@index([monthlyServiceRevisionId, serviceLevelId])
+  @@map("subscription_services")
+}
+
+model SubscriptionServiceHistory {
+  id                    String              @id @default(uuid()) @db.Uuid
+  subscriptionServiceId String              @db.Uuid
+  effectiveAt           DateTime
+  changeType            String
+  beforeSnapshot        Json?
+  afterSnapshot         Json
+  reason                String?             @db.Text
+  createdAt             DateTime            @default(now())
+  subscriptionService   SubscriptionService @relation(fields: [subscriptionServiceId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionServiceId, effectiveAt])
+  @@map("subscription_service_history")
+}
+
+model Quote {
+  id              String      @id @default(uuid()) @db.Uuid
+  quoteNumber     String      @unique
+  clientId        String?     @db.Uuid
+  status          QuoteStatus @default(DRAFT)
+  currency        String      @default("SAR")
+  issueDate       DateTime?
+  validUntil      DateTime?
+  clientSnapshot  Json
+  subtotalMonthly Decimal     @default(0) @db.Decimal(18, 2)
+  subtotalSetup   Decimal     @default(0) @db.Decimal(18, 2)
+  subtotalOneTime Decimal     @default(0) @db.Decimal(18, 2)
+  discountTotal   Decimal     @default(0) @db.Decimal(18, 2)
+  finalDueNoTax   Decimal     @default(0) @db.Decimal(18, 2)
+  internalCost    Decimal     @default(0) @db.Decimal(18, 2)
+  margin          Decimal     @default(0) @db.Decimal(18, 2)
+  lockedAt        DateTime?
+  approvedAt      DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  client          Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  items           QuoteItem[]
+  invoices        Invoice[]
+  projects        Project[]
+
+  @@index([clientId, status])
+  @@index([status, validUntil])
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id                       String                         @id @default(uuid()) @db.Uuid
+  quoteId                  String                         @db.Uuid
+  lineType                 String
+  monthlyServiceRevisionId String?                        @db.Uuid
+  oneTimeServiceRevisionId String?                        @db.Uuid
+  serviceLevelCode         String?
+  serviceSnapshot          Json
+  quantity                 Decimal                        @default(1) @db.Decimal(10, 2)
+  hours                    Decimal?                       @db.Decimal(10, 2)
+  unitPrice                Decimal                        @db.Decimal(18, 2)
+  setupFee                 Decimal                        @default(0) @db.Decimal(18, 2)
+  discount                 Decimal                        @default(0) @db.Decimal(18, 2)
+  lineTotal                Decimal                        @db.Decimal(18, 2)
+  internalCost             Decimal                        @default(0) @db.Decimal(18, 2)
+  overrideReason           String?                        @db.Text
+  sortOrder                Int                            @default(0)
+  createdAt                DateTime                       @default(now())
+  updatedAt                DateTime                       @updatedAt
+  quote                    Quote                          @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  monthlyServiceRevision   MonthlyServiceRevision?        @relation(fields: [monthlyServiceRevisionId], references: [id], onDelete: Restrict)
+  oneTimeServiceRevision   OneTimeServiceRevision?        @relation(fields: [oneTimeServiceRevisionId], references: [id], onDelete: Restrict)
+  serviceItemSnapshots     QuoteItemServiceItemSnapshot[]
+  invoiceItems             InvoiceItem[]
+  projects                 Project[]
+
+  @@index([quoteId, sortOrder])
+  @@map("quote_items")
+}
+
+model QuoteItemServiceItemSnapshot {
+  id                    String               @id @default(uuid()) @db.Uuid
+  quoteItemId           String               @db.Uuid
+  serviceItemRevisionId String?              @db.Uuid
+  itemCode              String
+  nameAr                String
+  nameEn                String
+  expectedOutput        String?
+  requiresFile          Boolean
+  deductHours           Boolean
+  sortOrder             Int                  @default(0)
+  createdAt             DateTime             @default(now())
+  quoteItem             QuoteItem            @relation(fields: [quoteItemId], references: [id], onDelete: Cascade)
+  serviceItemRevision   ServiceItemRevision? @relation(fields: [serviceItemRevisionId], references: [id], onDelete: SetNull)
+
+  @@unique([quoteItemId, itemCode])
+  @@map("quote_item_service_item_snapshots")
+}
+
+model Invoice {
+  id              String        @id @default(uuid()) @db.Uuid
+  invoiceNumber   String        @unique
+  quoteId         String        @db.Uuid
+  clientId        String        @db.Uuid
+  status          InvoiceStatus @default(DRAFT)
+  currency        String        @default("SAR")
+  issueDate       DateTime?
+  clientSnapshot  Json
+  paymentSnapshot Json?
+  discountTotal   Decimal       @default(0) @db.Decimal(18, 2)
+  finalDueNoTax   Decimal       @db.Decimal(18, 2)
+  issuedAt        DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  quote           Quote         @relation(fields: [quoteId], references: [id], onDelete: Restrict)
+  client          Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  items           InvoiceItem[]
+
+  @@index([clientId, status])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id           String     @id @default(uuid()) @db.Uuid
+  invoiceId    String     @db.Uuid
+  quoteItemId  String?    @db.Uuid
+  itemSnapshot Json
+  quantity     Decimal    @default(1) @db.Decimal(10, 2)
+  unitPrice    Decimal    @db.Decimal(18, 2)
+  discount     Decimal    @default(0) @db.Decimal(18, 2)
+  lineTotal    Decimal    @db.Decimal(18, 2)
+  sortOrder    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  invoice      Invoice    @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  quoteItem    QuoteItem? @relation(fields: [quoteItemId], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId, sortOrder])
+  @@map("invoice_items")
+}
+
+model Request {
+  id                    String               @id @default(uuid()) @db.Uuid
+  requestNumber         String               @unique
+  clientId              String               @db.Uuid
+  subscriptionServiceId String               @db.Uuid
+  serviceItemRevisionId String?              @db.Uuid
+  workflowVersionId     String               @db.Uuid
+  currentStateId        String               @db.Uuid
+  title                 String
+  description           String               @db.Text
+  priority              String
+  dueAt                 DateTime?
+  closedAt              DateTime?
+  archivedAt            DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  client                Client               @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  subscriptionService   SubscriptionService  @relation(fields: [subscriptionServiceId], references: [id], onDelete: Restrict)
+  serviceItemRevision   ServiceItemRevision? @relation(fields: [serviceItemRevisionId], references: [id], onDelete: Restrict)
+  workflowVersion       WorkflowVersion      @relation(fields: [workflowVersionId], references: [id], onDelete: Restrict)
+  currentState          WorkflowState        @relation("RequestCurrentState", fields: [currentStateId], references: [id], onDelete: Restrict)
+  tasks                 Task[]
+  comments              Comment[]
+  internalNotes         InternalNote[]
+  files                 FileMetadata[]
+  approvals             Approval[]
+  timeEntries           TimeEntry[]
+  workflowEvents        WorkflowEvent[]
+
+  @@index([clientId, currentStateId])
+  @@index([subscriptionServiceId])
+  @@index([dueAt])
+  @@map("requests")
+}
+
+model Project {
+  id                       String                 @id @default(uuid()) @db.Uuid
+  projectNumber            String                 @unique
+  clientId                 String                 @db.Uuid
+  quoteId                  String?                @db.Uuid
+  quoteItemId              String?                @db.Uuid
+  oneTimeServiceRevisionId String                 @db.Uuid
+  workflowVersionId        String                 @db.Uuid
+  currentStateId           String                 @db.Uuid
+  name                     String
+  status                   ProjectStatus          @default(DRAFT)
+  startsAt                 DateTime?
+  dueAt                    DateTime?
+  completedAt              DateTime?
+  closedAt                 DateTime?
+  archivedAt               DateTime?
+  serviceSnapshot          Json
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  client                   Client                 @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  quote                    Quote?                 @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  quoteItem                QuoteItem?             @relation(fields: [quoteItemId], references: [id], onDelete: SetNull)
+  oneTimeServiceRevision   OneTimeServiceRevision @relation(fields: [oneTimeServiceRevisionId], references: [id], onDelete: Restrict)
+  workflowVersion          WorkflowVersion        @relation(fields: [workflowVersionId], references: [id], onDelete: Restrict)
+  currentState             WorkflowState          @relation("ProjectCurrentState", fields: [currentStateId], references: [id], onDelete: Restrict)
+  outputs                  ProjectOutput[]
+  tasks                    Task[]
+  comments                 Comment[]
+  internalNotes            InternalNote[]
+  files                    FileMetadata[]
+  approvals                Approval[]
+  timeEntries              TimeEntry[]
+  workflowEvents           WorkflowEvent[]
+
+  @@index([clientId, status])
+  @@index([currentStateId, dueAt])
+  @@map("projects")
+}
+
+model ProjectOutput {
+  id            String         @id @default(uuid()) @db.Uuid
+  projectId     String         @db.Uuid
+  code          String
+  title         String
+  description   String?        @db.Text
+  status        OutputStatus   @default(DRAFT)
+  dueAt         DateTime?
+  sharedAt      DateTime?
+  approvedAt    DateTime?
+  lockedAt      DateTime?
+  revision      Int            @default(1)
+  sortOrder     Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  comments      Comment[]
+  internalNotes InternalNote[]
+  files         FileMetadata[]
+  approvals     Approval[]
+  timeEntries   TimeEntry[]
+
+  @@unique([projectId, code, revision])
+  @@index([projectId, status, sortOrder])
+  @@map("project_outputs")
+}
+
+model Task {
+  id          String    @id @default(uuid()) @db.Uuid
+  requestId   String?   @db.Uuid
+  projectId   String?   @db.Uuid
+  title       String
+  description String?   @db.Text
+  status      String
+  priority    String
+  assigneeId  String?   @db.Uuid
+  dueAt       DateTime?
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  request     Request?  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, status])
+  @@index([projectId, status])
+  @@index([assigneeId, status])
+  @@map("tasks")
+}
+
+model Comment {
+  id              String         @id @default(uuid()) @db.Uuid
+  authorId        String         @db.Uuid
+  requestId       String?        @db.Uuid
+  projectId       String?        @db.Uuid
+  outputId        String?        @db.Uuid
+  body            String         @db.Text
+  isClientVisible Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  author          User           @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  request         Request?       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  project         Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  output          ProjectOutput? @relation(fields: [outputId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, createdAt])
+  @@index([projectId, createdAt])
+  @@index([outputId, createdAt])
+  @@map("comments")
+}
+
+model InternalNote {
+  id        String         @id @default(uuid()) @db.Uuid
+  authorId  String         @db.Uuid
+  requestId String?        @db.Uuid
+  projectId String?        @db.Uuid
+  outputId  String?        @db.Uuid
+  body      String         @db.Text
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  author    User           @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  request   Request?       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  project   Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  output    ProjectOutput? @relation(fields: [outputId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, createdAt])
+  @@index([projectId, createdAt])
+  @@index([outputId, createdAt])
+  @@map("internal_notes")
+}
+
+model FileMetadata {
+  id              String         @id @default(uuid()) @db.Uuid
+  requestId       String?        @db.Uuid
+  projectId       String?        @db.Uuid
+  outputId        String?        @db.Uuid
+  uploadedById    String         @db.Uuid
+  storageProvider String
+  storageKey      String         @unique
+  originalName    String
+  mimeType        String
+  sizeBytes       BigInt
+  sha256          String
+  visibility      FileVisibility
+  version         Int            @default(1)
+  archivedAt      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  request         Request?       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  project         Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  output          ProjectOutput? @relation(fields: [outputId], references: [id], onDelete: Cascade)
+  uploadedBy      User           @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@index([requestId, visibility])
+  @@index([projectId, visibility])
+  @@index([outputId, visibility])
+  @@map("files_metadata")
+}
+
+model Approval {
+  id           String         @id @default(uuid()) @db.Uuid
+  requestId    String?        @db.Uuid
+  projectId    String?        @db.Uuid
+  outputId     String?        @db.Uuid
+  timeEntryId  String?        @db.Uuid
+  approvalType String
+  status       ApprovalStatus @default(PENDING)
+  actorRole    String
+  actorId      String?        @db.Uuid
+  reason       String?        @db.Text
+  decidedAt    DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  request      Request?       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  project      Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  output       ProjectOutput? @relation(fields: [outputId], references: [id], onDelete: Cascade)
+  timeEntry    TimeEntry?     @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, status])
+  @@index([projectId, status])
+  @@index([outputId, status])
+  @@index([timeEntryId, status])
+  @@map("approvals")
+}
+
+model TimeEntry {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  userId             String                  @db.Uuid
+  requestId          String?                 @db.Uuid
+  projectId          String?                 @db.Uuid
+  outputId           String?                 @db.Uuid
+  hours              Decimal                 @db.Decimal(10, 2)
+  billable           Boolean                 @default(true)
+  deductHours        Boolean                 @default(true)
+  status             TimeEntryStatus         @default(DRAFT)
+  workDate           DateTime
+  notes              String?                 @db.Text
+  submittedAt        DateTime?
+  decidedAt          DateTime?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  user               User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  request            Request?                @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  project            Project?                @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  output             ProjectOutput?          @relation(fields: [outputId], references: [id], onDelete: Restrict)
+  approvals          Approval[]
+  ledgerTransactions HourLedgerTransaction[]
+
+  @@index([userId, status, workDate])
+  @@index([requestId])
+  @@index([projectId])
+  @@map("time_entries")
+}
+
+model HourLedgerTransaction {
+  id            String                @id @default(uuid()) @db.Uuid
+  clientId      String                @db.Uuid
+  timeEntryId   String?               @db.Uuid
+  type          LedgerTransactionType
+  hours         Decimal               @db.Decimal(10, 2)
+  balanceBefore Decimal               @db.Decimal(10, 2)
+  balanceAfter  Decimal               @db.Decimal(10, 2)
+  referenceCode String                @unique
+  reason        String?               @db.Text
+  createdAt     DateTime              @default(now())
+  client        Client                @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  timeEntry     TimeEntry?            @relation(fields: [timeEntryId], references: [id], onDelete: Restrict)
+
+  @@index([clientId, createdAt])
+  @@map("hour_ledger_transactions")
+}
+
+model WorkflowEvent {
+  id                String              @id @default(uuid()) @db.Uuid
+  workflowVersionId String              @db.Uuid
+  transitionId      String?             @db.Uuid
+  requestId         String?             @db.Uuid
+  projectId         String?             @db.Uuid
+  fromStateId       String?             @db.Uuid
+  toStateId         String              @db.Uuid
+  actorId           String?             @db.Uuid
+  actorRole         String
+  reason            String?             @db.Text
+  metadata          Json?
+  occurredAt        DateTime            @default(now())
+  workflowVersion   WorkflowVersion     @relation(fields: [workflowVersionId], references: [id], onDelete: Restrict)
+  transition        WorkflowTransition? @relation(fields: [transitionId], references: [id], onDelete: SetNull)
+  request           Request?            @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  project           Project?            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fromState         WorkflowState?      @relation("WorkflowEventFromState", fields: [fromStateId], references: [id], onDelete: Restrict)
+  toState           WorkflowState       @relation("WorkflowEventToState", fields: [toStateId], references: [id], onDelete: Restrict)
+
+  @@index([requestId, occurredAt])
+  @@index([projectId, occurredAt])
+  @@map("workflow_events")
+}
+
+model Notification {
+  id          String             @id @default(uuid()) @db.Uuid
+  userId      String             @db.Uuid
+  event       String
+  targetType  String
+  targetId    String
+  messageAr   String?            @db.Text
+  messageEn   String?            @db.Text
+  deepLink    String
+  status      NotificationStatus @default(PENDING)
+  readAt      DateTime?
+  deliveredAt DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([targetType, targetId])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String        @id @default(uuid()) @db.Uuid
+  actorId    String?       @db.Uuid
+  eventCode  String
+  entityType String
+  entityId   String?
+  before     Json?
+  after      Json?
+  reason     String?       @db.Text
+  requestId  String?
+  ipAddress  String?
+  userAgent  String?       @db.Text
+  severity   AuditSeverity
+  occurredAt DateTime      @default(now())
+  actor      User?         @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, occurredAt])
+  @@index([actorId, occurredAt])
+  @@index([eventCode, occurredAt])
+  @@map("audit_logs")
+}
+
+model ImportJob {
+  id             String    @id @default(uuid()) @db.Uuid
+  type           String
+  sourceFileName String
+  sourceSha256   String
+  status         JobStatus @default(PENDING)
+  preview        Json?
+  errors         Json?
+  appliedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, createdAt])
+  @@map("import_jobs")
+}
+
+model ExportJob {
+  id         String    @id @default(uuid()) @db.Uuid
+  type       String
+  scope      Json
+  status     JobStatus @default(PENDING)
+  storageKey String?
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([status, createdAt])
+  @@map("export_jobs")
+}
+
+model OutboxEvent {
+  id            String    @id @default(uuid()) @db.Uuid
+  aggregateType String
+  aggregateId   String
+  eventType     String
+  payload       Json
+  occurredAt    DateTime  @default(now())
+  availableAt   DateTime  @default(now())
+  processedAt   DateTime?
+  attemptCount  Int       @default(0)
+  lastError     String?   @db.Text
+
+  @@index([processedAt, availableAt])
+  @@index([aggregateType, aggregateId])
+  @@map("outbox_events")
+}

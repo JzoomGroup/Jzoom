@@ -1,0 +1,36 @@
+{
+  "blueprintCode": "JZOOM-EXECUTION-CONTROL-V3",
+  "version": "V3",
+  "sourceFile": "jzoom-execution-control-v3.xlsx",
+  "sha256": "d9782cde70e313d08dab8fab5bf2aa0d370bc14317eadda6bf4f187ff3b86a47",
+  "createdDate": "2026-06-18",
+  "requiredSheets": [
+    "09_Permission_Matrix",
+    "12_Monthly_Services",
+    "13_Service_Items",
+    "14_One_Time_Services",
+    "15_Service_Levels",
+    "16_Pricing_Rules",
+    "18_Workflows",
+    "19_Documents_PDF",
+    "20_Notifications",
+    "24_Localization",
+    "36_Button_Action_Matrix",
+    "37_Screen_State_Matrix",
+    "38_Navigation_Routing",
+    "40_Form_Fields",
+    "41_Validation_Rules",
+    "42_PDF_Field_Mapping",
+    "43_Audit_Events",
+    "44_Notification_Templates",
+    "47_Seed_Data",
+    "48_Definition_of_Done",
+    "53_Service_Item_Level_Matrix",
+    "54_Service_Card_Display_Map",
+    "55_Package_Level_Summary"
+  ],
+  "additions": {
+    "routes": "additions/38_Navigation_Routing.csv",
+    "actions": "additions/36_Button_Action_Matrix.csv"
+  }
+}
