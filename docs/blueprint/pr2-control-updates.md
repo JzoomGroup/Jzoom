@@ -5,32 +5,37 @@ entries into the formal blueprint source before implementing any related route o
 
 ## Route Matrix additions
 
-| ID        | Route                                 | Access                                             | Purpose                                 |
-| --------- | ------------------------------------- | -------------------------------------------------- | --------------------------------------- |
-| ROUTE-019 | `/admin/clients/:id`                  | Admin, assigned AM, permitted Management read-only | Full client profile                     |
-| ROUTE-020 | `/admin/subscriptions`                | Admin, scoped AM                                   | Subscription administration and history |
-| ROUTE-021 | `/admin/pricing-rules`                | Admin                                              | Pricing and approval thresholds         |
-| ROUTE-022 | `/admin/workflows`                    | Admin                                              | Versioned workflow builder              |
-| ROUTE-023 | `/admin/hours-rules`                  | Admin                                              | Hours and balance rules                 |
-| ROUTE-024 | `/admin/import-export`                | Admin                                              | Transactional imports and safe exports  |
-| ROUTE-025 | `/admin/pdf-templates`                | Admin                                              | Versioned PDF configuration             |
-| ROUTE-026 | `/admin/notification-templates`       | Admin                                              | Localized notification templates        |
-| ROUTE-027 | `/admin/localization`                 | Admin                                              | Translation-label management            |
-| ROUTE-028 | `/pricing`                            | Admin, AM                                          | Quote list and commercial workspace     |
-| ROUTE-029 | `/pricing/:quoteId/client-setup`      | Admin, AM                                          | Quote client inputs                     |
-| ROUTE-030 | `/pricing/:quoteId/monthly-services`  | Admin, AM                                          | Monthly service selection               |
-| ROUTE-031 | `/pricing/:quoteId/one-time-services` | Admin, AM                                          | Build/Digital selection                 |
-| ROUTE-032 | `/pricing/:quoteId/review`            | Admin, AM                                          | Totals, overrides, and approvals        |
-| ROUTE-033 | `/pricing/:quoteId/issue`             | Admin, AM                                          | Documents and activation                |
-| ROUTE-034 | `/client/requests/new`                | Client                                             | Submit an eligible request              |
-| ROUTE-035 | `/specialist`                         | Specialist                                         | Assigned-work workspace                 |
-| ROUTE-036 | `/review`                             | Supervisor, permitted Admin                        | Review queue                            |
-| ROUTE-037 | `/projects/:id`                       | Scoped roles                                       | Project and output detail               |
-| ROUTE-038 | `/hours`                              | Scoped roles; Client when enabled                  | Time ledger                             |
-| ROUTE-039 | `/files`                              | Scoped authenticated roles                         | Protected file library                  |
-| ROUTE-040 | `/notifications`                      | All authenticated                                  | Deep-linked notifications               |
-| ROUTE-041 | `/profile`                            | All authenticated                                  | Personal settings and security          |
-| ROUTE-042 | `/client/documents`                   | Client                                             | Published quotes and invoices           |
+| ID        | Route                                 | Access                                             | Purpose                                  |
+| --------- | ------------------------------------- | -------------------------------------------------- | ---------------------------------------- |
+| ROUTE-019 | `/admin/clients/:id`                  | Admin, assigned AM, permitted Management read-only | Full client profile                      |
+| ROUTE-020 | `/admin/subscriptions`                | Admin, scoped AM                                   | Subscription administration and history  |
+| ROUTE-021 | `/admin/pricing-rules`                | Admin                                              | Pricing and approval thresholds          |
+| ROUTE-022 | `/admin/workflows`                    | Admin                                              | Versioned workflow builder               |
+| ROUTE-023 | `/admin/hours-rules`                  | Admin                                              | Hours and balance rules                  |
+| ROUTE-024 | `/admin/import-export`                | Admin                                              | Transactional imports and safe exports   |
+| ROUTE-025 | `/admin/pdf-templates`                | Admin                                              | Versioned PDF configuration              |
+| ROUTE-026 | `/admin/notification-templates`       | Admin                                              | Localized notification templates         |
+| ROUTE-027 | `/admin/localization`                 | Admin                                              | Translation-label management             |
+| ROUTE-028 | `/pricing`                            | Admin, AM                                          | Quote list and commercial workspace      |
+| ROUTE-029 | `/pricing/:quoteId/client-setup`      | Admin, AM                                          | Quote client inputs                      |
+| ROUTE-030 | `/pricing/:quoteId/monthly-services`  | Admin, AM                                          | Monthly service selection                |
+| ROUTE-031 | `/pricing/:quoteId/one-time-services` | Admin, AM                                          | Build/Digital selection                  |
+| ROUTE-032 | `/pricing/:quoteId/review`            | Admin, AM                                          | Totals, overrides, and approvals         |
+| ROUTE-033 | `/pricing/:quoteId/issue`             | Admin, AM                                          | Documents and activation                 |
+| ROUTE-034 | `/client/requests/new`                | Client                                             | Submit an eligible request               |
+| ROUTE-035 | `/specialist`                         | Specialist                                         | Assigned-work workspace                  |
+| ROUTE-036 | `/review`                             | Supervisor, permitted Admin                        | Review queue                             |
+| ROUTE-037 | `/projects/:id`                       | Scoped roles                                       | Project and output detail                |
+| ROUTE-038 | `/hours`                              | Scoped roles; Client when enabled                  | Time ledger                              |
+| ROUTE-039 | `/files`                              | Scoped authenticated roles                         | Protected file library                   |
+| ROUTE-040 | `/notifications`                      | All authenticated                                  | Deep-linked notifications                |
+| ROUTE-041 | `/profile`                            | All authenticated                                  | Personal settings and security           |
+| ROUTE-042 | `/client/documents`                   | Client                                             | Published quotes and invoices            |
+| ROUTE-043 | `/admin/catalog`                      | Admin                                              | Catalog administration shell             |
+| ROUTE-044 | `/admin/catalog/categories`           | Admin                                              | Monthly service category management      |
+| ROUTE-045 | `/admin/catalog/monthly-services`     | Admin                                              | Revision-safe monthly service management |
+| ROUTE-046 | `/admin/catalog/service-items`        | Admin                                              | Revision-safe service item management    |
+| ROUTE-047 | `/admin/catalog/service-levels`       | Admin                                              | Package and service-level management     |
 
 `/settings` remains the Admin-only platform-settings route. User preferences belong to `/profile`.
 
@@ -64,6 +69,15 @@ entries into the formal blueprint source before implementing any related route o
 | ACT-056 | Localization — Publish Revision         | Admin; publish complete revision      | Reason/audit; missing-translation errors              |
 | ACT-057 | Catalog — Reorder Entry                 | Admin; persist display order          | Audit; order-conflict errors                          |
 | ACT-058 | Catalog — Archive Entry                 | Admin; history-safe archive           | Reason/audit; dependency protection                   |
+| ACT-059 | Monthly Services — Add Service          | Admin; create stable record/revision  | Audit; duplicate/category/rate validation             |
+| ACT-060 | Monthly Services — Change Status        | Admin; lifecycle transition           | Reason/audit; preserve pinned revisions               |
+| ACT-061 | Monthly Categories — Add Category       | Admin; create editable category       | Audit; localized-name and unique-code validation      |
+| ACT-062 | Monthly Categories — Edit Category      | Admin; update labels/description      | Before/after audit; immutable code                    |
+| ACT-063 | Monthly Categories — Change Status      | Admin; lifecycle transition           | Dependency protection and audit                       |
+| ACT-064 | Service Items — Add Item                | Admin; create stable record/revision  | Audit; parent and package-matrix validation           |
+| ACT-065 | Service Items — Change Status           | Admin; lifecycle transition           | Reason/audit; preserve request and quote snapshots    |
+| ACT-066 | Service Levels — Add Level              | Admin; create package level           | Audit; localized labels and unique-code validation    |
+| ACT-067 | Service Levels — Change Status          | Admin; lifecycle transition           | Active dependency protection and audit                |
 
 ## Excel V3 inputs for PR 2
 

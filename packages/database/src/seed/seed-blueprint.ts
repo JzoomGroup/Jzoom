@@ -9,6 +9,7 @@ export interface BlueprintSeedResult {
   errorCount: number;
   counts: {
     monthlyServices: number;
+    monthlyServiceCategories: number;
     serviceItems: number;
     oneTimeServices: number;
     workflows: number;
@@ -21,12 +22,25 @@ function json(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
+function categoryCode(domain: string): string {
+  const slug = domain
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return `CAT-${slug || "GENERAL"}`;
+}
+
 export async function seedBlueprint(
   client: PrismaClient,
   blueprint: NormalizedBlueprint,
 ): Promise<BlueprintSeedResult> {
   const errorCount = blueprint.issues.filter((issue) => issue.severity === "ERROR").length;
   const warningCount = blueprint.issues.filter((issue) => issue.severity === "WARNING").length;
+  const monthlyServiceCategoryCount = new Set(
+    blueprint.monthlyServices.map((service) => service.domain),
+  ).size;
 
   if (errorCount > 0) {
     throw new Error(
@@ -46,6 +60,7 @@ export async function seedBlueprint(
       errorCount: existing.errorCount,
       counts: {
         monthlyServices: blueprint.monthlyServices.length,
+        monthlyServiceCategories: monthlyServiceCategoryCount,
         serviceItems: blueprint.serviceItems.length,
         oneTimeServices: blueprint.oneTimeServices.length,
         workflows: blueprint.workflows.length,
@@ -200,11 +215,33 @@ export async function seedBlueprint(
         levelIds.set(level.code, record.id);
       }
 
+      const categoryIds = new Map<string, string>();
+      for (const [sortOrder, domain] of [
+        ...new Set(blueprint.monthlyServices.map((service) => service.domain)),
+      ].entries()) {
+        const record = await tx.monthlyServiceCategory.upsert({
+          where: { code: categoryCode(domain) },
+          create: {
+            code: categoryCode(domain),
+            nameAr: domain,
+            nameEn: domain,
+            sortOrder,
+          },
+          update: {},
+        });
+        categoryIds.set(domain, record.id);
+      }
+
       const monthlyIds = new Map<string, string>();
       for (const service of blueprint.monthlyServices) {
+        const categoryId = categoryIds.get(service.domain);
+        if (!categoryId) {
+          throw new Error(`Normalized monthly service ${service.code} has no category.`);
+        }
         const stable = await tx.monthlyService.upsert({
           where: { code: service.code },
           create: {
+            categoryId,
             code: service.code,
             externalId: service.externalId,
             status: service.status,
@@ -866,6 +903,7 @@ export async function seedBlueprint(
     errorCount,
     counts: {
       monthlyServices: blueprint.monthlyServices.length,
+      monthlyServiceCategories: monthlyServiceCategoryCount,
       serviceItems: blueprint.serviceItems.length,
       oneTimeServices: blueprint.oneTimeServices.length,
       workflows: blueprint.workflows.length,

@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { DatabaseService } from "../database/database.service.js";
 import type { RequestMetadata } from "./auth.types.js";
 
-interface AuditEvent {
+export interface AuditEvent {
   actorId?: string;
   eventCode: string;
   entityType: string;
