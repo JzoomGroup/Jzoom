@@ -198,7 +198,7 @@ describeWithDatabase("PR 3 PostgreSQL authentication and RBAC", () => {
 
     const { agent } = await login("client@pr3.test");
     const response = await agent.get("/api/v1/auth/access/admin").expect(403);
-    expect(response.body.code).toBe("PERMISSION_DENIED");
+    expect(response.body.code).toBe("ROLE_DENIED");
   });
 
   it("requires CSRF and revokes the current session on logout", async () => {
