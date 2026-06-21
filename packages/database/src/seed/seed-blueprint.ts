@@ -459,6 +459,7 @@ export async function seedBlueprint(
             sourceBlueprintImportId: blueprintImport.id,
             version: 1,
             status: "ACTIVE",
+            effectiveFrom: new Date(blueprint.effectiveFrom),
             rule: rule.rule,
             errorMessageAr: rule.errorMessageAr,
             errorMessageEn: rule.errorMessageEn,

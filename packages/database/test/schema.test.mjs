@@ -42,6 +42,11 @@ test("migration enforces active revision and polymorphic integrity constraints",
 
   assert.match(migration, /monthly_service_revisions_one_active/);
   assert.match(migration, /service_item_revisions_one_active/);
+  assert.match(migration, /validation_rule_revisions_one_active/);
+  assert.match(
+    migration,
+    /CREATE TABLE "validation_rule_revisions"[\s\S]*"effectiveTo" TIMESTAMP\(3\)/,
+  );
   assert.match(migration, /workflow_versions_one_active/);
   assert.match(migration, /quote_items_exactly_one_service/);
   assert.match(migration, /workflow_events_exactly_one_parent/);

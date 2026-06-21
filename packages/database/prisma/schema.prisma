@@ -737,6 +737,8 @@ model ValidationRuleRevision {
   sourceBlueprintImportId String?          @db.Uuid
   version                 Int
   status                  RevisionStatus   @default(DRAFT)
+  effectiveFrom           DateTime?
+  effectiveTo             DateTime?
   rule                    String           @db.Text
   errorMessageAr          String?
   errorMessageEn          String?
@@ -749,6 +751,7 @@ model ValidationRuleRevision {
   sourceBlueprintImport   BlueprintImport? @relation(fields: [sourceBlueprintImportId], references: [id], onDelete: SetNull)
 
   @@unique([validationRuleId, version])
+  @@index([validationRuleId, status, effectiveFrom])
   @@map("validation_rule_revisions")
 }
 

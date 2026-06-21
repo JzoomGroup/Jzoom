@@ -540,6 +540,8 @@ CREATE TABLE "validation_rule_revisions" (
     "sourceBlueprintImportId" UUID,
     "version" INTEGER NOT NULL,
     "status" "RevisionStatus" NOT NULL DEFAULT 'DRAFT',
+    "effectiveFrom" TIMESTAMP(3),
+    "effectiveTo" TIMESTAMP(3),
     "rule" TEXT NOT NULL,
     "errorMessageAr" TEXT,
     "errorMessageEn" TEXT,
@@ -1493,6 +1495,9 @@ CREATE INDEX "validation_rules_entity_field_status_idx" ON "validation_rules"("e
 
 -- CreateIndex
 CREATE UNIQUE INDEX "validation_rule_revisions_validationRuleId_version_key" ON "validation_rule_revisions"("validationRuleId", "version");
+
+-- CreateIndex
+CREATE INDEX "validation_rule_revisions_validationRuleId_status_effectiveFrom_idx" ON "validation_rule_revisions"("validationRuleId", "status", "effectiveFrom");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "workflow_definitions_code_key" ON "workflow_definitions"("code");
