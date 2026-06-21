@@ -35,6 +35,11 @@ select {
   font: inherit;
 }
 
+button,
+.text-link {
+  cursor: pointer;
+}
+
 .foundation-shell {
   display: grid;
   min-height: 100vh;
@@ -140,6 +145,115 @@ h1 {
 
 .scope-note span {
   color: var(--muted);
+}
+
+.auth-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: min(520px, 100%);
+  padding: clamp(28px, 6vw, 52px);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 28px 80px rgba(13, 19, 33, 0.09);
+}
+
+.auth-card .brand-mark {
+  margin-bottom: 24px;
+}
+
+.auth-card h1 {
+  font-size: clamp(32px, 7vw, 48px);
+}
+
+.auth-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 28px;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 8px;
+  color: var(--jzoom-gray);
+  font-weight: 750;
+}
+
+.auth-form input {
+  width: 100%;
+  min-height: 48px;
+  padding: 11px 13px;
+  border: 1px solid rgba(13, 19, 33, 0.22);
+  border-radius: 12px;
+  background: white;
+  color: var(--jzoom-navy);
+}
+
+.auth-form input:focus {
+  outline: 3px solid rgba(255, 90, 77, 0.2);
+  border-color: var(--jzoom-coral);
+}
+
+.auth-form button,
+.secondary-button {
+  min-height: 48px;
+  padding: 11px 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--jzoom-navy);
+  color: white;
+  font-weight: 800;
+}
+
+.auth-form button:disabled,
+.secondary-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.secondary-button {
+  margin-top: 24px;
+}
+
+.form-error {
+  margin: 0;
+  color: #a31b12;
+  font-weight: 700;
+}
+
+.profile-list {
+  display: grid;
+  gap: 12px;
+  margin: 28px 0 0;
+}
+
+.profile-list div {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.profile-list dt {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.profile-list dd {
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.text-link {
+  color: var(--jzoom-coral);
+  font-weight: 800;
 }
 
 @media (max-width: 680px) {

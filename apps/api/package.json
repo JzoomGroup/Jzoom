@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "bootstrap:admin": "tsx scripts/bootstrap-admin.ts",
     "dev": "tsx watch src/main.ts",
     "lint": "eslint src scripts test",
     "openapi:generate": "tsx scripts/generate-openapi.ts",

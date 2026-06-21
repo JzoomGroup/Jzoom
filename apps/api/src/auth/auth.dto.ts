@@ -1,0 +1,108 @@
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  MaxLength,
+  MinLength,
+} from "class-validator";
+
+const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{12,}$/;
+
+export class LoginDto {
+  @ApiProperty({ type: String, example: "person@example.com" })
+  @IsEmail()
+  email!: string;
+
+  @ApiProperty({ type: String, format: "password", minLength: 12 })
+  @IsString()
+  @MaxLength(256)
+  password!: string;
+}
+
+export class PasswordResetRequestDto {
+  @ApiProperty({ type: String, example: "person@example.com" })
+  @IsEmail()
+  email!: string;
+}
+
+export class PasswordResetConfirmDto {
+  @ApiProperty({ type: String })
+  @IsString()
+  @MinLength(20)
+  token!: string;
+
+  @ApiProperty({ type: String, format: "password", minLength: 12 })
+  @Matches(PASSWORD_PATTERN, {
+    message: "password must contain upper-case, lower-case, and numeric characters",
+  })
+  @MaxLength(256)
+  password!: string;
+}
+
+export class AcceptInvitationDto extends PasswordResetConfirmDto {
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  displayName?: string;
+}
+
+export class InviteUserDto {
+  @ApiProperty({ type: String, example: "person@example.com" })
+  @IsEmail()
+  email!: string;
+
+  @ApiProperty({ type: String })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  displayName!: string;
+
+  @ApiProperty({ type: String, enum: ["INTERNAL", "EXTERNAL"] })
+  @IsIn(["INTERNAL", "EXTERNAL"])
+  userType!: "INTERNAL" | "EXTERNAL";
+
+  @ApiProperty({ type: [String], example: ["ROLE-SPECIALIST"] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(10)
+  @IsString({ each: true })
+  roleCodes!: string[];
+}
+
+export class UpdateUserStatusDto {
+  @ApiProperty({ type: String, enum: ["ACTIVE", "DISABLED", "ARCHIVED"] })
+  @IsIn(["ACTIVE", "DISABLED", "ARCHIVED"])
+  status!: "ACTIVE" | "DISABLED" | "ARCHIVED";
+}
+
+export class ReplaceUserRolesDto {
+  @ApiProperty({ type: [String] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(10)
+  @IsString({ each: true })
+  roleCodes!: string[];
+}
+
+export class ReplaceRolePermissionsDto {
+  @ApiProperty({ type: [String] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(200)
+  @IsString({ each: true })
+  permissionCodes!: string[];
+}
+
+export class UserIdParamDto {
+  @IsUUID()
+  userId!: string;
+}

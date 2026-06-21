@@ -23,6 +23,12 @@ export function configureApiApplication(
 
   app.use(requestIdMiddleware.use.bind(requestIdMiddleware));
   app.setGlobalPrefix("api/v1");
+  app.enableCors({
+    origin: environment.webOrigin,
+    credentials: true,
+    allowedHeaders: ["Content-Type", "X-CSRF-Token", "X-Request-Id"],
+    exposedHeaders: ["X-Request-Id"],
+  });
   app.enableShutdownHooks();
   app.useGlobalPipes(
     new ValidationPipe({

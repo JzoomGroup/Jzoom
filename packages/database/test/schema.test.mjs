@@ -52,3 +52,26 @@ test("migration enforces active revision and polymorphic integrity constraints",
   assert.match(migration, /workflow_events_exactly_one_parent/);
   assert.match(migration, /setupFeePct" <= 100/);
 });
+
+test("PR 3 schema stores revocable sessions and one-time auth tokens", async () => {
+  const schema = await readFile(
+    path.join(workspaceRoot, "packages/database/prisma/schema.prisma"),
+    "utf8",
+  );
+  const migration = await readFile(
+    path.join(
+      workspaceRoot,
+      "packages/database/prisma/migrations/202606210002_pr3_auth_rbac/migration.sql",
+    ),
+    "utf8",
+  );
+
+  assert.match(schema, /model AuthSession \{/);
+  assert.match(schema, /tokenHash\s+String\s+@unique/);
+  assert.match(schema, /csrfTokenHash\s+String/);
+  assert.match(schema, /model AuthToken \{/);
+  assert.match(schema, /enum AuthTokenType \{/);
+  assert.match(migration, /CREATE TABLE "auth_sessions"/);
+  assert.match(migration, /CREATE TABLE "auth_tokens"/);
+  assert.match(migration, /ON DELETE CASCADE/);
+});

@@ -6,7 +6,10 @@ export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
     .setTitle("Jzoom Operating Platform API")
     .setDescription("REST API foundation for the Jzoom Operating Platform.")
     .setVersion("1.0")
+    .addCookieAuth("jzoom_session")
+    .addApiKey({ type: "apiKey", in: "header", name: "X-CSRF-Token" }, "csrf")
     .addTag("health", "Process and dependency health checks")
+    .addTag("authentication", "Authentication, sessions, and authorization")
     .build();
 
   return SwaggerModule.createDocument(app, configuration, {

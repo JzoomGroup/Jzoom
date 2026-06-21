@@ -14,6 +14,10 @@ export class DatabaseService implements OnModuleDestroy {
     await this.client.$queryRaw`SELECT 1`;
   }
 
+  get prisma(): JzoomDatabaseClient {
+    return this.client;
+  }
+
   async onModuleDestroy(): Promise<void> {
     await this.client.$disconnect();
   }
