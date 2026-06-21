@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { LogoutButton } from "../../components/logout-button";
 import { getCurrentUser, hasBackendAdminAccess } from "../../lib/auth";
 import { protectedRouteRedirect } from "../../lib/route-access";
@@ -21,6 +22,9 @@ export default async function SettingsPage() {
         <p className="lead">
           Access is enforced by the API. Configuration modules will be added in their approved PRs.
         </p>
+        <Link className="button-link" href="/admin/catalog">
+          Open Admin Console
+        </Link>
         <LogoutButton />
       </section>
     </main>
