@@ -70,6 +70,14 @@ describeWithDatabase("PR 6 pricing rules and Pricing Studio APIs", () => {
     await database.pricingRule.deleteMany({
       where: { code: { startsWith: "PR6-" } },
     });
+    await database.clientAssignment.deleteMany({
+      where: {
+        OR: [
+          { user: { email: { endsWith: "@pr6.test" } } },
+          { client: { code: { startsWith: "PR6-" } } },
+        ],
+      },
+    });
     await database.user.deleteMany({
       where: { email: { endsWith: "@pr6.test" } },
     });
