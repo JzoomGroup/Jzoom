@@ -28,10 +28,15 @@ export function InvoiceDetail({ initialInvoice }: { initialInvoice: Invoice }) {
           </p>
         </div>
         <div className="quote-header-actions">
-          <span className={`status-badge status-${invoice.status.toLowerCase()}`}>
+          <span
+            className={`status-badge status-${invoice.status.toLowerCase()}`}
+          >
             {invoice.status}
           </span>
-          <Link className="button-secondary" href={`/pricing/quotes/${invoice.quoteId}`}>
+          <Link
+            className="button-secondary"
+            href={`/pricing/quotes/${invoice.quoteId}`}
+          >
             Source quote
           </Link>
           <Link className="button-secondary" href="/pricing/invoices">
@@ -45,8 +50,8 @@ export function InvoiceDetail({ initialInvoice }: { initialInvoice: Invoice }) {
           <div>
             <h2>Lifecycle</h2>
             <p>
-              Invoice issuance, cancellation, and voiding are audited and never rewrite invoice
-              content.
+              Invoice issuance, cancellation, and voiding are audited and never
+              rewrite invoice content.
             </p>
           </div>
           <InvoiceLifecycleActions
@@ -94,7 +99,11 @@ export function InvoiceDetail({ initialInvoice }: { initialInvoice: Invoice }) {
             </div>
             <div>
               <dt>Issue date</dt>
-              <dd>{invoice.issueDate ? new Date(invoice.issueDate).toLocaleDateString("en-SA") : "—"}</dd>
+              <dd>
+                {invoice.issueDate
+                  ? new Date(invoice.issueDate).toLocaleDateString("en-SA")
+                  : "—"}
+              </dd>
             </div>
             <div>
               <dt>Status note</dt>
@@ -128,11 +137,18 @@ export function InvoiceDetail({ initialInvoice }: { initialInvoice: Invoice }) {
                 <tr key={item.id}>
                   <td>
                     <strong>{item.itemSnapshot.serviceSnapshot.nameEn}</strong>
-                    <small>{item.itemSnapshot.serviceSnapshot.serviceCode}</small>
+                    <small>
+                      {item.itemSnapshot.serviceSnapshot.serviceCode}
+                    </small>
                   </td>
                   <td>
-                    {item.itemSnapshot.lineType === "MONTHLY" ? "Monthly" : "One-time"}
-                    <small>{item.itemSnapshot.serviceSnapshot.serviceLevelLabel ?? "—"}</small>
+                    {item.itemSnapshot.lineType === "MONTHLY"
+                      ? "Monthly"
+                      : "One-time"}
+                    <small>
+                      {item.itemSnapshot.serviceSnapshot.serviceLevelLabel ??
+                        "—"}
+                    </small>
                   </td>
                   <td>{item.quantity}</td>
                   <td>{sar(item.unitPrice)}</td>
@@ -157,8 +173,8 @@ export function InvoiceDetail({ initialInvoice }: { initialInvoice: Invoice }) {
           </div>
         </div>
         <p className="pricing-muted">
-          This foundation does not generate invoice PDFs, tax QR codes, e-invoicing artifacts, or
-          payment status.
+          This foundation does not generate invoice PDFs, tax QR codes,
+          e-invoicing artifacts, or payment status.
         </p>
       </section>
     </>
