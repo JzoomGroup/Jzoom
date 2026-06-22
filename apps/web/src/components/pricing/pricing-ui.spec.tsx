@@ -8,9 +8,10 @@ import { PricingRuleManager } from "./pricing-rule-manager";
 import { PricingStudio } from "./pricing-studio";
 
 const replaceMock = jest.fn();
+const pushMock = jest.fn();
 
 jest.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: replaceMock }),
+  useRouter: () => ({ replace: replaceMock, push: pushMock }),
 }));
 
 function rulesSnapshot(): PricingRulesSnapshot {
@@ -175,6 +176,7 @@ function jsonResponse(body: unknown, status = 200): Promise<Response> {
 describe("PR 6 pricing UI", () => {
   beforeEach(() => {
     replaceMock.mockReset();
+    pushMock.mockReset();
     Object.defineProperty(global, "fetch", {
       configurable: true,
       writable: true,
@@ -272,5 +274,37 @@ describe("PR 6 pricing UI", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     expect(fetchMock.mock.calls[1]?.[0]).toBe("http://localhost:4000/api/v1/pricing/drafts");
     expect(replaceMock).toHaveBeenCalledWith(`/pricing/${draft.id}`);
+  });
+
+  it("creates a quote snapshot from a saved pricing draft", async () => {
+    const fetchMock = jest.mocked(fetch);
+    const draft = savedDraft();
+    fetchMock.mockImplementationOnce(() =>
+      jsonResponse({ id: "66666666-6666-4666-8666-666666666666" }, 201),
+    );
+
+    render(
+      <PricingStudio
+        displayName="Pricing Admin"
+        isAdmin
+        initialCatalog={studioCatalog()}
+        initialDrafts={[]}
+        initialDraft={draft}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Create quote" }));
+    fireEvent.change(screen.getByLabelText("Payment terms"), {
+      target: { value: "50% upfront" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create quote snapshot" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("http://localhost:4000/api/v1/quotes");
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
+      pricingDraftId: draft.id,
+      validityDays: 30,
+      terms: { paymentTerms: "50% upfront" },
+    });
+    expect(pushMock).toHaveBeenCalledWith("/pricing/quotes/66666666-6666-4666-8666-666666666666");
   });
 });

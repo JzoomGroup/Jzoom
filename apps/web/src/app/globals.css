@@ -1302,6 +1302,176 @@ h1 {
   min-width: 720px;
 }
 
+.quote-create-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 20px;
+  padding: 18px;
+  border: 1px solid rgba(255, 90, 77, 0.3);
+  border-radius: 15px;
+  background: #fff8f5;
+}
+
+.quote-create-form > div:first-child,
+.quote-create-form .form-actions {
+  grid-column: 1 / -1;
+}
+
+.quote-create-form h3,
+.quote-create-form p {
+  margin: 0;
+}
+
+.quote-create-form p {
+  margin-top: 5px;
+  color: var(--muted);
+}
+
+.quote-create-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--jzoom-gray);
+  font-weight: 750;
+}
+
+.quote-create-form input,
+.quote-create-form textarea {
+  min-height: 44px;
+  padding: 9px 11px;
+  border: 1px solid rgba(13, 19, 33, 0.2);
+  border-radius: 10px;
+  background: white;
+}
+
+.quote-main {
+  width: min(1440px, 100%);
+  margin: 0 auto;
+  padding: clamp(22px, 4vw, 48px);
+}
+
+.quote-list-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.quote-list-grid > a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: #faf9f5;
+  color: var(--jzoom-navy);
+  text-decoration: none;
+}
+
+.quote-list-grid > a:hover {
+  border-color: rgba(255, 90, 77, 0.5);
+  background: white;
+}
+
+.quote-list-grid h2,
+.quote-list-grid p {
+  margin: 4px 0 0;
+}
+
+.quote-list-grid p,
+.quote-list-grid small {
+  color: var(--muted);
+}
+
+.quote-list-meta {
+  display: grid;
+  justify-items: end;
+  gap: 7px;
+  text-align: end;
+}
+
+.quote-header-actions,
+.quote-lifecycle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.quote-header-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.quote-lifecycle h2,
+.quote-lifecycle p {
+  margin: 0;
+}
+
+.quote-lifecycle p {
+  margin-top: 6px;
+  color: var(--muted);
+}
+
+.quote-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.quote-definition-list {
+  display: grid;
+  gap: 12px;
+  margin: 18px 0 0;
+}
+
+.quote-definition-list div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.quote-definition-list dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.quote-definition-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.quote-service-items {
+  margin: 8px 0 0;
+  padding-inline-start: 18px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.status-issued {
+  background: #e8efff;
+  color: #234b91;
+}
+
+.status-accepted {
+  background: #e3f5ea;
+  color: #15683a;
+}
+
+.status-rejected,
+.status-cancelled {
+  background: #fff0ed;
+  color: #9c2017;
+}
+
+.status-expired {
+  background: #eceef2;
+  color: #575f6c;
+}
+
 @media (max-width: 680px) {
   .foundation-shell {
     align-items: start;
@@ -1409,8 +1579,32 @@ h1 {
 
   .pricing-service-grid,
   .pricing-total-grid,
-  .pricing-selection-fields {
+  .pricing-selection-fields,
+  .quote-create-form,
+  .quote-summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .quote-create-form > div:first-child,
+  .quote-create-form .form-actions {
+    grid-column: auto;
+  }
+
+  .quote-list-grid > a,
+  .quote-header-actions,
+  .quote-lifecycle {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .quote-list-meta {
+    justify-items: start;
+    text-align: start;
+  }
+
+  .quote-definition-list div {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 
   .pricing-draft-identity {

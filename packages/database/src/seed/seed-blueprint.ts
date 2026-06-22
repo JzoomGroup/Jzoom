@@ -273,6 +273,14 @@ export async function seedBlueprint(
           description: "Create, calculate, save, and reload scoped pricing drafts.",
           roleCodes: ["ROLE-ADMIN", "ROLE-AM"],
         },
+        {
+          code: "PERM-MANAGE-QUOTES",
+          name: "Manage Quotes",
+          action: "manage_quotes",
+          description:
+            "Create immutable quotes from scoped pricing drafts and manage quote lifecycle.",
+          roleCodes: ["ROLE-ADMIN", "ROLE-AM"],
+        },
       ] as const;
       for (const [index, permission] of pricingPermissions.entries()) {
         const record = await tx.permission.upsert({

@@ -74,6 +74,8 @@ enum QuoteStatus {
   CALCULATED
   NEEDS_APPROVAL
   ISSUED
+  ACCEPTED
+  REJECTED
   APPROVED
   EXPIRED
   CANCELLED
@@ -332,6 +334,7 @@ model User {
   createdAuthTokens    AuthToken[]              @relation("AuthTokenCreator")
   createdPricingDrafts PricingDraft[]           @relation("PricingDraftCreator")
   updatedPricingDrafts PricingDraft[]           @relation("PricingDraftUpdater")
+  createdQuotes        Quote[]                  @relation("QuoteCreator")
 
   @@index([status])
   @@index([lockedUntil])
@@ -870,6 +873,7 @@ model PricingDraft {
   createdBy           User               @relation("PricingDraftCreator", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy           User?              @relation("PricingDraftUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
   items               PricingDraftItem[]
+  quotes              Quote[]
 
   @@index([clientId, status, updatedAt])
   @@index([createdById, status, updatedAt])
@@ -1394,31 +1398,50 @@ model SubscriptionServiceHistory {
 }
 
 model Quote {
-  id              String      @id @default(uuid()) @db.Uuid
-  quoteNumber     String      @unique
-  clientId        String?     @db.Uuid
-  status          QuoteStatus @default(DRAFT)
-  currency        String      @default("SAR")
-  issueDate       DateTime?
-  validUntil      DateTime?
-  clientSnapshot  Json
-  subtotalMonthly Decimal     @default(0) @db.Decimal(18, 2)
-  subtotalSetup   Decimal     @default(0) @db.Decimal(18, 2)
-  subtotalOneTime Decimal     @default(0) @db.Decimal(18, 2)
-  discountTotal   Decimal     @default(0) @db.Decimal(18, 2)
-  finalDueNoTax   Decimal     @default(0) @db.Decimal(18, 2)
-  internalCost    Decimal     @default(0) @db.Decimal(18, 2)
-  margin          Decimal     @default(0) @db.Decimal(18, 2)
-  lockedAt        DateTime?
-  approvedAt      DateTime?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  client          Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  items           QuoteItem[]
-  invoices        Invoice[]
-  projects        Project[]
+  id                   String        @id @default(uuid()) @db.Uuid
+  quoteNumber          String        @unique
+  clientId             String?       @db.Uuid
+  sourcePricingDraftId String?       @db.Uuid
+  createdById          String?       @db.Uuid
+  sourceDraftVersion   Int?
+  status               QuoteStatus   @default(DRAFT)
+  currency             String        @default("SAR")
+  issueDate            DateTime?
+  validUntil           DateTime?
+  clientSnapshot       Json
+  pricingSnapshot      Json?
+  pricingRulesSnapshot Json?
+  termsSnapshot        Json?
+  sourceDraftSnapshot  Json?
+  totalsSnapshot       Json?
+  snapshotHash         String?
+  subtotalMonthly      Decimal       @default(0) @db.Decimal(18, 2)
+  subtotalSetup        Decimal       @default(0) @db.Decimal(18, 2)
+  subtotalOneTime      Decimal       @default(0) @db.Decimal(18, 2)
+  discountTotal        Decimal       @default(0) @db.Decimal(18, 2)
+  finalDueNoTax        Decimal       @default(0) @db.Decimal(18, 2)
+  internalCost         Decimal       @default(0) @db.Decimal(18, 2)
+  margin               Decimal       @default(0) @db.Decimal(18, 2)
+  lockedAt             DateTime?
+  approvedAt           DateTime?
+  acceptedAt           DateTime?
+  rejectedAt           DateTime?
+  expiredAt            DateTime?
+  cancelledAt          DateTime?
+  statusReason         String?       @db.Text
+  statusChangedAt      DateTime      @default(now())
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  client               Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  sourcePricingDraft   PricingDraft? @relation(fields: [sourcePricingDraftId], references: [id], onDelete: Restrict)
+  createdBy            User?         @relation("QuoteCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  items                QuoteItem[]
+  invoices             Invoice[]
+  projects             Project[]
 
   @@index([clientId, status])
+  @@index([sourcePricingDraftId])
+  @@index([createdById, status])
   @@index([status, validUntil])
   @@map("quotes")
 }
