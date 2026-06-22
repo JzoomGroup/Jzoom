@@ -49,7 +49,7 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
   let database: JzoomDatabaseClient;
   let clientId: string;
   let otherClientId: string;
-  let adminId: string;
+  let accountManagerId: string;
 
   async function login(email: string) {
     const agent = request.agent(app.getHttpServer());
@@ -66,19 +66,18 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
     const blueprint = await normalizeBlueprint(path.join(workspaceRoot, "data", "blueprints"));
     await seedBlueprint(database, blueprint);
 
-    const [adminRole, accountManagerRole, clientRole, quotePermission] = await Promise.all([
-      database.role.findUniqueOrThrow({ where: { code: "ROLE-ADMIN" } }),
+    const [accountManagerRole, clientRole, quotePermission] = await Promise.all([
       database.role.findUniqueOrThrow({ where: { code: "ROLE-AM" } }),
       database.role.findUniqueOrThrow({ where: { code: "ROLE-CLIENT" } }),
       database.permission.findUniqueOrThrow({ where: { code: "PERM-MANAGE-QUOTES" } }),
     ]);
-    for (const roleId of [adminRole.id, accountManagerRole.id]) {
-      await database.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId, permissionId: quotePermission.id } },
-        create: { roleId, permissionId: quotePermission.id, effect: "ALLOW" },
-        update: { effect: "ALLOW" },
-      });
-    }
+    await database.rolePermission.upsert({
+      where: {
+        roleId_permissionId: { roleId: accountManagerRole.id, permissionId: quotePermission.id },
+      },
+      create: { roleId: accountManagerRole.id, permissionId: quotePermission.id, effect: "ALLOW" },
+      update: { effect: "ALLOW" },
+    });
 
     const passwordHash = await new PasswordHasherService().hash("StrongPassword123");
     const [client, otherClient] = await Promise.all([
@@ -104,17 +103,7 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
     clientId = client.id;
     otherClientId = otherClient.id;
 
-    const [admin, accountManager, clientUser] = await Promise.all([
-      database.user.create({
-        data: {
-          email: "admin@pr7.test",
-          displayName: "PR7 Admin",
-          userType: "INTERNAL",
-          status: "ACTIVE",
-          passwordHash,
-          passwordChangedAt: new Date(),
-        },
-      }),
+    const [accountManager, clientUser] = await Promise.all([
       database.user.create({
         data: {
           email: "am@pr7.test",
@@ -136,10 +125,9 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
         },
       }),
     ]);
-    adminId = admin.id;
+    accountManagerId = accountManager.id;
     await database.userRole.createMany({
       data: [
-        { userId: admin.id, roleId: adminRole.id },
         { userId: accountManager.id, roleId: accountManagerRole.id },
         { userId: clientUser.id, roleId: clientRole.id },
       ],
@@ -172,7 +160,7 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
       data: {
         draftNumber: "PR7-OTHER-DRAFT",
         clientId: otherClientId,
-        createdById: adminId,
+        createdById: accountManagerId,
         currency: "SAR",
         pricingDate: new Date(),
         title: "Other client draft",
@@ -201,15 +189,30 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
   });
 
   it("creates a complete immutable snapshot and preserves it after source changes", async () => {
-    const admin = await login("admin@pr7.test");
-    await admin.agent
-      .post("/api/v1/admin/pricing-rules")
-      .set("X-CSRF-Token", admin.csrf)
-      .send({
+    const taxRule = await database.pricingRule.upsert({
+      where: { code: "PR7-TAX-SNAPSHOT" },
+      create: {
         code: "PR7-TAX-SNAPSHOT",
         name: "PR7 Snapshot Tax",
         status: "ACTIVE",
         sortOrder: 900,
+      },
+      update: {
+        name: "PR7 Snapshot Tax",
+        status: "ACTIVE",
+        sortOrder: 900,
+        archivedAt: null,
+      },
+    });
+    await database.pricingRuleRevision.upsert({
+      where: { pricingRuleId_version: { pricingRuleId: taxRule.id, version: 1 } },
+      create: {
+        pricingRuleId: taxRule.id,
+        version: 1,
+        status: "ACTIVE",
+        effectiveFrom: new Date(Date.now() - 60_000),
+        formulaOrRule: "final_before_tax * 1%",
+        appliesTo: "PR7 quote snapshot test",
         ruleType: "TAX",
         calculationMethod: "PERCENTAGE",
         value: 1,
@@ -218,12 +221,23 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
         priority: 900,
         isStackable: true,
         isEnabled: true,
+      },
+      update: {
+        status: "ACTIVE",
+        effectiveFrom: new Date(Date.now() - 60_000),
+        effectiveTo: null,
         formulaOrRule: "final_before_tax * 1%",
         appliesTo: "PR7 quote snapshot test",
-        effectiveFrom: new Date(Date.now() - 60_000).toISOString(),
-        revisionStatus: "ACTIVE",
-      })
-      .expect(201);
+        ruleType: "TAX",
+        calculationMethod: "PERCENTAGE",
+        value: 1,
+        currency: "SAR",
+        targetType: "ALL",
+        priority: 900,
+        isStackable: true,
+        isEnabled: true,
+      },
+    });
 
     const accountManager = await login("am@pr7.test");
     const catalog = await accountManager.agent.get("/api/v1/pricing/catalog").expect(200);
