@@ -134,6 +134,9 @@ describe("PR 1 API foundation", () => {
 
     expect(document.paths["/api/v1/health/live"]).toBeDefined();
     expect(document.paths["/api/v1/health/ready"]).toBeDefined();
+    expect(document.paths["/api/v1/admin/catalog/one-time"]).toBeDefined();
+    expect(document.paths["/api/v1/services/one-time"]).toBeDefined();
+    expect(document.paths["/api/v1/services/one-time/{id}/template"]).toBeDefined();
     expect(document.components?.schemas?.ApiErrorResponseDto).toBeDefined();
   });
 

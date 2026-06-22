@@ -28,3 +28,5 @@ ROUTE-044,/admin/catalog/categories,Monthly Service Categories,Admin,Yes,More,Ad
 ROUTE-045,/admin/catalog/monthly-services,Monthly Services Admin,Admin,Yes,More,Admin only,/403,Admin Console
 ROUTE-046,/admin/catalog/service-items,Service Items Admin,Admin,Yes,More,Admin only,/403,Admin Console
 ROUTE-047,/admin/catalog/service-levels,Service Levels Admin,Admin,Yes,More,Admin only,/403,Admin Console
+ROUTE-048,/admin/catalog/one-time-services,One-Time Services Admin,Admin,Yes,More,Admin only,/403,Admin Console
+ROUTE-049,/admin/catalog/one-time-categories,One-Time Service Categories,Admin,Yes,More,Admin only,/403,Admin Console

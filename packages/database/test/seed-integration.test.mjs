@@ -28,6 +28,7 @@ test(
         items: await database.serviceItem.count(),
         itemRevisions: await database.serviceItemRevision.count(),
         oneTime: await database.oneTimeService.count(),
+        oneTimeCategories: await database.oneTimeServiceCategory.count(),
         workflows: await database.workflowDefinition.count(),
         routes: await database.routeDefinition.count(),
         actions: await database.actionDefinition.count(),
@@ -43,6 +44,7 @@ test(
         items: await database.serviceItem.count(),
         itemRevisions: await database.serviceItemRevision.count(),
         oneTime: await database.oneTimeService.count(),
+        oneTimeCategories: await database.oneTimeServiceCategory.count(),
         workflows: await database.workflowDefinition.count(),
         routes: await database.routeDefinition.count(),
         actions: await database.actionDefinition.count(),
@@ -56,6 +58,10 @@ test(
       assert.equal(
         countsAfterSecond.monthlyCategories,
         new Set(blueprint.monthlyServices.map((service) => service.domain)).size,
+      );
+      assert.equal(
+        countsAfterSecond.oneTimeCategories,
+        new Set(blueprint.oneTimeServices.map((service) => service.serviceLine)).size,
       );
       assert.equal(countsAfterSecond.routes, blueprint.routes.length);
       assert.equal(countsAfterSecond.actions, blueprint.actions.length);

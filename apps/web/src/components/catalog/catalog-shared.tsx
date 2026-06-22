@@ -77,7 +77,10 @@ export function CatalogFeedback({
   );
 }
 
-export function useCatalogMutation(setSnapshot: (snapshot: CatalogSnapshot) => void) {
+export function useCatalogMutation<T = CatalogSnapshot>(
+  setSnapshot: (snapshot: T) => void,
+  refresher: () => Promise<T> = refreshCatalog as () => Promise<T>,
+) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
@@ -92,7 +95,7 @@ export function useCatalogMutation(setSnapshot: (snapshot: CatalogSnapshot) => v
     setSuccess(undefined);
     try {
       await catalogRequest(path, options);
-      setSnapshot(await refreshCatalog());
+      setSnapshot(await refresher());
       setSuccess(successMessage);
       return true;
     } catch (mutationError) {

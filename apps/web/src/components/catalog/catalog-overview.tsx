@@ -63,6 +63,16 @@ export function CatalogOverview({ snapshot }: { snapshot: CatalogSnapshot }) {
             <strong>Service levels</strong>
             <p>Basic, Growth, Advanced, Partnership, and future configurable levels.</p>
           </Link>
+          <Link href="/admin/catalog/one-time-categories">
+            <span>05</span>
+            <strong>One-time categories</strong>
+            <p>Localized Build and Digital groupings with safe lifecycle controls.</p>
+          </Link>
+          <Link href="/admin/catalog/one-time-services">
+            <span>06</span>
+            <strong>One-time services</strong>
+            <p>Revisioned pricing, phases, deliverables, tasks, and duration.</p>
+          </Link>
         </div>
       </section>
 

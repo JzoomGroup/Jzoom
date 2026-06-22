@@ -8,6 +8,8 @@ const navigation = [
   { href: "/admin/catalog/monthly-services", label: "Monthly services" },
   { href: "/admin/catalog/service-items", label: "Service items" },
   { href: "/admin/catalog/service-levels", label: "Service levels" },
+  { href: "/admin/catalog/one-time-categories", label: "One-time categories" },
+  { href: "/admin/catalog/one-time-services", label: "One-time services" },
 ] as const;
 
 export function AdminShell({

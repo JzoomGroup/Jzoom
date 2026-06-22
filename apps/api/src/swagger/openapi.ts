@@ -14,6 +14,10 @@ export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
       "admin-monthly-catalog",
       "Admin-only monthly services, items, categories, and package levels",
     )
+    .addTag(
+      "admin-one-time-catalog",
+      "Admin-only one-time services, categories, phases, deliverables, and tasks",
+    )
     .build();
 
   return SwaggerModule.createDocument(app, configuration, {

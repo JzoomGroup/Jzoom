@@ -96,3 +96,27 @@ test("PR 4 schema adds editable monthly categories without destructive catalog d
   assert.match(migration, /monthly_services_code_ci_key/);
   assert.doesNotMatch(migration, /ON DELETE CASCADE[\s\S]*monthly_service_categories/);
 });
+
+test("PR 5 schema keeps one-time services revisioned with editable templates", async () => {
+  const schema = await readFile(
+    path.join(workspaceRoot, "packages/database/prisma/schema.prisma"),
+    "utf8",
+  );
+  const migration = await readFile(
+    path.join(
+      workspaceRoot,
+      "packages/database/prisma/migrations/202606220001_pr5_one_time_catalog/migration.sql",
+    ),
+    "utf8",
+  );
+
+  assert.match(schema, /model OneTimeServiceCategory \{/);
+  assert.match(schema, /model OneTimeServiceTask \{/);
+  assert.match(schema, /internalHourlyCostSar\s+Decimal/);
+  assert.match(schema, /phaseId\s+String\?\s+@db\.Uuid/);
+  assert.match(migration, /Seed editable categories from the Excel V3 service path\/type/);
+  assert.match(migration, /one_time_service_tasks/);
+  assert.match(migration, /one_time_services_categoryId_fkey/);
+  assert.match(migration, /ON DELETE RESTRICT/);
+  assert.match(migration, /PERM-MANAGE-ONE-TIME-SERVICES/);
+});
