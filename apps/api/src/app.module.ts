@@ -11,6 +11,7 @@ import { OneTimeCatalogModule } from "./one-time-catalog/one-time-catalog.module
 import { PricingModule } from "./pricing/pricing.module.js";
 import { QuotesModule } from "./quotes/quotes.module.js";
 import { RequestContextModule } from "./request-context/request-context.module.js";
+import { RequestsModule } from "./requests/requests.module.js";
 
 @Module({})
 export class AppModule {
@@ -27,6 +28,7 @@ export class AppModule {
         QuotesModule,
         InvoicesModule,
         ClientPortalModule,
+        RequestsModule,
         HealthModule,
       ],
     };
