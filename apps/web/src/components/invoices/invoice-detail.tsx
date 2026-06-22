@@ -94,11 +94,7 @@ export function InvoiceDetail({ initialInvoice }: { initialInvoice: Invoice }) {
             </div>
             <div>
               <dt>Issue date</dt>
-              <dd>
-                {invoice.issueDate
-                  ? new Date(invoice.issueDate).toLocaleDateString("en-SA")
-                  : "—"}
-              </dd>
+              <dd>{invoice.issueDate ? new Date(invoice.issueDate).toLocaleDateString("en-SA") : "—"}</dd>
             </div>
             <div>
               <dt>Status note</dt>
