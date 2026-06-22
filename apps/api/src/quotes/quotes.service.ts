@@ -62,6 +62,13 @@ const transitions: Record<PublicQuoteStatus, PublicQuoteStatus[]> = {
   CANCELLED: [],
 };
 
+const lifecycleAuditEvents: Partial<Record<PublicQuoteStatus, string>> = {
+  ACCEPTED: QUOTE_EVENT.accepted,
+  REJECTED: QUOTE_EVENT.rejected,
+  EXPIRED: QUOTE_EVENT.expired,
+  CANCELLED: QUOTE_EVENT.cancelled,
+};
+
 function json(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
@@ -365,7 +372,7 @@ export class QuotesService {
   async changeStatus(
     id: string,
     target: PublicQuoteStatus,
-    reason: string | undefined,
+    note: string | undefined,
     principal: AuthenticatedPrincipal,
     metadata: RequestMetadata,
   ) {
@@ -377,13 +384,8 @@ export class QuotesService {
         message: `Quote status cannot change from ${quote.status} to ${target}`,
       });
     }
-    if ((target === "REJECTED" || target === "CANCELLED") && !reason?.trim()) {
-      throw new BadRequestException({
-        code: "QUOTE_STATUS_REASON_REQUIRED",
-        message: `A reason is required when a quote is ${target.toLowerCase()}`,
-      });
-    }
     const now = new Date();
+    const trimmedNote = note?.trim() || undefined;
     if (target === "ISSUED" && (!quote.validUntil || quote.validUntil <= now)) {
       throw new ConflictException({
         code: "QUOTE_VALIDITY_EXPIRED",
@@ -407,7 +409,7 @@ export class QuotesService {
       where: { id },
       data: {
         status: target,
-        statusReason: reason?.trim() || null,
+        statusReason: trimmedNote ?? null,
         statusChangedAt: now,
         ...(target === "ISSUED" ? { issueDate: now } : {}),
         ...(target === "ACCEPTED" ? { acceptedAt: now, approvedAt: now } : {}),
@@ -423,12 +425,69 @@ export class QuotesService {
         entityType: "Quote",
         entityId: id,
         before: { status: current },
-        after: { status: target, changedAt: now.toISOString() },
-        ...(reason?.trim() ? { reason: reason.trim() } : {}),
+        after: { note: trimmedNote ?? null, status: target, changedAt: now.toISOString() },
+        ...(trimmedNote ? { reason: trimmedNote } : {}),
       },
       metadata,
     );
+    const lifecycleEvent = lifecycleAuditEvents[target];
+    if (lifecycleEvent) {
+      await this.audit.record(
+        {
+          actorId: principal.userId,
+          eventCode: lifecycleEvent,
+          entityType: "Quote",
+          entityId: id,
+          before: { status: current },
+          after: {
+            note: trimmedNote ?? null,
+            quoteNumber: quote.quoteNumber,
+            snapshotHash: quote.snapshotHash,
+            status: target,
+            changedAt: now.toISOString(),
+          },
+          ...(trimmedNote ? { reason: trimmedNote } : {}),
+        },
+        metadata,
+      );
+    }
     return this.get(id, principal);
+  }
+
+  accept(
+    id: string,
+    note: string | undefined,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    return this.changeStatus(id, "ACCEPTED", note, principal, metadata);
+  }
+
+  reject(
+    id: string,
+    note: string | undefined,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    return this.changeStatus(id, "REJECTED", note, principal, metadata);
+  }
+
+  expire(
+    id: string,
+    note: string | undefined,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    return this.changeStatus(id, "EXPIRED", note, principal, metadata);
+  }
+
+  cancel(
+    id: string,
+    note: string | undefined,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    return this.changeStatus(id, "CANCELLED", note, principal, metadata);
   }
 
   private async snapshotLine(

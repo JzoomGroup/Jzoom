@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Inject,
   Param,
   Patch,
@@ -24,7 +25,12 @@ import { RequirePermissions, RequireRoles } from "../auth/auth.decorators.js";
 import type { RequestMetadata } from "../auth/auth.types.js";
 import type { RequestWithId } from "../request-context/request-with-id.js";
 import { ACCOUNT_MANAGER_ROLE_CODE, MANAGE_QUOTES_PERMISSION } from "./quotes.constants.js";
-import { CreateQuoteDto, QuoteStatusDto, QuoteTermsDto } from "./quotes.dto.js";
+import {
+  CreateQuoteDto,
+  QuoteLifecycleActionDto,
+  QuoteStatusDto,
+  QuoteTermsDto,
+} from "./quotes.dto.js";
 import { QuotesService } from "./quotes.service.js";
 
 function metadata(request: RequestWithId): RequestMetadata {
@@ -38,7 +44,7 @@ function metadata(request: RequestWithId): RequestMetadata {
 
 @ApiTags("quotes")
 @ApiCookieAuth()
-@ApiExtraModels(CreateQuoteDto, QuoteStatusDto, QuoteTermsDto)
+@ApiExtraModels(CreateQuoteDto, QuoteLifecycleActionDto, QuoteStatusDto, QuoteTermsDto)
 @RequireRoles(ADMIN_ROLE_CODE, ACCOUNT_MANAGER_ROLE_CODE)
 @RequirePermissions(MANAGE_QUOTES_PERMISSION)
 @Controller("quotes")
@@ -85,6 +91,50 @@ export class QuotesController {
   @ApiOperation({ summary: "Create an immutable quote from a saved pricing draft" })
   create(@Body() input: CreateQuoteDto, @Req() request: RequestWithId) {
     return this.quotes.create(input, request.auth!, metadata(request));
+  }
+
+  @Post(":id/accept")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Accept an issued quote without mutating its immutable snapshot" })
+  accept(
+    @Param("id") id: string,
+    @Body() input: QuoteLifecycleActionDto | undefined,
+    @Req() request: RequestWithId,
+  ) {
+    return this.quotes.accept(id, input?.note, request.auth!, metadata(request));
+  }
+
+  @Post(":id/reject")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Reject an issued quote with optional notes" })
+  reject(
+    @Param("id") id: string,
+    @Body() input: QuoteLifecycleActionDto | undefined,
+    @Req() request: RequestWithId,
+  ) {
+    return this.quotes.reject(id, input?.note, request.auth!, metadata(request));
+  }
+
+  @Post(":id/expire")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Mark an issued quote as expired" })
+  expire(
+    @Param("id") id: string,
+    @Body() input: QuoteLifecycleActionDto | undefined,
+    @Req() request: RequestWithId,
+  ) {
+    return this.quotes.expire(id, input?.note, request.auth!, metadata(request));
+  }
+
+  @Post(":id/cancel")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Cancel a draft or issued quote with optional notes" })
+  cancel(
+    @Param("id") id: string,
+    @Body() input: QuoteLifecycleActionDto | undefined,
+    @Req() request: RequestWithId,
+  ) {
+    return this.quotes.cancel(id, input?.note, request.auth!, metadata(request));
   }
 
   @Patch(":id/status")

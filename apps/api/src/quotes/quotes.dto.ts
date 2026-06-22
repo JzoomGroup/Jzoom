@@ -76,3 +76,14 @@ export class QuoteStatusDto {
   @MaxLength(2_000)
   reason?: string;
 }
+
+export class QuoteLifecycleActionDto {
+  @ApiPropertyOptional({
+    description: "Optional internal note for the lifecycle decision.",
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  note?: string;
+}
