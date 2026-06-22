@@ -11,6 +11,7 @@ import { ADMIN_ROLE_CODE } from "../auth/auth.constants.js";
 import { AuthAuditService } from "../auth/audit.service.js";
 import type { AuthenticatedPrincipal, RequestMetadata } from "../auth/auth.types.js";
 import { DatabaseService } from "../database/database.service.js";
+import { InvoicePdfService } from "./invoice-pdf.service.js";
 import { INVOICE_EVENT } from "./invoices.constants.js";
 import type { CreateInvoiceDto } from "./invoices.dto.js";
 
@@ -79,6 +80,7 @@ export class InvoicesService {
   constructor(
     @Inject(DatabaseService) private readonly database: DatabaseService,
     @Inject(AuthAuditService) private readonly audit: AuthAuditService,
+    @Inject(InvoicePdfService) private readonly invoicePdf: InvoicePdfService,
   ) {}
 
   async list(principal: AuthenticatedPrincipal) {
@@ -114,6 +116,29 @@ export class InvoicesService {
   async get(id: string, principal: AuthenticatedPrincipal) {
     const invoice = await this.requireAccessibleInvoice(id, principal);
     return this.invoiceView(invoice);
+  }
+
+  async generatePdf(id: string, principal: AuthenticatedPrincipal, metadata: RequestMetadata) {
+    const invoice = await this.requireAccessibleInvoice(id, principal);
+    const pdf = await this.invoicePdf.render(this.invoiceView(invoice));
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: INVOICE_EVENT.pdfGenerated,
+        entityType: "Invoice",
+        entityId: invoice.id,
+        after: {
+          byteLength: pdf.byteLength,
+          contentSha256: pdf.sha256,
+          filename: pdf.filename,
+          invoiceNumber: invoice.invoiceNumber,
+          snapshotHash: invoice.snapshotHash,
+          sourceQuoteSnapshotHash: invoice.sourceQuoteSnapshotHash,
+        },
+      },
+      metadata,
+    );
+    return pdf;
   }
 
   async create(

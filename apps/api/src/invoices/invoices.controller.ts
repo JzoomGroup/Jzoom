@@ -1,5 +1,25 @@
-import { Body, Controller, Get, HttpCode, Inject, Param, Patch, Post, Req } from "@nestjs/common";
-import { ApiCookieAuth, ApiExtraModels, ApiOperation, ApiTags } from "@nestjs/swagger";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Req,
+  Res,
+  StreamableFile,
+} from "@nestjs/common";
+import {
+  ApiCookieAuth,
+  ApiExtraModels,
+  ApiOkResponse,
+  ApiOperation,
+  ApiProduces,
+  ApiTags,
+} from "@nestjs/swagger";
+import type { Response } from "express";
 import { ADMIN_ROLE_CODE } from "../auth/auth.constants.js";
 import { RequirePermissions, RequireRoles } from "../auth/auth.decorators.js";
 import type { RequestMetadata } from "../auth/auth.types.js";
@@ -36,6 +56,30 @@ export class InvoicesController {
   @ApiOperation({ summary: "Retrieve an immutable invoice snapshot" })
   get(@Param("id") id: string, @Req() request: RequestWithId) {
     return this.invoices.get(id, request.auth!);
+  }
+
+  @Get(":id/pdf")
+  @ApiOperation({ summary: "Generate an invoice PDF from the immutable invoice snapshot" })
+  @ApiProduces("application/pdf")
+  @ApiOkResponse({
+    content: {
+      "application/pdf": {
+        schema: { type: "string", format: "binary" },
+      },
+    },
+    description: "A4 invoice PDF generated from the stored invoice snapshot",
+  })
+  async pdf(
+    @Param("id") id: string,
+    @Req() request: RequestWithId,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const pdf = await this.invoices.generatePdf(id, request.auth!, metadata(request));
+    response.setHeader("Content-Type", pdf.contentType);
+    response.setHeader("Content-Length", String(pdf.byteLength));
+    response.setHeader("Content-Disposition", `inline; filename="${pdf.filename}"`);
+    response.setHeader("Cache-Control", "private, no-store");
+    return new StreamableFile(pdf.bytes);
   }
 
   @Post()
