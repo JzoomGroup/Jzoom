@@ -83,6 +83,9 @@ export function RequestList({ requests }: { requests: RequestSummary[] }) {
             their own request-safe view after account creation.
           </p>
         </div>
+        <Link className="button-primary" href="/requests/queues">
+          Open work queues
+        </Link>
       </header>
 
       <section className="catalog-panel editor-panel">

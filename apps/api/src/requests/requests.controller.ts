@@ -1,4 +1,15 @@
-import { Body, Controller, Get, HttpCode, Inject, Param, Patch, Post, Req } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+} from "@nestjs/common";
 import { ApiCookieAuth, ApiExtraModels, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ADMIN_ROLE_CODE, MANAGEMENT_ROLE_CODE } from "../auth/auth.constants.js";
 import { RequireRoles } from "../auth/auth.decorators.js";
@@ -10,8 +21,15 @@ import {
   AddInternalNoteDto,
   AddRequestCommentDto,
   AssignRequestDto,
+  CreateRequestOutputDto,
+  CreateRequestTaskDto,
   CreateRequestDto,
+  RequestQueueQueryDto,
   RequestStatusDto,
+  ReviewRequestOutputDto,
+  SupervisorRequestReviewDto,
+  UpdateRequestOutputDto,
+  UpdateRequestTaskDto,
 } from "./requests.dto.js";
 import {
   ACCOUNT_MANAGER_ROLE_CODE,
@@ -36,8 +54,15 @@ function metadata(request: RequestWithId): RequestMetadata {
   AddInternalNoteDto,
   AddRequestCommentDto,
   AssignRequestDto,
+  CreateRequestOutputDto,
+  CreateRequestTaskDto,
   CreateRequestDto,
+  RequestQueueQueryDto,
   RequestStatusDto,
+  ReviewRequestOutputDto,
+  SupervisorRequestReviewDto,
+  UpdateRequestOutputDto,
+  UpdateRequestTaskDto,
 )
 @RequireRoles(
   ADMIN_ROLE_CODE,
@@ -54,6 +79,22 @@ export class RequestsController {
   @ApiOperation({ summary: "List service requests within the caller's internal scope" })
   list(@Req() request: RequestWithId) {
     return this.requests.list(request.auth!);
+  }
+
+  @Get("queues")
+  @ApiOperation({ summary: "List internal request work queues with workload counters" })
+  queue(@Query() input: RequestQueueQueryDto, @Req() request: RequestWithId) {
+    return this.requests.queue(input, request.auth!);
+  }
+
+  @Get("queues/:queue")
+  @ApiOperation({ summary: "List a specific internal request work queue" })
+  queueByType(
+    @Param("queue") queue: NonNullable<RequestQueueQueryDto["queue"]>,
+    @Query() input: RequestQueueQueryDto,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.queue({ ...input, queue }, request.auth!);
   }
 
   @Get(":id")
@@ -90,6 +131,26 @@ export class RequestsController {
     );
   }
 
+  @Post(":id/start")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Start work on an assigned request" })
+  startWork(@Param("id") id: string, @Req() request: RequestWithId) {
+    return this.requests.startWork(id, request.auth!, metadata(request));
+  }
+
+  @Post(":id/supervisor-review")
+  @HttpCode(200)
+  @ApiOperation({
+    summary: "Approve, return, reject, or escalate a request under supervisor review",
+  })
+  supervisorReview(
+    @Param("id") id: string,
+    @Body() input: SupervisorRequestReviewDto,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.supervisorReview(id, input, request.auth!, metadata(request));
+  }
+
   @Post(":id/comments")
   @HttpCode(200)
   @ApiOperation({ summary: "Add a request comment with explicit client visibility" })
@@ -121,6 +182,73 @@ export class RequestsController {
     @Req() request: RequestWithId,
   ) {
     return this.requests.addAttachmentMetadata(id, input, request.auth!, metadata(request));
+  }
+
+  @Post(":id/tasks")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Create an internal request task or checklist item" })
+  createTask(
+    @Param("id") id: string,
+    @Body() input: CreateRequestTaskDto,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.createTask(id, input, request.auth!, metadata(request));
+  }
+
+  @Patch(":id/tasks/:taskId")
+  @ApiOperation({ summary: "Update an internal request task or checklist item" })
+  updateTask(
+    @Param("id") id: string,
+    @Param("taskId") taskId: string,
+    @Body() input: UpdateRequestTaskDto,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.updateTask(id, taskId, input, request.auth!, metadata(request));
+  }
+
+  @Post(":id/outputs")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Create an internal-only request output preparation record" })
+  createOutput(
+    @Param("id") id: string,
+    @Body() input: CreateRequestOutputDto,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.createOutput(id, input, request.auth!, metadata(request));
+  }
+
+  @Patch(":id/outputs/:outputId")
+  @ApiOperation({ summary: "Update a draft or returned internal request output" })
+  updateOutput(
+    @Param("id") id: string,
+    @Param("outputId") outputId: string,
+    @Body() input: UpdateRequestOutputDto,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.updateOutput(id, outputId, input, request.auth!, metadata(request));
+  }
+
+  @Post(":id/outputs/:outputId/submit")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Submit an internal request output for supervisor review" })
+  submitOutput(
+    @Param("id") id: string,
+    @Param("outputId") outputId: string,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.submitOutput(id, outputId, request.auth!, metadata(request));
+  }
+
+  @Post(":id/outputs/:outputId/review")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Approve or return an internal request output" })
+  reviewOutput(
+    @Param("id") id: string,
+    @Param("outputId") outputId: string,
+    @Body() input: ReviewRequestOutputDto,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.reviewOutput(id, outputId, input, request.auth!, metadata(request));
   }
 }
 
