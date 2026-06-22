@@ -125,9 +125,20 @@ enum OutputStatus {
   INTERNAL_REVIEW
   APPROVED_INTERNAL
   SHARED
+  SHARED_WITH_CLIENT
+  ACCEPTED_BY_CLIENT
+  RETURNED_BY_CLIENT
+  CLOSED
   REVISION_REQUESTED
   APPROVED
   LOCKED
+}
+
+enum ClientDocumentRequestStatus {
+  REQUESTED
+  UPLOADED
+  CANCELLED
+  CLOSED
 }
 
 enum TimeEntryStatus {
@@ -357,6 +368,11 @@ model User {
   assignedTasks          Task[]                   @relation("TaskAssignee")
   createdRequestOutputs  RequestOutput[]          @relation("RequestOutputCreator")
   reviewedRequestOutputs RequestOutput[]          @relation("RequestOutputReviewer")
+  sharedRequestOutputs   RequestOutput[]          @relation("RequestOutputSharer")
+  decidedRequestOutputs  RequestOutput[]          @relation("RequestOutputClientDecision")
+  requestedDocuments     ClientDocumentRequest[]  @relation("ClientDocumentRequester")
+  fulfilledDocuments     ClientDocumentRequest[]  @relation("ClientDocumentFulfiller")
+  decidedTimeEntries     TimeEntry[]              @relation("TimeEntryDecider")
 
   @@index([status])
   @@index([lockedUntil])
@@ -1577,37 +1593,37 @@ model InvoiceItem {
 }
 
 model Request {
-  id                    String               @id @default(uuid()) @db.Uuid
-  requestNumber         String               @unique
-  clientId              String               @db.Uuid
-  subscriptionServiceId String               @db.Uuid
-  serviceItemRevisionId String?              @db.Uuid
-  sourceQuoteId         String?              @db.Uuid
-  sourceInvoiceId       String?              @db.Uuid
-  assignedSpecialistId  String?              @db.Uuid
-  assignedSupervisorId  String?              @db.Uuid
-  accountManagerId      String?              @db.Uuid
-  workflowVersionId     String               @db.Uuid
-  currentStateId        String               @db.Uuid
-  status                RequestStatus        @default(NEW)
+  id                    String                  @id @default(uuid()) @db.Uuid
+  requestNumber         String                  @unique
+  clientId              String                  @db.Uuid
+  subscriptionServiceId String                  @db.Uuid
+  serviceItemRevisionId String?                 @db.Uuid
+  sourceQuoteId         String?                 @db.Uuid
+  sourceInvoiceId       String?                 @db.Uuid
+  assignedSpecialistId  String?                 @db.Uuid
+  assignedSupervisorId  String?                 @db.Uuid
+  accountManagerId      String?                 @db.Uuid
+  workflowVersionId     String                  @db.Uuid
+  currentStateId        String                  @db.Uuid
+  status                RequestStatus           @default(NEW)
   title                 String
-  description           String               @db.Text
+  description           String                  @db.Text
   priority              String
   dueAt                 DateTime?
   closedAt              DateTime?
   archivedAt            DateTime?
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
-  client                Client               @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  subscriptionService   SubscriptionService  @relation(fields: [subscriptionServiceId], references: [id], onDelete: Restrict)
-  serviceItemRevision   ServiceItemRevision? @relation(fields: [serviceItemRevisionId], references: [id], onDelete: Restrict)
-  sourceQuote           Quote?               @relation("RequestSourceQuote", fields: [sourceQuoteId], references: [id], onDelete: SetNull)
-  sourceInvoice         Invoice?             @relation("RequestSourceInvoice", fields: [sourceInvoiceId], references: [id], onDelete: SetNull)
-  assignedSpecialist    User?                @relation("RequestAssignedSpecialist", fields: [assignedSpecialistId], references: [id], onDelete: SetNull)
-  assignedSupervisor    User?                @relation("RequestAssignedSupervisor", fields: [assignedSupervisorId], references: [id], onDelete: SetNull)
-  accountManager        User?                @relation("RequestAccountManager", fields: [accountManagerId], references: [id], onDelete: SetNull)
-  workflowVersion       WorkflowVersion      @relation(fields: [workflowVersionId], references: [id], onDelete: Restrict)
-  currentState          WorkflowState        @relation("RequestCurrentState", fields: [currentStateId], references: [id], onDelete: Restrict)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  client                Client                  @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  subscriptionService   SubscriptionService     @relation(fields: [subscriptionServiceId], references: [id], onDelete: Restrict)
+  serviceItemRevision   ServiceItemRevision?    @relation(fields: [serviceItemRevisionId], references: [id], onDelete: Restrict)
+  sourceQuote           Quote?                  @relation("RequestSourceQuote", fields: [sourceQuoteId], references: [id], onDelete: SetNull)
+  sourceInvoice         Invoice?                @relation("RequestSourceInvoice", fields: [sourceInvoiceId], references: [id], onDelete: SetNull)
+  assignedSpecialist    User?                   @relation("RequestAssignedSpecialist", fields: [assignedSpecialistId], references: [id], onDelete: SetNull)
+  assignedSupervisor    User?                   @relation("RequestAssignedSupervisor", fields: [assignedSupervisorId], references: [id], onDelete: SetNull)
+  accountManager        User?                   @relation("RequestAccountManager", fields: [accountManagerId], references: [id], onDelete: SetNull)
+  workflowVersion       WorkflowVersion         @relation(fields: [workflowVersionId], references: [id], onDelete: Restrict)
+  currentState          WorkflowState           @relation("RequestCurrentState", fields: [currentStateId], references: [id], onDelete: Restrict)
   tasks                 Task[]
   comments              Comment[]
   internalNotes         InternalNote[]
@@ -1616,6 +1632,7 @@ model Request {
   timeEntries           TimeEntry[]
   workflowEvents        WorkflowEvent[]
   outputs               RequestOutput[]
+  documentRequests      ClientDocumentRequest[]
 
   @@index([clientId, currentStateId])
   @@index([clientId, status])
@@ -1696,31 +1713,41 @@ model ProjectOutput {
 }
 
 model RequestOutput {
-  id              String       @id @default(uuid()) @db.Uuid
-  requestId       String       @db.Uuid
-  createdById     String       @db.Uuid
-  reviewedById    String?      @db.Uuid
-  code            String
-  title           String
-  description     String?      @db.Text
-  contentSnapshot Json?
-  status          OutputStatus @default(DRAFT)
-  dueAt           DateTime?
-  submittedAt     DateTime?
-  reviewedAt      DateTime?
-  reviewReason    String?      @db.Text
-  revision        Int          @default(1)
-  sortOrder       Int          @default(0)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  request         Request      @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  createdBy       User         @relation("RequestOutputCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  reviewedBy      User?        @relation("RequestOutputReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  id                 String       @id @default(uuid()) @db.Uuid
+  requestId          String       @db.Uuid
+  createdById        String       @db.Uuid
+  reviewedById       String?      @db.Uuid
+  sharedById         String?      @db.Uuid
+  clientDecisionById String?      @db.Uuid
+  code               String
+  title              String
+  description        String?      @db.Text
+  contentSnapshot    Json?
+  status             OutputStatus @default(DRAFT)
+  dueAt              DateTime?
+  submittedAt        DateTime?
+  reviewedAt         DateTime?
+  sharedAt           DateTime?
+  clientDecidedAt    DateTime?
+  closedAt           DateTime?
+  reviewReason       String?      @db.Text
+  clientReturnReason String?      @db.Text
+  revision           Int          @default(1)
+  sortOrder          Int          @default(0)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  request            Request      @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  createdBy          User         @relation("RequestOutputCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  reviewedBy         User?        @relation("RequestOutputReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  sharedBy           User?        @relation("RequestOutputSharer", fields: [sharedById], references: [id], onDelete: SetNull)
+  clientDecisionBy   User?        @relation("RequestOutputClientDecision", fields: [clientDecisionById], references: [id], onDelete: SetNull)
 
   @@unique([requestId, code, revision])
   @@index([requestId, status, sortOrder])
   @@index([createdById, status])
   @@index([reviewedById, status])
+  @@index([sharedById, status])
+  @@index([clientDecisionById, status])
   @@map("request_outputs")
 }
 
@@ -1789,31 +1816,59 @@ model InternalNote {
 }
 
 model FileMetadata {
-  id              String         @id @default(uuid()) @db.Uuid
-  requestId       String?        @db.Uuid
-  projectId       String?        @db.Uuid
-  outputId        String?        @db.Uuid
-  uploadedById    String         @db.Uuid
+  id              String                 @id @default(uuid()) @db.Uuid
+  requestId       String?                @db.Uuid
+  projectId       String?                @db.Uuid
+  outputId        String?                @db.Uuid
+  uploadedById    String                 @db.Uuid
   storageProvider String
-  storageKey      String         @unique
+  storageKey      String                 @unique
   originalName    String
   mimeType        String
   sizeBytes       BigInt
   sha256          String
   visibility      FileVisibility
-  version         Int            @default(1)
+  version         Int                    @default(1)
   archivedAt      DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  request         Request?       @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  project         Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  output          ProjectOutput? @relation(fields: [outputId], references: [id], onDelete: Cascade)
-  uploadedBy      User           @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  request         Request?               @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  project         Project?               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  output          ProjectOutput?         @relation(fields: [outputId], references: [id], onDelete: Cascade)
+  uploadedBy      User                   @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  documentRequest ClientDocumentRequest?
 
   @@index([requestId, visibility])
   @@index([projectId, visibility])
   @@index([outputId, visibility])
   @@map("files_metadata")
+}
+
+model ClientDocumentRequest {
+  id             String                      @id @default(uuid()) @db.Uuid
+  requestId      String                      @db.Uuid
+  requestedById  String                      @db.Uuid
+  fulfilledById  String?                     @db.Uuid
+  fileMetadataId String?                     @unique @db.Uuid
+  title          String
+  instructions   String?                     @db.Text
+  status         ClientDocumentRequestStatus @default(REQUESTED)
+  dueAt          DateTime?
+  requestedAt    DateTime                    @default(now())
+  fulfilledAt    DateTime?
+  closedAt       DateTime?
+  cancelledAt    DateTime?
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @updatedAt
+  request        Request                     @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  requestedBy    User                        @relation("ClientDocumentRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  fulfilledBy    User?                       @relation("ClientDocumentFulfiller", fields: [fulfilledById], references: [id], onDelete: SetNull)
+  fileMetadata   FileMetadata?               @relation(fields: [fileMetadataId], references: [id], onDelete: SetNull)
+
+  @@index([requestId, status, dueAt])
+  @@index([requestedById, status])
+  @@index([fulfilledById, status])
+  @@map("client_document_requests")
 }
 
 model Approval {
@@ -1854,11 +1909,14 @@ model TimeEntry {
   status             TimeEntryStatus         @default(DRAFT)
   workDate           DateTime
   notes              String?                 @db.Text
+  decisionReason     String?                 @db.Text
   submittedAt        DateTime?
   decidedAt          DateTime?
+  decidedById        String?                 @db.Uuid
   createdAt          DateTime                @default(now())
   updatedAt          DateTime                @updatedAt
   user               User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  decidedBy          User?                   @relation("TimeEntryDecider", fields: [decidedById], references: [id], onDelete: SetNull)
   request            Request?                @relation(fields: [requestId], references: [id], onDelete: Restrict)
   project            Project?                @relation(fields: [projectId], references: [id], onDelete: Restrict)
   output             ProjectOutput?          @relation(fields: [outputId], references: [id], onDelete: Restrict)
@@ -1866,6 +1924,7 @@ model TimeEntry {
   ledgerTransactions HourLedgerTransaction[]
 
   @@index([userId, status, workDate])
+  @@index([decidedById, status])
   @@index([requestId])
   @@index([projectId])
   @@map("time_entries")

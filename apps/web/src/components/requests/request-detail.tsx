@@ -8,12 +8,19 @@ import {
   addRequestComment,
   assignRequest,
   changeRequestStatus,
+  changeClientDocumentRequestStatus,
   createRequestOutput,
   createRequestTask,
+  createRequestTimeEntry,
+  closeRequestOutput,
   requestErrorMessage,
+  requestClientDocument,
   reviewRequestOutput,
+  reviewRequestTimeEntry,
+  shareRequestOutput,
   startRequestWork,
   submitRequestOutput,
+  submitRequestTimeEntry,
   supervisorReviewRequest,
   updateRequestTask,
 } from "../../lib/request-client";
@@ -72,6 +79,17 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
     code: "",
     description: "",
     title: "",
+  });
+  const [documentForm, setDocumentForm] = useState({
+    dueAt: "",
+    instructions: "",
+    title: "",
+  });
+  const [timeForm, setTimeForm] = useState({
+    billable: true,
+    hours: "1",
+    notes: "",
+    workDate: new Date().toISOString().slice(0, 10),
   });
   const [reviewReason, setReviewReason] = useState("");
   const [fileForm, setFileForm] = useState({
@@ -191,7 +209,10 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
     });
   }
 
-  function setTaskStatus(taskId: string, status: "TODO" | "IN_PROGRESS" | "DONE" | "BLOCKED") {
+  function setTaskStatus(
+    taskId: string,
+    status: "PENDING" | "IN_PROGRESS" | "DONE" | "NOT_APPLICABLE" | "BLOCKED",
+  ) {
     void run("task-status", () => updateRequestTask(request.id, taskId, { status }));
   }
 
@@ -215,6 +236,71 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
   function reviewOutput(outputId: string, action: "APPROVE" | "RETURN" | "REJECT") {
     void run("output-review", () =>
       reviewRequestOutput(request.id, outputId, action, reviewReason || undefined),
+    );
+  }
+
+  function shareOutput(outputId: string) {
+    void run("output-share", () =>
+      shareRequestOutput(request.id, outputId, reviewReason || undefined),
+    );
+  }
+
+  function closeOutput(outputId: string) {
+    void run("output-close", () =>
+      closeRequestOutput(request.id, outputId, reviewReason || undefined),
+    );
+  }
+
+  function submitDocumentRequest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void run("document-request", async () => {
+      const updated = await requestClientDocument(request.id, {
+        title: documentForm.title,
+        ...(documentForm.instructions ? { instructions: documentForm.instructions } : {}),
+        ...(documentForm.dueAt ? { dueAt: new Date(documentForm.dueAt).toISOString() } : {}),
+      });
+      setDocumentForm({ dueAt: "", instructions: "", title: "" });
+      return updated;
+    });
+  }
+
+  function setDocumentRequestStatus(documentRequestId: string, status: "CANCELLED" | "CLOSED") {
+    void run("document-request-status", () =>
+      changeClientDocumentRequestStatus(
+        request.id,
+        documentRequestId,
+        status,
+        reviewReason || undefined,
+      ),
+    );
+  }
+
+  function submitTimeEntry(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void run("time-entry", async () => {
+      const updated = await createRequestTimeEntry(request.id, {
+        billable: timeForm.billable,
+        hours: Number(timeForm.hours),
+        workDate: new Date(timeForm.workDate).toISOString(),
+        ...(timeForm.notes ? { notes: timeForm.notes } : {}),
+      });
+      setTimeForm({
+        billable: true,
+        hours: "1",
+        notes: "",
+        workDate: new Date().toISOString().slice(0, 10),
+      });
+      return updated;
+    });
+  }
+
+  function submitTimeEntryForReview(timeEntryId: string) {
+    void run("time-entry-submit", () => submitRequestTimeEntry(request.id, timeEntryId));
+  }
+
+  function reviewTimeEntry(timeEntryId: string, action: "APPROVE" | "REJECT") {
+    void run("time-entry-review", () =>
+      reviewRequestTimeEntry(request.id, timeEntryId, action, reviewReason || undefined),
     );
   }
 
@@ -483,6 +569,13 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
                     <button
                       className="button-secondary"
                       type="button"
+                      onClick={() => setTaskStatus(task.id, "PENDING")}
+                    >
+                      Pending
+                    </button>
+                    <button
+                      className="button-secondary"
+                      type="button"
                       onClick={() => setTaskStatus(task.id, "IN_PROGRESS")}
                     >
                       Start
@@ -493,6 +586,13 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
                       onClick={() => setTaskStatus(task.id, "DONE")}
                     >
                       Done
+                    </button>
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={() => setTaskStatus(task.id, "NOT_APPLICABLE")}
+                    >
+                      N/A
                     </button>
                     <button
                       className="button-secondary"
@@ -550,11 +650,15 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
                     {output.code} · {output.title}
                   </strong>
                   <small>
-                    {output.status} · created by {output.createdBy.displayName}
+                    {output.status} · created by {output.createdBy?.displayName ?? "Internal user"}
                     {output.reviewedBy ? ` · reviewed by ${output.reviewedBy.displayName}` : ""}
+                    {output.sharedAt ? ` · shared ${dateTime(output.sharedAt)}` : ""}
                   </small>
                   {output.description && <p>{output.description}</p>}
                   {output.reviewReason && <p>Review note: {output.reviewReason}</p>}
+                  {output.clientReturnReason && (
+                    <p>Client return note: {output.clientReturnReason}</p>
+                  )}
                   <div className="row-actions">
                     <button
                       className="button-secondary"
@@ -581,6 +685,183 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
                       className="button-danger"
                       type="button"
                       onClick={() => reviewOutput(output.id, "REJECT")}
+                    >
+                      Reject
+                    </button>
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={() => shareOutput(output.id)}
+                    >
+                      Share with client
+                    </button>
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={() => closeOutput(output.id)}
+                    >
+                      Close delivery
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </article>
+      </section>
+
+      <section className="quote-summary-grid">
+        <article className="catalog-panel">
+          <h2>Client document requests</h2>
+          <form className="catalog-form" onSubmit={submitDocumentRequest}>
+            <label>
+              Document title
+              <input
+                required
+                value={documentForm.title}
+                onChange={(event) =>
+                  setDocumentForm({ ...documentForm, title: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              Due at
+              <input
+                type="datetime-local"
+                value={documentForm.dueAt}
+                onChange={(event) =>
+                  setDocumentForm({ ...documentForm, dueAt: event.target.value })
+                }
+              />
+            </label>
+            <label className="form-span">
+              Instructions
+              <textarea
+                value={documentForm.instructions}
+                onChange={(event) =>
+                  setDocumentForm({ ...documentForm, instructions: event.target.value })
+                }
+              />
+            </label>
+            <button
+              className="button-primary"
+              type="submit"
+              disabled={saving === "document-request"}
+            >
+              Request document
+            </button>
+          </form>
+          <div className="activity-list">
+            {request.documentRequests.length === 0 ? (
+              <p>No client documents requested yet.</p>
+            ) : (
+              request.documentRequests.map((documentRequest) => (
+                <article key={documentRequest.id}>
+                  <strong>{documentRequest.title}</strong>
+                  <small>
+                    {documentRequest.status} · due {dateTime(documentRequest.dueAt)}
+                  </small>
+                  {documentRequest.instructions && <p>{documentRequest.instructions}</p>}
+                  {documentRequest.file && <p>Uploaded: {documentRequest.file.originalName}</p>}
+                  <div className="row-actions">
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={() => setDocumentRequestStatus(documentRequest.id, "CLOSED")}
+                    >
+                      Close
+                    </button>
+                    <button
+                      className="button-danger"
+                      type="button"
+                      onClick={() => setDocumentRequestStatus(documentRequest.id, "CANCELLED")}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </article>
+
+        <article className="catalog-panel">
+          <h2>Basic time entries</h2>
+          <form className="catalog-form" onSubmit={submitTimeEntry}>
+            <label>
+              Work date
+              <input
+                required
+                type="date"
+                value={timeForm.workDate}
+                onChange={(event) => setTimeForm({ ...timeForm, workDate: event.target.value })}
+              />
+            </label>
+            <label>
+              Hours
+              <input
+                required
+                max="24"
+                min="0.01"
+                step="0.25"
+                type="number"
+                value={timeForm.hours}
+                onChange={(event) => setTimeForm({ ...timeForm, hours: event.target.value })}
+              />
+            </label>
+            <label className="checkbox-label">
+              <input
+                checked={timeForm.billable}
+                type="checkbox"
+                onChange={(event) => setTimeForm({ ...timeForm, billable: event.target.checked })}
+              />
+              Billable
+            </label>
+            <label className="form-span">
+              Note
+              <textarea
+                value={timeForm.notes}
+                onChange={(event) => setTimeForm({ ...timeForm, notes: event.target.value })}
+              />
+            </label>
+            <button className="button-primary" type="submit" disabled={saving === "time-entry"}>
+              Add time
+            </button>
+          </form>
+          <div className="activity-list">
+            {request.timeEntries.length === 0 ? (
+              <p>No time entries yet.</p>
+            ) : (
+              request.timeEntries.map((entry) => (
+                <article key={entry.id}>
+                  <strong>
+                    {entry.hours}h · {entry.user.displayName}
+                  </strong>
+                  <small>
+                    {entry.status} · {dateTime(entry.workDate)} ·{" "}
+                    {entry.billable ? "Billable" : "Non-billable"}
+                  </small>
+                  {entry.notes && <p>{entry.notes}</p>}
+                  {entry.decisionReason && <p>Decision note: {entry.decisionReason}</p>}
+                  <div className="row-actions">
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={() => submitTimeEntryForReview(entry.id)}
+                    >
+                      Submit
+                    </button>
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={() => reviewTimeEntry(entry.id, "APPROVE")}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      className="button-danger"
+                      type="button"
+                      onClick={() => reviewTimeEntry(entry.id, "REJECT")}
                     >
                       Reject
                     </button>

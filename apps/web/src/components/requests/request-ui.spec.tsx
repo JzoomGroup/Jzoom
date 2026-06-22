@@ -72,10 +72,12 @@ function requestSummary(): RequestSummary {
     },
     counts: {
       comments: 1,
+      documentRequests: 1,
       files: 1,
       internalNotes: 1,
       outputs: 1,
       tasks: 1,
+      timeEntries: 1,
       workflowEvents: 1,
     },
   };
@@ -148,13 +150,37 @@ function serviceRequest(): ServiceRequest {
         dueAt: null,
         submittedAt: null,
         reviewedAt: null,
+        sharedAt: null,
+        clientDecidedAt: null,
+        closedAt: null,
         reviewReason: null,
+        clientReturnReason: null,
         revision: 1,
         sortOrder: 0,
         createdAt: "2026-06-22T00:00:00.000Z",
         updatedAt: "2026-06-22T00:00:00.000Z",
         createdBy: { id: "am-1", email: "am@example.com", displayName: "Account Manager" },
         reviewedBy: null,
+        sharedBy: null,
+        clientDecisionBy: null,
+      },
+    ],
+    documentRequests: [
+      {
+        id: "document-request-1",
+        title: "Bank statement",
+        instructions: "Upload the latest statement.",
+        status: "REQUESTED",
+        dueAt: "2026-06-28T09:00:00.000Z",
+        requestedAt: "2026-06-22T00:00:00.000Z",
+        fulfilledAt: null,
+        closedAt: null,
+        cancelledAt: null,
+        createdAt: "2026-06-22T00:00:00.000Z",
+        updatedAt: "2026-06-22T00:00:00.000Z",
+        requestedBy: { id: "am-1", email: "am@example.com", displayName: "Account Manager" },
+        fulfilledBy: null,
+        file: null,
       },
     ],
     tasks: [
@@ -167,6 +193,23 @@ function serviceRequest(): ServiceRequest {
         assignee: null,
         dueAt: null,
         sortOrder: 0,
+        createdAt: "2026-06-22T00:00:00.000Z",
+        updatedAt: "2026-06-22T00:00:00.000Z",
+      },
+    ],
+    timeEntries: [
+      {
+        id: "time-entry-1",
+        user: { id: "am-1", email: "am@example.com", displayName: "Account Manager" },
+        workDate: "2026-06-22T00:00:00.000Z",
+        hours: 1.5,
+        billable: true,
+        status: "DRAFT",
+        notes: "Initial work",
+        decisionReason: null,
+        submittedAt: null,
+        decidedAt: null,
+        decidedBy: null,
         createdAt: "2026-06-22T00:00:00.000Z",
         updatedAt: "2026-06-22T00:00:00.000Z",
       },
@@ -263,6 +306,52 @@ describe("Request lifecycle UI", () => {
     expect(calledUrl.searchParams.get("status")).toBe("IN_PROGRESS");
     expect(calledUrl.searchParams.get("dueTo")).toBe(new Date("2026-06-30T09:00").toISOString());
     expect(await screen.findByText("No requests match this queue.")).toBeInTheDocument();
+  });
+
+  it("shares an internally approved output through the backend API", async () => {
+    const fetchMock = jest.mocked(fetch);
+    fetchMock.mockImplementationOnce(() => jsonResponse(serviceRequest()));
+    const request = serviceRequest();
+    request.outputs[0] = {
+      ...request.outputs[0]!,
+      status: "APPROVED_INTERNAL",
+      title: "Approved internal output",
+    };
+
+    render(<RequestDetail initialRequest={request} />);
+    fireEvent.click(screen.getByRole("button", { name: "Share with client" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "http://localhost:4000/api/v1/requests/request-1/outputs/output-1/share",
+    );
+  });
+
+  it("lets client users accept only shared outputs through the backend API", async () => {
+    const fetchMock = jest.mocked(fetch);
+    const request = serviceRequest();
+    request.outputs[0] = {
+      ...request.outputs[0]!,
+      status: "SHARED_WITH_CLIENT",
+      title: "Shared SEO output",
+      sharedAt: "2026-06-23T00:00:00.000Z",
+      createdBy: null,
+    };
+    fetchMock.mockImplementationOnce(() =>
+      jsonResponse({
+        ...request,
+        outputs: [{ ...request.outputs[0]!, status: "ACCEPTED_BY_CLIENT" }],
+      }),
+    );
+
+    render(<ClientRequestDetail request={request} />);
+    expect(screen.getByText("Shared SEO output")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Accept output" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "http://localhost:4000/api/v1/client-portal/requests/request-1/outputs/output-1/accept",
+    );
   });
 
   it("does not render internal notes in the client request view", () => {

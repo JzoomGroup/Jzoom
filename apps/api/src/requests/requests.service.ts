@@ -14,6 +14,7 @@ import type { AuthenticatedPrincipal, RequestMetadata } from "../auth/auth.types
 import { DatabaseService } from "../database/database.service.js";
 import {
   ACCOUNT_MANAGER_ROLE_CODE,
+  CLIENT_VISIBLE_OUTPUT_STATUSES,
   REQUEST_EVENT,
   REQUEST_STATUSES,
   type RequestLifecycleStatus,
@@ -25,14 +26,23 @@ import type {
   AddInternalNoteDto,
   AddRequestCommentDto,
   AssignRequestDto,
+  ClientDocumentRequestStatusDto,
+  CloseRequestOutputDto,
+  CreateTimeEntryDto,
+  RequestClientDocumentDto,
   CreateRequestOutputDto,
   CreateRequestTaskDto,
   CreateRequestDto,
   RequestQueueQueryDto,
   ReviewRequestOutputDto,
+  ReviewTimeEntryDto,
+  ReturnSharedOutputDto,
+  ShareRequestOutputDto,
   SupervisorRequestReviewDto,
+  UpdateTimeEntryDto,
   UpdateRequestOutputDto,
   UpdateRequestTaskDto,
+  UploadClientDocumentMetadataDto,
 } from "./requests.dto.js";
 
 const workflowCode = "REQUEST_LIFECYCLE_FOUNDATION";
@@ -153,8 +163,10 @@ const requestSummaryInclude = {
       comments: true,
       files: true,
       internalNotes: true,
+      documentRequests: true,
       outputs: true,
       tasks: true,
+      timeEntries: true,
       workflowEvents: true,
     },
   },
@@ -179,11 +191,30 @@ const requestDetailInclude = {
     include: {
       createdBy: { select: userSummarySelect },
       reviewedBy: { select: userSummarySelect },
+      sharedBy: { select: userSummarySelect },
+      clientDecisionBy: { select: userSummarySelect },
+    },
+  },
+  documentRequests: {
+    orderBy: [{ dueAt: "asc" }, { createdAt: "asc" }],
+    include: {
+      requestedBy: { select: userSummarySelect },
+      fulfilledBy: { select: userSummarySelect },
+      fileMetadata: {
+        include: { uploadedBy: { select: userSummarySelect } },
+      },
     },
   },
   tasks: {
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     include: { assignee: { select: userSummarySelect } },
+  },
+  timeEntries: {
+    orderBy: [{ workDate: "desc" }, { createdAt: "desc" }],
+    include: {
+      user: { select: userSummarySelect },
+      decidedBy: { select: userSummarySelect },
+    },
   },
   workflowEvents: {
     orderBy: { occurredAt: "asc" },
@@ -657,10 +688,10 @@ export class RequestsService {
     const request = await this.requireAccessibleRequest(id, principal);
     this.assertAssignedWork(request, principal);
     const output = await this.requireRequestOutput(id, outputId);
-    if (!["DRAFT", "REVISION_REQUESTED"].includes(output.status)) {
+    if (!["DRAFT", "REVISION_REQUESTED", "RETURNED_BY_CLIENT"].includes(output.status)) {
       throw new ConflictException({
         code: "REQUEST_OUTPUT_LOCKED_FOR_REVIEW",
-        message: "Only draft or returned internal outputs can be edited",
+        message: "Only draft, returned internal, or client-returned outputs can be edited",
       });
     }
     const data: Prisma.RequestOutputUpdateInput = {};
@@ -700,10 +731,11 @@ export class RequestsService {
     const request = await this.requireAccessibleRequest(id, principal);
     this.assertAssignedWork(request, principal);
     const output = await this.requireRequestOutput(id, outputId);
-    if (!["DRAFT", "REVISION_REQUESTED"].includes(output.status)) {
+    if (!["DRAFT", "REVISION_REQUESTED", "RETURNED_BY_CLIENT"].includes(output.status)) {
       throw new ConflictException({
         code: "REQUEST_OUTPUT_NOT_SUBMITTABLE",
-        message: "Only draft or returned internal outputs can be submitted for review",
+        message:
+          "Only draft, returned internal, or client-returned outputs can be submitted for review",
       });
     }
     const updated = await this.database.prisma.requestOutput.update({
@@ -712,6 +744,7 @@ export class RequestsService {
         status: "INTERNAL_REVIEW",
         submittedAt: new Date(),
         reviewReason: null,
+        clientReturnReason: null,
       },
     });
     await this.audit.record(
@@ -778,6 +811,99 @@ export class RequestsService {
     return this.get(id, principal);
   }
 
+  async shareOutput(
+    id: string,
+    outputId: string,
+    input: ShareRequestOutputDto,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const request = await this.requireAccessibleRequest(id, principal);
+    this.assertSupervisorAccess(request, principal);
+    const output = await this.requireRequestOutput(id, outputId);
+    if (output.status !== "APPROVED_INTERNAL") {
+      throw new ConflictException({
+        code: "REQUEST_OUTPUT_NOT_APPROVED_INTERNAL",
+        message: "Only internally approved outputs can be shared with the client",
+      });
+    }
+    const updated = await this.database.prisma.requestOutput.update({
+      where: { id: output.id },
+      data: {
+        status: "SHARED_WITH_CLIENT",
+        sharedById: principal.userId,
+        sharedAt: new Date(),
+      },
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.outputShared,
+        entityType: "RequestOutput",
+        entityId: updated.id,
+        before: this.outputAuditSnapshot(output),
+        after: this.outputAuditSnapshot(updated),
+        ...(input.reason ? { reason: input.reason } : {}),
+      },
+      metadata,
+    );
+    await this.recordRequestActivity(
+      request,
+      principal,
+      REQUEST_EVENT.outputShared,
+      input.reason ?? "Output shared with client",
+      { outputId: updated.id, status: updated.status },
+    );
+    return this.get(id, principal);
+  }
+
+  async closeOutput(
+    id: string,
+    outputId: string,
+    input: CloseRequestOutputDto,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const request = await this.requireAccessibleRequest(id, principal);
+    this.assertSupervisorAccess(request, principal);
+    const output = await this.requireRequestOutput(id, outputId);
+    if (
+      !["ACCEPTED_BY_CLIENT", "RETURNED_BY_CLIENT", "SHARED_WITH_CLIENT"].includes(output.status)
+    ) {
+      throw new ConflictException({
+        code: "REQUEST_OUTPUT_NOT_CLOSABLE",
+        message: "Only shared, accepted, or returned client delivery outputs can be closed",
+      });
+    }
+    const updated = await this.database.prisma.requestOutput.update({
+      where: { id: output.id },
+      data: {
+        status: "CLOSED",
+        closedAt: new Date(),
+      },
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.outputClosed,
+        entityType: "RequestOutput",
+        entityId: updated.id,
+        before: this.outputAuditSnapshot(output),
+        after: this.outputAuditSnapshot(updated),
+        ...(input.reason ? { reason: input.reason } : {}),
+      },
+      metadata,
+    );
+    await this.recordRequestActivity(
+      request,
+      principal,
+      REQUEST_EVENT.outputClosed,
+      input.reason ?? "Output closed",
+      { outputId: updated.id, status: updated.status },
+    );
+    return this.get(id, principal);
+  }
+
   async listClientRequests(principal: AuthenticatedPrincipal) {
     const requests = await this.database.prisma.request.findMany({
       where: {
@@ -837,6 +963,417 @@ export class RequestsService {
       metadata,
     );
     return this.getClientRequest(id, principal, metadata);
+  }
+
+  async acceptClientOutput(
+    id: string,
+    outputId: string,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const request = await this.requireClientRequest(id, principal);
+    const output = this.requireSharedOutputFromRequest(request, outputId);
+    const updated = await this.database.prisma.requestOutput.update({
+      where: { id: output.id },
+      data: {
+        status: "ACCEPTED_BY_CLIENT",
+        clientDecisionById: principal.userId,
+        clientDecidedAt: new Date(),
+        clientReturnReason: null,
+      },
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.outputClientAccepted,
+        entityType: "RequestOutput",
+        entityId: updated.id,
+        before: this.outputAuditSnapshot(output),
+        after: this.outputAuditSnapshot(updated),
+      },
+      metadata,
+    );
+    await this.recordRequestActivity(
+      request,
+      principal,
+      REQUEST_EVENT.outputClientAccepted,
+      "Client accepted shared output",
+      { outputId: updated.id, status: updated.status },
+    );
+    const refreshed = await this.requireClientRequest(id, principal);
+    return this.detailView(refreshed, true);
+  }
+
+  async returnClientOutput(
+    id: string,
+    outputId: string,
+    input: ReturnSharedOutputDto,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const request = await this.requireClientRequest(id, principal);
+    const output = this.requireSharedOutputFromRequest(request, outputId);
+    const updated = await this.database.prisma.requestOutput.update({
+      where: { id: output.id },
+      data: {
+        status: "RETURNED_BY_CLIENT",
+        clientDecisionById: principal.userId,
+        clientDecidedAt: new Date(),
+        clientReturnReason: input.reason.trim(),
+      },
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.outputClientReturned,
+        entityType: "RequestOutput",
+        entityId: updated.id,
+        before: this.outputAuditSnapshot(output),
+        after: this.outputAuditSnapshot(updated),
+        reason: input.reason.trim(),
+      },
+      metadata,
+    );
+    await this.recordRequestActivity(
+      request,
+      principal,
+      REQUEST_EVENT.outputClientReturned,
+      "Client returned shared output",
+      { outputId: updated.id, status: updated.status },
+    );
+    const refreshed = await this.requireClientRequest(id, principal);
+    return this.detailView(refreshed, true);
+  }
+
+  async requestClientDocument(
+    id: string,
+    input: RequestClientDocumentDto,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const request = await this.requireAccessibleRequest(id, principal);
+    const documentRequest = await this.database.prisma.clientDocumentRequest.create({
+      data: {
+        requestId: id,
+        requestedById: principal.userId,
+        title: input.title.trim(),
+        ...(input.instructions ? { instructions: input.instructions.trim() } : {}),
+        ...(input.dueAt ? { dueAt: new Date(input.dueAt) } : {}),
+      },
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.documentRequested,
+        entityType: "ClientDocumentRequest",
+        entityId: documentRequest.id,
+        after: this.documentRequestAuditSnapshot(documentRequest),
+      },
+      metadata,
+    );
+    await this.recordRequestActivity(
+      request,
+      principal,
+      REQUEST_EVENT.documentRequested,
+      "Client document requested",
+      { documentRequestId: documentRequest.id, status: documentRequest.status },
+    );
+    return this.get(id, principal);
+  }
+
+  async changeDocumentRequestStatus(
+    id: string,
+    documentRequestId: string,
+    input: ClientDocumentRequestStatusDto,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const request = await this.requireAccessibleRequest(id, principal);
+    const documentRequest = await this.requireClientDocumentRequest(id, documentRequestId);
+    if (!["CANCELLED", "CLOSED"].includes(input.status)) {
+      throw new BadRequestException({
+        code: "DOCUMENT_REQUEST_STATUS_UNSUPPORTED",
+        message: "Internal users may only cancel or close a client document request in this PR",
+      });
+    }
+    if (documentRequest.status === "UPLOADED" && input.status === "CANCELLED") {
+      throw new ConflictException({
+        code: "DOCUMENT_REQUEST_ALREADY_UPLOADED",
+        message: "Uploaded document requests cannot be cancelled",
+      });
+    }
+    const updated = await this.database.prisma.clientDocumentRequest.update({
+      where: { id: documentRequest.id },
+      data: {
+        status: input.status,
+        ...(input.status === "CANCELLED" ? { cancelledAt: new Date() } : {}),
+        ...(input.status === "CLOSED" ? { closedAt: new Date() } : {}),
+      },
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.documentRequestCancelled,
+        entityType: "ClientDocumentRequest",
+        entityId: updated.id,
+        before: this.documentRequestAuditSnapshot(documentRequest),
+        after: this.documentRequestAuditSnapshot(updated),
+        ...(input.reason ? { reason: input.reason } : {}),
+      },
+      metadata,
+    );
+    await this.recordRequestActivity(
+      request,
+      principal,
+      REQUEST_EVENT.documentRequestCancelled,
+      input.reason ?? `Document request ${input.status.toLowerCase()}`,
+      { documentRequestId: updated.id, status: updated.status },
+    );
+    return this.get(id, principal);
+  }
+
+  async uploadClientDocument(
+    id: string,
+    documentRequestId: string,
+    input: UploadClientDocumentMetadataDto,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const request = await this.requireClientRequest(id, principal);
+    const documentRequest = await this.requireClientDocumentRequest(id, documentRequestId);
+    if (documentRequest.status !== "REQUESTED") {
+      throw new ConflictException({
+        code: "DOCUMENT_REQUEST_NOT_OPEN",
+        message: "Only open document requests can receive a client upload",
+      });
+    }
+    const file = await this.database.prisma.fileMetadata.create({
+      data: {
+        requestId: id,
+        uploadedById: principal.userId,
+        storageProvider: "client-upload-metadata",
+        storageKey: `requests/${id}/client-documents/${documentRequest.id}/${randomUUID()}/${input.originalName}`,
+        originalName: input.originalName,
+        mimeType: input.mimeType,
+        sizeBytes: BigInt(input.sizeBytes),
+        sha256: input.sha256,
+        visibility: "CLIENT_VISIBLE",
+      },
+    });
+    const updated = await this.database.prisma.clientDocumentRequest.update({
+      where: { id: documentRequest.id },
+      data: {
+        status: "UPLOADED",
+        fulfilledById: principal.userId,
+        fulfilledAt: new Date(),
+        fileMetadataId: file.id,
+      },
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.documentUploaded,
+        entityType: "ClientDocumentRequest",
+        entityId: updated.id,
+        before: this.documentRequestAuditSnapshot(documentRequest),
+        after: this.documentRequestAuditSnapshot(updated),
+      },
+      metadata,
+    );
+    await this.recordRequestActivity(
+      request,
+      principal,
+      REQUEST_EVENT.documentUploaded,
+      "Client uploaded requested document metadata",
+      { documentRequestId: updated.id, fileId: file.id, status: updated.status },
+    );
+    const refreshed = await this.requireClientRequest(id, principal);
+    return this.detailView(refreshed, true);
+  }
+
+  async createTimeEntry(
+    id: string,
+    input: CreateTimeEntryDto,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const request = await this.requireAccessibleRequest(id, principal);
+    this.assertAssignedWork(request, principal);
+    const entry = await this.database.prisma.timeEntry.create({
+      data: {
+        requestId: id,
+        userId: principal.userId,
+        workDate: new Date(input.workDate),
+        hours: new Prisma.Decimal(input.hours),
+        billable: input.billable ?? true,
+        deductHours: input.billable ?? true,
+        ...(input.notes ? { notes: input.notes.trim() } : {}),
+      },
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.timeEntryCreated,
+        entityType: "TimeEntry",
+        entityId: entry.id,
+        after: this.timeEntryAuditSnapshot(entry),
+      },
+      metadata,
+    );
+    await this.recordRequestActivity(
+      request,
+      principal,
+      REQUEST_EVENT.timeEntryCreated,
+      "Time entry created",
+      { timeEntryId: entry.id, status: entry.status, hours: input.hours },
+    );
+    return this.get(id, principal);
+  }
+
+  async updateTimeEntry(
+    id: string,
+    timeEntryId: string,
+    input: UpdateTimeEntryDto,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    await this.requireAccessibleRequest(id, principal);
+    const entry = await this.requireRequestTimeEntry(id, timeEntryId);
+    this.assertTimeEntryOwnerOrManager(entry, principal);
+    if (!["DRAFT", "REJECTED"].includes(entry.status)) {
+      throw new ConflictException({
+        code: "TIME_ENTRY_LOCKED",
+        message: "Only draft or rejected time entries can be edited",
+      });
+    }
+    const data: Prisma.TimeEntryUpdateInput = {};
+    if (input.workDate !== undefined) data.workDate = new Date(input.workDate);
+    if (input.hours !== undefined) data.hours = new Prisma.Decimal(input.hours);
+    if (input.billable !== undefined) {
+      data.billable = input.billable;
+      data.deductHours = input.billable;
+    }
+    if (input.notes !== undefined) data.notes = input.notes?.trim() ?? null;
+    if (input.status !== undefined && input.status !== entry.status) {
+      if (!["DRAFT", "SUBMITTED"].includes(input.status)) {
+        throw new BadRequestException({
+          code: "TIME_ENTRY_STATUS_UNSUPPORTED",
+          message: "Use submit or review actions for approval status changes",
+        });
+      }
+      data.status = input.status;
+      if (input.status === "SUBMITTED") data.submittedAt = new Date();
+    }
+    const updated = await this.database.prisma.timeEntry.update({
+      where: { id: entry.id },
+      data,
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.timeEntryUpdated,
+        entityType: "TimeEntry",
+        entityId: updated.id,
+        before: this.timeEntryAuditSnapshot(entry),
+        after: this.timeEntryAuditSnapshot(updated),
+      },
+      metadata,
+    );
+    return this.get(id, principal);
+  }
+
+  async submitTimeEntry(
+    id: string,
+    timeEntryId: string,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const request = await this.requireAccessibleRequest(id, principal);
+    const entry = await this.requireRequestTimeEntry(id, timeEntryId);
+    this.assertTimeEntryOwnerOrManager(entry, principal);
+    if (!["DRAFT", "REJECTED"].includes(entry.status)) {
+      throw new ConflictException({
+        code: "TIME_ENTRY_NOT_SUBMITTABLE",
+        message: "Only draft or rejected time entries can be submitted",
+      });
+    }
+    const updated = await this.database.prisma.timeEntry.update({
+      where: { id: entry.id },
+      data: {
+        status: "SUBMITTED",
+        submittedAt: new Date(),
+        decisionReason: null,
+        decidedAt: null,
+        decidedById: null,
+      },
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.timeEntrySubmitted,
+        entityType: "TimeEntry",
+        entityId: updated.id,
+        before: this.timeEntryAuditSnapshot(entry),
+        after: this.timeEntryAuditSnapshot(updated),
+      },
+      metadata,
+    );
+    await this.recordRequestActivity(
+      request,
+      principal,
+      REQUEST_EVENT.timeEntrySubmitted,
+      "Time entry submitted",
+      { timeEntryId: updated.id, status: updated.status },
+    );
+    return this.get(id, principal);
+  }
+
+  async reviewTimeEntry(
+    id: string,
+    timeEntryId: string,
+    input: ReviewTimeEntryDto,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const request = await this.requireAccessibleRequest(id, principal);
+    this.assertSupervisorAccess(request, principal);
+    const entry = await this.requireRequestTimeEntry(id, timeEntryId);
+    if (entry.status !== "SUBMITTED") {
+      throw new ConflictException({
+        code: "TIME_ENTRY_NOT_SUBMITTED",
+        message: "Only submitted time entries can be reviewed",
+      });
+    }
+    const approved = input.action === "APPROVE";
+    const updated = await this.database.prisma.timeEntry.update({
+      where: { id: entry.id },
+      data: {
+        status: approved ? "APPROVED" : "REJECTED",
+        decidedById: principal.userId,
+        decidedAt: new Date(),
+        decisionReason: input.reason ?? input.action.toLowerCase(),
+      },
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.timeEntryReviewed,
+        entityType: "TimeEntry",
+        entityId: updated.id,
+        before: this.timeEntryAuditSnapshot(entry),
+        after: this.timeEntryAuditSnapshot(updated),
+        ...(input.reason ? { reason: input.reason } : {}),
+      },
+      metadata,
+    );
+    await this.recordRequestActivity(
+      request,
+      principal,
+      REQUEST_EVENT.timeEntryReviewed,
+      input.reason ?? `Time entry ${updated.status.toLowerCase()}`,
+      { timeEntryId: updated.id, status: updated.status },
+    );
+    return this.get(id, principal);
   }
 
   private queueAccessWhere(
@@ -1108,6 +1645,89 @@ export class RequestsService {
       });
     }
     return output;
+  }
+
+  private requireSharedOutputFromRequest(request: RequestDetailRecord, outputId: string) {
+    const output = request.outputs.find(
+      (item) =>
+        item.id === outputId &&
+        CLIENT_VISIBLE_OUTPUT_STATUSES.includes(
+          item.status as (typeof CLIENT_VISIBLE_OUTPUT_STATUSES)[number],
+        ),
+    );
+    if (!output) {
+      throw new NotFoundException({
+        code: "CLIENT_OUTPUT_NOT_FOUND",
+        message: "The shared output could not be found",
+      });
+    }
+    if (output.status !== "SHARED_WITH_CLIENT") {
+      throw new ConflictException({
+        code: "CLIENT_OUTPUT_NOT_OPEN_FOR_DECISION",
+        message: "Only outputs currently shared with the client can be accepted or returned",
+      });
+    }
+    return output;
+  }
+
+  private async requireClientDocumentRequest(requestId: string, documentRequestId: string) {
+    const documentRequest = await this.database.prisma.clientDocumentRequest.findFirst({
+      where: { id: documentRequestId, requestId },
+    });
+    if (!documentRequest) {
+      throw new NotFoundException({
+        code: "CLIENT_DOCUMENT_REQUEST_NOT_FOUND",
+        message: "The client document request could not be found",
+      });
+    }
+    return documentRequest;
+  }
+
+  private async requireRequestTimeEntry(requestId: string, timeEntryId: string) {
+    const entry = await this.database.prisma.timeEntry.findFirst({
+      where: { id: timeEntryId, requestId },
+    });
+    if (!entry) {
+      throw new NotFoundException({
+        code: "REQUEST_TIME_ENTRY_NOT_FOUND",
+        message: "The request time entry could not be found",
+      });
+    }
+    return entry;
+  }
+
+  private assertTimeEntryOwnerOrManager(
+    entry: { userId: string },
+    principal: AuthenticatedPrincipal,
+  ): void {
+    if (hasGlobalAccess(principal) || entry.userId === principal.userId) {
+      return;
+    }
+    throw new ForbiddenException({
+      code: "TIME_ENTRY_OWNER_REQUIRED",
+      message: "Only the time entry owner or management can change this entry",
+    });
+  }
+
+  private async recordRequestActivity(
+    request: RequestDetailRecord,
+    principal: AuthenticatedPrincipal,
+    eventCode: string,
+    reason: string,
+    metadata: Record<string, unknown>,
+  ): Promise<void> {
+    await this.database.prisma.workflowEvent.create({
+      data: {
+        workflowVersionId: request.workflowVersionId,
+        requestId: request.id,
+        fromStateId: request.currentStateId,
+        toStateId: request.currentStateId,
+        actorId: principal.userId,
+        actorRole: primaryRole(principal),
+        reason,
+        metadata: json({ eventCode, ...metadata }),
+      },
+    });
   }
 
   private internalAccessWhere(principal: AuthenticatedPrincipal): Prisma.RequestWhereInput {
@@ -1466,10 +2086,12 @@ export class RequestsService {
       counts: clientSafe
         ? {
             comments: 0,
+            documentRequests: 0,
             files: 0,
             internalNotes: 0,
             outputs: 0,
             tasks: 0,
+            timeEntries: 0,
             workflowEvents: 0,
           }
         : request._count,
@@ -1512,7 +2134,18 @@ export class RequestsService {
           createdAt: file.createdAt.toISOString(),
           updatedAt: file.updatedAt.toISOString(),
         })),
-      outputs: clientSafe ? [] : request.outputs.map((output) => this.outputView(output)),
+      outputs: request.outputs
+        .filter(
+          (output) =>
+            !clientSafe ||
+            CLIENT_VISIBLE_OUTPUT_STATUSES.includes(
+              output.status as (typeof CLIENT_VISIBLE_OUTPUT_STATUSES)[number],
+            ),
+        )
+        .map((output) => this.outputView(output, clientSafe)),
+      documentRequests: request.documentRequests
+        .filter((documentRequest) => !clientSafe || documentRequest.status !== "CANCELLED")
+        .map((documentRequest) => this.documentRequestView(documentRequest, clientSafe)),
       tasks: clientSafe
         ? []
         : request.tasks.map((task) => ({
@@ -1527,6 +2160,7 @@ export class RequestsService {
             createdAt: task.createdAt.toISOString(),
             updatedAt: task.updatedAt.toISOString(),
           })),
+      timeEntries: clientSafe ? [] : request.timeEntries.map((entry) => this.timeEntryView(entry)),
       activity: request.workflowEvents.map((event) => ({
         id: event.id,
         actorId: event.actorId,
@@ -1568,7 +2202,7 @@ export class RequestsService {
     };
   }
 
-  private outputView(output: RequestDetailRecord["outputs"][number]) {
+  private outputView(output: RequestDetailRecord["outputs"][number], clientSafe = false) {
     return {
       id: output.id,
       code: output.code,
@@ -1579,13 +2213,72 @@ export class RequestsService {
       dueAt: output.dueAt?.toISOString() ?? null,
       submittedAt: output.submittedAt?.toISOString() ?? null,
       reviewedAt: output.reviewedAt?.toISOString() ?? null,
-      reviewReason: output.reviewReason,
+      sharedAt: output.sharedAt?.toISOString() ?? null,
+      clientDecidedAt: output.clientDecidedAt?.toISOString() ?? null,
+      closedAt: output.closedAt?.toISOString() ?? null,
+      reviewReason: clientSafe ? null : output.reviewReason,
+      clientReturnReason: output.clientReturnReason,
       revision: output.revision,
       sortOrder: output.sortOrder,
       createdAt: output.createdAt.toISOString(),
       updatedAt: output.updatedAt.toISOString(),
-      createdBy: output.createdBy,
-      reviewedBy: output.reviewedBy,
+      createdBy: clientSafe ? null : output.createdBy,
+      reviewedBy: clientSafe ? null : output.reviewedBy,
+      sharedBy: clientSafe ? null : output.sharedBy,
+      clientDecisionBy: clientSafe ? null : output.clientDecisionBy,
+    };
+  }
+
+  private documentRequestView(
+    documentRequest: RequestDetailRecord["documentRequests"][number],
+    clientSafe = false,
+  ) {
+    return {
+      id: documentRequest.id,
+      title: documentRequest.title,
+      instructions: documentRequest.instructions,
+      status: documentRequest.status,
+      dueAt: documentRequest.dueAt?.toISOString() ?? null,
+      requestedAt: documentRequest.requestedAt.toISOString(),
+      fulfilledAt: documentRequest.fulfilledAt?.toISOString() ?? null,
+      closedAt: documentRequest.closedAt?.toISOString() ?? null,
+      cancelledAt: documentRequest.cancelledAt?.toISOString() ?? null,
+      createdAt: documentRequest.createdAt.toISOString(),
+      updatedAt: documentRequest.updatedAt.toISOString(),
+      requestedBy: clientSafe ? null : documentRequest.requestedBy,
+      fulfilledBy: clientSafe ? null : documentRequest.fulfilledBy,
+      file: documentRequest.fileMetadata
+        ? {
+            id: documentRequest.fileMetadata.id,
+            uploadedBy: clientSafe ? null : documentRequest.fileMetadata.uploadedBy,
+            originalName: documentRequest.fileMetadata.originalName,
+            mimeType: documentRequest.fileMetadata.mimeType,
+            sizeBytes: Number(documentRequest.fileMetadata.sizeBytes),
+            sha256: documentRequest.fileMetadata.sha256,
+            visibility: documentRequest.fileMetadata.visibility,
+            version: documentRequest.fileMetadata.version,
+            createdAt: documentRequest.fileMetadata.createdAt.toISOString(),
+            updatedAt: documentRequest.fileMetadata.updatedAt.toISOString(),
+          }
+        : null,
+    };
+  }
+
+  private timeEntryView(entry: RequestDetailRecord["timeEntries"][number]) {
+    return {
+      id: entry.id,
+      user: entry.user,
+      workDate: entry.workDate.toISOString(),
+      hours: Number(entry.hours),
+      billable: entry.billable,
+      status: entry.status,
+      notes: entry.notes,
+      decisionReason: entry.decisionReason,
+      submittedAt: entry.submittedAt?.toISOString() ?? null,
+      decidedAt: entry.decidedAt?.toISOString() ?? null,
+      decidedBy: entry.decidedBy,
+      createdAt: entry.createdAt.toISOString(),
+      updatedAt: entry.updatedAt.toISOString(),
     };
   }
 
@@ -1609,6 +2302,10 @@ export class RequestsService {
   }
 
   private outputAuditSnapshot(output: {
+    clientDecidedAt: Date | null;
+    clientDecisionById: string | null;
+    clientReturnReason: string | null;
+    closedAt: Date | null;
     code: string;
     contentSnapshot: unknown;
     description: string | null;
@@ -1617,6 +2314,8 @@ export class RequestsService {
     reviewReason: string | null;
     reviewedAt: Date | null;
     reviewedById: string | null;
+    sharedAt: Date | null;
+    sharedById: string | null;
     status: string;
     submittedAt: Date | null;
     title: string;
@@ -1631,8 +2330,76 @@ export class RequestsService {
       dueAt: output.dueAt?.toISOString() ?? null,
       submittedAt: output.submittedAt?.toISOString() ?? null,
       reviewedAt: output.reviewedAt?.toISOString() ?? null,
+      sharedAt: output.sharedAt?.toISOString() ?? null,
+      clientDecidedAt: output.clientDecidedAt?.toISOString() ?? null,
+      closedAt: output.closedAt?.toISOString() ?? null,
       reviewedById: output.reviewedById,
+      sharedById: output.sharedById,
+      clientDecisionById: output.clientDecisionById,
       reviewReason: output.reviewReason,
+      clientReturnReason: output.clientReturnReason,
+    };
+  }
+
+  private documentRequestAuditSnapshot(documentRequest: {
+    cancelledAt: Date | null;
+    closedAt: Date | null;
+    dueAt: Date | null;
+    fileMetadataId: string | null;
+    fulfilledAt: Date | null;
+    fulfilledById: string | null;
+    id: string;
+    instructions: string | null;
+    requestedAt: Date;
+    requestedById: string;
+    requestId: string;
+    status: string;
+    title: string;
+  }) {
+    return {
+      id: documentRequest.id,
+      requestId: documentRequest.requestId,
+      title: documentRequest.title,
+      instructions: documentRequest.instructions,
+      status: documentRequest.status,
+      dueAt: documentRequest.dueAt?.toISOString() ?? null,
+      requestedAt: documentRequest.requestedAt.toISOString(),
+      fulfilledAt: documentRequest.fulfilledAt?.toISOString() ?? null,
+      closedAt: documentRequest.closedAt?.toISOString() ?? null,
+      cancelledAt: documentRequest.cancelledAt?.toISOString() ?? null,
+      requestedById: documentRequest.requestedById,
+      fulfilledById: documentRequest.fulfilledById,
+      fileMetadataId: documentRequest.fileMetadataId,
+    };
+  }
+
+  private timeEntryAuditSnapshot(entry: {
+    billable: boolean;
+    decidedAt: Date | null;
+    decidedById: string | null;
+    decisionReason: string | null;
+    hours: { toString(): string };
+    id: string;
+    notes: string | null;
+    requestId: string | null;
+    status: string;
+    submittedAt: Date | null;
+    userId: string;
+    workDate: Date;
+  }) {
+    return {
+      id: entry.id,
+      requestId: entry.requestId,
+      userId: entry.userId,
+      workDate: entry.workDate.toISOString(),
+      hours: Number(entry.hours),
+      billable: entry.billable,
+      status: entry.status,
+      notes: entry.notes,
+      submittedAt: entry.submittedAt?.toISOString() ?? null,
+      decidedAt: entry.decidedAt?.toISOString() ?? null,
+      decidedById: entry.decidedById,
+      decisionReason: entry.decisionReason,
     };
   }
 }

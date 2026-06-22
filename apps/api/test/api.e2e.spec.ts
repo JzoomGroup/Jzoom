@@ -180,9 +180,30 @@ describe("PR 1 API foundation", () => {
     expect(document.paths["/api/v1/requests/{id}/outputs/{outputId}"]).toBeDefined();
     expect(document.paths["/api/v1/requests/{id}/outputs/{outputId}/submit"]).toBeDefined();
     expect(document.paths["/api/v1/requests/{id}/outputs/{outputId}/review"]).toBeDefined();
+    expect(document.paths["/api/v1/requests/{id}/outputs/{outputId}/share"]).toBeDefined();
+    expect(document.paths["/api/v1/requests/{id}/outputs/{outputId}/close"]).toBeDefined();
+    expect(document.paths["/api/v1/requests/{id}/document-requests"]).toBeDefined();
+    expect(
+      document.paths["/api/v1/requests/{id}/document-requests/{documentRequestId}/status"],
+    ).toBeDefined();
+    expect(document.paths["/api/v1/requests/{id}/time-entries"]).toBeDefined();
+    expect(document.paths["/api/v1/requests/{id}/time-entries/{timeEntryId}"]).toBeDefined();
+    expect(document.paths["/api/v1/requests/{id}/time-entries/{timeEntryId}/submit"]).toBeDefined();
+    expect(document.paths["/api/v1/requests/{id}/time-entries/{timeEntryId}/review"]).toBeDefined();
     expect(document.paths["/api/v1/client-portal/requests"]).toBeDefined();
     expect(document.paths["/api/v1/client-portal/requests/{id}"]).toBeDefined();
     expect(document.paths["/api/v1/client-portal/requests/{id}/comments"]).toBeDefined();
+    expect(
+      document.paths["/api/v1/client-portal/requests/{id}/outputs/{outputId}/accept"],
+    ).toBeDefined();
+    expect(
+      document.paths["/api/v1/client-portal/requests/{id}/outputs/{outputId}/return"],
+    ).toBeDefined();
+    expect(
+      document.paths[
+        "/api/v1/client-portal/requests/{id}/document-requests/{documentRequestId}/upload"
+      ],
+    ).toBeDefined();
     expect(document.components?.schemas?.ApiErrorResponseDto).toBeDefined();
   });
 

@@ -82,10 +82,12 @@ export interface RequestSummary {
   };
   counts: {
     comments: number;
+    documentRequests: number;
     files: number;
     internalNotes: number;
     outputs: number;
     tasks: number;
+    timeEntries: number;
     workflowEvents: number;
   };
 }
@@ -150,26 +152,75 @@ export interface RequestOutput {
   title: string;
   description: string | null;
   contentSnapshot: unknown;
-  status: "DRAFT" | "INTERNAL_REVIEW" | "APPROVED_INTERNAL" | "REVISION_REQUESTED";
+  status:
+    | "DRAFT"
+    | "INTERNAL_REVIEW"
+    | "APPROVED_INTERNAL"
+    | "SHARED_WITH_CLIENT"
+    | "ACCEPTED_BY_CLIENT"
+    | "RETURNED_BY_CLIENT"
+    | "CLOSED"
+    | "REVISION_REQUESTED";
   dueAt: string | null;
   submittedAt: string | null;
   reviewedAt: string | null;
+  sharedAt: string | null;
+  clientDecidedAt: string | null;
+  closedAt: string | null;
   reviewReason: string | null;
+  clientReturnReason: string | null;
   revision: number;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
-  createdBy: RequestUser;
+  createdBy: RequestUser | null;
   reviewedBy: RequestUser | null;
+  sharedBy: RequestUser | null;
+  clientDecisionBy: RequestUser | null;
+}
+
+export interface RequestDocumentRequest {
+  id: string;
+  title: string;
+  instructions: string | null;
+  status: "REQUESTED" | "UPLOADED" | "CANCELLED" | "CLOSED";
+  dueAt: string | null;
+  requestedAt: string;
+  fulfilledAt: string | null;
+  closedAt: string | null;
+  cancelledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  requestedBy: RequestUser | null;
+  fulfilledBy: RequestUser | null;
+  file: RequestAttachment | null;
+}
+
+export interface RequestTimeEntry {
+  id: string;
+  user: RequestUser;
+  workDate: string;
+  hours: number;
+  billable: boolean;
+  status: "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
+  notes: string | null;
+  decisionReason: string | null;
+  submittedAt: string | null;
+  decidedAt: string | null;
+  decidedBy: RequestUser | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ServiceRequest extends RequestSummary {
   comments: RequestComment[];
   internalNotes: RequestInternalNote[];
   attachments: RequestAttachment[];
+  documentRequests: RequestDocumentRequest[];
   activity: RequestActivity[];
   outputs: RequestOutput[];
   tasks: RequestTask[];
+  timeEntries: RequestTimeEntry[];
 }
 
 export interface RequestQueueResponse {
