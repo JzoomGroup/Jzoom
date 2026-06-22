@@ -6,6 +6,7 @@ import { CatalogModule } from "./catalog-admin/catalog.module.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { OneTimeCatalogModule } from "./one-time-catalog/one-time-catalog.module.js";
+import { PricingModule } from "./pricing/pricing.module.js";
 import { RequestContextModule } from "./request-context/request-context.module.js";
 
 @Module({})
@@ -19,6 +20,7 @@ export class AppModule {
         AuthModule.forRoot(environment),
         CatalogModule,
         OneTimeCatalogModule,
+        PricingModule,
         HealthModule,
       ],
     };

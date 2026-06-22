@@ -18,6 +18,11 @@ export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
       "admin-one-time-catalog",
       "Admin-only one-time services, categories, phases, deliverables, and tasks",
     )
+    .addTag("admin-pricing-rules", "Admin-only effective-dated pricing configuration")
+    .addTag(
+      "pricing-studio",
+      "Scoped client pricing drafts and backend-trusted calculation previews",
+    )
     .build();
 
   return SwaggerModule.createDocument(app, configuration, {
