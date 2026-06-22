@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import type { ApiEnvironment } from "@jzoom/config";
@@ -122,7 +123,7 @@ describeWithDatabase("PR 5 one-time catalog APIs", () => {
 
   beforeAll(async () => {
     database = createDatabaseClient(environment.databaseUrl);
-    const workspaceRoot = path.resolve(import.meta.dirname, "../../..");
+    const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
     const blueprint = await normalizeBlueprint(path.join(workspaceRoot, "data", "blueprints"));
     await seedBlueprint(database, blueprint);
 
@@ -200,7 +201,9 @@ describeWithDatabase("PR 5 one-time catalog APIs", () => {
     await database.user.deleteMany({
       where: { email: { endsWith: "@pr5.test" } },
     });
-    await app.close();
+    if (app) {
+      await app.close();
+    }
     await database.$disconnect();
   });
 
