@@ -2,6 +2,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/prisma/client.js";
 
 export type JzoomDatabaseClient = PrismaClient;
+export { Prisma } from "./generated/prisma/client.js";
 
 export { normalizeBlueprint } from "./blueprint/normalizer.js";
 export type {

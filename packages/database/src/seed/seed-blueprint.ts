@@ -12,6 +12,7 @@ export interface BlueprintSeedResult {
     monthlyServiceCategories: number;
     serviceItems: number;
     oneTimeServices: number;
+    oneTimeServiceCategories: number;
     workflows: number;
     routes: number;
     actions: number;
@@ -32,6 +33,16 @@ function categoryCode(domain: string): string {
   return `CAT-${slug || "GENERAL"}`;
 }
 
+function oneTimeCategoryCode(serviceLine: string): string {
+  const slug = serviceLine
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return `OT-CAT-${slug || "GENERAL"}`;
+}
+
 export async function seedBlueprint(
   client: PrismaClient,
   blueprint: NormalizedBlueprint,
@@ -40,6 +51,9 @@ export async function seedBlueprint(
   const warningCount = blueprint.issues.filter((issue) => issue.severity === "WARNING").length;
   const monthlyServiceCategoryCount = new Set(
     blueprint.monthlyServices.map((service) => service.domain),
+  ).size;
+  const oneTimeServiceCategoryCount = new Set(
+    blueprint.oneTimeServices.map((service) => service.serviceLine),
   ).size;
 
   if (errorCount > 0) {
@@ -63,6 +77,7 @@ export async function seedBlueprint(
         monthlyServiceCategories: monthlyServiceCategoryCount,
         serviceItems: blueprint.serviceItems.length,
         oneTimeServices: blueprint.oneTimeServices.length,
+        oneTimeServiceCategories: oneTimeServiceCategoryCount,
         workflows: blueprint.workflows.length,
         routes: blueprint.routes.length,
         actions: blueprint.actions.length,
@@ -192,6 +207,36 @@ export async function seedBlueprint(
             update: {},
           });
         }
+      }
+
+      const oneTimePermission = await tx.permission.upsert({
+        where: { code: "PERM-MANAGE-ONE-TIME-SERVICES" },
+        create: {
+          code: "PERM-MANAGE-ONE-TIME-SERVICES",
+          name: "Manage One-Time Services",
+          module: "Catalog",
+          action: "manage_one_time_services",
+          description: "Create and configure revision-safe one-time service catalog records.",
+          sortOrder: blueprint.permissions.length + 500,
+        },
+        update: { status: "ACTIVE" },
+      });
+      const adminRoleId = roleIds.get("ROLE-ADMIN");
+      if (adminRoleId) {
+        await tx.rolePermission.upsert({
+          where: {
+            roleId_permissionId: {
+              roleId: adminRoleId,
+              permissionId: oneTimePermission.id,
+            },
+          },
+          create: {
+            roleId: adminRoleId,
+            permissionId: oneTimePermission.id,
+            effect: "ALLOW",
+          },
+          update: { effect: "ALLOW" },
+        });
       }
 
       const levelIds = new Map<string, string>();
@@ -369,10 +414,32 @@ export async function seedBlueprint(
         }
       }
 
+      const oneTimeCategoryIds = new Map<string, string>();
+      for (const [sortOrder, serviceLine] of [
+        ...new Set(blueprint.oneTimeServices.map((service) => service.serviceLine)),
+      ].entries()) {
+        const record = await tx.oneTimeServiceCategory.upsert({
+          where: { code: oneTimeCategoryCode(serviceLine) },
+          create: {
+            code: oneTimeCategoryCode(serviceLine),
+            nameAr: serviceLine,
+            nameEn: serviceLine,
+            sortOrder,
+          },
+          update: {},
+        });
+        oneTimeCategoryIds.set(serviceLine, record.id);
+      }
+
       for (const service of blueprint.oneTimeServices) {
+        const categoryId = oneTimeCategoryIds.get(service.serviceLine);
+        if (!categoryId) {
+          throw new Error(`Normalized one-time service ${service.code} has no category.`);
+        }
         const stable = await tx.oneTimeService.upsert({
           where: { code: service.code },
           create: {
+            categoryId,
             code: service.code,
             serviceLine: service.serviceLine,
             status: service.status,
@@ -398,6 +465,7 @@ export async function seedBlueprint(
             paymentType: service.paymentType,
             basePriceSar: service.basePriceSar,
             estimatedHours: service.estimatedHours,
+            internalHourlyCostSar: 0,
             durationDays: service.durationDays,
             visibleInPricing: service.visibleInPricing,
             createsProject: service.createsProject,
@@ -906,6 +974,7 @@ export async function seedBlueprint(
       monthlyServiceCategories: monthlyServiceCategoryCount,
       serviceItems: blueprint.serviceItems.length,
       oneTimeServices: blueprint.oneTimeServices.length,
+      oneTimeServiceCategories: oneTimeServiceCategoryCount,
       workflows: blueprint.workflows.length,
       routes: blueprint.routes.length,
       actions: blueprint.actions.length,

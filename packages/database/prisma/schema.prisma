@@ -665,6 +665,7 @@ model ServiceItemLevelInclusion {
 
 model OneTimeService {
   id          String                   @id @default(uuid()) @db.Uuid
+  categoryId  String                   @db.Uuid
   code        String                   @unique
   serviceLine String
   status      RecordStatus             @default(ACTIVE)
@@ -672,10 +673,29 @@ model OneTimeService {
   archivedAt  DateTime?
   createdAt   DateTime                 @default(now())
   updatedAt   DateTime                 @updatedAt
+  category    OneTimeServiceCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   revisions   OneTimeServiceRevision[]
 
   @@index([serviceLine, status, sortOrder])
+  @@index([categoryId, status, sortOrder])
   @@map("one_time_services")
+}
+
+model OneTimeServiceCategory {
+  id          String           @id @default(uuid()) @db.Uuid
+  code        String           @unique
+  nameAr      String
+  nameEn      String
+  description String?          @db.Text
+  status      RecordStatus     @default(ACTIVE)
+  sortOrder   Int              @default(0)
+  archivedAt  DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  services    OneTimeService[]
+
+  @@index([status, sortOrder])
+  @@map("one_time_service_categories")
 }
 
 model OneTimeServiceRevision {
@@ -691,6 +711,7 @@ model OneTimeServiceRevision {
   paymentType             String                      @default("One-Time")
   basePriceSar            Decimal                     @db.Decimal(18, 2)
   estimatedHours          Decimal                     @db.Decimal(10, 2)
+  internalHourlyCostSar   Decimal                     @default(0) @db.Decimal(18, 2)
   durationDays            Int
   visibleInPricing        Boolean                     @default(true)
   createsProject          Boolean                     @default(true)
@@ -710,18 +731,19 @@ model OneTimeServiceRevision {
 }
 
 model OneTimeServicePhase {
-  id                       String                 @id @default(uuid()) @db.Uuid
-  oneTimeServiceRevisionId String                 @db.Uuid
+  id                       String                      @id @default(uuid()) @db.Uuid
+  oneTimeServiceRevisionId String                      @db.Uuid
   code                     String
   nameAr                   String?
   nameEn                   String
-  description              String?                @db.Text
+  description              String?                     @db.Text
   sortOrder                Int
-  isRequired               Boolean                @default(true)
-  status                   RecordStatus           @default(ACTIVE)
-  createdAt                DateTime               @default(now())
-  updatedAt                DateTime               @updatedAt
-  oneTimeServiceRevision   OneTimeServiceRevision @relation(fields: [oneTimeServiceRevisionId], references: [id], onDelete: Cascade)
+  isRequired               Boolean                     @default(true)
+  status                   RecordStatus                @default(ACTIVE)
+  createdAt                DateTime                    @default(now())
+  updatedAt                DateTime                    @updatedAt
+  oneTimeServiceRevision   OneTimeServiceRevision      @relation(fields: [oneTimeServiceRevisionId], references: [id], onDelete: Cascade)
+  deliverables             OneTimeServiceDeliverable[]
 
   @@unique([oneTimeServiceRevisionId, code])
   @@index([oneTimeServiceRevisionId, sortOrder])
@@ -731,6 +753,7 @@ model OneTimeServicePhase {
 model OneTimeServiceDeliverable {
   id                       String                 @id @default(uuid()) @db.Uuid
   oneTimeServiceRevisionId String                 @db.Uuid
+  phaseId                  String?                @db.Uuid
   code                     String
   nameAr                   String?
   nameEn                   String
@@ -742,10 +765,33 @@ model OneTimeServiceDeliverable {
   createdAt                DateTime               @default(now())
   updatedAt                DateTime               @updatedAt
   oneTimeServiceRevision   OneTimeServiceRevision @relation(fields: [oneTimeServiceRevisionId], references: [id], onDelete: Cascade)
+  phase                    OneTimeServicePhase?   @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  tasks                    OneTimeServiceTask[]
 
   @@unique([oneTimeServiceRevisionId, code])
   @@index([oneTimeServiceRevisionId, sortOrder])
+  @@index([phaseId, sortOrder])
   @@map("one_time_service_deliverables")
+}
+
+model OneTimeServiceTask {
+  id             String                    @id @default(uuid()) @db.Uuid
+  deliverableId  String                    @db.Uuid
+  code           String
+  nameAr         String
+  nameEn         String
+  description    String?                   @db.Text
+  estimatedHours Decimal                   @default(0) @db.Decimal(10, 2)
+  sortOrder      Int
+  isRequired     Boolean                   @default(true)
+  status         RecordStatus              @default(ACTIVE)
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  deliverable    OneTimeServiceDeliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+
+  @@unique([deliverableId, code])
+  @@index([deliverableId, sortOrder])
+  @@map("one_time_service_tasks")
 }
 
 model PricingRule {
