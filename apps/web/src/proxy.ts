@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED_PATHS = ["/profile", "/settings", "/admin"];
+const PROTECTED_PATHS = ["/profile", "/settings", "/admin", "/pricing"];
 
 export function proxy(request: NextRequest) {
   if (
@@ -19,5 +19,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/profile/:path*", "/settings/:path*", "/admin/:path*"],
+  matcher: ["/profile/:path*", "/settings/:path*", "/admin/:path*", "/pricing/:path*"],
 };

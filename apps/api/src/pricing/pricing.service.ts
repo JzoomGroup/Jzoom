@@ -179,6 +179,19 @@ export class PricingService {
 
     const revisionStatus = input.revisionStatus ?? "DRAFT";
     const effectiveFrom = new Date(input.effectiveFrom);
+    const currentOpenRevision = before.revisions.find(
+      (revision) => revision.status === "ACTIVE" && revision.effectiveTo === null,
+    );
+    if (
+      revisionStatus === "ACTIVE" &&
+      currentOpenRevision?.effectiveFrom &&
+      effectiveFrom <= currentOpenRevision.effectiveFrom
+    ) {
+      throw new BadRequestException({
+        code: "PRICING_REVISION_EFFECTIVE_DATE_CONFLICT",
+        message: "A new active pricing revision must start after the current active revision",
+      });
+    }
     await this.database.prisma.$transaction(async (tx) => {
       if (revisionStatus === "ACTIVE") {
         await tx.pricingRuleRevision.updateMany({
@@ -614,11 +627,9 @@ export class PricingService {
       });
     }
     assertUnique(
-      input.monthlySelections.map(
-        (selection) => `${selection.monthlyServiceRevisionId}:${selection.serviceLevelId}`,
-      ),
+      input.monthlySelections.map((selection) => selection.monthlyServiceRevisionId),
       "DUPLICATE_MONTHLY_SELECTION",
-      "A monthly service and package level may only be selected once",
+      "A monthly service may only be selected once with one package level",
     );
     assertUnique(
       input.oneTimeSelections.map((selection) => selection.oneTimeServiceRevisionId),
@@ -707,11 +718,14 @@ export class PricingService {
         "MONTHLY",
         revision.monthlyService.code,
       );
+      const configuredSetupRules = setupRules.filter(
+        (rule) => rule.calculationMethod !== "NONE" && rule.value !== null,
+      );
       const setupFee =
-        setupRules.length > 0
-          ? this.applyAmountRules(base, setupRules, quantity)
+        configuredSetupRules.length > 0
+          ? this.applyAmountRules(base, configuredSetupRules, quantity)
           : money(base * (numberValue(revision.setupFeePct) / 100));
-      setupRules.forEach((rule) => appliedRuleIds.add(rule.id));
+      configuredSetupRules.forEach((rule) => appliedRuleIds.add(rule.id));
       const internalCost = money(hours * numberValue(revision.internalHourlyCostSar) * quantity);
       return {
         sortOrder,
