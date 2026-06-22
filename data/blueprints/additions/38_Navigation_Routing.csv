@@ -30,3 +30,4 @@ ROUTE-046,/admin/catalog/service-items,Service Items Admin,Admin,Yes,More,Admin 
 ROUTE-047,/admin/catalog/service-levels,Service Levels Admin,Admin,Yes,More,Admin only,/403,Admin Console
 ROUTE-048,/admin/catalog/one-time-services,One-Time Services Admin,Admin,Yes,More,Admin only,/403,Admin Console
 ROUTE-049,/admin/catalog/one-time-categories,One-Time Service Categories,Admin,Yes,More,Admin only,/403,Admin Console
+ROUTE-050,/pricing/:draftId,Pricing Draft Workspace,"Admin, Account Manager",Deep link,Full-screen mobile,Commercial roles,/403,Pricing Studio

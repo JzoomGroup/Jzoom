@@ -302,34 +302,36 @@ model RolePermission {
 }
 
 model User {
-  id                  String                   @id @default(uuid()) @db.Uuid
-  email               String                   @unique
-  passwordHash        String?
-  displayName         String
-  preferredLocale     String                   @default("ar")
-  userType            UserType
-  status              UserStatus               @default(INVITED)
-  failedLoginCount    Int                      @default(0)
-  lockedUntil         DateTime?
-  passwordChangedAt   DateTime?
-  sessionVersion      Int                      @default(1)
-  lastLoginAt         DateTime?
-  archivedAt          DateTime?
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @updatedAt
-  roles               UserRole[]
-  permissionOverrides UserPermissionOverride[]
-  scopes              UserScope[]
-  clientAssignments   ClientAssignment[]
-  comments            Comment[]
-  internalNotes       InternalNote[]
-  uploadedFiles       FileMetadata[]
-  timeEntries         TimeEntry[]
-  notifications       Notification[]
-  auditLogs           AuditLog[]
-  authSessions        AuthSession[]
-  authTokens          AuthToken[]              @relation("AuthTokenUser")
-  createdAuthTokens   AuthToken[]              @relation("AuthTokenCreator")
+  id                   String                   @id @default(uuid()) @db.Uuid
+  email                String                   @unique
+  passwordHash         String?
+  displayName          String
+  preferredLocale      String                   @default("ar")
+  userType             UserType
+  status               UserStatus               @default(INVITED)
+  failedLoginCount     Int                      @default(0)
+  lockedUntil          DateTime?
+  passwordChangedAt    DateTime?
+  sessionVersion       Int                      @default(1)
+  lastLoginAt          DateTime?
+  archivedAt           DateTime?
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  roles                UserRole[]
+  permissionOverrides  UserPermissionOverride[]
+  scopes               UserScope[]
+  clientAssignments    ClientAssignment[]
+  comments             Comment[]
+  internalNotes        InternalNote[]
+  uploadedFiles        FileMetadata[]
+  timeEntries          TimeEntry[]
+  notifications        Notification[]
+  auditLogs            AuditLog[]
+  authSessions         AuthSession[]
+  authTokens           AuthToken[]              @relation("AuthTokenUser")
+  createdAuthTokens    AuthToken[]              @relation("AuthTokenCreator")
+  createdPricingDrafts PricingDraft[]           @relation("PricingDraftCreator")
+  updatedPricingDrafts PricingDraft[]           @relation("PricingDraftUpdater")
 
   @@index([status])
   @@index([lockedUntil])
@@ -448,6 +450,7 @@ model Client {
   requests               Request[]
   projects               Project[]
   hourTransactions       HourLedgerTransaction[]
+  pricingDrafts          PricingDraft[]
 
   @@index([status])
   @@index([sector])
@@ -508,6 +511,7 @@ model ServiceLevel {
   monthlyConfigs       MonthlyServiceLevelConfig[]
   itemInclusions       ServiceItemLevelInclusion[]
   subscriptionServices SubscriptionService[]
+  pricingDraftItems    PricingDraftItem[]
 
   @@index([status, sortOrder])
   @@map("service_levels")
@@ -580,6 +584,7 @@ model MonthlyServiceRevision {
   levelConfigs            MonthlyServiceLevelConfig[]
   subscriptionServices    SubscriptionService[]
   quoteItems              QuoteItem[]
+  pricingDraftItems       PricingDraftItem[]
 
   @@unique([monthlyServiceId, version])
   @@index([monthlyServiceId, status, effectiveFrom])
@@ -724,6 +729,7 @@ model OneTimeServiceRevision {
   deliverables            OneTimeServiceDeliverable[]
   quoteItems              QuoteItem[]
   projects                Project[]
+  pricingDraftItems       PricingDraftItem[]
 
   @@unique([oneTimeServiceId, version])
   @@index([oneTimeServiceId, status, effectiveFrom])
@@ -821,6 +827,16 @@ model PricingRuleRevision {
   appliesTo               String
   implementationOwner     String?
   visibility              String?          @db.Text
+  ruleType                String           @default("FORMULA")
+  calculationMethod       String           @default("NONE")
+  value                   Decimal?         @db.Decimal(18, 4)
+  currency                String           @default("SAR")
+  targetType              String           @default("ALL")
+  targetCode              String?
+  priority                Int              @default(0)
+  isStackable             Boolean          @default(true)
+  isEnabled               Boolean          @default(true)
+  conditions              Json?
   configuration           Json?
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
@@ -830,6 +846,56 @@ model PricingRuleRevision {
   @@unique([pricingRuleId, version])
   @@index([pricingRuleId, status, effectiveFrom])
   @@map("pricing_rule_revisions")
+}
+
+model PricingDraft {
+  id                  String             @id @default(uuid()) @db.Uuid
+  draftNumber         String             @unique
+  clientId            String             @db.Uuid
+  createdById         String             @db.Uuid
+  updatedById         String?            @db.Uuid
+  status              RecordStatus       @default(DRAFT)
+  currency            String             @default("SAR")
+  pricingDate         DateTime
+  title               String
+  notes               String?            @db.Text
+  clientSnapshot      Json
+  calculationSnapshot Json?
+  calculationVersion  Int                @default(0)
+  lastCalculatedAt    DateTime?
+  archivedAt          DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  client              Client             @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  createdBy           User               @relation("PricingDraftCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy           User?              @relation("PricingDraftUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+  items               PricingDraftItem[]
+
+  @@index([clientId, status, updatedAt])
+  @@index([createdById, status, updatedAt])
+  @@map("pricing_drafts")
+}
+
+model PricingDraftItem {
+  id                       String                  @id @default(uuid()) @db.Uuid
+  pricingDraftId           String                  @db.Uuid
+  lineType                 String
+  monthlyServiceRevisionId String?                 @db.Uuid
+  oneTimeServiceRevisionId String?                 @db.Uuid
+  serviceLevelId           String?                 @db.Uuid
+  quantity                 Decimal                 @default(1) @db.Decimal(10, 2)
+  sortOrder                Int                     @default(0)
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  pricingDraft             PricingDraft            @relation(fields: [pricingDraftId], references: [id], onDelete: Cascade)
+  monthlyServiceRevision   MonthlyServiceRevision? @relation(fields: [monthlyServiceRevisionId], references: [id], onDelete: Restrict)
+  oneTimeServiceRevision   OneTimeServiceRevision? @relation(fields: [oneTimeServiceRevisionId], references: [id], onDelete: Restrict)
+  serviceLevel             ServiceLevel?           @relation(fields: [serviceLevelId], references: [id], onDelete: Restrict)
+
+  @@index([pricingDraftId, sortOrder])
+  @@index([monthlyServiceRevisionId])
+  @@index([oneTimeServiceRevisionId])
+  @@map("pricing_draft_items")
 }
 
 model ValidationRule {

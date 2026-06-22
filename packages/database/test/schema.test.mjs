@@ -120,3 +120,28 @@ test("PR 5 schema keeps one-time services revisioned with editable templates", a
   assert.match(migration, /ON DELETE RESTRICT/);
   assert.match(migration, /PERM-MANAGE-ONE-TIME-SERVICES/);
 });
+
+test("PR 6 schema stores effective pricing rules and drafts without creating quotes", async () => {
+  const schema = await readFile(
+    path.join(workspaceRoot, "packages/database/prisma/schema.prisma"),
+    "utf8",
+  );
+  const migration = await readFile(
+    path.join(
+      workspaceRoot,
+      "packages/database/prisma/migrations/202606220002_pr6_pricing_studio_foundation/migration.sql",
+    ),
+    "utf8",
+  );
+
+  assert.match(schema, /model PricingDraft \{/);
+  assert.match(schema, /model PricingDraftItem \{/);
+  assert.match(schema, /calculationSnapshot\s+Json\?/);
+  assert.match(schema, /ruleType\s+String/);
+  assert.match(schema, /calculationMethod\s+String/);
+  assert.match(migration, /pricing_draft_items_exactly_one_service/);
+  assert.match(migration, /ON DELETE RESTRICT/);
+  assert.match(migration, /PERM-MANAGE-PRICING-RULES/);
+  assert.match(migration, /PERM-USE-PRICING-STUDIO/);
+  assert.doesNotMatch(migration, /INSERT INTO "quotes"/);
+});

@@ -137,6 +137,10 @@ describe("PR 1 API foundation", () => {
     expect(document.paths["/api/v1/admin/catalog/one-time"]).toBeDefined();
     expect(document.paths["/api/v1/services/one-time"]).toBeDefined();
     expect(document.paths["/api/v1/services/one-time/{id}/template"]).toBeDefined();
+    expect(document.paths["/api/v1/admin/pricing-rules"]).toBeDefined();
+    expect(document.paths["/api/v1/pricing/catalog"]).toBeDefined();
+    expect(document.paths["/api/v1/pricing/preview"]).toBeDefined();
+    expect(document.paths["/api/v1/pricing/drafts"]).toBeDefined();
     expect(document.components?.schemas?.ApiErrorResponseDto).toBeDefined();
   });
 

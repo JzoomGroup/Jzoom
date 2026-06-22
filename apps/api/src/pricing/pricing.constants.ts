@@ -1,0 +1,26 @@
+export const MANAGE_PRICING_RULES_PERMISSION = "PERM-MANAGE-PRICING-RULES";
+export const USE_PRICING_STUDIO_PERMISSION = "PERM-USE-PRICING-STUDIO";
+export const ACCOUNT_MANAGER_ROLE_CODE = "ROLE-AM";
+
+export const PRICING_RULE_TYPES = [
+  "RATE_CARD",
+  "SETUP_FEE",
+  "MARGIN",
+  "DISCOUNT",
+  "TAX",
+  "FORMULA",
+] as const;
+
+export const PRICING_CALCULATION_METHODS = ["NONE", "FIXED_AMOUNT", "PERCENTAGE"] as const;
+export const PRICING_TARGET_TYPES = ["ALL", "MONTHLY", "ONE_TIME"] as const;
+
+export const PRICING_EVENT = {
+  ruleCreated: "PRICING_RULE_CREATED",
+  ruleRevised: "PRICING_RULE_REVISED",
+  ruleStatusChanged: "PRICING_RULE_STATUS_CHANGED",
+  ruleReordered: "PRICING_RULE_REORDERED",
+  previewCalculated: "PRICING_PREVIEW_CALCULATED",
+  draftCreated: "PRICING_DRAFT_CREATED",
+  draftUpdated: "PRICING_DRAFT_UPDATED",
+  draftArchived: "PRICING_DRAFT_ARCHIVED",
+} as const;

@@ -43,6 +43,25 @@ function oneTimeCategoryCode(serviceLine: string): string {
   return `OT-CAT-${slug || "GENERAL"}`;
 }
 
+function pricingRuleDefaults(code: string, sortOrder: number) {
+  if (code === "PR-001") {
+    return { ruleType: "RATE_CARD", targetType: "MONTHLY", priority: sortOrder };
+  }
+  if (code === "PR-002") {
+    return { ruleType: "SETUP_FEE", targetType: "MONTHLY", priority: sortOrder };
+  }
+  if (code === "PR-003") {
+    return { ruleType: "RATE_CARD", targetType: "ONE_TIME", priority: sortOrder };
+  }
+  if (code === "PR-004") {
+    return { ruleType: "DISCOUNT", targetType: "ALL", priority: sortOrder };
+  }
+  if (code === "PR-007") {
+    return { ruleType: "MARGIN", targetType: "ALL", priority: sortOrder };
+  }
+  return { ruleType: "FORMULA", targetType: "ALL", priority: sortOrder };
+}
+
 export async function seedBlueprint(
   client: PrismaClient,
   blueprint: NormalizedBlueprint,
@@ -237,6 +256,57 @@ export async function seedBlueprint(
           },
           update: { effect: "ALLOW" },
         });
+      }
+
+      const pricingPermissions = [
+        {
+          code: "PERM-MANAGE-PRICING-RULES",
+          name: "Manage Pricing Rules",
+          action: "manage_pricing_rules",
+          description: "Create and configure effective-dated pricing-rule revisions.",
+          roleCodes: ["ROLE-ADMIN"],
+        },
+        {
+          code: "PERM-USE-PRICING-STUDIO",
+          name: "Use Pricing Studio",
+          action: "use_pricing_studio",
+          description: "Create, calculate, save, and reload scoped pricing drafts.",
+          roleCodes: ["ROLE-ADMIN", "ROLE-AM"],
+        },
+      ] as const;
+      for (const [index, permission] of pricingPermissions.entries()) {
+        const record = await tx.permission.upsert({
+          where: { code: permission.code },
+          create: {
+            code: permission.code,
+            name: permission.name,
+            module: "Pricing",
+            action: permission.action,
+            description: permission.description,
+            sortOrder: blueprint.permissions.length + 600 + index,
+          },
+          update: { status: "ACTIVE" },
+        });
+        for (const roleCode of permission.roleCodes) {
+          const roleId = roleIds.get(roleCode);
+          if (!roleId) {
+            continue;
+          }
+          await tx.rolePermission.upsert({
+            where: {
+              roleId_permissionId: {
+                roleId,
+                permissionId: record.id,
+              },
+            },
+            create: {
+              roleId,
+              permissionId: record.id,
+              effect: "ALLOW",
+            },
+            update: { effect: "ALLOW" },
+          });
+        }
       }
 
       const levelIds = new Map<string, string>();
@@ -536,6 +606,7 @@ export async function seedBlueprint(
             appliesTo: rule.appliesTo,
             implementationOwner: rule.implementationOwner,
             visibility: rule.visibility,
+            ...pricingRuleDefaults(rule.code, rule.sortOrder),
           },
           update: {},
         });
