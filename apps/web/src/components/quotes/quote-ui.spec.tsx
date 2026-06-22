@@ -155,6 +155,10 @@ describe("Quote snapshot UI", () => {
     expect(screen.getByText("50% upfront")).toBeInTheDocument();
     expect(screen.getByText("Monthly output")).toBeInTheDocument();
     expect(screen.getByText(/PR7-TAX v1/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View PDF" })).toHaveAttribute(
+      "href",
+      "http://localhost:4000/api/v1/quotes/quote-1/pdf",
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Mark issued" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));

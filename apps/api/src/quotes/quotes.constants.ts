@@ -12,5 +12,6 @@ export const QUOTE_PUBLIC_STATUSES = [
 
 export const QUOTE_EVENT = {
   created: "QUOTE_CREATED",
+  pdfGenerated: "QUOTE_PDF_GENERATED",
   statusChanged: "QUOTE_STATUS_CHANGED",
 } as const;

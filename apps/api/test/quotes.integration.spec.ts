@@ -44,6 +44,22 @@ function csrfFrom(response: request.Response): string {
   return decodeURIComponent(csrfCookie.split(";", 1)[0]!.slice("jzoom_csrf=".length));
 }
 
+interface ParserResponse {
+  on(event: "data", listener: (chunk: Buffer | string) => void): unknown;
+  on(event: "end", listener: () => void): unknown;
+}
+
+function pdfParser(
+  response: ParserResponse,
+  callback: (error: Error | null, body: Buffer) => void,
+): void {
+  const chunks: Buffer[] = [];
+  response.on("data", (chunk: Buffer | string) => {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  });
+  response.on("end", () => callback(null, Buffer.concat(chunks)));
+}
+
 describeWithDatabase("PR 7 immutable quote snapshots", () => {
   let app: INestApplication;
   let database: JzoomDatabaseClient;
@@ -356,6 +372,26 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
     ).rejects.toThrow();
     expect(await database.invoice.count({ where: { quoteId: quote.body.id } })).toBe(0);
 
+    const pdf = await accountManager.agent
+      .get(`/api/v1/quotes/${quote.body.id}/pdf`)
+      .buffer(true)
+      .parse(pdfParser)
+      .expect(200);
+    expect(pdf.headers["content-type"]).toContain("application/pdf");
+    expect(pdf.headers["content-disposition"]).toContain(`${quote.body.quoteNumber}.pdf`);
+    expect((pdf.body as Buffer).subarray(0, 4).toString()).toBe("%PDF");
+
+    const pdfAudit = await database.auditLog.findFirst({
+      where: { entityId: quote.body.id, eventCode: "QUOTE_PDF_GENERATED" },
+      select: { after: true, requestId: true },
+    });
+    expect(pdfAudit?.requestId).toBeTruthy();
+    expect(pdfAudit?.after).toMatchObject({
+      filename: `${quote.body.quoteNumber}.pdf`,
+      quoteNumber: quote.body.quoteNumber,
+      snapshotHash: quote.body.snapshotHash,
+    });
+
     const invalidAccept = await accountManager.agent
       .patch(`/api/v1/quotes/${quote.body.id}/status`)
       .set("X-CSRF-Token", accountManager.csrf)
@@ -380,12 +416,12 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
     const auditEvents = await database.auditLog.findMany({
       where: {
         entityId: quote.body.id,
-        eventCode: { in: ["QUOTE_CREATED", "QUOTE_STATUS_CHANGED"] },
+        eventCode: { in: ["QUOTE_CREATED", "QUOTE_STATUS_CHANGED", "QUOTE_PDF_GENERATED"] },
       },
       select: { eventCode: true, requestId: true },
     });
     expect(auditEvents.map((event) => event.eventCode)).toEqual(
-      expect.arrayContaining(["QUOTE_CREATED", "QUOTE_STATUS_CHANGED"]),
+      expect.arrayContaining(["QUOTE_CREATED", "QUOTE_STATUS_CHANGED", "QUOTE_PDF_GENERATED"]),
     );
     expect(auditEvents.every((event) => Boolean(event.requestId))).toBe(true);
   });

@@ -3,6 +3,8 @@
 import { catalogErrorMessage, catalogRequest } from "./catalog-client";
 import type { Quote, QuoteStatus, QuoteSummary } from "./quote-types";
 
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
+
 export const quoteRequest = catalogRequest;
 export const quoteErrorMessage = catalogErrorMessage;
 
@@ -36,4 +38,8 @@ export function changeQuoteStatus(
     method: "PATCH",
     body: JSON.stringify({ status, ...(reason ? { reason } : {}) }),
   });
+}
+
+export function quotePdfUrl(id: string): string {
+  return `${apiBaseUrl}/quotes/${encodeURIComponent(id)}/pdf`;
 }
