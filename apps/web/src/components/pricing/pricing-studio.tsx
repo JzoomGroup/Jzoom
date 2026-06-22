@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import {
   pricingErrorMessage,
   pricingRequest,
   refreshPricingDrafts,
 } from "../../lib/pricing-client";
+import { createQuote, quoteErrorMessage } from "../../lib/quote-client";
 import type {
   MonthlyPricingSelection,
   OneTimePricingSelection,
@@ -86,6 +87,7 @@ export function PricingStudio({
     initialDraft?.calculation ?? null,
   );
   const [submitting, setSubmitting] = useState<"preview" | "save" | "archive" | null>(null);
+  const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
 
@@ -249,6 +251,7 @@ export function PricingStudio({
         </Link>
         <nav aria-label="Pricing account">
           {isAdmin && <Link href="/admin/pricing-rules">Pricing rules</Link>}
+          <Link href="/pricing/quotes">Quotes</Link>
           <Link href="/profile">Profile</Link>
           <span>{displayName}</span>
           <LogoutButton />
@@ -584,8 +587,26 @@ export function PricingStudio({
                     Archive
                   </button>
                 )}
+                {currentDraft && calculation && !isArchived && (
+                  <button
+                    className="button-secondary"
+                    type="button"
+                    disabled={submitting !== null}
+                    onClick={() => setShowQuoteForm((visible) => !visible)}
+                  >
+                    Create quote
+                  </button>
+                )}
               </div>
             </div>
+            {showQuoteForm && currentDraft && (
+              <QuoteCreationForm
+                pricingDraftId={currentDraft.id}
+                disabled={submitting !== null}
+                onCancel={() => setShowQuoteForm(false)}
+                onError={setError}
+              />
+            )}
             {calculation ? (
               <>
                 <div className="pricing-total-grid">
@@ -669,5 +690,87 @@ export function PricingStudio({
         </main>
       </div>
     </div>
+  );
+}
+
+function QuoteCreationForm({
+  pricingDraftId,
+  disabled,
+  onCancel,
+  onError,
+}: {
+  pricingDraftId: string;
+  disabled: boolean;
+  onCancel: () => void;
+  onError: (message: string | undefined) => void;
+}) {
+  const router = useRouter();
+  const [creating, setCreating] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    onError(undefined);
+    setCreating(true);
+    try {
+      const quote = await createQuote({
+        pricingDraftId,
+        validityDays: Number(form.get("validityDays") ?? 30),
+        terms: {
+          paymentTerms: String(form.get("paymentTerms") ?? "").trim(),
+          ...(String(form.get("deliveryTerms") ?? "").trim()
+            ? { deliveryTerms: String(form.get("deliveryTerms")).trim() }
+            : {}),
+          ...(String(form.get("additionalTerms") ?? "").trim()
+            ? { additionalTerms: String(form.get("additionalTerms")).trim() }
+            : {}),
+          ...(String(form.get("clientNotes") ?? "").trim()
+            ? { clientNotes: String(form.get("clientNotes")).trim() }
+            : {}),
+        },
+      });
+      router.push(`/pricing/quotes/${quote.id}`);
+    } catch (error) {
+      onError(quoteErrorMessage(error));
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  return (
+    <form className="quote-create-form" onSubmit={submit}>
+      <div>
+        <h3>Create immutable quote</h3>
+        <p>The current saved calculation and terms will be permanently snapshotted.</p>
+      </div>
+      <label>
+        Validity days
+        <input name="validityDays" type="number" min="1" max="365" defaultValue="30" required />
+      </label>
+      <label>
+        Payment terms
+        <input name="paymentTerms" defaultValue="Payment due according to agreed terms." required />
+      </label>
+      <label>
+        Delivery terms
+        <input name="deliveryTerms" />
+      </label>
+      <label className="form-span">
+        Additional terms
+        <textarea name="additionalTerms" />
+      </label>
+      <label className="form-span">
+        Client-facing notes
+        <textarea name="clientNotes" />
+      </label>
+      <div className="form-actions">
+        <button className="button-secondary" type="button" onClick={onCancel}>
+          Cancel
+        </button>
+        <button className="button-primary" type="submit" disabled={disabled || creating}>
+          {creating ? "Creating…" : "Create quote snapshot"}
+        </button>
+      </div>
+    </form>
   );
 }

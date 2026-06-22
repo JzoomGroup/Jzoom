@@ -145,3 +145,31 @@ test("PR 6 schema stores effective pricing rules and drafts without creating quo
   assert.match(migration, /PERM-USE-PRICING-STUDIO/);
   assert.doesNotMatch(migration, /INSERT INTO "quotes"/);
 });
+
+test("PR 7 schema links immutable quote snapshots to pricing drafts", async () => {
+  const schema = await readFile(
+    path.join(workspaceRoot, "packages/database/prisma/schema.prisma"),
+    "utf8",
+  );
+  const migration = await readFile(
+    path.join(
+      workspaceRoot,
+      "packages/database/prisma/migrations/202606220003_pr7_quote_snapshots/migration.sql",
+    ),
+    "utf8",
+  );
+
+  assert.match(schema, /sourcePricingDraftId\s+String\?\s+@db\.Uuid/);
+  assert.match(schema, /pricingSnapshot\s+Json\?/);
+  assert.match(schema, /pricingRulesSnapshot\s+Json\?/);
+  assert.match(schema, /termsSnapshot\s+Json\?/);
+  assert.match(schema, /snapshotHash\s+String\?/);
+  assert.match(schema, /ACCEPTED/);
+  assert.match(schema, /REJECTED/);
+  assert.match(migration, /quotes_snapshot_immutable/);
+  assert.match(migration, /quote_items_immutable/);
+  assert.match(migration, /quotes_no_delete/);
+  assert.match(migration, /PERM-MANAGE-QUOTES/);
+  assert.doesNotMatch(migration, /CREATE TABLE "invoices"/);
+  assert.doesNotMatch(migration, /pdf/i);
+});

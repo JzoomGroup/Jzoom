@@ -23,6 +23,7 @@ export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
       "pricing-studio",
       "Scoped client pricing drafts and backend-trusted calculation previews",
     )
+    .addTag("quotes", "Immutable quote snapshots and scoped quote lifecycle")
     .build();
 
   return SwaggerModule.createDocument(app, configuration, {

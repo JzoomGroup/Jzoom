@@ -141,6 +141,9 @@ describe("PR 1 API foundation", () => {
     expect(document.paths["/api/v1/pricing/catalog"]).toBeDefined();
     expect(document.paths["/api/v1/pricing/preview"]).toBeDefined();
     expect(document.paths["/api/v1/pricing/drafts"]).toBeDefined();
+    expect(document.paths["/api/v1/quotes"]).toBeDefined();
+    expect(document.paths["/api/v1/quotes/{id}"]).toBeDefined();
+    expect(document.paths["/api/v1/quotes/{id}/status"]).toBeDefined();
     expect(document.components?.schemas?.ApiErrorResponseDto).toBeDefined();
   });
 
