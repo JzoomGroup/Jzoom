@@ -1494,6 +1494,29 @@ h1 {
   font-size: 12px;
 }
 
+.activity-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.activity-list article {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.54);
+}
+
+.activity-list small {
+  color: var(--muted);
+}
+
+.activity-list p {
+  margin: 0;
+}
+
 .status-issued {
   background: #e8efff;
   color: #234b91;
@@ -1514,6 +1537,27 @@ h1 {
 .status-expired {
   background: #eceef2;
   color: #575f6c;
+}
+
+.status-new,
+.status-triage,
+.status-returned {
+  background: #fff7dd;
+  color: #806000;
+}
+
+.status-assigned,
+.status-in_progress,
+.status-waiting_client,
+.status-waiting_supervisor {
+  background: #e8efff;
+  color: #234b91;
+}
+
+.status-completed,
+.status-closed {
+  background: #e3f5ea;
+  color: #15683a;
 }
 
 @media (max-width: 680px) {

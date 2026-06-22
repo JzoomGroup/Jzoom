@@ -90,6 +90,19 @@ enum InvoiceStatus {
   VOID
 }
 
+enum RequestStatus {
+  NEW
+  TRIAGE
+  ASSIGNED
+  IN_PROGRESS
+  WAITING_CLIENT
+  WAITING_SUPERVISOR
+  COMPLETED
+  CLOSED
+  RETURNED
+  REJECTED
+}
+
 enum SubscriptionStatus {
   DRAFT
   ACTIVE
@@ -306,38 +319,41 @@ model RolePermission {
 }
 
 model User {
-  id                   String                   @id @default(uuid()) @db.Uuid
-  email                String                   @unique
-  passwordHash         String?
-  displayName          String
-  preferredLocale      String                   @default("ar")
-  userType             UserType
-  status               UserStatus               @default(INVITED)
-  failedLoginCount     Int                      @default(0)
-  lockedUntil          DateTime?
-  passwordChangedAt    DateTime?
-  sessionVersion       Int                      @default(1)
-  lastLoginAt          DateTime?
-  archivedAt           DateTime?
-  createdAt            DateTime                 @default(now())
-  updatedAt            DateTime                 @updatedAt
-  roles                UserRole[]
-  permissionOverrides  UserPermissionOverride[]
-  scopes               UserScope[]
-  clientAssignments    ClientAssignment[]
-  comments             Comment[]
-  internalNotes        InternalNote[]
-  uploadedFiles        FileMetadata[]
-  timeEntries          TimeEntry[]
-  notifications        Notification[]
-  auditLogs            AuditLog[]
-  authSessions         AuthSession[]
-  authTokens           AuthToken[]              @relation("AuthTokenUser")
-  createdAuthTokens    AuthToken[]              @relation("AuthTokenCreator")
-  createdPricingDrafts PricingDraft[]           @relation("PricingDraftCreator")
-  updatedPricingDrafts PricingDraft[]           @relation("PricingDraftUpdater")
-  createdQuotes        Quote[]                  @relation("QuoteCreator")
-  createdInvoices      Invoice[]                @relation("InvoiceCreator")
+  id                     String                   @id @default(uuid()) @db.Uuid
+  email                  String                   @unique
+  passwordHash           String?
+  displayName            String
+  preferredLocale        String                   @default("ar")
+  userType               UserType
+  status                 UserStatus               @default(INVITED)
+  failedLoginCount       Int                      @default(0)
+  lockedUntil            DateTime?
+  passwordChangedAt      DateTime?
+  sessionVersion         Int                      @default(1)
+  lastLoginAt            DateTime?
+  archivedAt             DateTime?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  roles                  UserRole[]
+  permissionOverrides    UserPermissionOverride[]
+  scopes                 UserScope[]
+  clientAssignments      ClientAssignment[]
+  comments               Comment[]
+  internalNotes          InternalNote[]
+  uploadedFiles          FileMetadata[]
+  timeEntries            TimeEntry[]
+  notifications          Notification[]
+  auditLogs              AuditLog[]
+  authSessions           AuthSession[]
+  authTokens             AuthToken[]              @relation("AuthTokenUser")
+  createdAuthTokens      AuthToken[]              @relation("AuthTokenCreator")
+  createdPricingDrafts   PricingDraft[]           @relation("PricingDraftCreator")
+  updatedPricingDrafts   PricingDraft[]           @relation("PricingDraftUpdater")
+  createdQuotes          Quote[]                  @relation("QuoteCreator")
+  createdInvoices        Invoice[]                @relation("InvoiceCreator")
+  specialistRequests     Request[]                @relation("RequestAssignedSpecialist")
+  supervisorRequests     Request[]                @relation("RequestAssignedSupervisor")
+  accountManagedRequests Request[]                @relation("RequestAccountManager")
 
   @@index([status])
   @@index([lockedUntil])
@@ -1441,6 +1457,7 @@ model Quote {
   items                QuoteItem[]
   invoices             Invoice[]
   projects             Project[]
+  requests             Request[]     @relation("RequestSourceQuote")
 
   @@index([clientId, status])
   @@index([sourcePricingDraftId])
@@ -1529,6 +1546,7 @@ model Invoice {
   client                  Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
   createdBy               User?         @relation("InvoiceCreator", fields: [createdById], references: [id], onDelete: SetNull)
   items                   InvoiceItem[]
+  requests                Request[]     @relation("RequestSourceInvoice")
 
   @@index([quoteId])
   @@index([clientId, status])
@@ -1561,8 +1579,14 @@ model Request {
   clientId              String               @db.Uuid
   subscriptionServiceId String               @db.Uuid
   serviceItemRevisionId String?              @db.Uuid
+  sourceQuoteId         String?              @db.Uuid
+  sourceInvoiceId       String?              @db.Uuid
+  assignedSpecialistId  String?              @db.Uuid
+  assignedSupervisorId  String?              @db.Uuid
+  accountManagerId      String?              @db.Uuid
   workflowVersionId     String               @db.Uuid
   currentStateId        String               @db.Uuid
+  status                RequestStatus        @default(NEW)
   title                 String
   description           String               @db.Text
   priority              String
@@ -1574,6 +1598,11 @@ model Request {
   client                Client               @relation(fields: [clientId], references: [id], onDelete: Restrict)
   subscriptionService   SubscriptionService  @relation(fields: [subscriptionServiceId], references: [id], onDelete: Restrict)
   serviceItemRevision   ServiceItemRevision? @relation(fields: [serviceItemRevisionId], references: [id], onDelete: Restrict)
+  sourceQuote           Quote?               @relation("RequestSourceQuote", fields: [sourceQuoteId], references: [id], onDelete: SetNull)
+  sourceInvoice         Invoice?             @relation("RequestSourceInvoice", fields: [sourceInvoiceId], references: [id], onDelete: SetNull)
+  assignedSpecialist    User?                @relation("RequestAssignedSpecialist", fields: [assignedSpecialistId], references: [id], onDelete: SetNull)
+  assignedSupervisor    User?                @relation("RequestAssignedSupervisor", fields: [assignedSupervisorId], references: [id], onDelete: SetNull)
+  accountManager        User?                @relation("RequestAccountManager", fields: [accountManagerId], references: [id], onDelete: SetNull)
   workflowVersion       WorkflowVersion      @relation(fields: [workflowVersionId], references: [id], onDelete: Restrict)
   currentState          WorkflowState        @relation("RequestCurrentState", fields: [currentStateId], references: [id], onDelete: Restrict)
   tasks                 Task[]
@@ -1585,7 +1614,13 @@ model Request {
   workflowEvents        WorkflowEvent[]
 
   @@index([clientId, currentStateId])
+  @@index([clientId, status])
   @@index([subscriptionServiceId])
+  @@index([sourceQuoteId])
+  @@index([sourceInvoiceId])
+  @@index([assignedSpecialistId, status])
+  @@index([assignedSupervisorId, status])
+  @@index([accountManagerId, status])
   @@index([dueAt])
   @@map("requests")
 }

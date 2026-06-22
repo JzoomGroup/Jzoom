@@ -203,3 +203,32 @@ test("PR 10 schema creates immutable invoices from quote snapshots", async () =>
   assert.doesNotMatch(migration, /pdf/i);
   assert.doesNotMatch(migration, /PAID/);
 });
+
+test("PR 13 schema adds request lifecycle source links and assignments", async () => {
+  const schema = await readFile(
+    path.join(workspaceRoot, "packages/database/prisma/schema.prisma"),
+    "utf8",
+  );
+  const migration = await readFile(
+    path.join(
+      workspaceRoot,
+      "packages/database/prisma/migrations/202606220005_pr13_request_lifecycle_foundation/migration.sql",
+    ),
+    "utf8",
+  );
+
+  assert.match(schema, /enum RequestStatus \{/);
+  assert.match(schema, /WAITING_CLIENT/);
+  assert.match(schema, /WAITING_SUPERVISOR/);
+  assert.match(schema, /sourceQuoteId\s+String\?\s+@db\.Uuid/);
+  assert.match(schema, /sourceInvoiceId\s+String\?\s+@db\.Uuid/);
+  assert.match(schema, /assignedSpecialistId\s+String\?\s+@db\.Uuid/);
+  assert.match(schema, /assignedSupervisorId\s+String\?\s+@db\.Uuid/);
+  assert.match(schema, /accountManagerId\s+String\?\s+@db\.Uuid/);
+  assert.match(migration, /CREATE TYPE "RequestStatus"/);
+  assert.match(migration, /requests_sourceQuoteId_fkey/);
+  assert.match(migration, /requests_sourceInvoiceId_fkey/);
+  assert.match(migration, /requests_assignedSpecialistId_fkey/);
+  assert.match(migration, /ON DELETE SET NULL/);
+  assert.doesNotMatch(migration, /DROP TABLE/);
+});
