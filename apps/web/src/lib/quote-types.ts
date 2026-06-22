@@ -1,6 +1,7 @@
 import type { PricingCalculation, PricingClient, PricingLine } from "./pricing-types";
 
 export type QuoteStatus = "DRAFT" | "ISSUED" | "ACCEPTED" | "REJECTED" | "EXPIRED" | "CANCELLED";
+export type QuoteInvoiceStatus = "DRAFT" | "ISSUED" | "CANCELLED" | "VOIDED";
 
 export interface QuoteTerms {
   paymentTerms: string;
@@ -99,5 +100,12 @@ export interface Quote {
     selections: unknown[];
   };
   totals: PricingCalculation["totals"];
+  invoices: Array<{
+    id: string;
+    invoiceNumber: string;
+    status: QuoteInvoiceStatus;
+    createdAt: string;
+    updatedAt: string;
+  }>;
   items: QuoteItem[];
 }

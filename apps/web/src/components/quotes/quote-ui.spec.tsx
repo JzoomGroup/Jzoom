@@ -3,6 +3,12 @@ import type { Quote, QuoteSummary } from "../../lib/quote-types";
 import { QuoteDetail } from "./quote-detail";
 import { QuoteList } from "./quote-list";
 
+const pushMock = jest.fn();
+
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: pushMock }),
+}));
+
 function quote(status: Quote["status"] = "DRAFT"): Quote {
   return {
     id: "quote-1",
@@ -79,6 +85,7 @@ function quote(status: Quote["status"] = "DRAFT"): Quote {
       targetMarginPct: null,
       meetsTargetMargin: null,
     },
+    invoices: [],
     items: [
       {
         id: "item-1",
@@ -154,6 +161,7 @@ function quoteSummary(status: Quote["status"] = "ISSUED"): QuoteSummary {
 
 describe("Quote snapshot UI", () => {
   beforeEach(() => {
+    pushMock.mockReset();
     Object.defineProperty(global, "fetch", {
       configurable: true,
       writable: true,
@@ -221,5 +229,43 @@ describe("Quote snapshot UI", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(fetchMock.mock.calls[0]?.[0]).toBe("http://localhost:4000/api/v1/quotes/quote-1/accept");
     expect(await screen.findByText("ACCEPTED")).toBeInTheDocument();
+  });
+
+  it("creates an invoice from an accepted quote snapshot", async () => {
+    const fetchMock = jest.mocked(fetch);
+    fetchMock.mockImplementationOnce(() =>
+      jsonResponse({ id: "invoice-1", invoiceNumber: "INV-20260622-ABC12345" }),
+    );
+
+    render(<QuoteDetail initialQuote={quote("ACCEPTED")} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Create invoice" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("http://localhost:4000/api/v1/invoices");
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ quoteId: "quote-1" });
+    expect(pushMock).toHaveBeenCalledWith("/pricing/invoices/invoice-1");
+  });
+
+  it("links an existing invoice from quote detail", () => {
+    render(
+      <QuoteDetail
+        initialQuote={{
+          ...quote("ACCEPTED"),
+          invoices: [
+            {
+              id: "invoice-1",
+              invoiceNumber: "INV-20260622-ABC12345",
+              status: "DRAFT",
+              createdAt: "2026-06-22T00:00:00.000Z",
+              updatedAt: "2026-06-22T00:00:00.000Z",
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("link", { name: /View invoice INV-20260622-ABC12345/ }),
+    ).toHaveAttribute("href", "/pricing/invoices/invoice-1");
   });
 });

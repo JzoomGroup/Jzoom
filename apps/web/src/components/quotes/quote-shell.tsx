@@ -26,6 +26,7 @@ export function QuoteShell({
         <nav aria-label="Quote account">
           <Link href="/pricing">Pricing drafts</Link>
           <Link href="/pricing/quotes">Quotes</Link>
+          <Link href="/pricing/invoices">Invoices</Link>
           {isAdmin && <Link href="/admin/pricing-rules">Pricing rules</Link>}
           <Link href="/profile">Profile</Link>
           <span>{displayName}</span>

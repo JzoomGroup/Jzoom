@@ -173,3 +173,33 @@ test("PR 7 schema links immutable quote snapshots to pricing drafts", async () =
   assert.doesNotMatch(migration, /CREATE TABLE "invoices"/);
   assert.doesNotMatch(migration, /pdf/i);
 });
+
+test("PR 10 schema creates immutable invoices from quote snapshots", async () => {
+  const schema = await readFile(
+    path.join(workspaceRoot, "packages/database/prisma/schema.prisma"),
+    "utf8",
+  );
+  const migration = await readFile(
+    path.join(
+      workspaceRoot,
+      "packages/database/prisma/migrations/202606220004_pr10_invoice_foundation/migration.sql",
+    ),
+    "utf8",
+  );
+
+  assert.match(schema, /model Invoice \{/);
+  assert.match(schema, /createdById\s+String\?\s+@db\.Uuid/);
+  assert.match(schema, /quoteSnapshot\s+Json\?/);
+  assert.match(schema, /pricingRulesSnapshot\s+Json\?/);
+  assert.match(schema, /sourceQuoteSnapshotHash\s+String\?/);
+  assert.match(schema, /snapshotHash\s+String\?/);
+  assert.match(schema, /CANCELLED/);
+  assert.match(schema, /VOIDED/);
+  assert.match(migration, /invoices_quoteId_idx/);
+  assert.match(migration, /invoices_snapshot_immutable/);
+  assert.match(migration, /invoice_items_immutable/);
+  assert.match(migration, /invoices_no_delete/);
+  assert.match(migration, /PERM-MANAGE-INVOICES/);
+  assert.doesNotMatch(migration, /pdf/i);
+  assert.doesNotMatch(migration, /PAID/);
+});

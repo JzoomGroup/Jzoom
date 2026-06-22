@@ -1429,6 +1429,11 @@ h1 {
   font-size: 12px;
 }
 
+.quote-action-stack {
+  display: grid;
+  gap: 6px;
+}
+
 .quote-action-feedback {
   font-weight: 750;
 }
@@ -1500,7 +1505,8 @@ h1 {
 }
 
 .status-rejected,
-.status-cancelled {
+.status-cancelled,
+.status-voided {
   background: #fff0ed;
   color: #9c2017;
 }
