@@ -49,6 +49,22 @@ function snapshotHash(label: string): string {
   return createHash("sha256").update(`${label}-${randomUUID()}`).digest("hex");
 }
 
+interface ParserResponse {
+  on(event: "data", listener: (chunk: Buffer | string) => void): unknown;
+  on(event: "end", listener: () => void): unknown;
+}
+
+function pdfParser(
+  response: ParserResponse,
+  callback: (error: Error | null, body: Buffer) => void,
+): void {
+  const chunks: Buffer[] = [];
+  response.on("data", (chunk: Buffer | string) => {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  });
+  response.on("end", () => callback(null, Buffer.concat(chunks)));
+}
+
 describeWithDatabase("PR 10 invoice foundation", () => {
   let app: INestApplication;
   let database: JzoomDatabaseClient;
@@ -449,5 +465,40 @@ describeWithDatabase("PR 10 invoice foundation", () => {
       ]),
     );
     expect(auditEvents.every((event) => Boolean(event.requestId))).toBe(true);
+  });
+
+  it("generates invoice PDFs from immutable invoice snapshots and audits generation", async () => {
+    const accountManager = await login(accountManagerEmail);
+    const acceptedQuote = await createQuoteFixture("PDF");
+    const invoice = await accountManager.agent
+      .post("/api/v1/invoices")
+      .set("X-CSRF-Token", accountManager.csrf)
+      .send({ quoteId: acceptedQuote.id })
+      .expect(201);
+
+    await database.quote.update({
+      where: { id: acceptedQuote.id },
+      data: { statusReason: "Changed after invoice snapshot was created" },
+    });
+
+    const pdf = await accountManager.agent
+      .get(`/api/v1/invoices/${invoice.body.id}/pdf`)
+      .buffer()
+      .parse(pdfParser)
+      .expect(200);
+    expect(pdf.headers["content-type"]).toContain("application/pdf");
+    expect(pdf.headers["content-disposition"]).toContain(`${invoice.body.invoiceNumber}.pdf`);
+    expect((pdf.body as Buffer).subarray(0, 4).toString()).toBe("%PDF");
+
+    const pdfAudit = await database.auditLog.findFirst({
+      where: { entityId: invoice.body.id, eventCode: "INVOICE_PDF_GENERATED" },
+    });
+    expect(pdfAudit?.requestId).toBeTruthy();
+    expect(pdfAudit?.after).toMatchObject({
+      filename: `${invoice.body.invoiceNumber}.pdf`,
+      invoiceNumber: invoice.body.invoiceNumber,
+      snapshotHash: invoice.body.snapshotHash,
+      sourceQuoteSnapshotHash: acceptedQuote.snapshotHash,
+    });
   });
 });

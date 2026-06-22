@@ -167,6 +167,10 @@ describe("Invoice foundation UI", () => {
       "href",
       "/pricing/quotes/quote-1",
     );
+    expect(screen.getByRole("link", { name: "View PDF" })).toHaveAttribute(
+      "href",
+      "http://localhost:4000/api/v1/invoices/invoice-1/pdf",
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Issue invoice" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));

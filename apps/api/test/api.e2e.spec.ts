@@ -151,6 +151,7 @@ describe("PR 1 API foundation", () => {
     expect(document.paths["/api/v1/quotes/{id}/status"]).toBeDefined();
     expect(document.paths["/api/v1/invoices"]).toBeDefined();
     expect(document.paths["/api/v1/invoices/{id}"]).toBeDefined();
+    expect(document.paths["/api/v1/invoices/{id}/pdf"]).toBeDefined();
     expect(document.paths["/api/v1/invoices/{id}/issue"]).toBeDefined();
     expect(document.paths["/api/v1/invoices/{id}/cancel"]).toBeDefined();
     expect(document.paths["/api/v1/invoices/{id}/void"]).toBeDefined();

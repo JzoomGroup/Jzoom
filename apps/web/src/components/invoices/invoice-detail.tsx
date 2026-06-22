@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { invoicePdfUrl } from "../../lib/invoice-client";
 import type { Invoice } from "../../lib/invoice-types";
 import { InvoiceLifecycleActions } from "./invoice-lifecycle-actions";
 
@@ -31,6 +32,14 @@ export function InvoiceDetail({ initialInvoice }: { initialInvoice: Invoice }) {
           <span className={`status-badge status-${invoice.status.toLowerCase()}`}>
             {invoice.status}
           </span>
+          <a
+            className="button-primary"
+            href={invoicePdfUrl(invoice.id)}
+            target="_blank"
+            rel="noreferrer"
+          >
+            View PDF
+          </a>
           <Link className="button-secondary" href={`/pricing/quotes/${invoice.quoteId}`}>
             Source quote
           </Link>
@@ -159,8 +168,8 @@ export function InvoiceDetail({ initialInvoice }: { initialInvoice: Invoice }) {
           </div>
         </div>
         <p className="pricing-muted">
-          This foundation does not generate invoice PDFs, tax QR codes, e-invoicing artifacts, or
-          payment status.
+          This invoice PDF is generated from the immutable invoice snapshot. Tax QR codes,
+          e-invoicing artifacts, payment gateways, and payment status remain outside this PR.
         </p>
       </section>
     </>
