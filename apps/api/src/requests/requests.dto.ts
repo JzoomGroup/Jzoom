@@ -4,16 +4,27 @@ import {
   IsDateString,
   IsIn,
   IsInt,
+  IsObject,
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   Max,
   MaxLength,
   Min,
   MinLength,
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { REQUEST_PRIORITIES, REQUEST_STATUSES } from "./requests.constants.js";
+import {
+  REQUEST_OUTPUT_REVIEW_ACTIONS,
+  REQUEST_PRIORITIES,
+  REQUEST_QUEUE_TYPES,
+  REQUEST_STATUSES,
+  REQUEST_TASK_STATUSES,
+  SUPERVISOR_REVIEW_ACTIONS,
+} from "./requests.constants.js";
+
+const REQUEST_OUTPUT_CODE_PATTERN = /^[A-Z0-9][A-Z0-9_-]{1,79}$/;
 
 export class CreateRequestDto {
   @ApiProperty({ type: String, format: "uuid" })
@@ -104,6 +115,232 @@ export class AssignRequestDto {
   @IsOptional()
   @IsUUID()
   accountManagerId?: string | null;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  reason?: string;
+}
+
+export class RequestQueueQueryDto {
+  @ApiPropertyOptional({ enum: REQUEST_QUEUE_TYPES, default: "all" })
+  @IsOptional()
+  @IsIn(REQUEST_QUEUE_TYPES)
+  queue?: (typeof REQUEST_QUEUE_TYPES)[number];
+
+  @ApiPropertyOptional({ enum: REQUEST_STATUSES })
+  @IsOptional()
+  @IsIn(REQUEST_STATUSES)
+  status?: (typeof REQUEST_STATUSES)[number];
+
+  @ApiPropertyOptional({ type: String, format: "uuid" })
+  @IsOptional()
+  @IsUUID()
+  clientId?: string;
+
+  @ApiPropertyOptional({
+    description: "Monthly service or monthly service revision id.",
+    type: String,
+    format: "uuid",
+  })
+  @IsOptional()
+  @IsUUID()
+  serviceId?: string;
+
+  @ApiPropertyOptional({ type: String, format: "uuid" })
+  @IsOptional()
+  @IsUUID()
+  assigneeId?: string;
+
+  @ApiPropertyOptional({ enum: REQUEST_PRIORITIES })
+  @IsOptional()
+  @IsIn(REQUEST_PRIORITIES)
+  priority?: (typeof REQUEST_PRIORITIES)[number];
+
+  @ApiPropertyOptional({ type: String, format: "date-time" })
+  @IsOptional()
+  @IsDateString()
+  dueFrom?: string;
+
+  @ApiPropertyOptional({ type: String, format: "date-time" })
+  @IsOptional()
+  @IsDateString()
+  dueTo?: string;
+}
+
+export class SupervisorRequestReviewDto {
+  @ApiProperty({ enum: SUPERVISOR_REVIEW_ACTIONS })
+  @IsIn(SUPERVISOR_REVIEW_ACTIONS)
+  action!: (typeof SUPERVISOR_REVIEW_ACTIONS)[number];
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  reason?: string;
+}
+
+export class CreateRequestTaskDto {
+  @ApiProperty({ type: String })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(240)
+  title!: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  description?: string;
+
+  @ApiPropertyOptional({ enum: REQUEST_TASK_STATUSES, default: "TODO" })
+  @IsOptional()
+  @IsIn(REQUEST_TASK_STATUSES)
+  status?: (typeof REQUEST_TASK_STATUSES)[number];
+
+  @ApiPropertyOptional({ enum: REQUEST_PRIORITIES, default: "NORMAL" })
+  @IsOptional()
+  @IsIn(REQUEST_PRIORITIES)
+  priority?: (typeof REQUEST_PRIORITIES)[number];
+
+  @ApiPropertyOptional({ type: String, format: "uuid" })
+  @IsOptional()
+  @IsUUID()
+  assigneeId?: string;
+
+  @ApiPropertyOptional({ type: String, format: "date-time" })
+  @IsOptional()
+  @IsDateString()
+  dueAt?: string;
+
+  @ApiPropertyOptional({ type: Number, default: 0 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(100_000)
+  sortOrder?: number;
+}
+
+export class UpdateRequestTaskDto {
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(240)
+  title?: string;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  description?: string | null;
+
+  @ApiPropertyOptional({ enum: REQUEST_TASK_STATUSES })
+  @IsOptional()
+  @IsIn(REQUEST_TASK_STATUSES)
+  status?: (typeof REQUEST_TASK_STATUSES)[number];
+
+  @ApiPropertyOptional({ enum: REQUEST_PRIORITIES })
+  @IsOptional()
+  @IsIn(REQUEST_PRIORITIES)
+  priority?: (typeof REQUEST_PRIORITIES)[number];
+
+  @ApiPropertyOptional({ type: String, format: "uuid", nullable: true })
+  @IsOptional()
+  @IsUUID()
+  assigneeId?: string | null;
+
+  @ApiPropertyOptional({ type: String, format: "date-time", nullable: true })
+  @IsOptional()
+  @IsDateString()
+  dueAt?: string | null;
+
+  @ApiPropertyOptional({ type: Number })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(100_000)
+  sortOrder?: number;
+}
+
+export class CreateRequestOutputDto {
+  @ApiProperty({ type: String, example: "MONTHLY_REPORT" })
+  @IsString()
+  @Matches(REQUEST_OUTPUT_CODE_PATTERN)
+  @MaxLength(80)
+  code!: string;
+
+  @ApiProperty({ type: String })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(240)
+  title!: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  @MaxLength(4_000)
+  description?: string;
+
+  @ApiPropertyOptional({ type: Object })
+  @IsOptional()
+  @IsObject()
+  contentSnapshot?: Record<string, unknown>;
+
+  @ApiPropertyOptional({ type: String, format: "date-time" })
+  @IsOptional()
+  @IsDateString()
+  dueAt?: string;
+
+  @ApiPropertyOptional({ type: Number, default: 0 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(100_000)
+  sortOrder?: number;
+}
+
+export class UpdateRequestOutputDto {
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(240)
+  title?: string;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(4_000)
+  description?: string | null;
+
+  @ApiPropertyOptional({ type: Object, nullable: true })
+  @IsOptional()
+  @IsObject()
+  contentSnapshot?: Record<string, unknown> | null;
+
+  @ApiPropertyOptional({ type: String, format: "date-time", nullable: true })
+  @IsOptional()
+  @IsDateString()
+  dueAt?: string | null;
+
+  @ApiPropertyOptional({ type: Number })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(100_000)
+  sortOrder?: number;
+}
+
+export class ReviewRequestOutputDto {
+  @ApiProperty({ enum: REQUEST_OUTPUT_REVIEW_ACTIONS })
+  @IsIn(REQUEST_OUTPUT_REVIEW_ACTIONS)
+  action!: (typeof REQUEST_OUTPUT_REVIEW_ACTIONS)[number];
 
   @ApiPropertyOptional({ type: String })
   @IsOptional()

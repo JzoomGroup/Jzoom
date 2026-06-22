@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import type { RequestSummary, ServiceRequest } from "./request-types";
+import type { RequestQueueResponse, RequestSummary, ServiceRequest } from "./request-types";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
 
@@ -31,6 +31,12 @@ async function requireRequestResponse<T>(path: string): Promise<T> {
 
 export function requireRequests(): Promise<RequestSummary[]> {
   return requireRequestResponse<RequestSummary[]>("requests");
+}
+
+export function requireRequestQueue(
+  queue: RequestQueueResponse["queue"] = "all",
+): Promise<RequestQueueResponse> {
+  return requireRequestResponse<RequestQueueResponse>(`requests/queues/${queue}`);
 }
 
 export function requireRequest(id: string): Promise<ServiceRequest> {

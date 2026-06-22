@@ -2,7 +2,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ClientRequestDetail } from "../client-portal/client-request-detail";
 import { RequestDetail } from "./request-detail";
 import { RequestList } from "./request-list";
-import type { RequestSummary, ServiceRequest } from "../../lib/request-types";
+import { RequestQueue } from "./request-queue";
+import type { RequestQueueResponse, RequestSummary, ServiceRequest } from "../../lib/request-types";
 
 const pushMock = jest.fn();
 
@@ -73,6 +74,8 @@ function requestSummary(): RequestSummary {
       comments: 1,
       files: 1,
       internalNotes: 1,
+      outputs: 1,
+      tasks: 1,
       workflowEvents: 1,
     },
   };
@@ -134,6 +137,55 @@ function serviceRequest(): ServiceRequest {
         occurredAt: "2026-06-22T00:00:00.000Z",
       },
     ],
+    outputs: [
+      {
+        id: "output-1",
+        code: "SEO_REPORT",
+        title: "Internal draft output",
+        description: "Internal prepared output",
+        contentSnapshot: null,
+        status: "DRAFT",
+        dueAt: null,
+        submittedAt: null,
+        reviewedAt: null,
+        reviewReason: null,
+        revision: 1,
+        sortOrder: 0,
+        createdAt: "2026-06-22T00:00:00.000Z",
+        updatedAt: "2026-06-22T00:00:00.000Z",
+        createdBy: { id: "am-1", email: "am@example.com", displayName: "Account Manager" },
+        reviewedBy: null,
+      },
+    ],
+    tasks: [
+      {
+        id: "task-1",
+        title: "Prepare report",
+        description: "Internal checklist item",
+        status: "TODO",
+        priority: "NORMAL",
+        assignee: null,
+        dueAt: null,
+        sortOrder: 0,
+        createdAt: "2026-06-22T00:00:00.000Z",
+        updatedAt: "2026-06-22T00:00:00.000Z",
+      },
+    ],
+  };
+}
+
+function requestQueue(): RequestQueueResponse {
+  return {
+    counters: {
+      accountManager: 1,
+      open: 1,
+      overdue: 0,
+      specialist: 1,
+      supervisor: 1,
+    },
+    filters: {},
+    queue: "all",
+    requests: [requestSummary()],
   };
 }
 
@@ -188,10 +240,37 @@ describe("Request lifecycle UI", () => {
     expect(await screen.findByText("TRIAGE")).toBeInTheDocument();
   });
 
+  it("loads filtered internal work queues through the backend API", async () => {
+    const fetchMock = jest.mocked(fetch);
+    fetchMock.mockImplementationOnce(() =>
+      jsonResponse({
+        ...requestQueue(),
+        requests: [],
+      }),
+    );
+
+    render(<RequestQueue initialQueue={requestQueue()} />);
+    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "IN_PROGRESS" } });
+    fireEvent.change(screen.getByLabelText("Due before"), {
+      target: { value: "2026-06-30T09:00" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Apply filters" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const calledUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
+    expect(calledUrl.pathname).toBe("/api/v1/requests/queues");
+    expect(calledUrl.searchParams.get("queue")).toBe("all");
+    expect(calledUrl.searchParams.get("status")).toBe("IN_PROGRESS");
+    expect(calledUrl.searchParams.get("dueTo")).toBe(new Date("2026-06-30T09:00").toISOString());
+    expect(await screen.findByText("No requests match this queue.")).toBeInTheDocument();
+  });
+
   it("does not render internal notes in the client request view", () => {
     render(<ClientRequestDetail request={serviceRequest()} />);
 
     expect(screen.getByText("Visible update")).toBeInTheDocument();
     expect(screen.queryByText("Internal note that clients must never see")).not.toBeInTheDocument();
+    expect(screen.queryByText("Internal draft output")).not.toBeInTheDocument();
+    expect(screen.queryByText("Prepare report")).not.toBeInTheDocument();
   });
 });

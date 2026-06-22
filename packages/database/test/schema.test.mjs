@@ -232,3 +232,30 @@ test("PR 13 schema adds request lifecycle source links and assignments", async (
   assert.match(migration, /ON DELETE SET NULL/);
   assert.doesNotMatch(migration, /DROP TABLE/);
 });
+
+test("PR 14 schema adds internal request outputs and task assignee integrity", async () => {
+  const schema = await readFile(
+    path.join(workspaceRoot, "packages/database/prisma/schema.prisma"),
+    "utf8",
+  );
+  const migration = await readFile(
+    path.join(
+      workspaceRoot,
+      "packages/database/prisma/migrations/202606230001_pr14_request_execution_foundation/migration.sql",
+    ),
+    "utf8",
+  );
+
+  assert.match(schema, /model RequestOutput \{/);
+  assert.match(schema, /requestId\s+String\s+@db\.Uuid/);
+  assert.match(schema, /contentSnapshot\s+Json\?/);
+  assert.match(schema, /status\s+OutputStatus\s+@default\(DRAFT\)/);
+  assert.match(schema, /assignedTasks\s+Task\[\]\s+@relation\("TaskAssignee"\)/);
+  assert.match(schema, /assignee\s+User\?\s+@relation\("TaskAssignee"/);
+  assert.match(migration, /CREATE TABLE "request_outputs"/);
+  assert.match(migration, /request_outputs_requestId_fkey/);
+  assert.match(migration, /tasks_assigneeId_fkey/);
+  assert.match(migration, /ON DELETE SET NULL/);
+  assert.doesNotMatch(migration, /client_visible/i);
+  assert.doesNotMatch(migration, /DROP TABLE/);
+});

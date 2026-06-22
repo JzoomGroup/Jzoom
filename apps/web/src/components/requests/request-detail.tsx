@@ -8,7 +8,14 @@ import {
   addRequestComment,
   assignRequest,
   changeRequestStatus,
+  createRequestOutput,
+  createRequestTask,
   requestErrorMessage,
+  reviewRequestOutput,
+  startRequestWork,
+  submitRequestOutput,
+  supervisorReviewRequest,
+  updateRequestTask,
 } from "../../lib/request-client";
 import type { RequestStatus, ServiceRequest } from "../../lib/request-types";
 
@@ -54,6 +61,19 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
   });
   const [commentForm, setCommentForm] = useState({ body: "", isClientVisible: true });
   const [noteBody, setNoteBody] = useState("");
+  const [taskForm, setTaskForm] = useState({
+    assigneeId: "",
+    description: "",
+    dueAt: "",
+    priority: "NORMAL" as "LOW" | "NORMAL" | "HIGH" | "URGENT",
+    title: "",
+  });
+  const [outputForm, setOutputForm] = useState({
+    code: "",
+    description: "",
+    title: "",
+  });
+  const [reviewReason, setReviewReason] = useState("");
   const [fileForm, setFileForm] = useState({
     originalName: "",
     mimeType: "",
@@ -80,6 +100,16 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
     event.preventDefault();
     void run("status", () =>
       changeRequestStatus(request.id, statusForm.status, statusForm.reason || undefined),
+    );
+  }
+
+  function startWork() {
+    void run("start", () => startRequestWork(request.id));
+  }
+
+  function supervisorAction(action: "APPROVE" | "RETURN" | "REJECT" | "ESCALATE") {
+    void run("supervisor-review", () =>
+      supervisorReviewRequest(request.id, action, reviewReason || undefined),
     );
   }
 
@@ -137,6 +167,55 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
       });
       return updated;
     });
+  }
+
+  function submitTask(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const payload: Parameters<typeof createRequestTask>[1] = {
+      title: taskForm.title,
+      priority: taskForm.priority,
+    };
+    if (taskForm.description) payload.description = taskForm.description;
+    if (taskForm.assigneeId) payload.assigneeId = taskForm.assigneeId;
+    if (taskForm.dueAt) payload.dueAt = new Date(taskForm.dueAt).toISOString();
+    void run("task", async () => {
+      const updated = await createRequestTask(request.id, payload);
+      setTaskForm({
+        assigneeId: "",
+        description: "",
+        dueAt: "",
+        priority: "NORMAL",
+        title: "",
+      });
+      return updated;
+    });
+  }
+
+  function setTaskStatus(taskId: string, status: "TODO" | "IN_PROGRESS" | "DONE" | "BLOCKED") {
+    void run("task-status", () => updateRequestTask(request.id, taskId, { status }));
+  }
+
+  function submitOutput(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void run("output", async () => {
+      const updated = await createRequestOutput(request.id, {
+        code: outputForm.code,
+        title: outputForm.title,
+        ...(outputForm.description ? { description: outputForm.description } : {}),
+      });
+      setOutputForm({ code: "", description: "", title: "" });
+      return updated;
+    });
+  }
+
+  function submitOutputForReview(outputId: string) {
+    void run("output-submit", () => submitRequestOutput(request.id, outputId));
+  }
+
+  function reviewOutput(outputId: string, action: "APPROVE" | "RETURN" | "REJECT") {
+    void run("output-review", () =>
+      reviewRequestOutput(request.id, outputId, action, reviewReason || undefined),
+    );
   }
 
   return (
@@ -292,6 +371,225 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
             Update status
           </button>
         </form>
+        <div className="row-actions">
+          <button className="button-secondary" type="button" onClick={startWork}>
+            Start work
+          </button>
+          <input
+            aria-label="Supervisor review reason"
+            placeholder="Supervisor review reason"
+            value={reviewReason}
+            onChange={(event) => setReviewReason(event.target.value)}
+          />
+          <button
+            className="button-secondary"
+            type="button"
+            onClick={() => supervisorAction("APPROVE")}
+          >
+            Approve request
+          </button>
+          <button
+            className="button-secondary"
+            type="button"
+            onClick={() => supervisorAction("RETURN")}
+          >
+            Return changes
+          </button>
+          <button
+            className="button-danger"
+            type="button"
+            onClick={() => supervisorAction("REJECT")}
+          >
+            Reject
+          </button>
+          <button
+            className="button-secondary"
+            type="button"
+            onClick={() => supervisorAction("ESCALATE")}
+          >
+            Escalate
+          </button>
+        </div>
+      </section>
+
+      <section className="quote-summary-grid">
+        <article className="catalog-panel">
+          <h2>Internal checklist</h2>
+          <form className="catalog-form" onSubmit={submitTask}>
+            <label>
+              Task title
+              <input
+                required
+                value={taskForm.title}
+                onChange={(event) => setTaskForm({ ...taskForm, title: event.target.value })}
+              />
+            </label>
+            <label>
+              Assignee ID
+              <input
+                value={taskForm.assigneeId}
+                onChange={(event) => setTaskForm({ ...taskForm, assigneeId: event.target.value })}
+              />
+            </label>
+            <label>
+              Priority
+              <select
+                value={taskForm.priority}
+                onChange={(event) =>
+                  setTaskForm({
+                    ...taskForm,
+                    priority: event.target.value as typeof taskForm.priority,
+                  })
+                }
+              >
+                {["LOW", "NORMAL", "HIGH", "URGENT"].map((priority) => (
+                  <option key={priority} value={priority}>
+                    {priority}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Due at
+              <input
+                type="datetime-local"
+                value={taskForm.dueAt}
+                onChange={(event) => setTaskForm({ ...taskForm, dueAt: event.target.value })}
+              />
+            </label>
+            <label className="form-span">
+              Description
+              <textarea
+                value={taskForm.description}
+                onChange={(event) => setTaskForm({ ...taskForm, description: event.target.value })}
+              />
+            </label>
+            <button className="button-primary" type="submit" disabled={saving === "task"}>
+              Add checklist item
+            </button>
+          </form>
+          <div className="activity-list">
+            {request.tasks.length === 0 ? (
+              <p>No internal checklist items yet.</p>
+            ) : (
+              request.tasks.map((task) => (
+                <article key={task.id}>
+                  <strong>{task.title}</strong>
+                  <small>
+                    {task.status} · {task.priority} · {task.assignee?.displayName ?? "Unassigned"}
+                  </small>
+                  {task.description && <p>{task.description}</p>}
+                  <div className="row-actions">
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={() => setTaskStatus(task.id, "IN_PROGRESS")}
+                    >
+                      Start
+                    </button>
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={() => setTaskStatus(task.id, "DONE")}
+                    >
+                      Done
+                    </button>
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={() => setTaskStatus(task.id, "BLOCKED")}
+                    >
+                      Blocked
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </article>
+
+        <article className="catalog-panel">
+          <h2>Internal outputs</h2>
+          <form className="catalog-form" onSubmit={submitOutput}>
+            <label>
+              Output code
+              <input
+                required
+                value={outputForm.code}
+                onChange={(event) => setOutputForm({ ...outputForm, code: event.target.value })}
+              />
+            </label>
+            <label>
+              Title
+              <input
+                required
+                value={outputForm.title}
+                onChange={(event) => setOutputForm({ ...outputForm, title: event.target.value })}
+              />
+            </label>
+            <label className="form-span">
+              Description
+              <textarea
+                value={outputForm.description}
+                onChange={(event) =>
+                  setOutputForm({ ...outputForm, description: event.target.value })
+                }
+              />
+            </label>
+            <button className="button-primary" type="submit" disabled={saving === "output"}>
+              Create internal output
+            </button>
+          </form>
+          <div className="activity-list">
+            {request.outputs.length === 0 ? (
+              <p>No internal outputs prepared yet.</p>
+            ) : (
+              request.outputs.map((output) => (
+                <article key={output.id}>
+                  <strong>
+                    {output.code} · {output.title}
+                  </strong>
+                  <small>
+                    {output.status} · created by {output.createdBy.displayName}
+                    {output.reviewedBy ? ` · reviewed by ${output.reviewedBy.displayName}` : ""}
+                  </small>
+                  {output.description && <p>{output.description}</p>}
+                  {output.reviewReason && <p>Review note: {output.reviewReason}</p>}
+                  <div className="row-actions">
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={() => submitOutputForReview(output.id)}
+                    >
+                      Submit
+                    </button>
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={() => reviewOutput(output.id, "APPROVE")}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={() => reviewOutput(output.id, "RETURN")}
+                    >
+                      Return
+                    </button>
+                    <button
+                      className="button-danger"
+                      type="button"
+                      onClick={() => reviewOutput(output.id, "REJECT")}
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </article>
       </section>
 
       <section className="quote-summary-grid">

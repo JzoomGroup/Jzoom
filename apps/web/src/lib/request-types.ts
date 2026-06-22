@@ -84,6 +84,8 @@ export interface RequestSummary {
     comments: number;
     files: number;
     internalNotes: number;
+    outputs: number;
+    tasks: number;
     workflowEvents: number;
   };
 }
@@ -129,9 +131,56 @@ export interface RequestActivity {
   occurredAt: string;
 }
 
+export interface RequestTask {
+  id: string;
+  title: string;
+  description: string | null;
+  status: "TODO" | "IN_PROGRESS" | "DONE" | "BLOCKED" | "CANCELLED";
+  priority: string;
+  assignee: RequestUser | null;
+  dueAt: string | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RequestOutput {
+  id: string;
+  code: string;
+  title: string;
+  description: string | null;
+  contentSnapshot: unknown;
+  status: "DRAFT" | "INTERNAL_REVIEW" | "APPROVED_INTERNAL" | "REVISION_REQUESTED";
+  dueAt: string | null;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  reviewReason: string | null;
+  revision: number;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: RequestUser;
+  reviewedBy: RequestUser | null;
+}
+
 export interface ServiceRequest extends RequestSummary {
   comments: RequestComment[];
   internalNotes: RequestInternalNote[];
   attachments: RequestAttachment[];
   activity: RequestActivity[];
+  outputs: RequestOutput[];
+  tasks: RequestTask[];
+}
+
+export interface RequestQueueResponse {
+  queue: "all" | "specialist" | "supervisor" | "account-manager";
+  filters: Record<string, unknown>;
+  counters: {
+    accountManager: number;
+    open: number;
+    overdue: number;
+    specialist: number;
+    supervisor: number;
+  };
+  requests: RequestSummary[];
 }

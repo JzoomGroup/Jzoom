@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
-import type { Prisma } from "@jzoom/database";
+import { Prisma } from "@jzoom/database";
 import { ADMIN_ROLE_CODE, MANAGEMENT_ROLE_CODE } from "../auth/auth.constants.js";
 import { AuthAuditService } from "../auth/audit.service.js";
 import type { AuthenticatedPrincipal, RequestMetadata } from "../auth/auth.types.js";
@@ -25,7 +25,14 @@ import type {
   AddInternalNoteDto,
   AddRequestCommentDto,
   AssignRequestDto,
+  CreateRequestOutputDto,
+  CreateRequestTaskDto,
   CreateRequestDto,
+  RequestQueueQueryDto,
+  ReviewRequestOutputDto,
+  SupervisorRequestReviewDto,
+  UpdateRequestOutputDto,
+  UpdateRequestTaskDto,
 } from "./requests.dto.js";
 
 const workflowCode = "REQUEST_LIFECYCLE_FOUNDATION";
@@ -56,6 +63,10 @@ const statusLabels: Record<RequestLifecycleStatus, { ar: string; en: string; ter
     RETURNED: { ar: "معاد", en: "Returned" },
     REJECTED: { ar: "مرفوض", en: "Rejected", terminal: true },
   };
+
+const openRequestStatuses = REQUEST_STATUSES.filter(
+  (status) => status !== "CLOSED" && status !== "REJECTED",
+);
 
 const userSummarySelect = {
   id: true,
@@ -142,6 +153,8 @@ const requestSummaryInclude = {
       comments: true,
       files: true,
       internalNotes: true,
+      outputs: true,
+      tasks: true,
       workflowEvents: true,
     },
   },
@@ -160,6 +173,17 @@ const requestDetailInclude = {
   files: {
     orderBy: { createdAt: "asc" },
     include: { uploadedBy: { select: userSummarySelect } },
+  },
+  outputs: {
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    include: {
+      createdBy: { select: userSummarySelect },
+      reviewedBy: { select: userSummarySelect },
+    },
+  },
+  tasks: {
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    include: { assignee: { select: userSummarySelect } },
   },
   workflowEvents: {
     orderBy: { occurredAt: "asc" },
@@ -213,6 +237,22 @@ export class RequestsService {
   async get(id: string, principal: AuthenticatedPrincipal) {
     const request = await this.requireAccessibleRequest(id, principal);
     return this.detailView(request, false);
+  }
+
+  async queue(input: RequestQueueQueryDto, principal: AuthenticatedPrincipal) {
+    const queue = input.queue ?? "all";
+    const where = this.queueAccessWhere(queue, input, principal);
+    const requests = await this.database.prisma.request.findMany({
+      where,
+      orderBy: [{ dueAt: "asc" }, { priority: "desc" }, { createdAt: "desc" }],
+      include: requestSummaryInclude,
+    });
+    return {
+      queue,
+      filters: input,
+      counters: await this.queueCounters(principal),
+      requests: requests.map((request) => this.summaryView(request)),
+    };
   }
 
   async create(
@@ -348,56 +388,36 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     const request = await this.requireAccessibleRequest(id, principal);
-    if (request.status === status) {
-      return this.detailView(request, false);
-    }
-    const allowed = lifecycleTransitions[request.status];
-    if (!allowed.includes(status)) {
-      throw new ConflictException({
-        code: "INVALID_REQUEST_STATUS_TRANSITION",
-        message: `Requests cannot move from ${request.status} to ${status}`,
-      });
-    }
+    return this.transitionRequest(request, status, reason, principal, metadata);
+  }
 
-    const workflow = await this.ensureRequestWorkflow();
-    const toStateId = workflow.states[status];
-    const now = new Date();
-    const updated = await this.database.prisma.request.update({
-      where: { id },
-      data: {
-        status,
-        currentStateId: toStateId,
-        ...(status === "CLOSED" ? { closedAt: now } : {}),
-      },
-      include: requestDetailInclude,
-    });
-    await this.database.prisma.workflowEvent.create({
-      data: {
-        workflowVersionId: updated.workflowVersionId,
-        requestId: id,
-        fromStateId: request.currentStateId,
-        toStateId,
-        actorId: principal.userId,
-        actorRole: primaryRole(principal),
-        ...(reason ? { reason } : {}),
-        metadata: json({ fromStatus: request.status, toStatus: status }),
-      },
-    });
-    await this.audit.record(
-      {
-        actorId: principal.userId,
-        eventCode: REQUEST_EVENT.statusChanged,
-        entityType: "Request",
-        entityId: updated.id,
-        before: this.auditSnapshot(request),
-        after: this.auditSnapshot(updated),
-        ...(reason ? { reason } : {}),
-      },
+  async startWork(id: string, principal: AuthenticatedPrincipal, metadata: RequestMetadata) {
+    const request = await this.requireAccessibleRequest(id, principal);
+    this.assertAssignedWork(request, principal);
+    return this.transitionRequest(request, "IN_PROGRESS", "Work started", principal, metadata);
+  }
+
+  async supervisorReview(
+    id: string,
+    input: SupervisorRequestReviewDto,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const request = await this.requireAccessibleRequest(id, principal);
+    this.assertSupervisorAccess(request, principal);
+    const targetStatus: Record<SupervisorRequestReviewDto["action"], RequestLifecycleStatus> = {
+      APPROVE: "COMPLETED",
+      ESCALATE: "WAITING_SUPERVISOR",
+      REJECT: "REJECTED",
+      RETURN: "RETURNED",
+    };
+    return this.transitionRequest(
+      request,
+      targetStatus[input.action],
+      input.reason ?? input.action.toLowerCase().replaceAll("_", " "),
+      principal,
       metadata,
     );
-
-    const refreshed = await this.requireAccessibleRequest(id, principal);
-    return this.detailView(refreshed, false);
   }
 
   async addComment(
@@ -495,6 +515,269 @@ export class RequestsService {
     return this.get(id, principal);
   }
 
+  async createTask(
+    id: string,
+    input: CreateRequestTaskDto,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    await this.requireAccessibleRequest(id, principal);
+    const assigneeId = await this.assignmentUserId(input.assigneeId, [
+      ACCOUNT_MANAGER_ROLE_CODE,
+      SPECIALIST_ROLE_CODE,
+      SUPERVISOR_ROLE_CODE,
+    ]);
+    const task = await this.database.prisma.task.create({
+      data: {
+        requestId: id,
+        title: input.title.trim(),
+        ...(input.description ? { description: input.description.trim() } : {}),
+        status: input.status ?? "TODO",
+        priority: input.priority ?? "NORMAL",
+        ...(assigneeId ? { assigneeId } : {}),
+        ...(input.dueAt ? { dueAt: new Date(input.dueAt) } : {}),
+        sortOrder: input.sortOrder ?? 0,
+      },
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.taskCreated,
+        entityType: "RequestTask",
+        entityId: task.id,
+        after: {
+          requestId: id,
+          title: task.title,
+          status: task.status,
+          assigneeId: task.assigneeId,
+        },
+      },
+      metadata,
+    );
+    return this.get(id, principal);
+  }
+
+  async updateTask(
+    id: string,
+    taskId: string,
+    input: UpdateRequestTaskDto,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    await this.requireAccessibleRequest(id, principal);
+    const task = await this.requireRequestTask(id, taskId);
+    const assigneeId = await this.assignmentUserId(input.assigneeId, [
+      ACCOUNT_MANAGER_ROLE_CODE,
+      SPECIALIST_ROLE_CODE,
+      SUPERVISOR_ROLE_CODE,
+    ]);
+    const data: Prisma.TaskUpdateInput = {};
+    if (input.title !== undefined) data.title = input.title.trim();
+    if (input.description !== undefined) data.description = input.description?.trim() ?? null;
+    if (input.status !== undefined) data.status = input.status;
+    if (input.priority !== undefined) data.priority = input.priority;
+    if (assigneeId !== undefined)
+      data.assignee = assigneeId ? { connect: { id: assigneeId } } : { disconnect: true };
+    if (input.dueAt !== undefined) data.dueAt = input.dueAt ? new Date(input.dueAt) : null;
+    if (input.sortOrder !== undefined) data.sortOrder = input.sortOrder;
+
+    const updated = await this.database.prisma.task.update({
+      where: { id: task.id },
+      data,
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.taskUpdated,
+        entityType: "RequestTask",
+        entityId: updated.id,
+        before: {
+          title: task.title,
+          status: task.status,
+          priority: task.priority,
+          assigneeId: task.assigneeId,
+        },
+        after: {
+          title: updated.title,
+          status: updated.status,
+          priority: updated.priority,
+          assigneeId: updated.assigneeId,
+        },
+      },
+      metadata,
+    );
+    return this.get(id, principal);
+  }
+
+  async createOutput(
+    id: string,
+    input: CreateRequestOutputDto,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const request = await this.requireAccessibleRequest(id, principal);
+    this.assertAssignedWork(request, principal);
+    const output = await this.database.prisma.requestOutput.create({
+      data: {
+        requestId: id,
+        createdById: principal.userId,
+        code: input.code.trim().toUpperCase(),
+        title: input.title.trim(),
+        ...(input.description ? { description: input.description.trim() } : {}),
+        ...(input.contentSnapshot ? { contentSnapshot: json(input.contentSnapshot) } : {}),
+        ...(input.dueAt ? { dueAt: new Date(input.dueAt) } : {}),
+        sortOrder: input.sortOrder ?? 0,
+      },
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.outputCreated,
+        entityType: "RequestOutput",
+        entityId: output.id,
+        after: {
+          requestId: id,
+          code: output.code,
+          title: output.title,
+          status: output.status,
+        },
+      },
+      metadata,
+    );
+    return this.get(id, principal);
+  }
+
+  async updateOutput(
+    id: string,
+    outputId: string,
+    input: UpdateRequestOutputDto,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const request = await this.requireAccessibleRequest(id, principal);
+    this.assertAssignedWork(request, principal);
+    const output = await this.requireRequestOutput(id, outputId);
+    if (!["DRAFT", "REVISION_REQUESTED"].includes(output.status)) {
+      throw new ConflictException({
+        code: "REQUEST_OUTPUT_LOCKED_FOR_REVIEW",
+        message: "Only draft or returned internal outputs can be edited",
+      });
+    }
+    const data: Prisma.RequestOutputUpdateInput = {};
+    if (input.title !== undefined) data.title = input.title.trim();
+    if (input.description !== undefined) data.description = input.description?.trim() ?? null;
+    if (input.contentSnapshot !== undefined) {
+      data.contentSnapshot =
+        input.contentSnapshot === null ? Prisma.DbNull : json(input.contentSnapshot);
+    }
+    if (input.dueAt !== undefined) data.dueAt = input.dueAt ? new Date(input.dueAt) : null;
+    if (input.sortOrder !== undefined) data.sortOrder = input.sortOrder;
+
+    const updated = await this.database.prisma.requestOutput.update({
+      where: { id: output.id },
+      data,
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.outputUpdated,
+        entityType: "RequestOutput",
+        entityId: updated.id,
+        before: this.outputAuditSnapshot(output),
+        after: this.outputAuditSnapshot(updated),
+      },
+      metadata,
+    );
+    return this.get(id, principal);
+  }
+
+  async submitOutput(
+    id: string,
+    outputId: string,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const request = await this.requireAccessibleRequest(id, principal);
+    this.assertAssignedWork(request, principal);
+    const output = await this.requireRequestOutput(id, outputId);
+    if (!["DRAFT", "REVISION_REQUESTED"].includes(output.status)) {
+      throw new ConflictException({
+        code: "REQUEST_OUTPUT_NOT_SUBMITTABLE",
+        message: "Only draft or returned internal outputs can be submitted for review",
+      });
+    }
+    const updated = await this.database.prisma.requestOutput.update({
+      where: { id: output.id },
+      data: {
+        status: "INTERNAL_REVIEW",
+        submittedAt: new Date(),
+        reviewReason: null,
+      },
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.outputSubmitted,
+        entityType: "RequestOutput",
+        entityId: updated.id,
+        before: this.outputAuditSnapshot(output),
+        after: this.outputAuditSnapshot(updated),
+      },
+      metadata,
+    );
+    if (request.status === "IN_PROGRESS") {
+      await this.transitionRequest(
+        request,
+        "WAITING_SUPERVISOR",
+        "Internal output submitted for supervisor review",
+        principal,
+        metadata,
+      );
+    }
+    return this.get(id, principal);
+  }
+
+  async reviewOutput(
+    id: string,
+    outputId: string,
+    input: ReviewRequestOutputDto,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const request = await this.requireAccessibleRequest(id, principal);
+    this.assertSupervisorAccess(request, principal);
+    const output = await this.requireRequestOutput(id, outputId);
+    if (output.status !== "INTERNAL_REVIEW") {
+      throw new ConflictException({
+        code: "REQUEST_OUTPUT_NOT_IN_REVIEW",
+        message: "Only outputs submitted for internal review can be reviewed",
+      });
+    }
+    const approved = input.action === "APPROVE";
+    const updated = await this.database.prisma.requestOutput.update({
+      where: { id: output.id },
+      data: {
+        status: approved ? "APPROVED_INTERNAL" : "REVISION_REQUESTED",
+        reviewedById: principal.userId,
+        reviewedAt: new Date(),
+        reviewReason: input.reason ?? input.action.toLowerCase(),
+      },
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.outputReviewed,
+        entityType: "RequestOutput",
+        entityId: updated.id,
+        before: this.outputAuditSnapshot(output),
+        after: this.outputAuditSnapshot(updated),
+        ...(input.reason ? { reason: input.reason } : {}),
+      },
+      metadata,
+    );
+    return this.get(id, principal);
+  }
+
   async listClientRequests(principal: AuthenticatedPrincipal) {
     const requests = await this.database.prisma.request.findMany({
       where: {
@@ -504,7 +787,7 @@ export class RequestsService {
       orderBy: [{ createdAt: "desc" }],
       include: requestSummaryInclude,
     });
-    return requests.map((request) => this.summaryView(request));
+    return requests.map((request) => this.summaryView(request, true));
   }
 
   async getClientRequest(id: string, principal: AuthenticatedPrincipal, metadata: RequestMetadata) {
@@ -554,6 +837,277 @@ export class RequestsService {
       metadata,
     );
     return this.getClientRequest(id, principal, metadata);
+  }
+
+  private queueAccessWhere(
+    queue: NonNullable<RequestQueueQueryDto["queue"]>,
+    input: RequestQueueQueryDto,
+    principal: AuthenticatedPrincipal,
+  ): Prisma.RequestWhereInput {
+    const filters: Prisma.RequestWhereInput[] = [this.internalAccessWhere(principal)];
+    const queueWhere = this.queueWhere(queue, input.assigneeId, principal);
+    if (queueWhere) filters.push(queueWhere);
+    if (input.status) filters.push({ status: input.status });
+    if (input.clientId) filters.push({ clientId: input.clientId });
+    if (input.priority) filters.push({ priority: input.priority });
+    if (input.serviceId) {
+      filters.push({
+        OR: [
+          { subscriptionService: { monthlyServiceRevisionId: input.serviceId } },
+          {
+            subscriptionService: {
+              monthlyServiceRevision: { monthlyServiceId: input.serviceId },
+            },
+          },
+        ],
+      });
+    }
+    if (input.assigneeId) {
+      filters.push({
+        OR: [
+          { assignedSpecialistId: input.assigneeId },
+          { assignedSupervisorId: input.assigneeId },
+          { accountManagerId: input.assigneeId },
+          { tasks: { some: { assigneeId: input.assigneeId } } },
+        ],
+      });
+    }
+    if (input.dueFrom || input.dueTo) {
+      filters.push({
+        dueAt: {
+          ...(input.dueFrom ? { gte: new Date(input.dueFrom) } : {}),
+          ...(input.dueTo ? { lte: new Date(input.dueTo) } : {}),
+        },
+      });
+    }
+    return { AND: filters };
+  }
+
+  private queueWhere(
+    queue: NonNullable<RequestQueueQueryDto["queue"]>,
+    assigneeId: string | undefined,
+    principal: AuthenticatedPrincipal,
+  ): Prisma.RequestWhereInput | null {
+    if (queue === "all") {
+      return null;
+    }
+    const openStatusFilter = { status: { in: openRequestStatuses } };
+    if (queue === "specialist") {
+      const targetUserId =
+        assigneeId ??
+        (principal.roles.includes(SPECIALIST_ROLE_CODE) ? principal.userId : undefined);
+      return {
+        ...openStatusFilter,
+        OR: targetUserId
+          ? [
+              { assignedSpecialistId: targetUserId },
+              { tasks: { some: { assigneeId: targetUserId } } },
+            ]
+          : [
+              { assignedSpecialistId: { not: null } },
+              { tasks: { some: { assigneeId: { not: null } } } },
+            ],
+      };
+    }
+    if (queue === "supervisor") {
+      const targetUserId =
+        assigneeId ??
+        (principal.roles.includes(SUPERVISOR_ROLE_CODE) ? principal.userId : undefined);
+      return {
+        ...openStatusFilter,
+        OR: [
+          ...(targetUserId
+            ? [{ assignedSupervisorId: targetUserId }]
+            : [{ assignedSupervisorId: { not: null } }]),
+          { status: "WAITING_SUPERVISOR" },
+          { outputs: { some: { status: "INTERNAL_REVIEW" } } },
+        ],
+      };
+    }
+    const targetUserId =
+      assigneeId ??
+      (principal.roles.includes(ACCOUNT_MANAGER_ROLE_CODE) ? principal.userId : undefined);
+    return {
+      ...openStatusFilter,
+      ...(targetUserId ? { accountManagerId: targetUserId } : { accountManagerId: { not: null } }),
+    };
+  }
+
+  private async queueCounters(principal: AuthenticatedPrincipal) {
+    const accessWhere = this.internalAccessWhere(principal);
+    const now = new Date();
+    const [open, overdue, specialist, supervisor, accountManager] = await Promise.all([
+      this.database.prisma.request.count({
+        where: { AND: [accessWhere, { status: { in: openRequestStatuses } }] },
+      }),
+      this.database.prisma.request.count({
+        where: {
+          AND: [accessWhere, { status: { in: openRequestStatuses } }, { dueAt: { lt: now } }],
+        },
+      }),
+      this.database.prisma.request.count({
+        where: {
+          AND: [
+            accessWhere,
+            {
+              status: { in: openRequestStatuses },
+              OR: [
+                { assignedSpecialistId: principal.userId },
+                { tasks: { some: { assigneeId: principal.userId } } },
+              ],
+            },
+          ],
+        },
+      }),
+      this.database.prisma.request.count({
+        where: {
+          AND: [
+            accessWhere,
+            {
+              status: { in: openRequestStatuses },
+              OR: [
+                { assignedSupervisorId: principal.userId },
+                { status: "WAITING_SUPERVISOR" },
+                { outputs: { some: { status: "INTERNAL_REVIEW" } } },
+              ],
+            },
+          ],
+        },
+      }),
+      this.database.prisma.request.count({
+        where: {
+          AND: [
+            accessWhere,
+            {
+              status: { in: openRequestStatuses },
+              OR: [
+                { accountManagerId: principal.userId },
+                { clientId: { in: this.optionalClientIdsFor(principal) } },
+              ],
+            },
+          ],
+        },
+      }),
+    ]);
+    return { accountManager, open, overdue, specialist, supervisor };
+  }
+
+  private async transitionRequest(
+    request: RequestDetailRecord,
+    status: RequestLifecycleStatus,
+    reason: string | undefined,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    if (request.status === status) {
+      return this.detailView(request, false);
+    }
+    const allowed = lifecycleTransitions[request.status];
+    if (!allowed.includes(status)) {
+      throw new ConflictException({
+        code: "INVALID_REQUEST_STATUS_TRANSITION",
+        message: `Requests cannot move from ${request.status} to ${status}`,
+      });
+    }
+
+    const workflow = await this.ensureRequestWorkflow();
+    const toStateId = workflow.states[status];
+    const updated = await this.database.prisma.request.update({
+      where: { id: request.id },
+      data: {
+        status,
+        currentStateId: toStateId,
+        ...(status === "CLOSED" ? { closedAt: new Date() } : {}),
+      },
+      include: requestDetailInclude,
+    });
+    await this.database.prisma.workflowEvent.create({
+      data: {
+        workflowVersionId: updated.workflowVersionId,
+        requestId: request.id,
+        fromStateId: request.currentStateId,
+        toStateId,
+        actorId: principal.userId,
+        actorRole: primaryRole(principal),
+        ...(reason ? { reason } : {}),
+        metadata: json({ fromStatus: request.status, toStatus: status }),
+      },
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.statusChanged,
+        entityType: "Request",
+        entityId: updated.id,
+        before: this.auditSnapshot(request),
+        after: this.auditSnapshot(updated),
+        ...(reason ? { reason } : {}),
+      },
+      metadata,
+    );
+    const refreshed = await this.requireAccessibleRequest(request.id, principal);
+    return this.detailView(refreshed, false);
+  }
+
+  private assertAssignedWork(
+    request: RequestDetailRecord,
+    principal: AuthenticatedPrincipal,
+  ): void {
+    if (hasGlobalAccess(principal)) {
+      return;
+    }
+    const taskAssigned = request.tasks.some((task) => task.assigneeId === principal.userId);
+    if (
+      request.assignedSpecialistId === principal.userId ||
+      request.assignedSupervisorId === principal.userId ||
+      request.accountManagerId === principal.userId ||
+      taskAssigned
+    ) {
+      return;
+    }
+    throw new ForbiddenException({
+      code: "REQUEST_ASSIGNMENT_REQUIRED",
+      message: "This action requires assignment to the request",
+    });
+  }
+
+  private assertSupervisorAccess(
+    request: RequestDetailRecord,
+    principal: AuthenticatedPrincipal,
+  ): void {
+    if (hasGlobalAccess(principal) || request.assignedSupervisorId === principal.userId) {
+      return;
+    }
+    throw new ForbiddenException({
+      code: "REQUEST_SUPERVISOR_REQUIRED",
+      message: "This action requires the assigned supervisor or management access",
+    });
+  }
+
+  private async requireRequestTask(requestId: string, taskId: string) {
+    const task = await this.database.prisma.task.findFirst({
+      where: { id: taskId, requestId },
+    });
+    if (!task) {
+      throw new NotFoundException({
+        code: "REQUEST_TASK_NOT_FOUND",
+        message: "The request task could not be found",
+      });
+    }
+    return task;
+  }
+
+  private async requireRequestOutput(requestId: string, outputId: string) {
+    const output = await this.database.prisma.requestOutput.findFirst({
+      where: { id: outputId, requestId },
+    });
+    if (!output) {
+      throw new NotFoundException({
+        code: "REQUEST_OUTPUT_NOT_FOUND",
+        message: "The internal request output could not be found",
+      });
+    }
+    return output;
   }
 
   private internalAccessWhere(principal: AuthenticatedPrincipal): Prisma.RequestWhereInput {
@@ -883,7 +1437,7 @@ export class RequestsService {
     return [...new Set([...principal.assignedClientIds, ...scopeClientIds])];
   }
 
-  private summaryView(request: RequestSummaryRecord) {
+  private summaryView(request: RequestSummaryRecord, clientSafe = false) {
     return {
       id: request.id,
       requestNumber: request.requestNumber,
@@ -909,13 +1463,22 @@ export class RequestsService {
       sourceQuote: request.sourceQuote,
       sourceInvoice: request.sourceInvoice,
       assignments: this.assignmentSummary(request),
-      counts: request._count,
+      counts: clientSafe
+        ? {
+            comments: 0,
+            files: 0,
+            internalNotes: 0,
+            outputs: 0,
+            tasks: 0,
+            workflowEvents: 0,
+          }
+        : request._count,
     };
   }
 
   private detailView(request: RequestDetailRecord, clientSafe: boolean) {
     return {
-      ...this.summaryView(request),
+      ...this.summaryView(request, clientSafe),
       comments: request.comments
         .filter((comment) => !clientSafe || comment.isClientVisible)
         .map((comment) => ({
@@ -949,6 +1512,21 @@ export class RequestsService {
           createdAt: file.createdAt.toISOString(),
           updatedAt: file.updatedAt.toISOString(),
         })),
+      outputs: clientSafe ? [] : request.outputs.map((output) => this.outputView(output)),
+      tasks: clientSafe
+        ? []
+        : request.tasks.map((task) => ({
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            status: task.status,
+            priority: task.priority,
+            assignee: task.assignee,
+            dueAt: task.dueAt?.toISOString() ?? null,
+            sortOrder: task.sortOrder,
+            createdAt: task.createdAt.toISOString(),
+            updatedAt: task.updatedAt.toISOString(),
+          })),
       activity: request.workflowEvents.map((event) => ({
         id: event.id,
         actorId: event.actorId,
@@ -990,6 +1568,27 @@ export class RequestsService {
     };
   }
 
+  private outputView(output: RequestDetailRecord["outputs"][number]) {
+    return {
+      id: output.id,
+      code: output.code,
+      title: output.title,
+      description: output.description,
+      contentSnapshot: output.contentSnapshot,
+      status: output.status,
+      dueAt: output.dueAt?.toISOString() ?? null,
+      submittedAt: output.submittedAt?.toISOString() ?? null,
+      reviewedAt: output.reviewedAt?.toISOString() ?? null,
+      reviewReason: output.reviewReason,
+      revision: output.revision,
+      sortOrder: output.sortOrder,
+      createdAt: output.createdAt.toISOString(),
+      updatedAt: output.updatedAt.toISOString(),
+      createdBy: output.createdBy,
+      reviewedBy: output.reviewedBy,
+    };
+  }
+
   private auditSnapshot(request: RequestSummaryRecord) {
     return {
       requestNumber: request.requestNumber,
@@ -1006,6 +1605,34 @@ export class RequestsService {
       priority: request.priority,
       dueAt: request.dueAt?.toISOString() ?? null,
       closedAt: request.closedAt?.toISOString() ?? null,
+    };
+  }
+
+  private outputAuditSnapshot(output: {
+    code: string;
+    contentSnapshot: unknown;
+    description: string | null;
+    dueAt: Date | null;
+    id: string;
+    reviewReason: string | null;
+    reviewedAt: Date | null;
+    reviewedById: string | null;
+    status: string;
+    submittedAt: Date | null;
+    title: string;
+  }) {
+    return {
+      id: output.id,
+      code: output.code,
+      title: output.title,
+      description: output.description,
+      contentSnapshot: output.contentSnapshot,
+      status: output.status,
+      dueAt: output.dueAt?.toISOString() ?? null,
+      submittedAt: output.submittedAt?.toISOString() ?? null,
+      reviewedAt: output.reviewedAt?.toISOString() ?? null,
+      reviewedById: output.reviewedById,
+      reviewReason: output.reviewReason,
     };
   }
 }
