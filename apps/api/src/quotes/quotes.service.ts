@@ -11,6 +11,7 @@ import { ADMIN_ROLE_CODE } from "../auth/auth.constants.js";
 import { AuthAuditService } from "../auth/audit.service.js";
 import type { AuthenticatedPrincipal, RequestMetadata } from "../auth/auth.types.js";
 import { DatabaseService } from "../database/database.service.js";
+import { QuotePdfService } from "./quote-pdf.service.js";
 import { QUOTE_EVENT } from "./quotes.constants.js";
 import type { CreateQuoteDto } from "./quotes.dto.js";
 
@@ -111,6 +112,7 @@ export class QuotesService {
   constructor(
     @Inject(DatabaseService) private readonly database: DatabaseService,
     @Inject(AuthAuditService) private readonly audit: AuthAuditService,
+    @Inject(QuotePdfService) private readonly quotePdf: QuotePdfService,
   ) {}
 
   async list(principal: AuthenticatedPrincipal) {
@@ -138,6 +140,28 @@ export class QuotesService {
   async get(id: string, principal: AuthenticatedPrincipal) {
     const quote = await this.requireAccessibleQuote(id, principal);
     return this.quoteView(quote);
+  }
+
+  async generatePdf(id: string, principal: AuthenticatedPrincipal, metadata: RequestMetadata) {
+    const quote = await this.requireAccessibleQuote(id, principal);
+    const pdf = await this.quotePdf.render(this.quoteView(quote));
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: QUOTE_EVENT.pdfGenerated,
+        entityType: "Quote",
+        entityId: quote.id,
+        after: {
+          byteLength: pdf.byteLength,
+          contentSha256: pdf.sha256,
+          filename: pdf.filename,
+          quoteNumber: quote.quoteNumber,
+          snapshotHash: quote.snapshotHash,
+        },
+      },
+      metadata,
+    );
+    return pdf;
   }
 
   async create(

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { changeQuoteStatus, quoteErrorMessage } from "../../lib/quote-client";
+import { changeQuoteStatus, quoteErrorMessage, quotePdfUrl } from "../../lib/quote-client";
 import type { Quote, QuoteStatus } from "../../lib/quote-types";
 
 function sar(value: number): string {
@@ -66,6 +66,14 @@ export function QuoteDetail({ initialQuote }: { initialQuote: Quote }) {
           <span className={`status-badge status-${quote.status.toLowerCase()}`}>
             {quote.status}
           </span>
+          <a
+            className="button-primary"
+            href={quotePdfUrl(quote.id)}
+            target="_blank"
+            rel="noreferrer"
+          >
+            View PDF
+          </a>
           <Link className="button-secondary" href={`/pricing/${quote.sourcePricingDraftId}`}>
             Source draft
           </Link>
