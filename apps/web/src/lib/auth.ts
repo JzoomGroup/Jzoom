@@ -28,6 +28,12 @@ export async function hasBackendAdminAccess(): Promise<boolean> {
   return response?.ok === true;
 }
 
+export async function hasBackendClientAccess(): Promise<boolean> {
+  const cookieStore = await cookies();
+  const response = await authenticatedFetch("client-portal/me", cookieStore.toString());
+  return response?.ok === true;
+}
+
 function authenticatedFetch(path: string, cookieHeader: string) {
   return fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1"}/${path}`,

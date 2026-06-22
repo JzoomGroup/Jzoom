@@ -11,6 +11,12 @@ export function protectedRouteRedirect(
   return adminOnly && !user.roles.includes("ROLE-ADMIN") ? "/403" : null;
 }
 
-export function postLoginRoute(roles: string[]): "/settings" | "/profile" {
-  return roles.includes("ROLE-ADMIN") ? "/settings" : "/profile";
+export function postLoginRoute(roles: string[]): "/client" | "/settings" | "/profile" {
+  if (roles.includes("ROLE-ADMIN")) {
+    return "/settings";
+  }
+  if (roles.includes("ROLE-CLIENT")) {
+    return "/client";
+  }
+  return "/profile";
 }

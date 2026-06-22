@@ -156,6 +156,13 @@ describe("PR 1 API foundation", () => {
     expect(document.paths["/api/v1/invoices/{id}/cancel"]).toBeDefined();
     expect(document.paths["/api/v1/invoices/{id}/void"]).toBeDefined();
     expect(document.paths["/api/v1/invoices/{id}/status"]).toBeDefined();
+    expect(document.paths["/api/v1/client-portal/me"]).toBeDefined();
+    expect(document.paths["/api/v1/client-portal/quotes"]).toBeDefined();
+    expect(document.paths["/api/v1/client-portal/quotes/{id}"]).toBeDefined();
+    expect(document.paths["/api/v1/client-portal/quotes/{id}/pdf"]).toBeDefined();
+    expect(document.paths["/api/v1/client-portal/invoices"]).toBeDefined();
+    expect(document.paths["/api/v1/client-portal/invoices/{id}"]).toBeDefined();
+    expect(document.paths["/api/v1/client-portal/invoices/{id}/pdf"]).toBeDefined();
     expect(document.components?.schemas?.ApiErrorResponseDto).toBeDefined();
   });
 
