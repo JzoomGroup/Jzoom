@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { CreateInvoiceAction } from "../invoices/create-invoice-action";
 import { quotePdfUrl } from "../../lib/quote-client";
 import type { Quote } from "../../lib/quote-types";
 import { QuoteLifecycleActions } from "./quote-lifecycle-actions";
@@ -40,6 +41,7 @@ export function QuoteDetail({ initialQuote }: { initialQuote: Quote }) {
           >
             View PDF
           </a>
+          <CreateInvoiceAction quote={quote} />
           <Link className="button-secondary" href={`/pricing/${quote.sourcePricingDraftId}`}>
             Source draft
           </Link>

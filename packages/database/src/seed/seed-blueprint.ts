@@ -281,6 +281,14 @@ export async function seedBlueprint(
             "Create immutable quotes from scoped pricing drafts and manage quote lifecycle.",
           roleCodes: ["ROLE-ADMIN", "ROLE-AM"],
         },
+        {
+          code: "PERM-MANAGE-INVOICES",
+          name: "Manage Invoices",
+          action: "manage_invoices",
+          description:
+            "Create immutable invoices from accepted quote snapshots and manage invoice lifecycle.",
+          roleCodes: ["ROLE-ADMIN", "ROLE-AM"],
+        },
       ] as const;
       for (const [index, permission] of pricingPermissions.entries()) {
         const record = await tx.permission.upsert({

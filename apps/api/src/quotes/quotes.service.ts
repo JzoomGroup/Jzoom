@@ -678,6 +678,16 @@ export class QuotesService {
     const quote = await this.database.prisma.quote.findFirst({
       where: { id, ...this.quoteAccessWhere(principal) },
       include: {
+        invoices: {
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            invoiceNumber: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
         items: {
           orderBy: { sortOrder: "asc" },
           include: {
@@ -734,6 +744,13 @@ export class QuotesService {
       terms: quote.termsSnapshot,
       sourceDraft: quote.sourceDraftSnapshot,
       totals: quote.totalsSnapshot,
+      invoices: quote.invoices.map((invoice) => ({
+        id: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        status: invoice.status === "VOID" ? "VOIDED" : invoice.status,
+        createdAt: invoice.createdAt.toISOString(),
+        updatedAt: invoice.updatedAt.toISOString(),
+      })),
       items: quote.items.map((item) => ({
         id: item.id,
         lineType: item.lineType,

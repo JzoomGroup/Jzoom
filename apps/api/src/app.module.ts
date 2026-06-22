@@ -5,6 +5,7 @@ import { AuthModule } from "./auth/auth.module.js";
 import { CatalogModule } from "./catalog-admin/catalog.module.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { HealthModule } from "./health/health.module.js";
+import { InvoicesModule } from "./invoices/invoices.module.js";
 import { OneTimeCatalogModule } from "./one-time-catalog/one-time-catalog.module.js";
 import { PricingModule } from "./pricing/pricing.module.js";
 import { QuotesModule } from "./quotes/quotes.module.js";
@@ -23,6 +24,7 @@ export class AppModule {
         OneTimeCatalogModule,
         PricingModule,
         QuotesModule,
+        InvoicesModule,
         HealthModule,
       ],
     };
