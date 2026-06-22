@@ -264,9 +264,8 @@ describe("Quote snapshot UI", () => {
       />,
     );
 
-    expect(screen.getByRole("link", { name: /View invoice INV-20260622-ABC12345/ })).toHaveAttribute(
-      "href",
-      "/pricing/invoices/invoice-1",
-    );
+    expect(
+      screen.getByRole("link", { name: /View invoice INV-20260622-ABC12345/ }),
+    ).toHaveAttribute("href", "/pricing/invoices/invoice-1");
   });
 });

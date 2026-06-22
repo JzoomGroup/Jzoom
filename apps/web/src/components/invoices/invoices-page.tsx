@@ -10,8 +10,8 @@ function canUseInvoices(
 ): user is NonNullable<typeof user> {
   return Boolean(
     user &&
-      user.roles.some((role) => role === "ROLE-ADMIN" || role === "ROLE-AM") &&
-      user.permissions.includes("PERM-MANAGE-INVOICES"),
+    user.roles.some((role) => role === "ROLE-ADMIN" || role === "ROLE-AM") &&
+    user.permissions.includes("PERM-MANAGE-INVOICES"),
   );
 }
 

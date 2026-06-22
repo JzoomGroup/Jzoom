@@ -5,11 +5,7 @@ import { RequirePermissions, RequireRoles } from "../auth/auth.decorators.js";
 import type { RequestMetadata } from "../auth/auth.types.js";
 import type { RequestWithId } from "../request-context/request-with-id.js";
 import { ACCOUNT_MANAGER_ROLE_CODE, MANAGE_INVOICES_PERMISSION } from "./invoices.constants.js";
-import {
-  CreateInvoiceDto,
-  InvoiceLifecycleActionDto,
-  InvoiceStatusDto,
-} from "./invoices.dto.js";
+import { CreateInvoiceDto, InvoiceLifecycleActionDto, InvoiceStatusDto } from "./invoices.dto.js";
 import { InvoicesService } from "./invoices.service.js";
 
 function metadata(request: RequestWithId): RequestMetadata {
