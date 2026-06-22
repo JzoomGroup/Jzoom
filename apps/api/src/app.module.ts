@@ -3,6 +3,7 @@ import { Module } from "@nestjs/common";
 import type { ApiEnvironment } from "@jzoom/config";
 import { AuthModule } from "./auth/auth.module.js";
 import { CatalogModule } from "./catalog-admin/catalog.module.js";
+import { ClientPortalModule } from "./client-portal/client-portal.module.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { InvoicesModule } from "./invoices/invoices.module.js";
@@ -25,6 +26,7 @@ export class AppModule {
         PricingModule,
         QuotesModule,
         InvoicesModule,
+        ClientPortalModule,
         HealthModule,
       ],
     };

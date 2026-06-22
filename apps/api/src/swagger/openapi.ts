@@ -25,6 +25,7 @@ export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
     )
     .addTag("quotes", "Immutable quote snapshots and scoped quote lifecycle")
     .addTag("invoices", "Immutable invoices created from accepted quote snapshots")
+    .addTag("client-portal", "Client-only quote and invoice views backed by immutable snapshots")
     .build();
 
   return SwaggerModule.createDocument(app, configuration, {

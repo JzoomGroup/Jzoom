@@ -25,6 +25,7 @@ describe("frontend authorization routing", () => {
 
   it("uses a role-aware destination after login", () => {
     expect(postLoginRoute(["ROLE-ADMIN"])).toBe("/settings");
+    expect(postLoginRoute(["ROLE-CLIENT"])).toBe("/client");
     expect(postLoginRoute(["ROLE-SPECIALIST"])).toBe("/profile");
   });
 });
