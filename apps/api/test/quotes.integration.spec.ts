@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { INestApplication } from "@nestjs/common";
@@ -74,6 +75,60 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
       .send({ email, password: "StrongPassword123" })
       .expect(200);
     return { agent, csrf: csrfFrom(response) };
+  }
+
+  async function createIssuedQuoteFixture(
+    label: string,
+    validUntil = new Date(Date.now() + 86_400_000),
+  ) {
+    return database.quote.create({
+      data: {
+        quoteNumber: `PR9-${label}-${randomUUID().slice(0, 8).toUpperCase()}`,
+        clientId,
+        createdById: accountManagerId,
+        status: "ISSUED",
+        currency: "SAR",
+        issueDate: new Date(),
+        validUntil,
+        clientSnapshot: {
+          id: clientId,
+          code: "PR7-CLIENT-A",
+          name: "PR7 Client A",
+          legalName: "PR7 Client A LLC",
+        },
+        pricingSnapshot: { currency: "SAR", lines: [] },
+        pricingRulesSnapshot: [],
+        termsSnapshot: {
+          paymentTerms: "Due in 30 days",
+          validUntil: validUntil.toISOString(),
+        },
+        sourceDraftSnapshot: { title: `PR9 ${label} lifecycle fixture` },
+        totalsSnapshot: {
+          subtotalMonthly: 0,
+          subtotalSetup: 0,
+          subtotalOneTime: 0,
+          subtotal: 0,
+          discountTotal: 0,
+          finalBeforeTax: 0,
+          taxTotal: 0,
+          finalTotal: 0,
+          internalCost: 0,
+          marginAmount: 0,
+          marginPct: 0,
+          targetMarginPct: null,
+          meetsTargetMargin: null,
+        },
+        snapshotHash: `${randomUUID().replaceAll("-", "")}${randomUUID().replaceAll("-", "")}`,
+        subtotalMonthly: 0,
+        subtotalSetup: 0,
+        subtotalOneTime: 0,
+        discountTotal: 0,
+        finalDueNoTax: 0,
+        internalCost: 0,
+        margin: 0,
+        lockedAt: new Date(),
+      },
+    });
   }
 
   beforeAll(async () => {
@@ -393,11 +448,52 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
     });
 
     const invalidAccept = await accountManager.agent
-      .patch(`/api/v1/quotes/${quote.body.id}/status`)
+      .post(`/api/v1/quotes/${quote.body.id}/accept`)
       .set("X-CSRF-Token", accountManager.csrf)
-      .send({ status: "ACCEPTED" })
+      .send({})
       .expect(409);
     expect(invalidAccept.body.code).toBe("INVALID_QUOTE_STATUS_TRANSITION");
+
+    const rejectedFixture = await createIssuedQuoteFixture("REJECT");
+    const rejected = await accountManager.agent
+      .post(`/api/v1/quotes/${rejectedFixture.id}/reject`)
+      .set("X-CSRF-Token", accountManager.csrf)
+      .send({ note: "Client selected a different option" })
+      .expect(200);
+    expect(rejected.body).toMatchObject({
+      status: "REJECTED",
+      statusReason: "Client selected a different option",
+    });
+    expect(rejected.body.rejectedAt).toBeTruthy();
+
+    const cancelledFixture = await createIssuedQuoteFixture("CANCEL");
+    const cancelled = await accountManager.agent
+      .post(`/api/v1/quotes/${cancelledFixture.id}/cancel`)
+      .set("X-CSRF-Token", accountManager.csrf)
+      .send({})
+      .expect(200);
+    expect(cancelled.body.status).toBe("CANCELLED");
+    expect(cancelled.body.cancelledAt).toBeTruthy();
+    expect(cancelled.body.statusReason).toBeNull();
+
+    const expiredAcceptanceFixture = await createIssuedQuoteFixture(
+      "PAST",
+      new Date(Date.now() - 60_000),
+    );
+    const expiredAccept = await accountManager.agent
+      .post(`/api/v1/quotes/${expiredAcceptanceFixture.id}/accept`)
+      .set("X-CSRF-Token", accountManager.csrf)
+      .send({})
+      .expect(409);
+    expect(expiredAccept.body.code).toBe("EXPIRED_QUOTE_CANNOT_BE_ACCEPTED");
+
+    const expired = await accountManager.agent
+      .post(`/api/v1/quotes/${expiredAcceptanceFixture.id}/expire`)
+      .set("X-CSRF-Token", accountManager.csrf)
+      .send({})
+      .expect(200);
+    expect(expired.body.status).toBe("EXPIRED");
+    expect(expired.body.expiredAt).toBeTruthy();
 
     await accountManager.agent
       .patch(`/api/v1/quotes/${quote.body.id}/status`)
@@ -405,23 +501,48 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
       .send({ status: "ISSUED" })
       .expect(200);
     const accepted = await accountManager.agent
-      .patch(`/api/v1/quotes/${quote.body.id}/status`)
+      .post(`/api/v1/quotes/${quote.body.id}/accept`)
       .set("X-CSRF-Token", accountManager.csrf)
-      .send({ status: "ACCEPTED" })
+      .send({})
       .expect(200);
     expect(accepted.body.status).toBe("ACCEPTED");
     expect(accepted.body.acceptedAt).toBeTruthy();
     expect(accepted.body.snapshotHash).toBe(originalSnapshot.hash);
+    await accountManager.agent
+      .post(`/api/v1/quotes/${quote.body.id}/reject`)
+      .set("X-CSRF-Token", accountManager.csrf)
+      .send({})
+      .expect(409);
 
     const auditEvents = await database.auditLog.findMany({
       where: {
-        entityId: quote.body.id,
-        eventCode: { in: ["QUOTE_CREATED", "QUOTE_STATUS_CHANGED", "QUOTE_PDF_GENERATED"] },
+        entityId: {
+          in: [quote.body.id, rejectedFixture.id, cancelledFixture.id, expiredAcceptanceFixture.id],
+        },
+        eventCode: {
+          in: [
+            "QUOTE_ACCEPTED",
+            "QUOTE_CANCELLED",
+            "QUOTE_CREATED",
+            "QUOTE_EXPIRED",
+            "QUOTE_PDF_GENERATED",
+            "QUOTE_REJECTED",
+            "QUOTE_STATUS_CHANGED",
+          ],
+        },
       },
       select: { eventCode: true, requestId: true },
     });
     expect(auditEvents.map((event) => event.eventCode)).toEqual(
-      expect.arrayContaining(["QUOTE_CREATED", "QUOTE_STATUS_CHANGED", "QUOTE_PDF_GENERATED"]),
+      expect.arrayContaining([
+        "QUOTE_ACCEPTED",
+        "QUOTE_CANCELLED",
+        "QUOTE_CREATED",
+        "QUOTE_EXPIRED",
+        "QUOTE_PDF_GENERATED",
+        "QUOTE_REJECTED",
+        "QUOTE_STATUS_CHANGED",
+      ]),
     );
     expect(auditEvents.every((event) => Boolean(event.requestId))).toBe(true);
   });

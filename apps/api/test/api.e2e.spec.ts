@@ -144,6 +144,10 @@ describe("PR 1 API foundation", () => {
     expect(document.paths["/api/v1/quotes"]).toBeDefined();
     expect(document.paths["/api/v1/quotes/{id}"]).toBeDefined();
     expect(document.paths["/api/v1/quotes/{id}/pdf"]).toBeDefined();
+    expect(document.paths["/api/v1/quotes/{id}/accept"]).toBeDefined();
+    expect(document.paths["/api/v1/quotes/{id}/reject"]).toBeDefined();
+    expect(document.paths["/api/v1/quotes/{id}/expire"]).toBeDefined();
+    expect(document.paths["/api/v1/quotes/{id}/cancel"]).toBeDefined();
     expect(document.paths["/api/v1/quotes/{id}/status"]).toBeDefined();
     expect(document.components?.schemas?.ApiErrorResponseDto).toBeDefined();
   });

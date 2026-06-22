@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { Quote } from "../../lib/quote-types";
+import type { Quote, QuoteSummary } from "../../lib/quote-types";
 import { QuoteDetail } from "./quote-detail";
+import { QuoteList } from "./quote-list";
 
 function quote(status: Quote["status"] = "DRAFT"): Quote {
   return {
@@ -128,6 +129,29 @@ function jsonResponse(body: unknown): Promise<Response> {
   } as Response);
 }
 
+function quoteSummary(status: Quote["status"] = "ISSUED"): QuoteSummary {
+  const fullQuote = quote(status);
+  return {
+    id: fullQuote.id,
+    quoteNumber: fullQuote.quoteNumber,
+    status,
+    currency: fullQuote.currency,
+    issueDate: fullQuote.issueDate,
+    validUntil: fullQuote.validUntil,
+    createdAt: fullQuote.createdAt,
+    updatedAt: fullQuote.updatedAt,
+    client: {
+      id: fullQuote.client.id,
+      code: fullQuote.client.code,
+      name: fullQuote.client.name,
+      legalName: fullQuote.client.legalName,
+    },
+    title: fullQuote.sourceDraft.title,
+    itemCount: fullQuote.items.length,
+    totals: fullQuote.totals,
+  };
+}
+
 describe("Quote snapshot UI", () => {
   beforeEach(() => {
     Object.defineProperty(global, "fetch", {
@@ -139,16 +163,28 @@ describe("Quote snapshot UI", () => {
       configurable: true,
       value: jest.fn(() => true),
     });
+    Object.defineProperty(window, "prompt", {
+      configurable: true,
+      value: jest.fn(() => ""),
+    });
   });
 
-  it("renders snapshotted content and advances lifecycle through the backend", async () => {
+  it("renders snapshotted content and advances lifecycle through explicit backend actions", async () => {
     const fetchMock = jest.mocked(fetch);
-    fetchMock.mockImplementationOnce(() =>
-      jsonResponse({
-        ...quote("ISSUED"),
-        issueDate: "2026-06-22T01:00:00.000Z",
-      }),
-    );
+    fetchMock
+      .mockImplementationOnce(() =>
+        jsonResponse({
+          ...quote("ISSUED"),
+          issueDate: "2026-06-22T01:00:00.000Z",
+        }),
+      )
+      .mockImplementationOnce(() =>
+        jsonResponse({
+          ...quote("ACCEPTED"),
+          acceptedAt: "2026-06-22T02:00:00.000Z",
+          issueDate: "2026-06-22T01:00:00.000Z",
+        }),
+      );
 
     render(<QuoteDetail initialQuote={quote()} />);
     expect(screen.getByText("Acme LLC")).toBeInTheDocument();
@@ -160,12 +196,30 @@ describe("Quote snapshot UI", () => {
       "http://localhost:4000/api/v1/quotes/quote-1/pdf",
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Mark issued" }));
+    fireEvent.click(screen.getByRole("button", { name: "Issue quote" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(fetchMock.mock.calls[0]?.[0]).toBe("http://localhost:4000/api/v1/quotes/quote-1/status");
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
       status: "ISSUED",
     });
     expect(await screen.findByText("Quote status changed to ISSUED.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Accept quote" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("http://localhost:4000/api/v1/quotes/quote-1/accept");
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({});
+    expect(await screen.findByText("ACCEPTED")).toBeInTheDocument();
+  });
+
+  it("renders compact lifecycle actions on the quote list", async () => {
+    const fetchMock = jest.mocked(fetch);
+    fetchMock.mockImplementationOnce(() => jsonResponse(quote("ACCEPTED")));
+
+    render(<QuoteList quotes={[quoteSummary("ISSUED")]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Accept quote" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("http://localhost:4000/api/v1/quotes/quote-1/accept");
+    expect(await screen.findByText("ACCEPTED")).toBeInTheDocument();
   });
 });

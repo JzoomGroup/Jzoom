@@ -1355,20 +1355,25 @@ h1 {
   gap: 10px;
 }
 
-.quote-list-grid > a {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
+.quote-list-card {
+  display: grid;
+  gap: 12px;
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 15px;
   background: #faf9f5;
+}
+
+.quote-list-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
   color: var(--jzoom-navy);
   text-decoration: none;
 }
 
-.quote-list-grid > a:hover {
+.quote-list-card:hover {
   border-color: rgba(255, 90, 77, 0.5);
   background: white;
 }
@@ -1401,6 +1406,39 @@ h1 {
 .quote-header-actions {
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.quote-lifecycle-actions,
+.quote-inline-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.quote-inline-actions {
+  justify-items: end;
+}
+
+.quote-inline-actions .row-actions {
+  justify-content: flex-end;
+}
+
+.quote-inline-actions button {
+  min-height: 34px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  font-size: 12px;
+}
+
+.quote-action-feedback {
+  font-weight: 750;
+}
+
+.quote-action-feedback.success {
+  color: #15683a;
+}
+
+.quote-action-feedback.error {
+  color: #9c2017;
 }
 
 .quote-lifecycle h2,
@@ -1590,7 +1628,7 @@ h1 {
     grid-column: auto;
   }
 
-  .quote-list-grid > a,
+  .quote-list-main,
   .quote-header-actions,
   .quote-lifecycle {
     align-items: stretch;

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { changeQuoteStatus, quoteErrorMessage, quotePdfUrl } from "../../lib/quote-client";
-import type { Quote, QuoteStatus } from "../../lib/quote-types";
+import { quotePdfUrl } from "../../lib/quote-client";
+import type { Quote } from "../../lib/quote-types";
+import { QuoteLifecycleActions } from "./quote-lifecycle-actions";
 
 function sar(value: number): string {
   return new Intl.NumberFormat("en-SA", {
@@ -13,43 +14,8 @@ function sar(value: number): string {
   }).format(value);
 }
 
-const actions: Partial<Record<QuoteStatus, QuoteStatus[]>> = {
-  DRAFT: ["ISSUED", "CANCELLED"],
-  ISSUED: ["ACCEPTED", "REJECTED", "EXPIRED", "CANCELLED"],
-};
-
 export function QuoteDetail({ initialQuote }: { initialQuote: Quote }) {
   const [quote, setQuote] = useState(initialQuote);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string>();
-  const [success, setSuccess] = useState<string>();
-
-  async function transition(status: QuoteStatus) {
-    let reason: string | undefined;
-    if (status === "REJECTED" || status === "CANCELLED") {
-      reason =
-        window.prompt(`Reason for marking this quote ${status.toLowerCase()}?`)?.trim() ||
-        undefined;
-      if (!reason) {
-        return;
-      }
-    }
-    if (!window.confirm(`Change quote status from ${quote.status} to ${status}?`)) {
-      return;
-    }
-    setSubmitting(true);
-    setError(undefined);
-    setSuccess(undefined);
-    try {
-      const updated = await changeQuoteStatus(quote.id, status, reason);
-      setQuote(updated);
-      setSuccess(`Quote status changed to ${status}.`);
-    } catch (transitionError) {
-      setError(quoteErrorMessage(transitionError));
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   return (
     <>
@@ -83,37 +49,18 @@ export function QuoteDetail({ initialQuote }: { initialQuote: Quote }) {
         </div>
       </header>
 
-      {(error || success) && (
-        <p className={error ? "catalog-feedback error" : "catalog-feedback success"} role="status">
-          {error ?? success}
-        </p>
-      )}
-
-      {(actions[quote.status]?.length ?? 0) > 0 && (
+      {quote.status === "DRAFT" || quote.status === "ISSUED" ? (
         <section className="catalog-panel quote-lifecycle">
           <div>
             <h2>Lifecycle</h2>
-            <p>Status changes are audited and never rewrite quote content.</p>
+            <p>
+              Acceptance, rejection, expiration, and cancellation are audited and never rewrite
+              quote content.
+            </p>
           </div>
-          <div className="row-actions">
-            {actions[quote.status]?.map((status) => (
-              <button
-                key={status}
-                type="button"
-                className={
-                  status === "CANCELLED" || status === "REJECTED"
-                    ? "button-danger"
-                    : "button-primary"
-                }
-                disabled={submitting}
-                onClick={() => void transition(status)}
-              >
-                Mark {status.toLowerCase()}
-              </button>
-            ))}
-          </div>
+          <QuoteLifecycleActions quoteId={quote.id} status={quote.status} onUpdated={setQuote} />
         </section>
-      )}
+      ) : null}
 
       <section className="quote-summary-grid">
         <article className="catalog-panel">
