@@ -11,7 +11,7 @@ export default async function ProfilePage() {
   }
 
   return (
-    <main className="auth-shell">
+    <main className="auth-shell" dir="ltr">
       <section className="auth-card" aria-labelledby="profile-title">
         <p className="eyebrow">Authenticated profile</p>
         <h1 id="profile-title">{user!.displayName}</h1>

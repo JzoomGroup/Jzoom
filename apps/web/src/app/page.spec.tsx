@@ -8,6 +8,7 @@ describe("FoundationPage", () => {
     expect(
       screen.getByRole("heading", { name: "Production foundation is ready." }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveAttribute("dir", "ltr");
     expect(screen.getByText("Foundation only.")).toBeInTheDocument();
     expect(screen.getByText(/No mock catalog/)).toBeInTheDocument();
   });

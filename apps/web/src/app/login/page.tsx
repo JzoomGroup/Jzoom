@@ -2,7 +2,7 @@ import { LoginForm } from "../../components/login-form";
 
 export default function LoginPage() {
   return (
-    <main className="auth-shell">
+    <main className="auth-shell" dir="ltr">
       <section className="auth-card" aria-labelledby="login-title">
         <div className="brand-mark" aria-hidden="true">
           J

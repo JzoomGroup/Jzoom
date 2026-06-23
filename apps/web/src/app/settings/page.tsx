@@ -15,7 +15,7 @@ export default async function SettingsPage() {
   }
 
   return (
-    <main className="auth-shell">
+    <main className="auth-shell" dir="ltr">
       <section className="auth-card" aria-labelledby="settings-title">
         <p className="eyebrow">Admin only</p>
         <h1 id="settings-title">Platform settings</h1>

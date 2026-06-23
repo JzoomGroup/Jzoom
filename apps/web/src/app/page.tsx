@@ -9,7 +9,7 @@ const foundationItems = [
 
 export default function FoundationPage() {
   return (
-    <main className="foundation-shell">
+    <main className="foundation-shell" dir="ltr">
       <section className="foundation-card" aria-labelledby="foundation-title">
         <div className="brand-row">
           <span className="brand-mark" aria-hidden="true">

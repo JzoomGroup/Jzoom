@@ -6,6 +6,7 @@ describe("PermissionDeniedPage", () => {
     render(<PermissionDeniedPage />);
 
     expect(screen.getByRole("heading", { name: "You cannot open this page." })).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveAttribute("dir", "ltr");
     expect(screen.getByRole("link", { name: "Return to profile" })).toHaveAttribute(
       "href",
       "/profile",
