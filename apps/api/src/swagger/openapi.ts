@@ -20,6 +20,10 @@ export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
     )
     .addTag("admin-pricing-rules", "Admin-only effective-dated pricing configuration")
     .addTag(
+      "admin-platform-configuration",
+      "Admin-only platform settings, labels, notification, PDF, and workflow template foundations",
+    )
+    .addTag(
       "pricing-studio",
       "Scoped client pricing drafts and backend-trusted calculation previews",
     )

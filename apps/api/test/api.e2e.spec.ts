@@ -221,6 +221,15 @@ describe("PR 1 API foundation", () => {
     expect(document.paths["/api/v1/hours-ledger/closings/prepare"]).toBeDefined();
     expect(document.paths["/api/v1/hours-ledger/closings/{id}"]).toBeDefined();
     expect(document.paths["/api/v1/hours-ledger/closings/{id}/finalize"]).toBeDefined();
+    expect(document.paths["/api/v1/admin/platform-configuration"]).toBeDefined();
+    expect(document.paths["/api/v1/admin/platform-configuration/settings"]).toBeDefined();
+    expect(document.paths["/api/v1/admin/platform-configuration/settings/{key}"]).toBeDefined();
+    expect(document.paths["/api/v1/admin/platform-configuration/notifications/{id}"]).toBeDefined();
+    expect(document.paths["/api/v1/admin/platform-configuration/pdfs/{id}"]).toBeDefined();
+    expect(
+      document.paths["/api/v1/admin/platform-configuration/localization/publish"],
+    ).toBeDefined();
+    expect(document.paths["/api/v1/admin/platform-configuration/workflows/{id}"]).toBeDefined();
     expect(document.components?.schemas?.ApiErrorResponseDto).toBeDefined();
   });
 

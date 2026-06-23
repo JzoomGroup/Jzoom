@@ -10,6 +10,7 @@ import { HoursLedgerModule } from "./hours-ledger/hours-ledger.module.js";
 import { InvoicesModule } from "./invoices/invoices.module.js";
 import { NotificationsModule } from "./notifications/notifications.module.js";
 import { OneTimeCatalogModule } from "./one-time-catalog/one-time-catalog.module.js";
+import { PlatformConfigurationModule } from "./platform-configuration/platform-configuration.module.js";
 import { PricingModule } from "./pricing/pricing.module.js";
 import { QuotesModule } from "./quotes/quotes.module.js";
 import { ReportsModule } from "./reports/reports.module.js";
@@ -35,6 +36,7 @@ export class AppModule {
         RequestsModule,
         ReportsModule,
         HoursLedgerModule,
+        PlatformConfigurationModule,
         HealthModule,
       ],
     };

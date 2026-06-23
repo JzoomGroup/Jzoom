@@ -348,3 +348,26 @@ test("PR 17 schema adds immutable client monthly closings for hours ledger closi
   assert.match(migration, /client_monthly_reports_published_snapshot_immutable/);
   assert.doesNotMatch(migration, /payment|payroll|public_link/i);
 });
+
+test("PR 18 seed exposes Admin-configurable platform and template foundations", async () => {
+  const normalizer = await readFile(
+    path.join(workspaceRoot, "packages/database/src/blueprint/normalizer.ts"),
+    "utf8",
+  );
+  const seed = await readFile(
+    path.join(workspaceRoot, "packages/database/src/seed/seed-blueprint.ts"),
+    "utf8",
+  );
+
+  assert.match(normalizer, /platform\.name/);
+  assert.match(normalizer, /localization\.date_format/);
+  assert.match(normalizer, /branding\.colors/);
+  assert.match(normalizer, /branding\.pdf_display_name/);
+  assert.match(normalizer, /business_text\.quote_terms/);
+  assert.match(normalizer, /business_text\.invoice_terms/);
+  assert.match(normalizer, /business_text\.request_instructions/);
+  assert.match(normalizer, /business_text\.client_document_request/);
+  assert.match(normalizer, /business_text\.output_delivery_note/);
+  assert.match(seed, /PERM-MANAGE-PLATFORM-CONFIGURATION/);
+  assert.doesNotMatch(normalizer, /payment_gateway|zatca|whatsapp_sender/i);
+});
