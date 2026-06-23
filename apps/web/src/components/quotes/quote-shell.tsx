@@ -29,6 +29,7 @@ export function QuoteShell({
           <Link href="/pricing/invoices">Invoices</Link>
           <Link href="/requests">Requests</Link>
           <Link href="/requests/queues">Work queues</Link>
+          <Link href="/hours-ledger">Hours Ledger</Link>
           <Link href="/reports">Reports</Link>
           <Link href="/account-manager">Account Manager</Link>
           <Link href="/notifications">Notifications</Link>

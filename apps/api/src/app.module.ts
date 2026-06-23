@@ -6,6 +6,7 @@ import { CatalogModule } from "./catalog-admin/catalog.module.js";
 import { ClientPortalModule } from "./client-portal/client-portal.module.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { HealthModule } from "./health/health.module.js";
+import { HoursLedgerModule } from "./hours-ledger/hours-ledger.module.js";
 import { InvoicesModule } from "./invoices/invoices.module.js";
 import { NotificationsModule } from "./notifications/notifications.module.js";
 import { OneTimeCatalogModule } from "./one-time-catalog/one-time-catalog.module.js";
@@ -33,6 +34,7 @@ export class AppModule {
         ClientPortalModule,
         RequestsModule,
         ReportsModule,
+        HoursLedgerModule,
         HealthModule,
       ],
     };

@@ -316,3 +316,35 @@ test("PR 16 schema stores client monthly report snapshots without external sends
   assert.doesNotMatch(migration, /email|sms|whatsapp/i);
   assert.doesNotMatch(migration, /monthly_closing/i);
 });
+
+test("PR 17 schema adds immutable client monthly closings for hours ledger closing", async () => {
+  const schema = await readFile(
+    path.join(workspaceRoot, "packages/database/prisma/schema.prisma"),
+    "utf8",
+  );
+  const migration = await readFile(
+    path.join(
+      workspaceRoot,
+      "packages/database/prisma/migrations/202606230004_pr17_hours_ledger_monthly_closing/migration.sql",
+    ),
+    "utf8",
+  );
+
+  assert.match(schema, /enum MonthlyClosingStatus \{/);
+  assert.match(schema, /model ClientMonthlyClosing \{/);
+  assert.match(schema, /summarySnapshot\s+Json/);
+  assert.match(
+    schema,
+    /preparedMonthlyClosings\s+ClientMonthlyClosing\[\]\s+@relation\("MonthlyClosingPreparer"\)/,
+  );
+  assert.match(
+    schema,
+    /finalizedMonthlyClosings\s+ClientMonthlyClosing\[\]\s+@relation\("MonthlyClosingFinalizer"\)/,
+  );
+  assert.match(migration, /CREATE TYPE "MonthlyClosingStatus"/);
+  assert.match(migration, /CREATE TABLE "client_monthly_closings"/);
+  assert.match(migration, /client_monthly_closings_no_delete/);
+  assert.match(migration, /client_monthly_closings_finalized_snapshot_immutable/);
+  assert.match(migration, /client_monthly_reports_published_snapshot_immutable/);
+  assert.doesNotMatch(migration, /payment|payroll|public_link/i);
+});
