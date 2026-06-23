@@ -191,6 +191,7 @@ describe("PR 1 API foundation", () => {
     expect(document.paths["/api/v1/requests/{id}/time-entries/{timeEntryId}/submit"]).toBeDefined();
     expect(document.paths["/api/v1/requests/{id}/time-entries/{timeEntryId}/review"]).toBeDefined();
     expect(document.paths["/api/v1/client-portal/requests"]).toBeDefined();
+    expect(document.paths["/api/v1/client-portal/requests"]?.post).toBeDefined();
     expect(document.paths["/api/v1/client-portal/requests/{id}"]).toBeDefined();
     expect(document.paths["/api/v1/client-portal/requests/{id}/comments"]).toBeDefined();
     expect(
@@ -230,6 +231,27 @@ describe("PR 1 API foundation", () => {
       document.paths["/api/v1/admin/platform-configuration/localization/publish"],
     ).toBeDefined();
     expect(document.paths["/api/v1/admin/platform-configuration/workflows/{id}"]).toBeDefined();
+    expect(document.paths["/api/v1/admin/request-templates"]).toBeDefined();
+    expect(document.paths["/api/v1/admin/request-templates/field-library"]).toBeDefined();
+    expect(document.paths["/api/v1/admin/request-templates/field-library/{id}"]).toBeDefined();
+    expect(
+      document.paths[
+        "/api/v1/admin/request-templates/service-items/{serviceItemId}/apply-suggested"
+      ],
+    ).toBeDefined();
+    expect(
+      document.paths["/api/v1/admin/request-templates/service-items/{serviceItemId}/template"],
+    ).toBeDefined();
+    expect(
+      document.paths[
+        "/api/v1/admin/request-templates/templates/{templateId}/versions/{versionId}/status"
+      ],
+    ).toBeDefined();
+    expect(
+      document.paths[
+        "/api/v1/request-templates/service-item-revisions/{serviceItemRevisionId}/active"
+      ],
+    ).toBeDefined();
     expect(document.components?.schemas?.ApiErrorResponseDto).toBeDefined();
   });
 

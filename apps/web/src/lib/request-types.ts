@@ -212,6 +212,43 @@ export interface RequestTimeEntry {
   updatedAt: string;
 }
 
+export interface RequestTemplateAnswer {
+  id: string;
+  fieldCode: string;
+  systemKey: string | null;
+  labelAr: string;
+  labelEn: string;
+  fieldType: string;
+  value: unknown;
+  clientVisible: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RequestTemplateResponse {
+  id: string;
+  requestTemplateVersionId: string | null;
+  requestTemplateVersion: {
+    id: string;
+    version: number;
+    status: string;
+    requestTemplateId: string;
+  } | null;
+  completenessStatus:
+    | "COMPLETE"
+    | "MISSING_REQUIRED_FIELDS"
+    | "MISSING_REQUIRED_ATTACHMENTS"
+    | "PENDING_INTERNAL_REVIEW";
+  templateSnapshot: unknown;
+  fileSnapshot: unknown;
+  submittedBy: RequestUser | null;
+  submittedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  answers: RequestTemplateAnswer[];
+}
+
 export interface ServiceRequest extends RequestSummary {
   comments: RequestComment[];
   internalNotes: RequestInternalNote[];
@@ -220,6 +257,7 @@ export interface ServiceRequest extends RequestSummary {
   activity: RequestActivity[];
   outputs: RequestOutput[];
   tasks: RequestTask[];
+  templateResponse?: RequestTemplateResponse | null;
   timeEntries: RequestTimeEntry[];
 }
 

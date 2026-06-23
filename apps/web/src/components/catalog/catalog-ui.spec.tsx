@@ -171,6 +171,10 @@ describe("Admin catalog UI", () => {
       "href",
       "/admin/platform-configuration",
     );
+    expect(screen.getByRole("link", { name: "Request templates" })).toHaveAttribute(
+      "href",
+      "/admin/request-templates",
+    );
   });
 
   it("renders the current seeded catalog snapshot instead of hardcoded cards", () => {

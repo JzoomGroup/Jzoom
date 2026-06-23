@@ -62,6 +62,128 @@ function pricingRuleDefaults(code: string, sortOrder: number) {
   return { ruleType: "FORMULA", targetType: "ALL", priority: sortOrder };
 }
 
+const requestFieldLibraryDefaults = [
+  {
+    code: "employee_name",
+    fieldType: "SHORT_TEXT",
+    labelAr: "اسم الموظف",
+    labelEn: "Employee name",
+    systemKey: "employeeName",
+  },
+  { code: "job_title", fieldType: "SHORT_TEXT", labelAr: "المسمى الوظيفي", labelEn: "Job title" },
+  {
+    code: "department",
+    fieldType: "SHORT_TEXT",
+    labelAr: "القسم",
+    labelEn: "Department",
+    systemKey: "department",
+  },
+  {
+    code: "branch",
+    fieldType: "SHORT_TEXT",
+    labelAr: "الفرع",
+    labelEn: "Branch",
+    systemKey: "branch",
+  },
+  { code: "start_date", fieldType: "DATE", labelAr: "تاريخ البداية", labelEn: "Start date" },
+  { code: "end_date", fieldType: "DATE", labelAr: "تاريخ النهاية", labelEn: "End date" },
+  { code: "salary", fieldType: "AMOUNT", labelAr: "الراتب", labelEn: "Salary" },
+  {
+    code: "amount",
+    fieldType: "AMOUNT",
+    labelAr: "المبلغ",
+    labelEn: "Amount",
+    systemKey: "amount",
+  },
+  {
+    code: "period_month",
+    fieldType: "SHORT_TEXT",
+    labelAr: "الفترة / الشهر",
+    labelEn: "Period/month",
+    systemKey: "period",
+  },
+  {
+    code: "urgency",
+    fieldType: "DROPDOWN",
+    labelAr: "الأولوية",
+    labelEn: "Urgency",
+    systemKey: "urgency",
+    defaultConfig: { options: ["LOW", "NORMAL", "HIGH", "URGENT"] },
+  },
+  {
+    code: "required_deadline",
+    fieldType: "DATE",
+    labelAr: "الموعد المطلوب",
+    labelEn: "Required deadline",
+    systemKey: "dueDate",
+  },
+  {
+    code: "request_description",
+    fieldType: "LONG_TEXT",
+    labelAr: "وصف الطلب",
+    labelEn: "Request description",
+    systemKey: "requestDescription",
+  },
+  { code: "notes", fieldType: "LONG_TEXT", labelAr: "ملاحظات", labelEn: "Notes" },
+  { code: "attachment", fieldType: "FILE", labelAr: "مرفق", labelEn: "Attachment" },
+  {
+    code: "document_type",
+    fieldType: "DROPDOWN",
+    labelAr: "نوع المستند",
+    labelEn: "Document type",
+  },
+  {
+    code: "approval_required",
+    fieldType: "CHECKBOX",
+    labelAr: "يتطلب موافقة",
+    labelEn: "Approval required",
+  },
+  {
+    code: "contact_person",
+    fieldType: "SHORT_TEXT",
+    labelAr: "الشخص المسؤول",
+    labelEn: "Contact person",
+    systemKey: "contactPerson",
+  },
+  { code: "email", fieldType: "EMAIL", labelAr: "البريد الإلكتروني", labelEn: "Email" },
+  { code: "phone", fieldType: "PHONE", labelAr: "رقم الهاتف", labelEn: "Phone number" },
+  {
+    code: "company_branch_name",
+    fieldType: "SHORT_TEXT",
+    labelAr: "اسم الشركة / الفرع",
+    labelEn: "Company/branch name",
+    systemKey: "branch",
+  },
+  {
+    code: "related_policy",
+    fieldType: "LONG_TEXT",
+    labelAr: "السياسة / الإجراء المرتبط",
+    labelEn: "Related policy/procedure",
+  },
+  {
+    code: "current_issue",
+    fieldType: "LONG_TEXT",
+    labelAr: "وصف المشكلة الحالية",
+    labelEn: "Current issue/problem description",
+    systemKey: "requestDescription",
+  },
+] as const;
+
+const defaultTemplateFieldCodes = [
+  "request_description",
+  "urgency",
+  "required_deadline",
+  "notes",
+  "attachment",
+] as const;
+
+const urgencyOptions = [
+  { value: "LOW", labelAr: "منخفضة", labelEn: "Low", sortOrder: 1 },
+  { value: "NORMAL", labelAr: "عادية", labelEn: "Normal", sortOrder: 2 },
+  { value: "HIGH", labelAr: "عالية", labelEn: "High", sortOrder: 3 },
+  { value: "URGENT", labelAr: "عاجلة", labelEn: "Urgent", sortOrder: 4 },
+] as const;
+
 export async function seedBlueprint(
   client: PrismaClient,
   blueprint: NormalizedBlueprint,
@@ -297,6 +419,14 @@ export async function seedBlueprint(
             "Manage revision-safe platform settings, labels, templates, and workflow configuration.",
           roleCodes: ["ROLE-ADMIN"],
         },
+        {
+          code: "PERM-MANAGE-REQUEST-TEMPLATES",
+          name: "Manage Request Templates",
+          action: "manage_request_templates",
+          description:
+            "Create and configure service item request templates, fields, documents, and suggested forms.",
+          roleCodes: ["ROLE-ADMIN"],
+        },
       ] as const;
       for (const [index, permission] of pricingPermissions.entries()) {
         const record = await tx.permission.upsert({
@@ -304,7 +434,7 @@ export async function seedBlueprint(
           create: {
             code: permission.code,
             name: permission.name,
-            module: "Pricing",
+            module: permission.code === "PERM-MANAGE-REQUEST-TEMPLATES" ? "Requests" : "Pricing",
             action: permission.action,
             description: permission.description,
             sortOrder: blueprint.permissions.length + 600 + index,
@@ -331,6 +461,24 @@ export async function seedBlueprint(
             update: { effect: "ALLOW" },
           });
         }
+      }
+
+      const requestFieldLibraryIds = new Map<string, string>();
+      for (const [index, field] of requestFieldLibraryDefaults.entries()) {
+        const record = await tx.requestFieldLibraryItem.upsert({
+          where: { code: field.code },
+          create: {
+            code: field.code,
+            fieldType: field.fieldType,
+            labelAr: field.labelAr,
+            labelEn: field.labelEn,
+            ...("systemKey" in field && field.systemKey ? { systemKey: field.systemKey } : {}),
+            defaultConfig: json("defaultConfig" in field ? field.defaultConfig : {}),
+            sortOrder: index + 1,
+          },
+          update: { status: "ACTIVE" },
+        });
+        requestFieldLibraryIds.set(field.code, record.id);
       }
 
       const levelIds = new Map<string, string>();
@@ -502,6 +650,167 @@ export async function seedBlueprint(
               serviceLevelId,
               included: inclusion.included,
               sortOrder: inclusion.sortOrder,
+            },
+            update: {},
+          });
+        }
+
+        const requestTemplate = await tx.requestTemplate.upsert({
+          where: { serviceItemId: stable.id },
+          create: {
+            serviceItemId: stable.id,
+            status: "ACTIVE",
+            sortOrder: item.sortOrder,
+          },
+          update: {},
+        });
+        const templateVersion = await tx.requestTemplateVersion.upsert({
+          where: {
+            requestTemplateId_version: {
+              requestTemplateId: requestTemplate.id,
+              version: 1,
+            },
+          },
+          create: {
+            requestTemplateId: requestTemplate.id,
+            sourceBlueprintImportId: blueprintImport.id,
+            version: 1,
+            status: "SUGGESTED",
+            instructionsAr: "يرجى تعبئة الحقول المطلوبة وإرفاق المستندات الداعمة عند الحاجة.",
+            instructionsEn:
+              "Please complete the required fields and attach supporting documents when needed.",
+            effectiveFrom: new Date(blueprint.effectiveFrom),
+            snapshot: json({
+              source: "Excel V3 seeded suggested default",
+              serviceItemCode: item.code,
+              serviceItemNameAr: item.nameAr,
+              serviceItemNameEn: item.nameEn,
+              expectedOutput: item.expectedOutput,
+              editableByAdmin: true,
+            }),
+          },
+          update: {},
+        });
+        const section = await tx.requestTemplateSection.upsert({
+          where: {
+            requestTemplateVersionId_code: {
+              requestTemplateVersionId: templateVersion.id,
+              code: "basic_request_information",
+            },
+          },
+          create: {
+            requestTemplateVersionId: templateVersion.id,
+            code: "basic_request_information",
+            titleAr: "معلومات الطلب الأساسية",
+            titleEn: "Basic request information",
+            descriptionAr: "الحقول الأساسية اللازمة لبدء فرز الطلب.",
+            descriptionEn: "Core fields needed to triage the request.",
+            sortOrder: 1,
+          },
+          update: {},
+        });
+        for (const [fieldIndex, fieldCode] of defaultTemplateFieldCodes.entries()) {
+          const libraryField = requestFieldLibraryDefaults.find(
+            (field) => field.code === fieldCode,
+          );
+          if (!libraryField) {
+            continue;
+          }
+          const templateField = await tx.requestTemplateField.upsert({
+            where: {
+              requestTemplateVersionId_code: {
+                requestTemplateVersionId: templateVersion.id,
+                code: fieldCode,
+              },
+            },
+            create: {
+              requestTemplateVersionId: templateVersion.id,
+              sectionId: section.id,
+              ...(requestFieldLibraryIds.get(fieldCode)
+                ? { libraryFieldId: requestFieldLibraryIds.get(fieldCode)! }
+                : {}),
+              code: fieldCode,
+              ...("systemKey" in libraryField && libraryField.systemKey
+                ? { systemKey: libraryField.systemKey }
+                : {}),
+              fieldType: libraryField.fieldType,
+              labelAr: libraryField.labelAr,
+              labelEn: libraryField.labelEn,
+              required:
+                fieldCode === "request_description" ||
+                fieldCode === "urgency" ||
+                (fieldCode === "attachment" && item.requiresFile),
+              clientVisible: true,
+              validation: json({ foundation: true }),
+              source: "SUGGESTED_LIBRARY",
+              sortOrder: fieldIndex + 1,
+            },
+            update: {},
+          });
+          if (fieldCode === "urgency") {
+            for (const option of urgencyOptions) {
+              await tx.requestTemplateOption.upsert({
+                where: {
+                  requestTemplateFieldId_value: {
+                    requestTemplateFieldId: templateField.id,
+                    value: option.value,
+                  },
+                },
+                create: {
+                  requestTemplateFieldId: templateField.id,
+                  value: option.value,
+                  labelAr: option.labelAr,
+                  labelEn: option.labelEn,
+                  sortOrder: option.sortOrder,
+                },
+                update: {},
+              });
+            }
+          }
+        }
+        await tx.requestTemplateDocument.upsert({
+          where: {
+            requestTemplateVersionId_code: {
+              requestTemplateVersionId: templateVersion.id,
+              code: "supporting_documents",
+            },
+          },
+          create: {
+            requestTemplateVersionId: templateVersion.id,
+            code: "supporting_documents",
+            labelAr: "المستندات الداعمة",
+            labelEn: "Supporting documents",
+            descriptionAr: "أرفق أي مستندات تساعد فريق جازوم على تنفيذ الطلب.",
+            descriptionEn: "Attach any documents that help the Jzoom team complete this request.",
+            required: item.requiresFile,
+            uploadRequired: item.requiresFile,
+            acceptedFileTypes: json(["pdf", "doc", "docx", "xls", "xlsx", "png", "jpg"]),
+            sortOrder: 1,
+          },
+          update: {},
+        });
+        if (item.requiresFile) {
+          await tx.requestTemplateFile.upsert({
+            where: {
+              requestTemplateVersionId_code_revision: {
+                requestTemplateVersionId: templateVersion.id,
+                code: "downloadable_template_placeholder",
+                revision: 1,
+              },
+            },
+            create: {
+              requestTemplateVersionId: templateVersion.id,
+              code: "downloadable_template_placeholder",
+              titleAr: "ملف قالب للطلب",
+              titleEn: "Request template file",
+              descriptionAr: "يمكن للمشرف إضافة ملف قالب قابل للتنزيل لاحقاً.",
+              descriptionEn: "Admin can attach a downloadable template file later.",
+              fileType: "template-metadata",
+              required: false,
+              returnUploadRequired: true,
+              clientVisible: true,
+              revision: 1,
+              sortOrder: 1,
             },
             update: {},
           });

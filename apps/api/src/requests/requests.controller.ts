@@ -16,6 +16,7 @@ import { RequireRoles } from "../auth/auth.decorators.js";
 import type { RequestMetadata } from "../auth/auth.types.js";
 import { CLIENT_ROLE_CODE } from "../client-portal/client-portal.constants.js";
 import type { RequestWithId } from "../request-context/request-with-id.js";
+import { RequestTemplateAnswerInputDto } from "../request-templates/request-templates.dto.js";
 import {
   AddAttachmentMetadataDto,
   AddInternalNoteDto,
@@ -72,6 +73,7 @@ function metadata(request: RequestWithId): RequestMetadata {
   RequestClientDocumentDto,
   RequestQueueQueryDto,
   RequestStatusDto,
+  RequestTemplateAnswerInputDto,
   ReviewRequestOutputDto,
   ReviewTimeEntryDto,
   ReturnSharedOutputDto,
@@ -378,6 +380,12 @@ export class ClientRequestsController {
   @ApiOperation({ summary: "List client-safe requests for the current client account" })
   list(@Req() request: RequestWithId) {
     return this.requests.listClientRequests(request.auth!);
+  }
+
+  @Post()
+  @ApiOperation({ summary: "Create a client-safe service request from the client portal" })
+  create(@Body() input: CreateRequestDto, @Req() request: RequestWithId) {
+    return this.requests.createClientRequest(input, request.auth!, metadata(request));
   }
 
   @Get(":id")

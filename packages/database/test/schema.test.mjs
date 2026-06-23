@@ -371,3 +371,39 @@ test("PR 18 seed exposes Admin-configurable platform and template foundations", 
   assert.match(seed, /PERM-MANAGE-PLATFORM-CONFIGURATION/);
   assert.doesNotMatch(normalizer, /payment_gateway|zatca|whatsapp_sender/i);
 });
+
+test("PR 19 schema adds service item request templates as non-destructive request sidecars", async () => {
+  const schema = await readFile(
+    path.join(workspaceRoot, "packages/database/prisma/schema.prisma"),
+    "utf8",
+  );
+  const migration = await readFile(
+    path.join(
+      workspaceRoot,
+      "packages/database/prisma/migrations/202606230005_pr19_service_item_request_templates/migration.sql",
+    ),
+    "utf8",
+  );
+  const seed = await readFile(
+    path.join(workspaceRoot, "packages/database/src/seed/seed-blueprint.ts"),
+    "utf8",
+  );
+
+  assert.match(schema, /model RequestFieldLibraryItem \{/);
+  assert.match(schema, /model RequestTemplate \{/);
+  assert.match(schema, /model RequestTemplateVersion \{/);
+  assert.match(schema, /model RequestTemplateSection \{/);
+  assert.match(schema, /model RequestTemplateField \{/);
+  assert.match(schema, /model RequestTemplateFile \{/);
+  assert.match(schema, /model RequestTemplateDocument \{/);
+  assert.match(schema, /model RequestFormResponse \{/);
+  assert.match(schema, /model RequestFormAnswer \{/);
+  assert.match(schema, /formResponse\s+RequestFormResponse\?/);
+  assert.match(migration, /CREATE TABLE "request_template_versions"/);
+  assert.match(migration, /CREATE TABLE "request_form_responses"/);
+  assert.match(migration, /PERM-MANAGE-REQUEST-TEMPLATES/);
+  assert.match(seed, /requestFieldLibraryDefaults/);
+  assert.match(seed, /PERM-MANAGE-REQUEST-TEMPLATES/);
+  assert.doesNotMatch(migration, /DROP TABLE "requests"/);
+  assert.doesNotMatch(migration, /ALTER TABLE "requests" DROP/);
+});

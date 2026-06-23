@@ -283,6 +283,51 @@ describe("Request lifecycle UI", () => {
     expect(await screen.findByText("TRIAGE")).toBeInTheDocument();
   });
 
+  it("renders submitted template answers separately on request detail", () => {
+    const request = {
+      ...serviceRequest(),
+      templateResponse: {
+        id: "form-response-1",
+        requestTemplateVersionId: "template-version-1",
+        requestTemplateVersion: {
+          id: "template-version-1",
+          version: 1,
+          status: "ACTIVE",
+          requestTemplateId: "template-1",
+        },
+        completenessStatus: "COMPLETE" as const,
+        templateSnapshot: {},
+        fileSnapshot: {},
+        submittedBy: { id: "client-user-1", email: "client@example.com", displayName: "Client" },
+        submittedAt: "2026-06-22T00:00:00.000Z",
+        createdAt: "2026-06-22T00:00:00.000Z",
+        updatedAt: "2026-06-22T00:00:00.000Z",
+        answers: [
+          {
+            id: "answer-1",
+            fieldCode: "request_description",
+            systemKey: "requestDescription",
+            labelAr: "وصف الطلب",
+            labelEn: "Request description",
+            fieldType: "LONG_TEXT",
+            value: "Please prepare the payroll review.",
+            clientVisible: true,
+            sortOrder: 1,
+            createdAt: "2026-06-22T00:00:00.000Z",
+            updatedAt: "2026-06-22T00:00:00.000Z",
+          },
+        ],
+      },
+    };
+
+    render(<RequestDetail initialRequest={request} />);
+
+    expect(screen.getByRole("heading", { name: "Template answers" })).toBeInTheDocument();
+    expect(screen.getByText("Request description")).toBeInTheDocument();
+    expect(screen.getByText("Please prepare the payroll review.")).toBeInTheDocument();
+    expect(screen.getByText("SEO operations")).toBeInTheDocument();
+  });
+
   it("loads filtered internal work queues through the backend API", async () => {
     const fetchMock = jest.mocked(fetch);
     fetchMock.mockImplementationOnce(() =>

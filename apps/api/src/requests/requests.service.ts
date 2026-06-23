@@ -14,6 +14,8 @@ import type { AuthenticatedPrincipal, RequestMetadata } from "../auth/auth.types
 import { CLIENT_ROLE_CODE } from "../client-portal/client-portal.constants.js";
 import { DatabaseService } from "../database/database.service.js";
 import { NotificationsService } from "../notifications/notifications.service.js";
+import { REQUEST_TEMPLATE_EVENT } from "../request-templates/request-templates.constants.js";
+import { RequestTemplatesService } from "../request-templates/request-templates.service.js";
 import {
   ACCOUNT_MANAGER_ROLE_CODE,
   CLIENT_VISIBLE_OUTPUT_STATUSES,
@@ -225,6 +227,31 @@ const requestDetailInclude = {
       toState: { select: { code: true, labelEn: true, labelAr: true } },
     },
   },
+  formResponse: {
+    include: {
+      requestTemplateVersion: {
+        select: {
+          id: true,
+          version: true,
+          status: true,
+          requestTemplateId: true,
+        },
+      },
+      answers: {
+        orderBy: [{ sortOrder: "asc" }, { fieldCode: "asc" }],
+        include: {
+          requestTemplateField: {
+            select: {
+              id: true,
+              code: true,
+              systemKey: true,
+            },
+          },
+        },
+      },
+      submittedBy: { select: userSummarySelect },
+    },
+  },
 } satisfies Prisma.RequestInclude;
 
 type RequestSummaryRecord = Prisma.RequestGetPayload<{ include: typeof requestSummaryInclude }>;
@@ -261,6 +288,7 @@ export class RequestsService {
     @Inject(DatabaseService) private readonly database: DatabaseService,
     @Inject(AuthAuditService) private readonly audit: AuthAuditService,
     @Inject(NotificationsService) private readonly notifications: NotificationsService,
+    @Inject(RequestTemplatesService) private readonly requestTemplates: RequestTemplatesService,
   ) {}
 
   async list(principal: AuthenticatedPrincipal) {
@@ -308,6 +336,18 @@ export class RequestsService {
     await this.requireServiceItem(input.serviceItemRevisionId, subscriptionService);
     await this.requireSourceQuote(input.sourceQuoteId, input.clientId);
     await this.requireSourceInvoice(input.sourceInvoiceId, input.clientId);
+    const templateSubmission = await this.requestTemplates.buildSubmissionForRequest(
+      {
+        ...(input.serviceItemRevisionId
+          ? { serviceItemRevisionId: input.serviceItemRevisionId }
+          : {}),
+        ...(input.requestTemplateVersionId
+          ? { requestTemplateVersionId: input.requestTemplateVersionId }
+          : {}),
+        ...(input.templateAnswers ? { templateAnswers: input.templateAnswers } : {}),
+      },
+      principal,
+    );
 
     const assignedSpecialistId = await this.assignmentUserId(input.assignedSpecialistId, [
       SPECIALIST_ROLE_CODE,
@@ -349,6 +389,19 @@ export class RequestsService {
       data: requestData,
       include: requestDetailInclude,
     });
+    if (templateSubmission) {
+      await this.database.prisma.requestFormResponse.create({
+        data: {
+          requestId: request.id,
+          requestTemplateVersionId: templateSubmission.requestTemplateVersionId,
+          submittedById: principal.userId,
+          completenessStatus: templateSubmission.completenessStatus,
+          templateSnapshot: templateSubmission.templateSnapshot,
+          fileSnapshot: templateSubmission.fileSnapshot,
+          answers: { create: templateSubmission.answersCreate },
+        },
+      });
+    }
 
     await this.database.prisma.workflowEvent.create({
       data: {
@@ -371,6 +424,23 @@ export class RequestsService {
       },
       metadata,
     );
+    if (templateSubmission) {
+      await this.audit.record(
+        {
+          actorId: principal.userId,
+          eventCode: REQUEST_TEMPLATE_EVENT.formResponseSubmitted,
+          entityType: "RequestFormResponse",
+          entityId: request.id,
+          after: {
+            requestId: request.id,
+            requestTemplateVersionId: templateSubmission.requestTemplateVersionId,
+            completenessStatus: templateSubmission.completenessStatus,
+            answerCount: templateSubmission.answersCreate.length,
+          },
+        },
+        metadata,
+      );
+    }
     await this.notifyInternalRequestStakeholders(
       request,
       principal,
@@ -379,6 +449,10 @@ export class RequestsService {
       { status: request.status },
     );
 
+    if (templateSubmission) {
+      const refreshed = await this.requireAccessibleRequest(request.id, principal);
+      return this.detailView(refreshed, false);
+    }
     return this.detailView(request, false);
   }
 
@@ -967,6 +1041,35 @@ export class RequestsService {
       include: requestSummaryInclude,
     });
     return requests.map((request) => this.summaryView(request, true));
+  }
+
+  async createClientRequest(
+    input: CreateRequestDto,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    this.assertCanAccessClient(input.clientId, principal);
+    return this.create(
+      {
+        clientId: input.clientId,
+        subscriptionServiceId: input.subscriptionServiceId,
+        ...(input.serviceItemRevisionId
+          ? { serviceItemRevisionId: input.serviceItemRevisionId }
+          : {}),
+        ...(input.requestTemplateVersionId
+          ? { requestTemplateVersionId: input.requestTemplateVersionId }
+          : {}),
+        ...(input.templateAnswers ? { templateAnswers: input.templateAnswers } : {}),
+        ...(input.sourceQuoteId ? { sourceQuoteId: input.sourceQuoteId } : {}),
+        ...(input.sourceInvoiceId ? { sourceInvoiceId: input.sourceInvoiceId } : {}),
+        title: input.title,
+        description: input.description,
+        ...(input.priority ? { priority: input.priority } : {}),
+        ...(input.dueAt ? { dueAt: input.dueAt } : {}),
+      },
+      principal,
+      metadata,
+    );
   }
 
   async getClientRequest(id: string, principal: AuthenticatedPrincipal, metadata: RequestMetadata) {
@@ -2369,6 +2472,9 @@ export class RequestsService {
             updatedAt: task.updatedAt.toISOString(),
           })),
       timeEntries: clientSafe ? [] : request.timeEntries.map((entry) => this.timeEntryView(entry)),
+      templateResponse: request.formResponse
+        ? this.templateResponseView(request.formResponse, clientSafe)
+        : null,
       activity: request.workflowEvents.map((event) => ({
         id: event.id,
         actorId: event.actorId,
@@ -2380,6 +2486,72 @@ export class RequestsService {
         occurredAt: event.occurredAt.toISOString(),
       })),
     };
+  }
+
+  private templateResponseView(
+    response: NonNullable<RequestDetailRecord["formResponse"]>,
+    clientSafe: boolean,
+  ) {
+    return {
+      id: response.id,
+      requestTemplateVersionId: response.requestTemplateVersionId,
+      requestTemplateVersion: response.requestTemplateVersion,
+      completenessStatus: response.completenessStatus,
+      templateSnapshot: clientSafe
+        ? this.clientSafeTemplateSnapshot(response.templateSnapshot)
+        : response.templateSnapshot,
+      fileSnapshot: clientSafe
+        ? this.clientSafeTemplateSnapshot(response.fileSnapshot)
+        : response.fileSnapshot,
+      submittedBy: clientSafe ? null : response.submittedBy,
+      submittedAt: response.submittedAt.toISOString(),
+      createdAt: response.createdAt.toISOString(),
+      updatedAt: response.updatedAt.toISOString(),
+      answers: response.answers
+        .filter((answer) => !clientSafe || answer.clientVisible)
+        .map((answer) => ({
+          id: answer.id,
+          fieldCode: answer.fieldCode,
+          systemKey: answer.systemKey,
+          labelAr: answer.labelAr,
+          labelEn: answer.labelEn,
+          fieldType: answer.fieldType,
+          value: answer.value,
+          clientVisible: answer.clientVisible,
+          sortOrder: answer.sortOrder,
+          requestTemplateField: clientSafe ? null : answer.requestTemplateField,
+          createdAt: answer.createdAt.toISOString(),
+          updatedAt: answer.updatedAt.toISOString(),
+        })),
+    };
+  }
+
+  private clientSafeTemplateSnapshot(value: unknown) {
+    if (!value || typeof value !== "object") {
+      return value ?? null;
+    }
+    const snapshot = JSON.parse(JSON.stringify(value)) as {
+      fields?: Array<{ clientVisible?: boolean }>;
+      downloadableFiles?: Array<{
+        clientVisible?: boolean;
+        storageKey?: unknown;
+        storageProvider?: unknown;
+      }>;
+      [key: string]: unknown;
+    };
+    if (Array.isArray(snapshot.fields)) {
+      snapshot.fields = snapshot.fields.filter((field) => field.clientVisible !== false);
+    }
+    if (Array.isArray(snapshot.downloadableFiles)) {
+      snapshot.downloadableFiles = snapshot.downloadableFiles
+        .filter((file) => file.clientVisible !== false)
+        .map((file) => ({
+          ...file,
+          storageKey: null,
+          storageProvider: null,
+        }));
+    }
+    return snapshot;
   }
 
   private serviceSummary(request: RequestSummaryRecord) {

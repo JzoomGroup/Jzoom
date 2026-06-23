@@ -24,6 +24,10 @@ export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
       "Admin-only platform settings, labels, notification, PDF, and workflow template foundations",
     )
     .addTag(
+      "admin-request-templates",
+      "Admin-only service item request template and field library configuration",
+    )
+    .addTag(
       "pricing-studio",
       "Scoped client pricing drafts and backend-trusted calculation previews",
     )
@@ -33,6 +37,10 @@ export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
     .addTag(
       "requests",
       "Request lifecycle foundation with internal assignment and client-safe request views",
+    )
+    .addTag(
+      "request-templates",
+      "Active service item request templates for optional dynamic request forms",
     )
     .build();
 

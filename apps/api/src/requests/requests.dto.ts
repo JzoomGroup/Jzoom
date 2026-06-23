@@ -1,5 +1,6 @@
 import { Type } from "class-transformer";
 import {
+  IsArray,
   IsBoolean,
   IsDateString,
   IsIn,
@@ -14,8 +15,10 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { RequestTemplateAnswerInputDto } from "../request-templates/request-templates.dto.js";
 import {
   CLIENT_DOCUMENT_REQUEST_STATUSES,
   REQUEST_OUTPUT_REVIEW_ACTIONS,
@@ -43,6 +46,25 @@ export class CreateRequestDto {
   @IsOptional()
   @IsUUID()
   serviceItemRevisionId?: string;
+
+  @ApiPropertyOptional({
+    description: "Active request template version used for structured template answers.",
+    type: String,
+    format: "uuid",
+  })
+  @IsOptional()
+  @IsUUID()
+  requestTemplateVersionId?: string;
+
+  @ApiPropertyOptional({
+    description: "Structured answers for the selected service item request template.",
+    type: [RequestTemplateAnswerInputDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RequestTemplateAnswerInputDto)
+  templateAnswers?: RequestTemplateAnswerInputDto[];
 
   @ApiPropertyOptional({ type: String, format: "uuid" })
   @IsOptional()

@@ -498,6 +498,38 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
         </div>
       </section>
 
+      {request.templateResponse && (
+        <section className="catalog-panel">
+          <h2>Template answers</h2>
+          <p>
+            Completeness:{" "}
+            <span
+              className={`status-badge status-${request.templateResponse.completenessStatus.toLowerCase()}`}
+            >
+              {request.templateResponse.completenessStatus}
+            </span>
+          </p>
+          <div className="activity-list">
+            {request.templateResponse.answers.length === 0 ? (
+              <p>No structured answers were submitted.</p>
+            ) : (
+              request.templateResponse.answers.map((answer) => (
+                <article key={answer.id}>
+                  <strong>{answer.labelEn}</strong>
+                  <small>
+                    {answer.fieldCode} · {answer.fieldType} ·{" "}
+                    {answer.clientVisible ? "client-visible" : "internal-only"}
+                  </small>
+                  <p>
+                    {typeof answer.value === "string" ? answer.value : JSON.stringify(answer.value)}
+                  </p>
+                </article>
+              ))
+            )}
+          </div>
+        </section>
+      )}
+
       <section className="quote-summary-grid">
         <article className="catalog-panel">
           <h2>Internal checklist</h2>

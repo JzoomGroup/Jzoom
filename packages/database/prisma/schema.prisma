@@ -176,6 +176,36 @@ enum NotificationStatus {
   CANCELLED
 }
 
+enum RequestTemplateRevisionStatus {
+  SUGGESTED
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum RequestTemplateFieldType {
+  SHORT_TEXT
+  LONG_TEXT
+  NUMBER
+  DATE
+  DROPDOWN
+  MULTI_SELECT
+  CHECKBOX
+  RADIO
+  FILE
+  EMAIL
+  PHONE
+  AMOUNT
+  URL
+}
+
+enum RequestFormCompletenessStatus {
+  COMPLETE
+  MISSING_REQUIRED_FIELDS
+  MISSING_REQUIRED_ATTACHMENTS
+  PENDING_INTERNAL_REVIEW
+}
+
 enum MonthlyReportStatus {
   DRAFT
   PREPARED
@@ -221,31 +251,32 @@ enum TranslationRevisionStatus {
 }
 
 model BlueprintImport {
-  id                   String                        @id @default(uuid()) @db.Uuid
-  blueprintCode        String
-  version              String
-  sourceFileName       String
-  sha256               String                        @unique
-  manifest             Json
-  status               BlueprintImportStatus         @default(PENDING)
-  warningCount         Int                           @default(0)
-  errorCount           Int                           @default(0)
-  importedAt           DateTime                      @default(now())
-  appliedAt            DateTime?
-  createdAt            DateTime                      @default(now())
-  updatedAt            DateTime                      @updatedAt
-  sheetSnapshots       BlueprintSheetSnapshot[]
-  issues               BlueprintIssue[]
-  monthlyRevisions     MonthlyServiceRevision[]
-  itemRevisions        ServiceItemRevision[]
-  oneTimeRevisions     OneTimeServiceRevision[]
-  pricingRevisions     PricingRuleRevision[]
-  workflowVersions     WorkflowVersion[]
-  pdfVersions          PdfTemplateVersion[]
-  notificationVersions NotificationTemplateVersion[]
-  validationRevisions  ValidationRuleRevision[]
-  settingRevisions     PlatformSettingRevision[]
-  translationRevisions TranslationRevision[]
+  id                      String                        @id @default(uuid()) @db.Uuid
+  blueprintCode           String
+  version                 String
+  sourceFileName          String
+  sha256                  String                        @unique
+  manifest                Json
+  status                  BlueprintImportStatus         @default(PENDING)
+  warningCount            Int                           @default(0)
+  errorCount              Int                           @default(0)
+  importedAt              DateTime                      @default(now())
+  appliedAt               DateTime?
+  createdAt               DateTime                      @default(now())
+  updatedAt               DateTime                      @updatedAt
+  sheetSnapshots          BlueprintSheetSnapshot[]
+  issues                  BlueprintIssue[]
+  monthlyRevisions        MonthlyServiceRevision[]
+  itemRevisions           ServiceItemRevision[]
+  oneTimeRevisions        OneTimeServiceRevision[]
+  pricingRevisions        PricingRuleRevision[]
+  workflowVersions        WorkflowVersion[]
+  pdfVersions             PdfTemplateVersion[]
+  notificationVersions    NotificationTemplateVersion[]
+  validationRevisions     ValidationRuleRevision[]
+  settingRevisions        PlatformSettingRevision[]
+  translationRevisions    TranslationRevision[]
+  requestTemplateVersions RequestTemplateVersion[]
 
   @@unique([blueprintCode, version, sha256])
   @@map("blueprint_imports")
@@ -389,6 +420,7 @@ model User {
   preparedMonthlyReports   ClientMonthlyReport[]    @relation("MonthlyReportPreparer")
   preparedMonthlyClosings  ClientMonthlyClosing[]   @relation("MonthlyClosingPreparer")
   finalizedMonthlyClosings ClientMonthlyClosing[]   @relation("MonthlyClosingFinalizer")
+  submittedRequestForms    RequestFormResponse[]    @relation("RequestFormSubmitter")
 
   @@index([status])
   @@index([lockedUntil])
@@ -679,6 +711,7 @@ model ServiceItem {
   updatedAt        DateTime              @updatedAt
   monthlyService   MonthlyService        @relation(fields: [monthlyServiceId], references: [id], onDelete: Restrict)
   revisions        ServiceItemRevision[]
+  requestTemplates RequestTemplate[]
 
   @@index([monthlyServiceId, status, sortOrder])
   @@map("service_items")
@@ -1651,6 +1684,7 @@ model Request {
   workflowEvents        WorkflowEvent[]
   outputs               RequestOutput[]
   documentRequests      ClientDocumentRequest[]
+  formResponse          RequestFormResponse?
 
   @@index([clientId, currentStateId])
   @@index([clientId, status])
@@ -2059,6 +2093,239 @@ model ClientMonthlyClosing {
   @@index([preparedById, status])
   @@index([finalizedById, status])
   @@map("client_monthly_closings")
+}
+
+model RequestFieldLibraryItem {
+  id             String                   @id @default(uuid()) @db.Uuid
+  code           String                   @unique
+  fieldType      RequestTemplateFieldType
+  labelAr        String
+  labelEn        String
+  helpTextAr     String?                  @db.Text
+  helpTextEn     String?                  @db.Text
+  placeholderAr  String?
+  placeholderEn  String?
+  systemKey      String?
+  defaultConfig  Json?
+  status         RecordStatus             @default(ACTIVE)
+  sortOrder      Int                      @default(0)
+  archivedAt     DateTime?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  templateFields RequestTemplateField[]
+
+  @@index([status, sortOrder])
+  @@index([systemKey])
+  @@map("request_field_library_items")
+}
+
+model RequestTemplate {
+  id            String                   @id @default(uuid()) @db.Uuid
+  serviceItemId String                   @db.Uuid
+  status        RecordStatus             @default(ACTIVE)
+  sortOrder     Int                      @default(0)
+  archivedAt    DateTime?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  serviceItem   ServiceItem              @relation(fields: [serviceItemId], references: [id], onDelete: Restrict)
+  versions      RequestTemplateVersion[]
+
+  @@unique([serviceItemId])
+  @@index([status, sortOrder])
+  @@map("request_templates")
+}
+
+model RequestTemplateVersion {
+  id                      String                        @id @default(uuid()) @db.Uuid
+  requestTemplateId       String                        @db.Uuid
+  sourceBlueprintImportId String?                       @db.Uuid
+  version                 Int
+  status                  RequestTemplateRevisionStatus @default(DRAFT)
+  instructionsAr          String?                       @db.Text
+  instructionsEn          String?                       @db.Text
+  snapshot                Json
+  effectiveFrom           DateTime?
+  effectiveTo             DateTime?
+  createdAt               DateTime                      @default(now())
+  updatedAt               DateTime                      @updatedAt
+  requestTemplate         RequestTemplate               @relation(fields: [requestTemplateId], references: [id], onDelete: Cascade)
+  sourceBlueprintImport   BlueprintImport?              @relation(fields: [sourceBlueprintImportId], references: [id], onDelete: SetNull)
+  sections                RequestTemplateSection[]
+  fields                  RequestTemplateField[]
+  downloadableFiles       RequestTemplateFile[]
+  documentChecklist       RequestTemplateDocument[]
+  responses               RequestFormResponse[]
+
+  @@unique([requestTemplateId, version])
+  @@index([requestTemplateId, status, effectiveFrom])
+  @@map("request_template_versions")
+}
+
+model RequestTemplateSection {
+  id                       String                 @id @default(uuid()) @db.Uuid
+  requestTemplateVersionId String                 @db.Uuid
+  code                     String
+  titleAr                  String
+  titleEn                  String
+  descriptionAr            String?                @db.Text
+  descriptionEn            String?                @db.Text
+  status                   RecordStatus           @default(ACTIVE)
+  sortOrder                Int                    @default(0)
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  requestTemplateVersion   RequestTemplateVersion @relation(fields: [requestTemplateVersionId], references: [id], onDelete: Cascade)
+  fields                   RequestTemplateField[]
+
+  @@unique([requestTemplateVersionId, code])
+  @@index([requestTemplateVersionId, status, sortOrder])
+  @@map("request_template_sections")
+}
+
+model RequestTemplateField {
+  id                       String                   @id @default(uuid()) @db.Uuid
+  requestTemplateVersionId String                   @db.Uuid
+  sectionId                String?                  @db.Uuid
+  libraryFieldId           String?                  @db.Uuid
+  code                     String
+  systemKey                String?
+  fieldType                RequestTemplateFieldType
+  labelAr                  String
+  labelEn                  String
+  helpTextAr               String?                  @db.Text
+  helpTextEn               String?                  @db.Text
+  placeholderAr            String?
+  placeholderEn            String?
+  required                 Boolean                  @default(false)
+  clientVisible            Boolean                  @default(true)
+  defaultValue             Json?
+  validation               Json?
+  source                   String                   @default("CUSTOM")
+  status                   RecordStatus             @default(ACTIVE)
+  sortOrder                Int                      @default(0)
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+  requestTemplateVersion   RequestTemplateVersion   @relation(fields: [requestTemplateVersionId], references: [id], onDelete: Cascade)
+  section                  RequestTemplateSection?  @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  libraryField             RequestFieldLibraryItem? @relation(fields: [libraryFieldId], references: [id], onDelete: SetNull)
+  options                  RequestTemplateOption[]
+  answers                  RequestFormAnswer[]
+
+  @@unique([requestTemplateVersionId, code])
+  @@index([requestTemplateVersionId, status, sortOrder])
+  @@index([sectionId, sortOrder])
+  @@index([systemKey])
+  @@map("request_template_fields")
+}
+
+model RequestTemplateOption {
+  id                     String               @id @default(uuid()) @db.Uuid
+  requestTemplateFieldId String               @db.Uuid
+  value                  String
+  labelAr                String
+  labelEn                String
+  status                 RecordStatus         @default(ACTIVE)
+  sortOrder              Int                  @default(0)
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  requestTemplateField   RequestTemplateField @relation(fields: [requestTemplateFieldId], references: [id], onDelete: Cascade)
+
+  @@unique([requestTemplateFieldId, value])
+  @@index([requestTemplateFieldId, status, sortOrder])
+  @@map("request_template_options")
+}
+
+model RequestTemplateFile {
+  id                       String                 @id @default(uuid()) @db.Uuid
+  requestTemplateVersionId String                 @db.Uuid
+  code                     String
+  titleAr                  String
+  titleEn                  String
+  descriptionAr            String?                @db.Text
+  descriptionEn            String?                @db.Text
+  fileName                 String?
+  fileType                 String?
+  mimeType                 String?
+  storageProvider          String?
+  storageKey               String?
+  required                 Boolean                @default(false)
+  returnUploadRequired     Boolean                @default(false)
+  clientVisible            Boolean                @default(true)
+  status                   RecordStatus           @default(ACTIVE)
+  revision                 Int                    @default(1)
+  sortOrder                Int                    @default(0)
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  requestTemplateVersion   RequestTemplateVersion @relation(fields: [requestTemplateVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([requestTemplateVersionId, code, revision])
+  @@index([requestTemplateVersionId, status, sortOrder])
+  @@map("request_template_files")
+}
+
+model RequestTemplateDocument {
+  id                       String                 @id @default(uuid()) @db.Uuid
+  requestTemplateVersionId String                 @db.Uuid
+  code                     String
+  labelAr                  String
+  labelEn                  String
+  descriptionAr            String?                @db.Text
+  descriptionEn            String?                @db.Text
+  required                 Boolean                @default(false)
+  uploadRequired           Boolean                @default(false)
+  acceptedFileTypes        Json?
+  status                   RecordStatus           @default(ACTIVE)
+  sortOrder                Int                    @default(0)
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  requestTemplateVersion   RequestTemplateVersion @relation(fields: [requestTemplateVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([requestTemplateVersionId, code])
+  @@index([requestTemplateVersionId, status, sortOrder])
+  @@map("request_template_documents")
+}
+
+model RequestFormResponse {
+  id                       String                        @id @default(uuid()) @db.Uuid
+  requestId                String                        @unique @db.Uuid
+  requestTemplateVersionId String?                       @db.Uuid
+  submittedById            String?                       @db.Uuid
+  completenessStatus       RequestFormCompletenessStatus @default(PENDING_INTERNAL_REVIEW)
+  templateSnapshot         Json
+  fileSnapshot             Json?
+  submittedAt              DateTime                      @default(now())
+  createdAt                DateTime                      @default(now())
+  updatedAt                DateTime                      @updatedAt
+  request                  Request                       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  requestTemplateVersion   RequestTemplateVersion?       @relation(fields: [requestTemplateVersionId], references: [id], onDelete: SetNull)
+  submittedBy              User?                         @relation("RequestFormSubmitter", fields: [submittedById], references: [id], onDelete: SetNull)
+  answers                  RequestFormAnswer[]
+
+  @@index([requestTemplateVersionId])
+  @@index([completenessStatus])
+  @@map("request_form_responses")
+}
+
+model RequestFormAnswer {
+  id                     String                   @id @default(uuid()) @db.Uuid
+  requestFormResponseId  String                   @db.Uuid
+  requestTemplateFieldId String?                  @db.Uuid
+  fieldCode              String
+  systemKey              String?
+  labelAr                String
+  labelEn                String
+  fieldType              RequestTemplateFieldType
+  value                  Json
+  clientVisible          Boolean                  @default(true)
+  sortOrder              Int                      @default(0)
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  requestFormResponse    RequestFormResponse      @relation(fields: [requestFormResponseId], references: [id], onDelete: Cascade)
+  requestTemplateField   RequestTemplateField?    @relation(fields: [requestTemplateFieldId], references: [id], onDelete: SetNull)
+
+  @@unique([requestFormResponseId, fieldCode])
+  @@index([requestTemplateFieldId])
+  @@index([systemKey])
+  @@map("request_form_answers")
 }
 
 model AuditLog {
