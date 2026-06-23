@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
+import {
+  RequestTemplateFields,
+  type TemplateAnswerState,
+} from "../request-templates/request-template-fields";
 import { createServiceRequest, requestErrorMessage } from "../../lib/request-client";
+import { answersForTemplate, fetchActiveRequestTemplate } from "../../lib/request-templates-client";
+import type { RequestTemplateVersion, TemplateAnswerValue } from "../../lib/request-template-types";
 import type { RequestSummary } from "../../lib/request-types";
 
 const priorities = ["LOW", "NORMAL", "HIGH", "URGENT"] as const;
@@ -21,7 +27,11 @@ export function RequestList({ requests }: { requests: RequestSummary[] }) {
   const router = useRouter();
   const [items, setItems] = useState(requests);
   const [creating, setCreating] = useState(false);
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [templateNotice, setTemplateNotice] = useState<string | null>(null);
+  const [activeTemplate, setActiveTemplate] = useState<RequestTemplateVersion | null>(null);
+  const [templateAnswers, setTemplateAnswers] = useState<TemplateAnswerState>({});
   const [form, setForm] = useState({
     clientId: "",
     subscriptionServiceId: "",
@@ -36,6 +46,37 @@ export function RequestList({ requests }: { requests: RequestSummary[] }) {
     priority: "NORMAL" as (typeof priorities)[number],
     dueAt: "",
   });
+
+  async function loadTemplate() {
+    const serviceItemRevisionId = optional(form.serviceItemRevisionId);
+    if (!serviceItemRevisionId) {
+      setTemplateNotice("Enter a service item revision ID first.");
+      setActiveTemplate(null);
+      return;
+    }
+    setLoadingTemplate(true);
+    setError(null);
+    setTemplateNotice(null);
+    try {
+      const response = await fetchActiveRequestTemplate(serviceItemRevisionId);
+      setActiveTemplate(response.template);
+      setTemplateAnswers({});
+      setTemplateNotice(
+        response.template
+          ? `Loaded template v${response.template.version} for ${response.serviceItemRevision.nameEn}.`
+          : "No active template exists. The generic request form will be used.",
+      );
+    } catch (caught) {
+      setActiveTemplate(null);
+      setError(requestErrorMessage(caught));
+    } finally {
+      setLoadingTemplate(false);
+    }
+  }
+
+  function setTemplateAnswer(code: string, value: TemplateAnswerValue) {
+    setTemplateAnswers((current) => ({ ...current, [code]: value }));
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,6 +103,10 @@ export function RequestList({ requests }: { requests: RequestSummary[] }) {
       if (assignedSupervisorId) payload.assignedSupervisorId = assignedSupervisorId;
       if (accountManagerId) payload.accountManagerId = accountManagerId;
       if (form.dueAt) payload.dueAt = new Date(form.dueAt).toISOString();
+      if (activeTemplate) {
+        payload.requestTemplateVersionId = activeTemplate.id;
+        payload.templateAnswers = answersForTemplate(activeTemplate, templateAnswers);
+      }
       const created = await createServiceRequest(payload);
       setItems((current) => [created, ...current]);
       router.push(`/requests/${created.id}`);
@@ -115,9 +160,24 @@ export function RequestList({ requests }: { requests: RequestSummary[] }) {
             Service item revision ID
             <input
               value={form.serviceItemRevisionId}
-              onChange={(event) => setForm({ ...form, serviceItemRevisionId: event.target.value })}
+              onChange={(event) => {
+                setForm({ ...form, serviceItemRevisionId: event.target.value });
+                setActiveTemplate(null);
+                setTemplateAnswers({});
+                setTemplateNotice(null);
+              }}
             />
           </label>
+          <div className="form-actions">
+            <button
+              className="button-secondary"
+              type="button"
+              disabled={loadingTemplate || !form.serviceItemRevisionId.trim()}
+              onClick={() => void loadTemplate()}
+            >
+              {loadingTemplate ? "Loading template..." : "Load request template"}
+            </button>
+          </div>
           <label>
             Source quote ID
             <input
@@ -192,6 +252,12 @@ export function RequestList({ requests }: { requests: RequestSummary[] }) {
               onChange={(event) => setForm({ ...form, description: event.target.value })}
             />
           </label>
+          {templateNotice && <p className="catalog-feedback success form-span">{templateNotice}</p>}
+          <RequestTemplateFields
+            template={activeTemplate}
+            values={templateAnswers}
+            onChange={setTemplateAnswer}
+          />
           {error && <p className="form-error form-span">{error}</p>}
           <button className="button-primary" type="submit" disabled={creating}>
             {creating ? "Creating..." : "Create request"}

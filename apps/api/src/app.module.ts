@@ -15,6 +15,7 @@ import { PricingModule } from "./pricing/pricing.module.js";
 import { QuotesModule } from "./quotes/quotes.module.js";
 import { ReportsModule } from "./reports/reports.module.js";
 import { RequestContextModule } from "./request-context/request-context.module.js";
+import { RequestTemplatesModule } from "./request-templates/request-templates.module.js";
 import { RequestsModule } from "./requests/requests.module.js";
 
 @Module({})
@@ -33,6 +34,7 @@ export class AppModule {
         InvoicesModule,
         NotificationsModule,
         ClientPortalModule,
+        RequestTemplatesModule,
         RequestsModule,
         ReportsModule,
         HoursLedgerModule,

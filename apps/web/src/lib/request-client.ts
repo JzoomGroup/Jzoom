@@ -1,6 +1,7 @@
 "use client";
 
 import { catalogErrorMessage, catalogRequest } from "./catalog-client";
+import type { RequestTemplateAnswerInput } from "./request-template-types";
 import type { RequestQueueResponse, RequestStatus, ServiceRequest } from "./request-types";
 
 export const requestErrorMessage = catalogErrorMessage;
@@ -17,6 +18,8 @@ export function createServiceRequest(input: {
   clientId: string;
   subscriptionServiceId: string;
   serviceItemRevisionId?: string;
+  requestTemplateVersionId?: string;
+  templateAnswers?: RequestTemplateAnswerInput[];
   sourceQuoteId?: string;
   sourceInvoiceId?: string;
   assignedSpecialistId?: string;
@@ -28,6 +31,25 @@ export function createServiceRequest(input: {
   dueAt?: string;
 }): Promise<ServiceRequest> {
   return catalogRequest<ServiceRequest>("requests", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function createClientServiceRequest(input: {
+  clientId: string;
+  subscriptionServiceId: string;
+  serviceItemRevisionId?: string;
+  requestTemplateVersionId?: string;
+  templateAnswers?: RequestTemplateAnswerInput[];
+  sourceQuoteId?: string;
+  sourceInvoiceId?: string;
+  title: string;
+  description: string;
+  priority?: "LOW" | "NORMAL" | "HIGH" | "URGENT";
+  dueAt?: string;
+}): Promise<ServiceRequest> {
+  return catalogRequest<ServiceRequest>("client-portal/requests", {
     method: "POST",
     body: JSON.stringify(input),
   });

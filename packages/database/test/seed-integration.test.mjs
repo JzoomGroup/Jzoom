@@ -32,6 +32,8 @@ test(
         workflows: await database.workflowDefinition.count(),
         routes: await database.routeDefinition.count(),
         actions: await database.actionDefinition.count(),
+        requestFieldLibrary: await database.requestFieldLibraryItem.count(),
+        requestTemplates: await database.requestTemplate.count(),
       };
 
       const second = await seedBlueprint(database, blueprint);
@@ -48,6 +50,8 @@ test(
         workflows: await database.workflowDefinition.count(),
         routes: await database.routeDefinition.count(),
         actions: await database.actionDefinition.count(),
+        requestFieldLibrary: await database.requestFieldLibraryItem.count(),
+        requestTemplates: await database.requestTemplate.count(),
       };
 
       assert.deepEqual(countsAfterSecond, countsAfterFirst);
@@ -65,6 +69,8 @@ test(
       );
       assert.equal(countsAfterSecond.routes, blueprint.routes.length);
       assert.equal(countsAfterSecond.actions, blueprint.actions.length);
+      assert.ok(countsAfterSecond.requestFieldLibrary >= 20);
+      assert.equal(countsAfterSecond.requestTemplates, blueprint.serviceItems.length);
       assert.equal(await database.user.count(), 0);
       assert.equal(await database.client.count(), 0);
     } finally {
