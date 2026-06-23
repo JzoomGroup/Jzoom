@@ -1,10 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import { AccountManagerPortfolio } from "./account-manager-portfolio";
 import { ClientReportDetail, ClientReportList } from "./client-reports";
+import { HoursLedger } from "./hours-ledger";
 import { MonthlyReports } from "./monthly-reports";
 import { NotificationInbox } from "./notification-inbox";
 import type {
   AccountManagerPortfolio as Portfolio,
+  HoursLedgerResponse,
+  MonthlyClosing,
+  MonthlyUsageResponse,
   MonthlyReport,
   NotificationListResponse,
 } from "../../lib/operations-types";
@@ -123,6 +127,134 @@ function portfolio(): Portfolio {
   };
 }
 
+function ledger(): HoursLedgerResponse {
+  return {
+    generatedAt: "2026-06-23T00:00:00.000Z",
+    period: {
+      key: "2026-06",
+      start: "2026-06-01T00:00:00.000Z",
+      end: "2026-07-01T00:00:00.000Z",
+    },
+    totals: {
+      entries: 2,
+      hours: 5,
+      approvedHours: 3,
+      submittedHours: 2,
+      rejectedHours: 0,
+      billableHours: 5,
+      nonBillableHours: 0,
+    },
+    byStatus: {},
+    byBillable: {},
+    byClient: [
+      {
+        id: "client-1",
+        code: "CLIENT-1",
+        name: "Client One",
+        sector: "Technology",
+        city: "Riyadh",
+        entries: 2,
+        hours: 5,
+        approvedHours: 3,
+        submittedHours: 2,
+        rejectedHours: 0,
+        billableHours: 5,
+        nonBillableHours: 0,
+      },
+    ],
+    byRequest: [],
+    byService: [],
+    byUser: [],
+    byMonth: [],
+    entries: [
+      {
+        id: "time-1",
+        workDate: "2026-06-10T00:00:00.000Z",
+        hours: 3,
+        billable: true,
+        deductHours: true,
+        status: "APPROVED",
+        notes: null,
+        submittedAt: "2026-06-10T10:00:00.000Z",
+        decidedAt: "2026-06-11T10:00:00.000Z",
+        decisionReason: "approved",
+        createdAt: "2026-06-10T10:00:00.000Z",
+        updatedAt: "2026-06-11T10:00:00.000Z",
+        user: { id: "specialist-1", email: "sp@example.com", displayName: "Specialist One" },
+        decidedBy: { id: "supervisor-1", email: "sv@example.com", displayName: "Supervisor" },
+        client: {
+          id: "client-1",
+          code: "CLIENT-1",
+          name: "Client One",
+          sector: "Technology",
+          city: "Riyadh",
+        },
+        request: {
+          id: "request-1",
+          requestNumber: "REQ-1",
+          title: "Monthly request",
+          status: "IN_PROGRESS",
+          priority: "NORMAL",
+        },
+        service: {
+          subscriptionServiceId: "subscription-service-1",
+          hoursAllocated: 20,
+          monthlyService: {
+            id: "service-1",
+            code: "M-SVC",
+            revisionId: "service-revision-1",
+            nameAr: "خدمة",
+            nameEn: "Monthly service",
+          },
+          serviceLevel: {
+            id: "level-1",
+            code: "GROWTH",
+            labelAr: "نمو",
+            labelEn: "Growth",
+          },
+          serviceItem: null,
+        },
+      },
+    ],
+  };
+}
+
+function monthlyUsage(): MonthlyUsageResponse {
+  const currentLedger = ledger();
+  return {
+    generatedAt: currentLedger.generatedAt,
+    period: currentLedger.period,
+    totals: currentLedger.totals,
+    clients: currentLedger.byClient,
+  };
+}
+
+function closing(): MonthlyClosing {
+  return {
+    id: "closing-1",
+    client: {
+      id: "client-1",
+      code: "CLIENT-1",
+      name: "Client One",
+      sector: "Technology",
+      city: "Riyadh",
+    },
+    periodStart: "2026-06-01T00:00:00.000Z",
+    periodEnd: "2026-07-01T00:00:00.000Z",
+    period: "2026-06",
+    status: "DRAFT",
+    title: "June closing",
+    summary: { totals: ledger().totals },
+    preparedBy: { id: "am-1", email: "am@example.com", displayName: "Account Manager" },
+    finalizedBy: null,
+    preparedAt: "2026-06-23T00:00:00.000Z",
+    finalizedAt: null,
+    archivedAt: null,
+    createdAt: "2026-06-23T00:00:00.000Z",
+    updatedAt: "2026-06-23T00:00:00.000Z",
+  };
+}
+
 describe("Operations foundation UI", () => {
   it("renders authenticated-user notifications without external channels", () => {
     render(<NotificationInbox initial={notifications()} />);
@@ -162,5 +294,23 @@ describe("Operations foundation UI", () => {
     expect(screen.getByRole("heading", { name: "Client portfolio" })).toBeInTheDocument();
     expect(screen.getByText("Needs attention")).toBeInTheDocument();
     expect(screen.getByText("REQ-1")).toBeInTheDocument();
+  });
+
+  it("renders the internal hours ledger and monthly closing foundation", () => {
+    render(
+      <HoursLedger
+        canManageClosings
+        initialClosings={[closing()]}
+        initialLedger={ledger()}
+        initialUsage={monthlyUsage()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Hours ledger and monthly closing" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("June closing")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Finalize and lock" })).toBeInTheDocument();
+    expect(screen.getByText("Monthly service")).toBeInTheDocument();
   });
 });

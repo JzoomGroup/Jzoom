@@ -183,6 +183,12 @@ enum MonthlyReportStatus {
   ARCHIVED
 }
 
+enum MonthlyClosingStatus {
+  DRAFT
+  FINALIZED
+  ARCHIVED
+}
+
 enum JobStatus {
   PENDING
   VALIDATING
@@ -337,50 +343,52 @@ model RolePermission {
 }
 
 model User {
-  id                     String                   @id @default(uuid()) @db.Uuid
-  email                  String                   @unique
-  passwordHash           String?
-  displayName            String
-  preferredLocale        String                   @default("ar")
-  userType               UserType
-  status                 UserStatus               @default(INVITED)
-  failedLoginCount       Int                      @default(0)
-  lockedUntil            DateTime?
-  passwordChangedAt      DateTime?
-  sessionVersion         Int                      @default(1)
-  lastLoginAt            DateTime?
-  archivedAt             DateTime?
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
-  roles                  UserRole[]
-  permissionOverrides    UserPermissionOverride[]
-  scopes                 UserScope[]
-  clientAssignments      ClientAssignment[]
-  comments               Comment[]
-  internalNotes          InternalNote[]
-  uploadedFiles          FileMetadata[]
-  timeEntries            TimeEntry[]
-  notifications          Notification[]
-  auditLogs              AuditLog[]
-  authSessions           AuthSession[]
-  authTokens             AuthToken[]              @relation("AuthTokenUser")
-  createdAuthTokens      AuthToken[]              @relation("AuthTokenCreator")
-  createdPricingDrafts   PricingDraft[]           @relation("PricingDraftCreator")
-  updatedPricingDrafts   PricingDraft[]           @relation("PricingDraftUpdater")
-  createdQuotes          Quote[]                  @relation("QuoteCreator")
-  createdInvoices        Invoice[]                @relation("InvoiceCreator")
-  specialistRequests     Request[]                @relation("RequestAssignedSpecialist")
-  supervisorRequests     Request[]                @relation("RequestAssignedSupervisor")
-  accountManagedRequests Request[]                @relation("RequestAccountManager")
-  assignedTasks          Task[]                   @relation("TaskAssignee")
-  createdRequestOutputs  RequestOutput[]          @relation("RequestOutputCreator")
-  reviewedRequestOutputs RequestOutput[]          @relation("RequestOutputReviewer")
-  sharedRequestOutputs   RequestOutput[]          @relation("RequestOutputSharer")
-  decidedRequestOutputs  RequestOutput[]          @relation("RequestOutputClientDecision")
-  requestedDocuments     ClientDocumentRequest[]  @relation("ClientDocumentRequester")
-  fulfilledDocuments     ClientDocumentRequest[]  @relation("ClientDocumentFulfiller")
-  decidedTimeEntries     TimeEntry[]              @relation("TimeEntryDecider")
-  preparedMonthlyReports ClientMonthlyReport[]    @relation("MonthlyReportPreparer")
+  id                       String                   @id @default(uuid()) @db.Uuid
+  email                    String                   @unique
+  passwordHash             String?
+  displayName              String
+  preferredLocale          String                   @default("ar")
+  userType                 UserType
+  status                   UserStatus               @default(INVITED)
+  failedLoginCount         Int                      @default(0)
+  lockedUntil              DateTime?
+  passwordChangedAt        DateTime?
+  sessionVersion           Int                      @default(1)
+  lastLoginAt              DateTime?
+  archivedAt               DateTime?
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+  roles                    UserRole[]
+  permissionOverrides      UserPermissionOverride[]
+  scopes                   UserScope[]
+  clientAssignments        ClientAssignment[]
+  comments                 Comment[]
+  internalNotes            InternalNote[]
+  uploadedFiles            FileMetadata[]
+  timeEntries              TimeEntry[]
+  notifications            Notification[]
+  auditLogs                AuditLog[]
+  authSessions             AuthSession[]
+  authTokens               AuthToken[]              @relation("AuthTokenUser")
+  createdAuthTokens        AuthToken[]              @relation("AuthTokenCreator")
+  createdPricingDrafts     PricingDraft[]           @relation("PricingDraftCreator")
+  updatedPricingDrafts     PricingDraft[]           @relation("PricingDraftUpdater")
+  createdQuotes            Quote[]                  @relation("QuoteCreator")
+  createdInvoices          Invoice[]                @relation("InvoiceCreator")
+  specialistRequests       Request[]                @relation("RequestAssignedSpecialist")
+  supervisorRequests       Request[]                @relation("RequestAssignedSupervisor")
+  accountManagedRequests   Request[]                @relation("RequestAccountManager")
+  assignedTasks            Task[]                   @relation("TaskAssignee")
+  createdRequestOutputs    RequestOutput[]          @relation("RequestOutputCreator")
+  reviewedRequestOutputs   RequestOutput[]          @relation("RequestOutputReviewer")
+  sharedRequestOutputs     RequestOutput[]          @relation("RequestOutputSharer")
+  decidedRequestOutputs    RequestOutput[]          @relation("RequestOutputClientDecision")
+  requestedDocuments       ClientDocumentRequest[]  @relation("ClientDocumentRequester")
+  fulfilledDocuments       ClientDocumentRequest[]  @relation("ClientDocumentFulfiller")
+  decidedTimeEntries       TimeEntry[]              @relation("TimeEntryDecider")
+  preparedMonthlyReports   ClientMonthlyReport[]    @relation("MonthlyReportPreparer")
+  preparedMonthlyClosings  ClientMonthlyClosing[]   @relation("MonthlyClosingPreparer")
+  finalizedMonthlyClosings ClientMonthlyClosing[]   @relation("MonthlyClosingFinalizer")
 
   @@index([status])
   @@index([lockedUntil])
@@ -501,6 +509,7 @@ model Client {
   hourTransactions       HourLedgerTransaction[]
   pricingDrafts          PricingDraft[]
   monthlyReports         ClientMonthlyReport[]
+  monthlyClosings        ClientMonthlyClosing[]
 
   @@index([status])
   @@index([sector])
@@ -2024,6 +2033,32 @@ model ClientMonthlyReport {
   @@index([clientId, status, periodStart])
   @@index([preparedById, status])
   @@map("client_monthly_reports")
+}
+
+model ClientMonthlyClosing {
+  id              String               @id @default(uuid()) @db.Uuid
+  clientId        String               @db.Uuid
+  periodStart     DateTime
+  periodEnd       DateTime
+  status          MonthlyClosingStatus @default(DRAFT)
+  title           String
+  summarySnapshot Json
+  preparedById    String?              @db.Uuid
+  finalizedById   String?              @db.Uuid
+  preparedAt      DateTime?
+  finalizedAt     DateTime?
+  archivedAt      DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  client          Client               @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  preparedBy      User?                @relation("MonthlyClosingPreparer", fields: [preparedById], references: [id], onDelete: SetNull)
+  finalizedBy     User?                @relation("MonthlyClosingFinalizer", fields: [finalizedById], references: [id], onDelete: SetNull)
+
+  @@unique([clientId, periodStart])
+  @@index([clientId, status, periodStart])
+  @@index([preparedById, status])
+  @@index([finalizedById, status])
+  @@map("client_monthly_closings")
 }
 
 model AuditLog {

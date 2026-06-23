@@ -107,6 +107,16 @@ export class ReportsService {
     this.assertInternalClientAccess(input.clientId, principal);
     const client = await this.requireActiveClient(input.clientId);
     const period = this.periodFromKey(input.period);
+    const existing = await this.database.prisma.clientMonthlyReport.findUnique({
+      where: { clientId_periodStart: { clientId: input.clientId, periodStart: period.start } },
+      select: { id: true, status: true },
+    });
+    if (existing?.status === "PUBLISHED") {
+      throw new BadRequestException({
+        code: "MONTHLY_REPORT_ALREADY_PUBLISHED",
+        message: "Published monthly report snapshots cannot be refreshed",
+      });
+    }
     const summary = await this.buildMonthlySummary(input.clientId, period.start, period.end);
     const title = input.title?.trim() || `Monthly report ${period.key} - ${client.name}`;
     const report = await this.database.prisma.clientMonthlyReport.upsert({
@@ -384,6 +394,7 @@ export class ReportsService {
       outputGroups,
       documentGroups,
       timeGroups,
+      finalizedClosing,
       recentActivity,
       requestTotal,
       outputTotal,
@@ -409,6 +420,17 @@ export class ReportsService {
         where: { request: { clientId }, workDate: { gte: start, lt: end } },
         _sum: { hours: true },
         _count: { _all: true },
+      }),
+      this.database.prisma.clientMonthlyClosing.findFirst({
+        where: { clientId, periodStart: start, status: "FINALIZED" },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          summarySnapshot: true,
+          preparedAt: true,
+          finalizedAt: true,
+        },
       }),
       this.database.prisma.workflowEvent.findMany({
         where: {
@@ -441,6 +463,10 @@ export class ReportsService {
         where: { request: { clientId }, createdAt: { gte: start, lt: end } },
       }),
     ]);
+    const liveHoursSummary = this.liveHoursSummary(timeGroups);
+    const closingHoursSummary = finalizedClosing
+      ? this.hoursSummaryFromClosing(finalizedClosing.summarySnapshot)
+      : null;
     return {
       client,
       period: {
@@ -460,19 +486,17 @@ export class ReportsService {
         total: documentTotal,
         byStatus: Object.fromEntries(documentGroups.map((row) => [row.status, row._count._all])),
       },
-      hours: {
-        entries: timeGroups.reduce((total, row) => total + row._count._all, 0),
-        byStatus: Object.fromEntries(
-          timeGroups.map((row) => [
-            row.status,
-            {
-              count: row._count._all,
-              hours: Number(row._sum.hours ?? 0),
-            },
-          ]),
-        ),
-        total: timeGroups.reduce((total, row) => total + Number(row._sum.hours ?? 0), 0),
-      },
+      hours: closingHoursSummary ?? liveHoursSummary,
+      monthlyClosing: finalizedClosing
+        ? {
+            id: finalizedClosing.id,
+            title: finalizedClosing.title,
+            status: finalizedClosing.status,
+            source: "FINALIZED_CLOSING",
+            preparedAt: finalizedClosing.preparedAt?.toISOString() ?? null,
+            finalizedAt: finalizedClosing.finalizedAt?.toISOString() ?? null,
+          }
+        : null,
       recentClientSafeActivity: recentActivity.map((event) => ({
         id: event.id,
         reason: event.reason,
@@ -481,6 +505,72 @@ export class ReportsService {
         request: event.request,
       })),
     };
+  }
+
+  private liveHoursSummary(
+    timeGroups: Array<{
+      _count: { _all: number };
+      _sum: { hours: { toString(): string } | null };
+      status: string;
+    }>,
+  ) {
+    const byStatus = Object.fromEntries(
+      timeGroups.map((row) => [
+        row.status,
+        {
+          count: row._count._all,
+          hours: Number(row._sum.hours ?? 0),
+        },
+      ]),
+    ) as Record<string, { count: number; hours: number }>;
+    return {
+      entries: timeGroups.reduce((total, row) => total + row._count._all, 0),
+      byStatus,
+      total: timeGroups.reduce((total, row) => total + Number(row._sum.hours ?? 0), 0),
+      approvedTotal: byStatus.APPROVED?.hours ?? 0,
+      source: "LIVE_TIME_ENTRIES",
+    };
+  }
+
+  private hoursSummaryFromClosing(value: unknown) {
+    if (!value || typeof value !== "object") {
+      return null;
+    }
+    const summary = value as {
+      byStatus?: Record<string, { entries?: unknown; hours?: unknown }>;
+      totals?: {
+        approvedHours?: unknown;
+        billableHours?: unknown;
+        entries?: unknown;
+        hours?: unknown;
+        nonBillableHours?: unknown;
+      };
+    };
+    if (!summary.totals) {
+      return null;
+    }
+    const byStatus = Object.fromEntries(
+      Object.entries(summary.byStatus ?? {}).map(([status, bucket]) => [
+        status,
+        {
+          count: this.numberFrom(bucket.entries),
+          hours: this.numberFrom(bucket.hours),
+        },
+      ]),
+    );
+    return {
+      entries: this.numberFrom(summary.totals.entries),
+      byStatus,
+      total: this.numberFrom(summary.totals.hours),
+      approvedTotal: this.numberFrom(summary.totals.approvedHours),
+      billableHours: this.numberFrom(summary.totals.billableHours),
+      nonBillableHours: this.numberFrom(summary.totals.nonBillableHours),
+      source: "FINALIZED_CLOSING",
+    };
+  }
+
+  private numberFrom(value: unknown): number {
+    return typeof value === "number" && Number.isFinite(value) ? value : 0;
   }
 
   private internalClientAccess(principal: AuthenticatedPrincipal): string[] | undefined {

@@ -132,8 +132,13 @@ export function MonthlyReports({ initialReports }: { initialReports: MonthlyRepo
                 <span>Documents</span>
                 <strong>{countFrom(report, "documentRequests")}</strong>
                 <span>Hours</span>
-                <strong>{report.summary.hours?.total ?? 0}</strong>
+                <strong>
+                  {report.summary.hours?.approvedTotal ?? report.summary.hours?.total ?? 0}
+                </strong>
               </div>
+              {report.summary.monthlyClosing && (
+                <p>Uses finalized closing snapshot: {report.summary.monthlyClosing.title}</p>
+              )}
               <div className="entity-card-actions">
                 {report.status !== "PUBLISHED" && (
                   <button type="button" disabled={saving} onClick={() => publish(report.id)}>

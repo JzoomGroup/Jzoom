@@ -2,7 +2,10 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type {
   AccountManagerPortfolio,
+  HoursLedgerResponse,
   MonthlyReport,
+  MonthlyClosing,
+  MonthlyUsageResponse,
   NotificationListResponse,
 } from "./operations-types";
 
@@ -54,4 +57,16 @@ export function requireAccountManagerPortfolio(): Promise<AccountManagerPortfoli
     "account-manager/portfolio",
     "/account-manager",
   );
+}
+
+export function requireHoursLedger(): Promise<HoursLedgerResponse> {
+  return requireOperationsResponse<HoursLedgerResponse>("hours-ledger", "/hours-ledger");
+}
+
+export function requireMonthlyUsage(): Promise<MonthlyUsageResponse> {
+  return requireOperationsResponse<MonthlyUsageResponse>("hours-ledger/usage", "/hours-ledger");
+}
+
+export function requireMonthlyClosings(): Promise<MonthlyClosing[]> {
+  return requireOperationsResponse<MonthlyClosing[]>("hours-ledger/closings", "/hours-ledger");
 }
