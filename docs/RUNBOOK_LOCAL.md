@@ -21,7 +21,7 @@ corepack prepare pnpm@11.8.0 --activate
 ## Clone and install
 
 ```powershell
-git clone https://github.com/Swayyan/Jzoom.git
+git clone https://github.com/JzoomGroup/Jzoom.git
 Set-Location Jzoom
 Copy-Item .env.example .env
 pnpm install
