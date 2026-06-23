@@ -289,6 +289,14 @@ export async function seedBlueprint(
             "Create immutable invoices from accepted quote snapshots and manage invoice lifecycle.",
           roleCodes: ["ROLE-ADMIN", "ROLE-AM"],
         },
+        {
+          code: "PERM-MANAGE-PLATFORM-CONFIGURATION",
+          name: "Manage Platform Configuration",
+          action: "manage_platform_configuration",
+          description:
+            "Manage revision-safe platform settings, labels, templates, and workflow configuration.",
+          roleCodes: ["ROLE-ADMIN"],
+        },
       ] as const;
       for (const [index, permission] of pricingPermissions.entries()) {
         const record = await tx.permission.upsert({

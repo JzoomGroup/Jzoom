@@ -20,10 +20,10 @@ export default async function SettingsPage() {
         <p className="eyebrow">Admin only</p>
         <h1 id="settings-title">Platform settings</h1>
         <p className="lead">
-          Access is enforced by the API. Configuration modules will be added in their approved PRs.
+          Access is enforced by the API. Platform configuration is managed from the Admin Console.
         </p>
-        <Link className="button-link" href="/admin/catalog">
-          Open Admin Console
+        <Link className="button-link" href="/admin/platform-configuration">
+          Open platform configuration
         </Link>
         <LogoutButton />
       </section>

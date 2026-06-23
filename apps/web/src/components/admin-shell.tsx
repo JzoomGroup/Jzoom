@@ -11,6 +11,7 @@ const navigation = [
   { href: "/admin/catalog/one-time-categories", label: "One-time categories" },
   { href: "/admin/catalog/one-time-services", label: "One-time services" },
   { href: "/admin/pricing-rules", label: "Pricing rules" },
+  { href: "/admin/platform-configuration", label: "Platform configuration" },
   { href: "/pricing", label: "Pricing Studio" },
 ] as const;
 
