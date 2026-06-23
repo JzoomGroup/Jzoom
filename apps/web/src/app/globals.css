@@ -1555,9 +1555,24 @@ h1 {
 }
 
 .status-completed,
-.status-closed {
+.status-closed,
+.status-published,
+.status-healthy {
   background: #e3f5ea;
   color: #15683a;
+}
+
+.status-draft,
+.status-prepared,
+.status-watch {
+  background: #fff7dd;
+  color: #806000;
+}
+
+.status-archived,
+.status-attention {
+  background: #fff0ed;
+  color: #9c2017;
 }
 
 @media (max-width: 680px) {

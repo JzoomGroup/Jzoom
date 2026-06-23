@@ -7,6 +7,8 @@ const navigation = [
   { href: "/client/quotes", label: "Quotes" },
   { href: "/client/invoices", label: "Invoices" },
   { href: "/client/requests", label: "Requests" },
+  { href: "/client/reports", label: "Reports" },
+  { href: "/notifications", label: "Notifications" },
 ] as const;
 
 export function ClientShell({

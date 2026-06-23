@@ -11,7 +11,9 @@ import { Prisma } from "@jzoom/database";
 import { ADMIN_ROLE_CODE, MANAGEMENT_ROLE_CODE } from "../auth/auth.constants.js";
 import { AuthAuditService } from "../auth/audit.service.js";
 import type { AuthenticatedPrincipal, RequestMetadata } from "../auth/auth.types.js";
+import { CLIENT_ROLE_CODE } from "../client-portal/client-portal.constants.js";
 import { DatabaseService } from "../database/database.service.js";
+import { NotificationsService } from "../notifications/notifications.service.js";
 import {
   ACCOUNT_MANAGER_ROLE_CODE,
   CLIENT_VISIBLE_OUTPUT_STATUSES,
@@ -249,11 +251,16 @@ function primaryRole(principal: AuthenticatedPrincipal): string {
   return principal.roles[0] ?? "UNKNOWN";
 }
 
+function unique(values: Array<string | null | undefined>): string[] {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))];
+}
+
 @Injectable()
 export class RequestsService {
   constructor(
     @Inject(DatabaseService) private readonly database: DatabaseService,
     @Inject(AuthAuditService) private readonly audit: AuthAuditService,
+    @Inject(NotificationsService) private readonly notifications: NotificationsService,
   ) {}
 
   async list(principal: AuthenticatedPrincipal) {
@@ -364,6 +371,13 @@ export class RequestsService {
       },
       metadata,
     );
+    await this.notifyInternalRequestStakeholders(
+      request,
+      principal,
+      REQUEST_EVENT.created,
+      `New request ${request.requestNumber}: ${request.title}`,
+      { status: request.status },
+    );
 
     return this.detailView(request, false);
   }
@@ -407,6 +421,14 @@ export class RequestsService {
         ...(input.reason ? { reason: input.reason } : {}),
       },
       metadata,
+    );
+    await this.notifyInternalRequestStakeholders(
+      updated,
+      principal,
+      REQUEST_EVENT.assignmentChanged,
+      `Request ${updated.requestNumber} assignment changed.`,
+      { status: updated.status },
+      unique([assignedSpecialistId, assignedSupervisorId, accountManagerId]),
     );
     return this.detailView(updated, false);
   }
@@ -758,6 +780,13 @@ export class RequestsService {
       },
       metadata,
     );
+    await this.notifyInternalRequestStakeholders(
+      request,
+      principal,
+      REQUEST_EVENT.outputSubmitted,
+      `Output "${updated.title}" is ready for internal review.`,
+      { outputId: updated.id, status: updated.status },
+    );
     if (request.status === "IN_PROGRESS") {
       await this.transitionRequest(
         request,
@@ -808,6 +837,14 @@ export class RequestsService {
       },
       metadata,
     );
+    await this.notifyInternalRequestStakeholders(
+      request,
+      principal,
+      REQUEST_EVENT.outputReviewed,
+      `Output "${updated.title}" was ${updated.status.toLowerCase().replaceAll("_", " ")}.`,
+      { outputId: updated.id, status: updated.status },
+      [output.createdById],
+    );
     return this.get(id, principal);
   }
 
@@ -854,6 +891,15 @@ export class RequestsService {
       input.reason ?? "Output shared with client",
       { outputId: updated.id, status: updated.status },
     );
+    await this.notifyClientRequestUsers(
+      request,
+      principal,
+      REQUEST_EVENT.outputShared,
+      `A new output is ready for review on request ${request.requestNumber}.`,
+      `تمت مشاركة مخرج جديد للمراجعة على الطلب ${request.requestNumber}.`,
+      { outputId: updated.id, status: updated.status },
+      `/client/requests/${request.id}`,
+    );
     return this.get(id, principal);
   }
 
@@ -899,6 +945,13 @@ export class RequestsService {
       principal,
       REQUEST_EVENT.outputClosed,
       input.reason ?? "Output closed",
+      { outputId: updated.id, status: updated.status },
+    );
+    await this.notifyInternalRequestStakeholders(
+      request,
+      principal,
+      REQUEST_EVENT.outputClosed,
+      `Output "${updated.title}" was closed.`,
       { outputId: updated.id, status: updated.status },
     );
     return this.get(id, principal);
@@ -1000,6 +1053,13 @@ export class RequestsService {
       "Client accepted shared output",
       { outputId: updated.id, status: updated.status },
     );
+    await this.notifyInternalRequestStakeholders(
+      request,
+      principal,
+      REQUEST_EVENT.outputClientAccepted,
+      `Client accepted output "${updated.title}".`,
+      { outputId: updated.id, status: updated.status },
+    );
     const refreshed = await this.requireClientRequest(id, principal);
     return this.detailView(refreshed, true);
   }
@@ -1041,6 +1101,13 @@ export class RequestsService {
       "Client returned shared output",
       { outputId: updated.id, status: updated.status },
     );
+    await this.notifyInternalRequestStakeholders(
+      request,
+      principal,
+      REQUEST_EVENT.outputClientReturned,
+      `Client returned output "${updated.title}".`,
+      { outputId: updated.id, status: updated.status },
+    );
     const refreshed = await this.requireClientRequest(id, principal);
     return this.detailView(refreshed, true);
   }
@@ -1077,6 +1144,15 @@ export class RequestsService {
       REQUEST_EVENT.documentRequested,
       "Client document requested",
       { documentRequestId: documentRequest.id, status: documentRequest.status },
+    );
+    await this.notifyClientRequestUsers(
+      request,
+      principal,
+      REQUEST_EVENT.documentRequested,
+      `Document requested for request ${request.requestNumber}: ${documentRequest.title}`,
+      `مطلوب مستند للطلب ${request.requestNumber}: ${documentRequest.title}`,
+      { documentRequestId: documentRequest.id, status: documentRequest.status },
+      `/client/requests/${request.id}`,
     );
     return this.get(id, principal);
   }
@@ -1128,6 +1204,15 @@ export class RequestsService {
       REQUEST_EVENT.documentRequestCancelled,
       input.reason ?? `Document request ${input.status.toLowerCase()}`,
       { documentRequestId: updated.id, status: updated.status },
+    );
+    await this.notifyClientRequestUsers(
+      request,
+      principal,
+      REQUEST_EVENT.documentRequestCancelled,
+      `Document request "${updated.title}" is ${updated.status.toLowerCase()}.`,
+      `طلب المستند "${updated.title}" أصبح ${updated.status.toLowerCase()}.`,
+      { documentRequestId: updated.id, status: updated.status },
+      `/client/requests/${request.id}`,
     );
     return this.get(id, principal);
   }
@@ -1185,6 +1270,13 @@ export class RequestsService {
       principal,
       REQUEST_EVENT.documentUploaded,
       "Client uploaded requested document metadata",
+      { documentRequestId: updated.id, fileId: file.id, status: updated.status },
+    );
+    await this.notifyInternalRequestStakeholders(
+      request,
+      principal,
+      REQUEST_EVENT.documentUploaded,
+      `Client uploaded requested document "${updated.title}".`,
       { documentRequestId: updated.id, fileId: file.id, status: updated.status },
     );
     const refreshed = await this.requireClientRequest(id, principal);
@@ -1325,6 +1417,13 @@ export class RequestsService {
       "Time entry submitted",
       { timeEntryId: updated.id, status: updated.status },
     );
+    await this.notifyInternalRequestStakeholders(
+      request,
+      principal,
+      REQUEST_EVENT.timeEntrySubmitted,
+      `Time entry submitted for request ${request.requestNumber}.`,
+      { timeEntryId: updated.id, status: updated.status },
+    );
     return this.get(id, principal);
   }
 
@@ -1372,6 +1471,14 @@ export class RequestsService {
       REQUEST_EVENT.timeEntryReviewed,
       input.reason ?? `Time entry ${updated.status.toLowerCase()}`,
       { timeEntryId: updated.id, status: updated.status },
+    );
+    await this.notifyInternalRequestStakeholders(
+      request,
+      principal,
+      REQUEST_EVENT.timeEntryReviewed,
+      `Time entry was ${updated.status.toLowerCase()}.`,
+      { timeEntryId: updated.id, status: updated.status },
+      [entry.userId],
     );
     return this.get(id, principal);
   }
@@ -1582,6 +1689,24 @@ export class RequestsService {
       },
       metadata,
     );
+    await this.notifyInternalRequestStakeholders(
+      updated,
+      principal,
+      REQUEST_EVENT.statusChanged,
+      `Request ${updated.requestNumber} moved to ${status.toLowerCase().replaceAll("_", " ")}.`,
+      { fromStatus: request.status, toStatus: status },
+    );
+    if (status === "WAITING_CLIENT") {
+      await this.notifyClientRequestUsers(
+        updated,
+        principal,
+        REQUEST_EVENT.statusChanged,
+        `Request ${updated.requestNumber} is waiting for your input.`,
+        `الطلب ${updated.requestNumber} بانتظار إجراء من طرفكم.`,
+        { fromStatus: request.status, toStatus: status },
+        `/client/requests/${updated.id}`,
+      );
+    }
     const refreshed = await this.requireAccessibleRequest(request.id, principal);
     return this.detailView(refreshed, false);
   }
@@ -1728,6 +1853,89 @@ export class RequestsService {
         metadata: json({ eventCode, ...metadata }),
       },
     });
+  }
+
+  private async notifyInternalRequestStakeholders(
+    request: RequestDetailRecord,
+    principal: AuthenticatedPrincipal,
+    event: string,
+    messageEn: string,
+    payload: Record<string, unknown>,
+    extraRecipients: string[] = [],
+  ): Promise<void> {
+    const recipientUserIds = unique([
+      request.assignedSpecialistId,
+      request.assignedSupervisorId,
+      request.accountManagerId,
+      ...extraRecipients,
+    ]).filter((userId) => userId !== principal.userId);
+    await this.notifications.notifyUsers({
+      aggregateType: "Request",
+      aggregateId: request.id,
+      event,
+      targetType: "Request",
+      targetId: request.id,
+      messageEn,
+      deepLink: `/requests/${request.id}`,
+      recipientUserIds,
+      payload: {
+        requestId: request.id,
+        requestNumber: request.requestNumber,
+        status: request.status,
+        ...payload,
+      },
+    });
+  }
+
+  private async notifyClientRequestUsers(
+    request: RequestDetailRecord,
+    principal: AuthenticatedPrincipal,
+    event: string,
+    messageEn: string,
+    messageAr: string,
+    payload: Record<string, unknown>,
+    deepLink: string,
+  ): Promise<void> {
+    const recipientUserIds = (await this.clientUserIds(request.clientId)).filter(
+      (userId) => userId !== principal.userId,
+    );
+    await this.notifications.notifyUsers({
+      aggregateType: "Request",
+      aggregateId: request.id,
+      event,
+      targetType: "Request",
+      targetId: request.id,
+      messageEn,
+      messageAr,
+      deepLink,
+      recipientUserIds,
+      payload: {
+        requestId: request.id,
+        requestNumber: request.requestNumber,
+        status: request.status,
+        ...payload,
+      },
+    });
+  }
+
+  private async clientUserIds(clientId: string): Promise<string[]> {
+    const now = new Date();
+    const users = await this.database.prisma.user.findMany({
+      where: {
+        status: "ACTIVE",
+        userType: "EXTERNAL",
+        clientAssignments: {
+          some: {
+            clientId,
+            roleCode: CLIENT_ROLE_CODE,
+            startsAt: { lte: now },
+            OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+          },
+        },
+      },
+      select: { id: true },
+    });
+    return users.map((user) => user.id);
   }
 
   private internalAccessWhere(principal: AuthenticatedPrincipal): Prisma.RequestWhereInput {
