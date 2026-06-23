@@ -4,6 +4,7 @@ import {
   IsDateString,
   IsIn,
   IsInt,
+  IsNumber,
   IsObject,
   IsOptional,
   IsString,
@@ -16,12 +17,15 @@ import {
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
+  CLIENT_DOCUMENT_REQUEST_STATUSES,
   REQUEST_OUTPUT_REVIEW_ACTIONS,
   REQUEST_PRIORITIES,
   REQUEST_QUEUE_TYPES,
   REQUEST_STATUSES,
   REQUEST_TASK_STATUSES,
   SUPERVISOR_REVIEW_ACTIONS,
+  TIME_ENTRY_REVIEW_ACTIONS,
+  TIME_ENTRY_STATUSES,
 } from "./requests.constants.js";
 
 const REQUEST_OUTPUT_CODE_PATTERN = /^[A-Z0-9][A-Z0-9_-]{1,79}$/;
@@ -341,6 +345,155 @@ export class ReviewRequestOutputDto {
   @ApiProperty({ enum: REQUEST_OUTPUT_REVIEW_ACTIONS })
   @IsIn(REQUEST_OUTPUT_REVIEW_ACTIONS)
   action!: (typeof REQUEST_OUTPUT_REVIEW_ACTIONS)[number];
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  reason?: string;
+}
+
+export class ShareRequestOutputDto {
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  reason?: string;
+}
+
+export class ReturnSharedOutputDto {
+  @ApiProperty({ type: String })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(2_000)
+  reason!: string;
+}
+
+export class CloseRequestOutputDto {
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  reason?: string;
+}
+
+export class RequestClientDocumentDto {
+  @ApiProperty({ type: String })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(240)
+  title!: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  @MaxLength(4_000)
+  instructions?: string;
+
+  @ApiPropertyOptional({ type: String, format: "date-time" })
+  @IsOptional()
+  @IsDateString()
+  dueAt?: string;
+}
+
+export class UploadClientDocumentMetadataDto {
+  @ApiProperty({ type: String })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(260)
+  originalName!: string;
+
+  @ApiProperty({ type: String })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(160)
+  mimeType!: string;
+
+  @ApiProperty({ type: Number, minimum: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_647)
+  sizeBytes!: number;
+
+  @ApiProperty({ type: String })
+  @IsString()
+  @MinLength(64)
+  @MaxLength(64)
+  sha256!: string;
+}
+
+export class ClientDocumentRequestStatusDto {
+  @ApiProperty({ enum: CLIENT_DOCUMENT_REQUEST_STATUSES })
+  @IsIn(CLIENT_DOCUMENT_REQUEST_STATUSES)
+  status!: (typeof CLIENT_DOCUMENT_REQUEST_STATUSES)[number];
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  reason?: string;
+}
+
+export class CreateTimeEntryDto {
+  @ApiProperty({ type: String, format: "date-time" })
+  @IsDateString()
+  workDate!: string;
+
+  @ApiProperty({ type: Number, minimum: 0.01, maximum: 24 })
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
+  @Max(24)
+  hours!: number;
+
+  @ApiPropertyOptional({ type: Boolean, default: true })
+  @IsOptional()
+  @IsBoolean()
+  billable?: boolean;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  notes?: string;
+}
+
+export class UpdateTimeEntryDto {
+  @ApiPropertyOptional({ type: String, format: "date-time" })
+  @IsOptional()
+  @IsDateString()
+  workDate?: string;
+
+  @ApiPropertyOptional({ type: Number, minimum: 0.01, maximum: 24 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
+  @Max(24)
+  hours?: number;
+
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  billable?: boolean;
+
+  @ApiPropertyOptional({ enum: TIME_ENTRY_STATUSES })
+  @IsOptional()
+  @IsIn(TIME_ENTRY_STATUSES)
+  status?: (typeof TIME_ENTRY_STATUSES)[number];
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  notes?: string | null;
+}
+
+export class ReviewTimeEntryDto {
+  @ApiProperty({ enum: TIME_ENTRY_REVIEW_ACTIONS })
+  @IsIn(TIME_ENTRY_REVIEW_ACTIONS)
+  action!: (typeof TIME_ENTRY_REVIEW_ACTIONS)[number];
 
   @ApiPropertyOptional({ type: String })
   @IsOptional()

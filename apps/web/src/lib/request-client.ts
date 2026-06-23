@@ -85,7 +85,14 @@ export function createRequestTask(
     dueAt?: string;
     priority?: "LOW" | "NORMAL" | "HIGH" | "URGENT";
     sortOrder?: number;
-    status?: "TODO" | "IN_PROGRESS" | "DONE" | "BLOCKED" | "CANCELLED";
+    status?:
+      | "PENDING"
+      | "TODO"
+      | "IN_PROGRESS"
+      | "DONE"
+      | "NOT_APPLICABLE"
+      | "BLOCKED"
+      | "CANCELLED";
     title: string;
   },
 ): Promise<ServiceRequest> {
@@ -104,7 +111,14 @@ export function updateRequestTask(
     dueAt?: string | null;
     priority?: "LOW" | "NORMAL" | "HIGH" | "URGENT";
     sortOrder?: number;
-    status?: "TODO" | "IN_PROGRESS" | "DONE" | "BLOCKED" | "CANCELLED";
+    status?:
+      | "PENDING"
+      | "TODO"
+      | "IN_PROGRESS"
+      | "DONE"
+      | "NOT_APPLICABLE"
+      | "BLOCKED"
+      | "CANCELLED";
     title?: string;
   },
 ): Promise<ServiceRequest> {
@@ -167,6 +181,108 @@ export function reviewRequestOutput(
   });
 }
 
+export function shareRequestOutput(
+  id: string,
+  outputId: string,
+  reason?: string,
+): Promise<ServiceRequest> {
+  return catalogRequest<ServiceRequest>(`requests/${id}/outputs/${outputId}/share`, {
+    method: "POST",
+    body: JSON.stringify({ ...(reason ? { reason } : {}) }),
+  });
+}
+
+export function closeRequestOutput(
+  id: string,
+  outputId: string,
+  reason?: string,
+): Promise<ServiceRequest> {
+  return catalogRequest<ServiceRequest>(`requests/${id}/outputs/${outputId}/close`, {
+    method: "POST",
+    body: JSON.stringify({ ...(reason ? { reason } : {}) }),
+  });
+}
+
+export function requestClientDocument(
+  id: string,
+  input: {
+    dueAt?: string;
+    instructions?: string;
+    title: string;
+  },
+): Promise<ServiceRequest> {
+  return catalogRequest<ServiceRequest>(`requests/${id}/document-requests`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function changeClientDocumentRequestStatus(
+  id: string,
+  documentRequestId: string,
+  status: "CANCELLED" | "CLOSED",
+  reason?: string,
+): Promise<ServiceRequest> {
+  return catalogRequest<ServiceRequest>(
+    `requests/${id}/document-requests/${documentRequestId}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status, ...(reason ? { reason } : {}) }),
+    },
+  );
+}
+
+export function createRequestTimeEntry(
+  id: string,
+  input: {
+    billable?: boolean;
+    hours: number;
+    notes?: string;
+    workDate: string;
+  },
+): Promise<ServiceRequest> {
+  return catalogRequest<ServiceRequest>(`requests/${id}/time-entries`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateRequestTimeEntry(
+  id: string,
+  timeEntryId: string,
+  input: {
+    billable?: boolean;
+    hours?: number;
+    notes?: string | null;
+    status?: "DRAFT" | "SUBMITTED";
+    workDate?: string;
+  },
+): Promise<ServiceRequest> {
+  return catalogRequest<ServiceRequest>(`requests/${id}/time-entries/${timeEntryId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function submitRequestTimeEntry(id: string, timeEntryId: string): Promise<ServiceRequest> {
+  return catalogRequest<ServiceRequest>(`requests/${id}/time-entries/${timeEntryId}/submit`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export function reviewRequestTimeEntry(
+  id: string,
+  timeEntryId: string,
+  action: "APPROVE" | "REJECT",
+  reason?: string,
+): Promise<ServiceRequest> {
+  return catalogRequest<ServiceRequest>(`requests/${id}/time-entries/${timeEntryId}/review`, {
+    method: "POST",
+    body: JSON.stringify({ action, ...(reason ? { reason } : {}) }),
+  });
+}
+
 export function addRequestComment(
   id: string,
   body: string,
@@ -206,4 +322,41 @@ export function addClientRequestComment(id: string, body: string): Promise<Servi
     method: "POST",
     body: JSON.stringify({ body, isClientVisible: true }),
   });
+}
+
+export function acceptClientRequestOutput(id: string, outputId: string): Promise<ServiceRequest> {
+  return catalogRequest<ServiceRequest>(`client-portal/requests/${id}/outputs/${outputId}/accept`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export function returnClientRequestOutput(
+  id: string,
+  outputId: string,
+  reason: string,
+): Promise<ServiceRequest> {
+  return catalogRequest<ServiceRequest>(`client-portal/requests/${id}/outputs/${outputId}/return`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export function uploadClientRequestedDocument(
+  id: string,
+  documentRequestId: string,
+  input: {
+    originalName: string;
+    mimeType: string;
+    sizeBytes: number;
+    sha256: string;
+  },
+): Promise<ServiceRequest> {
+  return catalogRequest<ServiceRequest>(
+    `client-portal/requests/${id}/document-requests/${documentRequestId}/upload`,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+  );
 }

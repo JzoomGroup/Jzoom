@@ -21,15 +21,24 @@ import {
   AddInternalNoteDto,
   AddRequestCommentDto,
   AssignRequestDto,
+  ClientDocumentRequestStatusDto,
+  CloseRequestOutputDto,
+  CreateTimeEntryDto,
   CreateRequestOutputDto,
   CreateRequestTaskDto,
   CreateRequestDto,
+  RequestClientDocumentDto,
   RequestQueueQueryDto,
   RequestStatusDto,
   ReviewRequestOutputDto,
+  ReviewTimeEntryDto,
+  ReturnSharedOutputDto,
+  ShareRequestOutputDto,
   SupervisorRequestReviewDto,
+  UpdateTimeEntryDto,
   UpdateRequestOutputDto,
   UpdateRequestTaskDto,
+  UploadClientDocumentMetadataDto,
 } from "./requests.dto.js";
 import {
   ACCOUNT_MANAGER_ROLE_CODE,
@@ -54,15 +63,24 @@ function metadata(request: RequestWithId): RequestMetadata {
   AddInternalNoteDto,
   AddRequestCommentDto,
   AssignRequestDto,
+  ClientDocumentRequestStatusDto,
+  CloseRequestOutputDto,
+  CreateTimeEntryDto,
   CreateRequestOutputDto,
   CreateRequestTaskDto,
   CreateRequestDto,
+  RequestClientDocumentDto,
   RequestQueueQueryDto,
   RequestStatusDto,
   ReviewRequestOutputDto,
+  ReviewTimeEntryDto,
+  ReturnSharedOutputDto,
+  ShareRequestOutputDto,
   SupervisorRequestReviewDto,
+  UpdateTimeEntryDto,
   UpdateRequestOutputDto,
   UpdateRequestTaskDto,
+  UploadClientDocumentMetadataDto,
 )
 @RequireRoles(
   ADMIN_ROLE_CODE,
@@ -250,6 +268,103 @@ export class RequestsController {
   ) {
     return this.requests.reviewOutput(id, outputId, input, request.auth!, metadata(request));
   }
+
+  @Post(":id/outputs/:outputId/share")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Share an internally approved output with the client" })
+  shareOutput(
+    @Param("id") id: string,
+    @Param("outputId") outputId: string,
+    @Body() input: ShareRequestOutputDto,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.shareOutput(id, outputId, input, request.auth!, metadata(request));
+  }
+
+  @Post(":id/outputs/:outputId/close")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Close a client delivery output after client workflow handling" })
+  closeOutput(
+    @Param("id") id: string,
+    @Param("outputId") outputId: string,
+    @Body() input: CloseRequestOutputDto,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.closeOutput(id, outputId, input, request.auth!, metadata(request));
+  }
+
+  @Post(":id/document-requests")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Request a document from the client for this request" })
+  requestClientDocument(
+    @Param("id") id: string,
+    @Body() input: RequestClientDocumentDto,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.requestClientDocument(id, input, request.auth!, metadata(request));
+  }
+
+  @Patch(":id/document-requests/:documentRequestId/status")
+  @ApiOperation({ summary: "Cancel or close a client document request" })
+  changeDocumentRequestStatus(
+    @Param("id") id: string,
+    @Param("documentRequestId") documentRequestId: string,
+    @Body() input: ClientDocumentRequestStatusDto,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.changeDocumentRequestStatus(
+      id,
+      documentRequestId,
+      input,
+      request.auth!,
+      metadata(request),
+    );
+  }
+
+  @Post(":id/time-entries")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Create a basic internal time entry for a request" })
+  createTimeEntry(
+    @Param("id") id: string,
+    @Body() input: CreateTimeEntryDto,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.createTimeEntry(id, input, request.auth!, metadata(request));
+  }
+
+  @Patch(":id/time-entries/:timeEntryId")
+  @ApiOperation({ summary: "Update a draft or rejected request time entry" })
+  updateTimeEntry(
+    @Param("id") id: string,
+    @Param("timeEntryId") timeEntryId: string,
+    @Body() input: UpdateTimeEntryDto,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.updateTimeEntry(id, timeEntryId, input, request.auth!, metadata(request));
+  }
+
+  @Post(":id/time-entries/:timeEntryId/submit")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Submit a basic request time entry for approval" })
+  submitTimeEntry(
+    @Param("id") id: string,
+    @Param("timeEntryId") timeEntryId: string,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.submitTimeEntry(id, timeEntryId, request.auth!, metadata(request));
+  }
+
+  @Post(":id/time-entries/:timeEntryId/review")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Approve or reject a submitted request time entry" })
+  reviewTimeEntry(
+    @Param("id") id: string,
+    @Param("timeEntryId") timeEntryId: string,
+    @Body() input: ReviewTimeEntryDto,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.reviewTimeEntry(id, timeEntryId, input, request.auth!, metadata(request));
+  }
 }
 
 @ApiTags("client-portal")
@@ -280,5 +395,46 @@ export class ClientRequestsController {
     @Req() request: RequestWithId,
   ) {
     return this.requests.addClientComment(id, input, request.auth!, metadata(request));
+  }
+
+  @Post(":id/outputs/:outputId/accept")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Accept an output explicitly shared with the client" })
+  acceptOutput(
+    @Param("id") id: string,
+    @Param("outputId") outputId: string,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.acceptClientOutput(id, outputId, request.auth!, metadata(request));
+  }
+
+  @Post(":id/outputs/:outputId/return")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Return an output explicitly shared with the client" })
+  returnOutput(
+    @Param("id") id: string,
+    @Param("outputId") outputId: string,
+    @Body() input: ReturnSharedOutputDto,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.returnClientOutput(id, outputId, input, request.auth!, metadata(request));
+  }
+
+  @Post(":id/document-requests/:documentRequestId/upload")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Upload requested client document metadata" })
+  uploadDocument(
+    @Param("id") id: string,
+    @Param("documentRequestId") documentRequestId: string,
+    @Body() input: UploadClientDocumentMetadataDto,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.uploadClientDocument(
+      id,
+      documentRequestId,
+      input,
+      request.auth!,
+      metadata(request),
+    );
   }
 }

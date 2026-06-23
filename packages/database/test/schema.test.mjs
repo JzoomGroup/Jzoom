@@ -259,3 +259,31 @@ test("PR 14 schema adds internal request outputs and task assignee integrity", a
   assert.doesNotMatch(migration, /client_visible/i);
   assert.doesNotMatch(migration, /DROP TABLE/);
 });
+
+test("PR 15 schema adds client delivery, document requests, and basic hours metadata", async () => {
+  const schema = await readFile(
+    path.join(workspaceRoot, "packages/database/prisma/schema.prisma"),
+    "utf8",
+  );
+  const migration = await readFile(
+    path.join(
+      workspaceRoot,
+      "packages/database/prisma/migrations/202606230002_pr15_client_delivery_workflow_hours/migration.sql",
+    ),
+    "utf8",
+  );
+
+  assert.match(schema, /SHARED_WITH_CLIENT/);
+  assert.match(schema, /ACCEPTED_BY_CLIENT/);
+  assert.match(schema, /RETURNED_BY_CLIENT/);
+  assert.match(schema, /model ClientDocumentRequest \{/);
+  assert.match(schema, /documentRequests\s+ClientDocumentRequest\[\]/);
+  assert.match(schema, /decisionReason\s+String\?\s+@db\.Text/);
+  assert.match(schema, /decidedBy\s+User\?\s+@relation\("TimeEntryDecider"/);
+  assert.match(migration, /ALTER TYPE "OutputStatus" ADD VALUE IF NOT EXISTS 'SHARED_WITH_CLIENT'/);
+  assert.match(migration, /CREATE TYPE "ClientDocumentRequestStatus"/);
+  assert.match(migration, /CREATE TABLE "client_document_requests"/);
+  assert.match(migration, /time_entries_decidedById_fkey/);
+  assert.doesNotMatch(migration, /HourLedgerTransaction/i);
+  assert.doesNotMatch(migration, /notifications/i);
+});
