@@ -67,6 +67,7 @@ const workerEnvironmentSchema = z.object({
 const webEnvironmentSchema = z.object({
   NODE_ENV: nodeEnvironmentSchema.default("development"),
   NEXT_PUBLIC_API_BASE_URL: z.string().url().default("http://localhost:4000/api/v1"),
+  NEXT_PUBLIC_AUTH_CSRF_COOKIE_NAME: z.string().trim().min(1).default("jzoom_csrf"),
 });
 
 export interface ApiEnvironment {
@@ -98,6 +99,7 @@ export interface WorkerEnvironment {
 export interface WebEnvironment {
   nodeEnvironment: z.infer<typeof nodeEnvironmentSchema>;
   apiBaseUrl: string;
+  csrfCookieName: string;
 }
 
 export class EnvironmentValidationError extends Error {
@@ -166,5 +168,6 @@ export function parseWebEnvironment(input: NodeJS.ProcessEnv): WebEnvironment {
   return {
     nodeEnvironment: environment.NODE_ENV,
     apiBaseUrl: environment.NEXT_PUBLIC_API_BASE_URL,
+    csrfCookieName: environment.NEXT_PUBLIC_AUTH_CSRF_COOKIE_NAME,
   };
 }

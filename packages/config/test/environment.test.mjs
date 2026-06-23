@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   EnvironmentValidationError,
   parseApiEnvironment,
+  parseWebEnvironment,
   parseWorkerEnvironment,
 } from "../dist/index.js";
 
@@ -70,5 +71,17 @@ test("worker environment remains business-logic free", () => {
   assert.deepEqual(environment, {
     nodeEnvironment: "test",
     workerName: "jzoom-worker",
+  });
+});
+
+test("web environment documents API and CSRF cookie defaults", () => {
+  const environment = parseWebEnvironment({
+    NODE_ENV: "development",
+  });
+
+  assert.deepEqual(environment, {
+    nodeEnvironment: "development",
+    apiBaseUrl: "http://localhost:4000/api/v1",
+    csrfCookieName: "jzoom_csrf",
   });
 });

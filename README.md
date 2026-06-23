@@ -122,3 +122,9 @@ Admin Console work can add, edit, disable, archive, reorder, and configure it wi
 Re-running the same workbook seed is idempotent and does not overwrite later Admin edits.
 
 See [PR 2 blueprint controls](docs/blueprint/pr2-control-updates.md).
+
+## Final QA and staging readiness
+
+- [Local runbook](docs/RUNBOOK_LOCAL.md)
+- [Staging readiness notes](docs/STAGING_READINESS.md)
+- [Final QA checklist](docs/QA_CHECKLIST.md)
