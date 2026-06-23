@@ -29,6 +29,9 @@ export function QuoteShell({
           <Link href="/pricing/invoices">Invoices</Link>
           <Link href="/requests">Requests</Link>
           <Link href="/requests/queues">Work queues</Link>
+          <Link href="/reports">Reports</Link>
+          <Link href="/account-manager">Account Manager</Link>
+          <Link href="/notifications">Notifications</Link>
           {isAdmin && <Link href="/admin/pricing-rules">Pricing rules</Link>}
           <Link href="/profile">Profile</Link>
           <span>{displayName}</span>

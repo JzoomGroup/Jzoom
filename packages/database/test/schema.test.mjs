@@ -287,3 +287,32 @@ test("PR 15 schema adds client delivery, document requests, and basic hours meta
   assert.doesNotMatch(migration, /HourLedgerTransaction/i);
   assert.doesNotMatch(migration, /notifications/i);
 });
+
+test("PR 16 schema stores client monthly report snapshots without external sends", async () => {
+  const schema = await readFile(
+    path.join(workspaceRoot, "packages/database/prisma/schema.prisma"),
+    "utf8",
+  );
+  const migration = await readFile(
+    path.join(
+      workspaceRoot,
+      "packages/database/prisma/migrations/202606230003_pr16_notifications_reports_account_manager/migration.sql",
+    ),
+    "utf8",
+  );
+
+  assert.match(schema, /enum MonthlyReportStatus \{/);
+  assert.match(schema, /model Notification \{/);
+  assert.match(schema, /model OutboxEvent \{/);
+  assert.match(schema, /model ClientMonthlyReport \{/);
+  assert.match(schema, /summarySnapshot\s+Json/);
+  assert.match(
+    schema,
+    /preparedMonthlyReports\s+ClientMonthlyReport\[\]\s+@relation\("MonthlyReportPreparer"\)/,
+  );
+  assert.match(migration, /CREATE TYPE "MonthlyReportStatus"/);
+  assert.match(migration, /CREATE TABLE "client_monthly_reports"/);
+  assert.match(migration, /client_monthly_reports_no_delete/);
+  assert.doesNotMatch(migration, /email|sms|whatsapp/i);
+  assert.doesNotMatch(migration, /monthly_closing/i);
+});

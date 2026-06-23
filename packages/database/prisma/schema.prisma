@@ -176,6 +176,13 @@ enum NotificationStatus {
   CANCELLED
 }
 
+enum MonthlyReportStatus {
+  DRAFT
+  PREPARED
+  PUBLISHED
+  ARCHIVED
+}
+
 enum JobStatus {
   PENDING
   VALIDATING
@@ -373,6 +380,7 @@ model User {
   requestedDocuments     ClientDocumentRequest[]  @relation("ClientDocumentRequester")
   fulfilledDocuments     ClientDocumentRequest[]  @relation("ClientDocumentFulfiller")
   decidedTimeEntries     TimeEntry[]              @relation("TimeEntryDecider")
+  preparedMonthlyReports ClientMonthlyReport[]    @relation("MonthlyReportPreparer")
 
   @@index([status])
   @@index([lockedUntil])
@@ -492,6 +500,7 @@ model Client {
   projects               Project[]
   hourTransactions       HourLedgerTransaction[]
   pricingDrafts          PricingDraft[]
+  monthlyReports         ClientMonthlyReport[]
 
   @@index([status])
   @@index([sector])
@@ -1992,6 +2001,29 @@ model Notification {
   @@index([userId, readAt, createdAt])
   @@index([targetType, targetId])
   @@map("notifications")
+}
+
+model ClientMonthlyReport {
+  id              String              @id @default(uuid()) @db.Uuid
+  clientId        String              @db.Uuid
+  periodStart     DateTime
+  periodEnd       DateTime
+  status          MonthlyReportStatus @default(DRAFT)
+  title           String
+  summarySnapshot Json
+  preparedById    String?             @db.Uuid
+  preparedAt      DateTime?
+  publishedAt     DateTime?
+  archivedAt      DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  client          Client              @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  preparedBy      User?               @relation("MonthlyReportPreparer", fields: [preparedById], references: [id], onDelete: SetNull)
+
+  @@unique([clientId, periodStart])
+  @@index([clientId, status, periodStart])
+  @@index([preparedById, status])
+  @@map("client_monthly_reports")
 }
 
 model AuditLog {

@@ -204,6 +204,17 @@ describe("PR 1 API foundation", () => {
         "/api/v1/client-portal/requests/{id}/document-requests/{documentRequestId}/upload"
       ],
     ).toBeDefined();
+    expect(document.paths["/api/v1/notifications"]).toBeDefined();
+    expect(document.paths["/api/v1/notifications/unread-count"]).toBeDefined();
+    expect(document.paths["/api/v1/notifications/read-all"]).toBeDefined();
+    expect(document.paths["/api/v1/notifications/{id}/read"]).toBeDefined();
+    expect(document.paths["/api/v1/reports/monthly"]).toBeDefined();
+    expect(document.paths["/api/v1/reports/monthly/prepare"]).toBeDefined();
+    expect(document.paths["/api/v1/reports/monthly/{id}"]).toBeDefined();
+    expect(document.paths["/api/v1/reports/monthly/{id}/publish"]).toBeDefined();
+    expect(document.paths["/api/v1/client-portal/reports"]).toBeDefined();
+    expect(document.paths["/api/v1/client-portal/reports/{id}"]).toBeDefined();
+    expect(document.paths["/api/v1/account-manager/portfolio"]).toBeDefined();
     expect(document.components?.schemas?.ApiErrorResponseDto).toBeDefined();
   });
 
