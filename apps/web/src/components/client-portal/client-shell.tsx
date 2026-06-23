@@ -21,8 +21,8 @@ export function ClientShell({
   displayName: string;
 }) {
   return (
-    <div className="pricing-shell">
-      <header className="pricing-topbar">
+    <div className="pricing-shell client-shell">
+      <header className="pricing-topbar client-topbar">
         <Link className="admin-brand" href="/client">
           <span className="brand-mark" aria-hidden="true">
             J

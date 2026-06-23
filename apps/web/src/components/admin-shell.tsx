@@ -26,7 +26,7 @@ export function AdminShell({
   displayName: string;
 }) {
   return (
-    <div className="admin-shell">
+    <div className="admin-shell admin-console-shell">
       <aside className="admin-sidebar">
         <Link className="admin-brand" href="/admin/catalog">
           <span className="brand-mark" aria-hidden="true">

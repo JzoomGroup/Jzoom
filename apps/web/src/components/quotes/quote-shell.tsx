@@ -12,8 +12,8 @@ export function QuoteShell({
   isAdmin: boolean;
 }) {
   return (
-    <div className="pricing-shell">
-      <header className="pricing-topbar">
+    <div className="pricing-shell internal-shell">
+      <header className="pricing-topbar internal-topbar">
         <Link className="admin-brand" href="/pricing">
           <span className="brand-mark" aria-hidden="true">
             J
