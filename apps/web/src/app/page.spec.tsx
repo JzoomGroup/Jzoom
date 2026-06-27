@@ -1,15 +1,40 @@
-import { render, screen } from "@testing-library/react";
-import FoundationPage from "./page";
+import HomePage from "./page";
+import { getCurrentUser } from "../lib/auth";
+import { redirect } from "next/navigation";
 
-describe("FoundationPage", () => {
-  it("renders the PR 1 foundation boundary", () => {
-    render(<FoundationPage />);
+jest.mock("../lib/auth", () => ({
+  getCurrentUser: jest.fn(),
+}));
 
-    expect(
-      screen.getByRole("heading", { name: "Production foundation is ready." }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("main")).toHaveAttribute("dir", "ltr");
-    expect(screen.getByText("Foundation only.")).toBeInTheDocument();
-    expect(screen.getByText(/No mock catalog/)).toBeInTheDocument();
+jest.mock("next/navigation", () => ({
+  redirect: jest.fn(),
+}));
+
+const getCurrentUserMock = getCurrentUser as jest.MockedFunction<typeof getCurrentUser>;
+const redirectMock = redirect as unknown as jest.MockedFunction<(path: string) => never>;
+
+describe("HomePage", () => {
+  it("redirects anonymous visitors to login", async () => {
+    getCurrentUserMock.mockResolvedValue(null);
+
+    await HomePage();
+
+    expect(redirectMock).toHaveBeenCalledWith("/login");
+  });
+
+  it("redirects authenticated admins to their default route", async () => {
+    getCurrentUserMock.mockResolvedValue({
+      id: "user-1",
+      email: "admin@example.com",
+      displayName: "Admin",
+      preferredLocale: "ar",
+      userType: "INTERNAL",
+      roles: ["ROLE-ADMIN"],
+      permissions: [],
+    });
+
+    await HomePage();
+
+    expect(redirectMock).toHaveBeenCalledWith("/settings");
   });
 });
