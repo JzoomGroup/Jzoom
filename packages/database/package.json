@@ -15,6 +15,7 @@
     "lint": "eslint src prisma.config.ts",
     "migrate:deploy": "prisma migrate deploy",
     "migrate:status": "prisma migrate status",
+    "demo:internal-users": "node dist/seed-demo-internal-users.js",
     "demo:subscriptions": "node dist/seed-demo-subscriptions.js",
     "seed": "pnpm build && node dist/seed.js",
     "seed:run": "node dist/seed.js",
