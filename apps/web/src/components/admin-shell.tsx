@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { LogoutButton } from "./logout-button";
 
 const navigation = [
+  { href: "/admin/clients", label: "Clients" },
   { href: "/admin/catalog", label: "Catalog overview" },
   { href: "/admin/catalog/categories", label: "Categories" },
   { href: "/admin/catalog/monthly-services", label: "Monthly services" },

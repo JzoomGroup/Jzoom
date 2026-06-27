@@ -4,6 +4,7 @@ import type { ApiEnvironment } from "@jzoom/config";
 import { AuthModule } from "./auth/auth.module.js";
 import { CatalogModule } from "./catalog-admin/catalog.module.js";
 import { ClientPortalModule } from "./client-portal/client-portal.module.js";
+import { ClientsModule } from "./clients/clients.module.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { HoursLedgerModule } from "./hours-ledger/hours-ledger.module.js";
@@ -28,6 +29,7 @@ export class AppModule {
         DatabaseModule.forRoot(environment.databaseUrl),
         AuthModule.forRoot(environment),
         CatalogModule,
+        ClientsModule,
         OneTimeCatalogModule,
         PricingModule,
         QuotesModule,

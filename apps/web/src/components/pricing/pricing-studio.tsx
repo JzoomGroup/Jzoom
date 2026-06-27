@@ -29,6 +29,10 @@ function pricingDateInput(value?: string): string {
   return (value ? new Date(value) : new Date()).toISOString().slice(0, 10);
 }
 
+function pricingDateIso(value: string): string {
+  return new Date(`${value}T12:00:00.000Z`).toISOString();
+}
+
 function sar(value: number): string {
   return new Intl.NumberFormat("en-SA", {
     style: "currency",
@@ -101,7 +105,7 @@ export function PricingStudio({
       clientId,
       title: title.trim(),
       ...(notes.trim() ? { notes: notes.trim() } : {}),
-      pricingDate: new Date(`${pricingDate}T00:00:00`).toISOString(),
+      pricingDate: pricingDateIso(pricingDate),
       currency: "SAR",
       monthlySelections: [...monthlySelections.entries()].map(
         ([monthlyServiceRevisionId, selection]): MonthlyPricingSelection => ({

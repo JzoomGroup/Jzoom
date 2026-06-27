@@ -260,6 +260,7 @@ describe("PR 6 pricing UI", () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe("http://localhost:4000/api/v1/pricing/preview");
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
       clientId: studioCatalog().clients[0]!.id,
+      pricingDate: expect.stringMatching(/T12:00:00\.000Z$/),
       monthlySelections: [
         {
           monthlyServiceRevisionId: studioCatalog().monthlyServices[0]!.revision.id,

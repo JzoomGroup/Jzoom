@@ -31,6 +31,31 @@ function account(): ClientPortalAccount {
         authorizedApprover: "Approver One",
       },
     ],
+    services: {
+      subscribedMonthly: [],
+      availableMonthly: [
+        {
+          id: "service-1",
+          code: "SERVICE-1",
+          category: {
+            id: "category-1",
+            code: "CAT-1",
+            nameAr: "Category",
+            nameEn: "Category",
+          },
+          revisionId: "service-revision-1",
+          nameAr: "Client Service",
+          nameEn: "Client Service",
+          description: "A client-visible service.",
+          serviceLine: "Operate",
+          domain: "Operations",
+          defaultSlaHours: 24,
+          sellingHourlyRateSar: 100,
+          levels: [],
+        },
+      ],
+      availableOneTime: [],
+    },
   };
 }
 
@@ -185,6 +210,7 @@ describe("Client portal UI", () => {
 
     expect(screen.getByRole("heading", { name: "Welcome, Client User" })).toBeInTheDocument();
     expect(screen.getByText("CLIENT-1")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Service catalog" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View quotes" })).toHaveAttribute(
       "href",
       "/client/quotes",

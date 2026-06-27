@@ -53,19 +53,24 @@ export class ClientPortalService {
 
   async profile(principal: AuthenticatedPrincipal) {
     const clientIds = this.clientIdsFor(principal);
-    const clients = await this.database.prisma.client.findMany({
-      where: { id: { in: clientIds } },
-      orderBy: [{ name: "asc" }, { code: "asc" }],
-      select: {
-        id: true,
-        code: true,
-        name: true,
-        legalName: true,
-        sector: true,
-        city: true,
-        authorizedApprover: true,
-      },
-    });
+    const [clients, subscribedMonthly, availableMonthly, availableOneTime] = await Promise.all([
+      this.database.prisma.client.findMany({
+        where: { id: { in: clientIds } },
+        orderBy: [{ name: "asc" }, { code: "asc" }],
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          legalName: true,
+          sector: true,
+          city: true,
+          authorizedApprover: true,
+        },
+      }),
+      this.subscribedMonthlyServices(clientIds),
+      this.availableMonthlyServices(),
+      this.availableOneTimeServices(),
+    ]);
     return {
       user: {
         id: principal.userId,
@@ -74,7 +79,262 @@ export class ClientPortalService {
         preferredLocale: principal.preferredLocale,
       },
       clients,
+      services: {
+        subscribedMonthly,
+        availableMonthly,
+        availableOneTime,
+      },
     };
+  }
+
+  private async subscribedMonthlyServices(clientIds: string[]) {
+    const now = new Date();
+    const subscriptions = await this.database.prisma.subscription.findMany({
+      where: {
+        clientId: { in: clientIds },
+        status: "ACTIVE",
+        startsAt: { lte: now },
+        OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+      },
+      orderBy: [{ startsAt: "desc" }, { createdAt: "desc" }],
+      include: {
+        client: { select: { id: true, code: true, name: true } },
+        services: {
+          where: {
+            status: "ACTIVE",
+            startsAt: { lte: now },
+            OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+          },
+          orderBy: [{ startsAt: "desc" }, { createdAt: "desc" }],
+          include: {
+            serviceLevel: true,
+            monthlyServiceRevision: {
+              include: {
+                monthlyService: {
+                  include: {
+                    category: true,
+                    items: {
+                      where: { status: "ACTIVE" },
+                      orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
+                      include: {
+                        revisions: {
+                          where: {
+                            status: "ACTIVE",
+                            visibleInQuote: true,
+                            AND: [
+                              { OR: [{ effectiveFrom: null }, { effectiveFrom: { lte: now } }] },
+                              { OR: [{ effectiveTo: null }, { effectiveTo: { gt: now } }] },
+                            ],
+                          },
+                          orderBy: { version: "desc" },
+                          take: 1,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return subscriptions.flatMap((subscription) =>
+      subscription.services.map((service) => {
+        const revision = service.monthlyServiceRevision;
+        return {
+          id: service.id,
+          subscriptionId: subscription.id,
+          clientId: subscription.clientId,
+          client: subscription.client,
+          status: service.status,
+          startsAt: service.startsAt.toISOString(),
+          endsAt: service.endsAt?.toISOString() ?? null,
+          hoursAllocated: numberValue(service.hoursAllocated),
+          service: {
+            id: revision.monthlyService.id,
+            code: revision.monthlyService.code,
+            revisionId: revision.id,
+            nameAr: revision.nameAr,
+            nameEn: revision.nameEn,
+            serviceLine: revision.serviceLine,
+            domain: revision.domain,
+            description: revision.description,
+            category: {
+              id: revision.monthlyService.category.id,
+              code: revision.monthlyService.category.code,
+              nameAr: revision.monthlyService.category.nameAr,
+              nameEn: revision.monthlyService.category.nameEn,
+            },
+          },
+          serviceLevel: {
+            id: service.serviceLevel.id,
+            code: service.serviceLevel.code,
+            labelAr: service.serviceLevel.labelAr,
+            labelEn: service.serviceLevel.labelEn,
+          },
+          serviceItems: revision.monthlyService.items.flatMap((item) => {
+            const itemRevision = item.revisions[0];
+            return itemRevision
+              ? [
+                  {
+                    id: itemRevision.id,
+                    itemId: item.id,
+                    code: item.code,
+                    nameAr: itemRevision.nameAr,
+                    nameEn: itemRevision.nameEn,
+                    expectedOutput: itemRevision.expectedOutput,
+                    requiresFile: itemRevision.requiresFile,
+                  },
+                ]
+              : [];
+          }),
+        };
+      }),
+    );
+  }
+
+  private async availableMonthlyServices() {
+    const now = new Date();
+    const services = await this.database.prisma.monthlyService.findMany({
+      where: {
+        status: "ACTIVE",
+        category: { status: "ACTIVE" },
+        revisions: {
+          some: {
+            status: "ACTIVE",
+            visibleInPricing: true,
+            AND: [
+              { OR: [{ effectiveFrom: null }, { effectiveFrom: { lte: now } }] },
+              { OR: [{ effectiveTo: null }, { effectiveTo: { gt: now } }] },
+            ],
+          },
+        },
+      },
+      orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
+      include: {
+        category: true,
+        revisions: {
+          where: {
+            status: "ACTIVE",
+            visibleInPricing: true,
+            AND: [
+              { OR: [{ effectiveFrom: null }, { effectiveFrom: { lte: now } }] },
+              { OR: [{ effectiveTo: null }, { effectiveTo: { gt: now } }] },
+            ],
+          },
+          orderBy: { version: "desc" },
+          take: 1,
+          include: {
+            levelConfigs: {
+              where: {
+                isEnabled: true,
+                serviceLevel: { status: "ACTIVE" },
+              },
+              orderBy: { sortOrder: "asc" },
+              include: { serviceLevel: true },
+            },
+          },
+        },
+      },
+    });
+
+    return services.flatMap((service) => {
+      const revision = service.revisions[0];
+      return revision
+        ? [
+            {
+              id: service.id,
+              code: service.code,
+              category: {
+                id: service.category.id,
+                code: service.category.code,
+                nameAr: service.category.nameAr,
+                nameEn: service.category.nameEn,
+              },
+              revisionId: revision.id,
+              nameAr: revision.nameAr,
+              nameEn: revision.nameEn,
+              description: revision.description,
+              serviceLine: revision.serviceLine,
+              domain: revision.domain,
+              defaultSlaHours: revision.defaultSlaHours,
+              sellingHourlyRateSar: numberValue(revision.sellingHourlyRateSar),
+              levels: revision.levelConfigs.map((config) => ({
+                serviceLevelId: config.serviceLevelId,
+                serviceLevelCode: config.serviceLevel.code,
+                labelAr: config.serviceLevel.labelAr,
+                labelEn: config.serviceLevel.labelEn,
+                hours: numberValue(config.hours),
+                slaHours: config.slaHours,
+              })),
+            },
+          ]
+        : [];
+    });
+  }
+
+  private async availableOneTimeServices() {
+    const now = new Date();
+    const services = await this.database.prisma.oneTimeService.findMany({
+      where: {
+        status: "ACTIVE",
+        category: { status: "ACTIVE" },
+        revisions: {
+          some: {
+            status: "ACTIVE",
+            visibleInPricing: true,
+            AND: [
+              { OR: [{ effectiveFrom: null }, { effectiveFrom: { lte: now } }] },
+              { OR: [{ effectiveTo: null }, { effectiveTo: { gt: now } }] },
+            ],
+          },
+        },
+      },
+      orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
+      include: {
+        category: true,
+        revisions: {
+          where: {
+            status: "ACTIVE",
+            visibleInPricing: true,
+            AND: [
+              { OR: [{ effectiveFrom: null }, { effectiveFrom: { lte: now } }] },
+              { OR: [{ effectiveTo: null }, { effectiveTo: { gt: now } }] },
+            ],
+          },
+          orderBy: { version: "desc" },
+          take: 1,
+        },
+      },
+    });
+
+    return services.flatMap((service) => {
+      const revision = service.revisions[0];
+      return revision
+        ? [
+            {
+              id: service.id,
+              code: service.code,
+              category: {
+                id: service.category.id,
+                code: service.category.code,
+                nameAr: service.category.nameAr,
+                nameEn: service.category.nameEn,
+              },
+              revisionId: revision.id,
+              nameAr: revision.nameAr,
+              nameEn: revision.nameEn,
+              description: revision.description,
+              serviceLine: service.serviceLine,
+              basePriceSar: numberValue(revision.basePriceSar),
+              estimatedHours: numberValue(revision.estimatedHours),
+              durationDays: revision.durationDays,
+            },
+          ]
+        : [];
+    });
   }
 
   async listQuotes(principal: AuthenticatedPrincipal) {

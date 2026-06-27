@@ -9,6 +9,7 @@ export interface ClientPortalAccount {
     preferredLocale: string;
   };
   clients: ClientPortalClient[];
+  services: ClientPortalServices;
 }
 
 export interface ClientPortalClient {
@@ -19,6 +20,96 @@ export interface ClientPortalClient {
   sector: string | null;
   city: string | null;
   authorizedApprover: string | null;
+}
+
+export interface ClientPortalServiceCategory {
+  id: string;
+  code: string;
+  nameAr: string;
+  nameEn: string;
+}
+
+export interface ClientPortalSubscribedMonthlyService {
+  id: string;
+  subscriptionId: string;
+  clientId: string;
+  client: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  status: string;
+  startsAt: string;
+  endsAt: string | null;
+  hoursAllocated: number;
+  service: {
+    id: string;
+    code: string;
+    revisionId: string;
+    nameAr: string;
+    nameEn: string;
+    serviceLine: string;
+    domain: string;
+    description: string;
+    category: ClientPortalServiceCategory;
+  };
+  serviceLevel: {
+    id: string;
+    code: string;
+    labelAr: string;
+    labelEn: string | null;
+  };
+  serviceItems: Array<{
+    id: string;
+    itemId: string;
+    code: string;
+    nameAr: string;
+    nameEn: string;
+    expectedOutput: string | null;
+    requiresFile: boolean;
+  }>;
+}
+
+export interface ClientPortalAvailableMonthlyService {
+  id: string;
+  code: string;
+  category: ClientPortalServiceCategory;
+  revisionId: string;
+  nameAr: string;
+  nameEn: string;
+  description: string;
+  serviceLine: string;
+  domain: string;
+  defaultSlaHours: number;
+  sellingHourlyRateSar: number;
+  levels: Array<{
+    serviceLevelId: string;
+    serviceLevelCode: string;
+    labelAr: string;
+    labelEn: string | null;
+    hours: number;
+    slaHours: number | null;
+  }>;
+}
+
+export interface ClientPortalAvailableOneTimeService {
+  id: string;
+  code: string;
+  category: ClientPortalServiceCategory;
+  revisionId: string;
+  nameAr: string;
+  nameEn: string;
+  description: string;
+  serviceLine: string;
+  basePriceSar: number;
+  estimatedHours: number;
+  durationDays: number;
+}
+
+export interface ClientPortalServices {
+  subscribedMonthly: ClientPortalSubscribedMonthlyService[];
+  availableMonthly: ClientPortalAvailableMonthlyService[];
+  availableOneTime: ClientPortalAvailableOneTimeService[];
 }
 
 export interface ClientPortalTotals {

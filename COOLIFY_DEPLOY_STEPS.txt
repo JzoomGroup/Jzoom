@@ -1,0 +1,482 @@
+Coolify Deployment Steps
+
+Use these steps in order. Do not move to the next step until the current step finishes without errors.
+
+General information:
+
+- The server is a VPS managed by Coolify.
+- The source code is in GitHub.
+- The system has 3 main parts:
+  1. PostgreSQL database
+  2. API
+  3. Web / frontend
+
+Final expected result:
+
+- A public web URL, for example:
+  https://app.domain.com
+
+- A public API URL, for example:
+  https://api.domain.com
+
+- Admin login credentials.
+
+------------------------------------------------------------
+Step 1: Connect GitHub to Coolify
+------------------------------------------------------------
+
+1. Open Coolify.
+2. From the sidebar, open Sources.
+3. Click Add or +.
+4. Choose GitHub App.
+
+If the repository is private:
+
+- Use GitHub App.
+
+If the repository is public:
+
+- Public Repository can work, but GitHub App is still preferred if available.
+
+5. Click Continue or Register.
+6. Coolify will redirect you to GitHub.
+7. In GitHub, choose the account or organization that owns the repository.
+8. Select Only selected repositories.
+9. Select the project repository.
+10. Click Install.
+
+If Coolify returns and the repository appears:
+
+- Good. Continue to the next step.
+
+If the repository does not appear:
+
+- Go back to the GitHub App settings.
+- Make sure the repository is selected in the app permissions.
+- Go back to Coolify and click Sync or Reload repositories.
+
+------------------------------------------------------------
+Step 2: Create Project and Environment
+------------------------------------------------------------
+
+1. In Coolify, open Projects.
+2. Create a new Project named:
+   Jzoom
+
+3. Inside the project, create an Environment named:
+   staging
+
+If the project already exists:
+
+- Open it directly.
+- Use an Environment named staging.
+
+------------------------------------------------------------
+Step 3: Create PostgreSQL Database
+------------------------------------------------------------
+
+1. Inside Project / staging, click New Resource.
+2. Choose Database.
+3. Choose PostgreSQL.
+4. Choose the target VPS server.
+5. Click Deploy or Start.
+
+Wait until the database status becomes Running.
+
+After it is running:
+
+1. Open the database settings.
+2. Look for Connection String or DATABASE_URL.
+3. Copy the internal connection string from Coolify.
+
+It usually looks like this:
+
+postgresql://user:password@host:5432/database
+
+Important:
+
+- Do not use localhost in DATABASE_URL.
+- Use the internal database URL provided by Coolify.
+
+If you cannot find DATABASE_URL:
+
+- Open the Connection, General, or Environment tab.
+- Look for Internal URL or Connection String.
+
+------------------------------------------------------------
+Step 4: Create API Resource
+------------------------------------------------------------
+
+1. Inside the same Project / staging, click New Resource.
+2. Choose Private Repository with GitHub App.
+3. Choose the GitHub App you connected.
+4. Choose the repository.
+5. Choose the branch:
+   main
+
+6. If Coolify asks for Build Pack, choose:
+   Nixpacks
+
+7. Set Base Directory to:
+   /
+
+8. Set Port to:
+   4000
+
+If you see an option called Is it a static site:
+
+- Do not enable it.
+- The API is a backend application, not a static site.
+
+------------------------------------------------------------
+Step 5: API Commands
+------------------------------------------------------------
+
+In the API Resource settings, set these commands:
+
+Install Command:
+
+corepack enable && pnpm install --frozen-lockfile
+
+Build Command:
+
+pnpm --workspace-concurrency=1 --filter @jzoom/config --filter @jzoom/contracts --filter @jzoom/database -r build && pnpm --filter @jzoom/api build
+
+Start Command:
+
+pnpm --filter @jzoom/api start
+
+If Coolify does not show Install / Build / Start fields:
+
+- Open the Resource settings.
+- Look for Build, Commands, or Advanced.
+- Add the commands there.
+
+If Nixpacks ignores the commands:
+
+- Make sure the Build Pack is Nixpacks.
+- Make sure Base Directory is /.
+
+------------------------------------------------------------
+Step 6: API Environment Variables
+------------------------------------------------------------
+
+Open Environment Variables inside the API Resource.
+
+Add these values:
+
+NODE_ENV=production
+API_PORT=4000
+DATABASE_URL=paste the internal PostgreSQL URL from Coolify here
+WEB_ORIGIN=https://your-web-url
+AUTH_COOKIE_SECURE=true
+AUTH_EXPOSE_TEST_TOKENS=false
+OPENAPI_ENABLED=false
+BOOTSTRAP_ADMIN_EMAIL=admin@example.com
+BOOTSTRAP_ADMIN_PASSWORD=strong-password-here
+
+Important:
+
+- DATABASE_URL must be the internal PostgreSQL URL from Coolify.
+- WEB_ORIGIN must exactly match the final web URL.
+- BOOTSTRAP_ADMIN_PASSWORD must be at least 12 characters.
+
+Example:
+
+WEB_ORIGIN=https://app.domain.com
+
+If you do not have the web URL yet:
+
+- Put a temporary value.
+- After creating the Web Resource, update WEB_ORIGIN.
+- After updating it, redeploy the API.
+
+------------------------------------------------------------
+Step 7: Deploy the API
+------------------------------------------------------------
+
+1. Click Deploy on the API Resource.
+2. Open Logs.
+3. Wait until the logs show that the application is running on port 4000.
+
+If deployment succeeds:
+
+- Continue to the next step.
+
+If you see pnpm not found:
+
+- Make sure the Install Command includes:
+  corepack enable
+
+If you see DATABASE_URL is required:
+
+- Go back to Environment Variables.
+- Make sure DATABASE_URL exists.
+- Redeploy the API.
+
+If you see DATABASE_URL must be PostgreSQL:
+
+- Make sure the URL starts with:
+  postgresql://
+  or
+  postgres://
+
+If you see Cannot connect to database:
+
+- Make sure the database is Running.
+- Make sure you are using the internal connection string, not localhost.
+- Make sure the API and Database are in the same Project or network in Coolify.
+
+------------------------------------------------------------
+Step 8: Run migrations, seed, and create admin
+------------------------------------------------------------
+
+After the API deployment succeeds:
+
+1. Open the Terminal inside the API Resource in Coolify.
+2. Run this command:
+
+pnpm --filter @jzoom/database migrate:deploy
+
+If it finishes without errors:
+
+- Run the next command:
+
+pnpm --filter @jzoom/database seed
+
+If it finishes without errors:
+
+- Run the next command:
+
+pnpm --filter @jzoom/api bootstrap:admin
+
+If you see:
+
+Bootstrap Admin created successfully.
+
+That means the admin user was created.
+
+If you see:
+
+An active Admin already exists; bootstrap was skipped.
+
+That is fine. It means there is already an active admin user.
+
+If you see:
+
+ROLE-ADMIN is missing
+
+That means seed did not run or failed.
+
+Fix:
+
+1. Run:
+   pnpm --filter @jzoom/database seed
+
+2. Then run:
+   pnpm --filter @jzoom/api bootstrap:admin
+
+If migration fails:
+
+- Copy the exact error from Logs and send it back.
+- Do not delete the database unless confirmed.
+
+------------------------------------------------------------
+Step 9: Create Web Resource
+------------------------------------------------------------
+
+1. Inside the same Project / staging, click New Resource.
+2. Choose Private Repository with GitHub App.
+3. Choose the same repository.
+4. Choose the same branch:
+   main
+
+5. Build Pack:
+   Nixpacks
+
+6. Base Directory:
+   /
+
+7. Port:
+   3000
+
+If you see Is it a static site:
+
+- Do not enable it.
+- The web app is Next.js and needs a server.
+
+------------------------------------------------------------
+Step 10: Web Commands
+------------------------------------------------------------
+
+Set these commands in the Web Resource:
+
+Install Command:
+
+corepack enable && pnpm install --frozen-lockfile
+
+Build Command:
+
+pnpm --filter @jzoom/web build
+
+Start Command:
+
+pnpm --filter @jzoom/web start
+
+If build fails and says it cannot reach the API:
+
+- Make sure NEXT_PUBLIC_API_BASE_URL is correct.
+- Make sure the API Resource is running.
+
+------------------------------------------------------------
+Step 11: Web Environment Variables
+------------------------------------------------------------
+
+Open Environment Variables inside the Web Resource.
+
+Add these values:
+
+NODE_ENV=production
+NEXT_PUBLIC_API_BASE_URL=https://your-api-url/api/v1
+NEXT_PUBLIC_AUTH_CSRF_COOKIE_NAME=jzoom_csrf
+
+Example:
+
+NEXT_PUBLIC_API_BASE_URL=https://api.domain.com/api/v1
+
+Important:
+
+- Do not use localhost.
+- Use the public API URL.
+- The URL must end with:
+  /api/v1
+
+------------------------------------------------------------
+Step 12: Connect domains
+------------------------------------------------------------
+
+Connect a domain for the web app:
+
+https://app.domain.com
+
+Connect a domain for the API:
+
+https://api.domain.com
+
+After connecting the domains:
+
+1. Go back to the API Resource.
+2. Update WEB_ORIGIN to the web URL:
+
+WEB_ORIGIN=https://app.domain.com
+
+3. Redeploy the API.
+
+4. Go back to the Web Resource.
+5. Make sure this value is correct:
+
+NEXT_PUBLIC_API_BASE_URL=https://api.domain.com/api/v1
+
+6. Redeploy the Web Resource.
+
+If login does not work:
+
+- WEB_ORIGIN is probably wrong.
+- Or NEXT_PUBLIC_API_BASE_URL is wrong.
+- Or cookies require HTTPS. Make sure both URLs use https, not http.
+
+------------------------------------------------------------
+Step 13: Test the deployment
+------------------------------------------------------------
+
+Open the web URL:
+
+https://app.domain.com
+
+Test the following:
+
+1. The login page appears.
+2. Login using the admin account.
+3. Open the clients page.
+4. Create a test client.
+5. Create a client user.
+6. Log out.
+7. Login using the client user.
+8. Confirm the client can see their services.
+
+If the login page appears:
+
+- Good.
+
+If you see 404:
+
+- Make sure the Web Resource is running.
+- Make sure the domain is connected to the Web Resource, not the API Resource.
+
+If you see 502:
+
+- Open Logs in Coolify.
+- Most likely the app did not start or the port is wrong.
+- Make sure Web port is 3000 and API port is 4000.
+
+If login shows a CORS error:
+
+- Update WEB_ORIGIN in the API to exactly match the web URL.
+
+Correct example:
+
+WEB_ORIGIN=https://app.domain.com
+
+Wrong example:
+
+WEB_ORIGIN=https://app.domain.com/
+
+Do not add a slash at the end.
+
+If login succeeds but redirects back to login:
+
+- Make sure AUTH_COOKIE_SECURE=true.
+- Make sure the site is running on https.
+- Make sure the API and Web domains are correct.
+
+------------------------------------------------------------
+Step 14: Send back these details after finishing
+------------------------------------------------------------
+
+Please send back:
+
+1. Web URL:
+   https://...
+
+2. API URL:
+   https://...
+
+3. Admin credentials:
+   Email:
+   Password:
+
+4. Is Auto Deploy working?
+   Yes / No
+
+5. Did migrations run successfully?
+   Yes / No
+
+6. Did seed run successfully?
+   Yes / No
+
+7. Did bootstrap admin run successfully?
+   Yes / No
+
+8. If any error appears, copy the exact error from Logs and send it back.
+
+------------------------------------------------------------
+Important notes
+------------------------------------------------------------
+
+- Do not use localhost in any Coolify Environment Variable.
+- Do not run the Web app without the API.
+- Do not run the API without the Database.
+- Run migrations before testing the system.
+- Run seed before creating the admin user.
+- If you change Environment Variables, redeploy the resource.
+- If you change domains, check WEB_ORIGIN and NEXT_PUBLIC_API_BASE_URL again.

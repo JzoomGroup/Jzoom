@@ -443,7 +443,8 @@ INSERT INTO "permissions" (
   "module",
   "action",
   "description",
-  "sortOrder"
+  "sortOrder",
+  "updatedAt"
 )
 VALUES (
   gen_random_uuid(),
@@ -452,17 +453,19 @@ VALUES (
   'Requests',
   'manage_request_templates',
   'Create and configure service item request templates, fields, documents, and suggested forms.',
-  1900
+  1900,
+  CURRENT_TIMESTAMP
 )
-ON CONFLICT ("code") DO UPDATE SET "status" = 'ACTIVE';
+ON CONFLICT ("code") DO UPDATE SET "status" = 'ACTIVE', "updatedAt" = CURRENT_TIMESTAMP;
 
 INSERT INTO "role_permissions" (
   "roleId",
   "permissionId",
-  "effect"
+  "effect",
+  "updatedAt"
 )
-SELECT role."id", permission."id", 'ALLOW'
+SELECT role."id", permission."id", 'ALLOW', CURRENT_TIMESTAMP
 FROM "roles" role
 JOIN "permissions" permission ON permission."code" = 'PERM-MANAGE-REQUEST-TEMPLATES'
 WHERE role."code" = 'ROLE-ADMIN'
-ON CONFLICT ("roleId", "permissionId") DO UPDATE SET "effect" = 'ALLOW';
+ON CONFLICT ("roleId", "permissionId") DO UPDATE SET "effect" = 'ALLOW', "updatedAt" = CURRENT_TIMESTAMP;
