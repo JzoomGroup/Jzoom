@@ -25,6 +25,7 @@ function cookieOptions(environment: AuthRuntimeEnvironment, httpOnly: boolean) {
     httpOnly,
     secure: environment.auth.cookieSecure,
     sameSite: "lax" as const,
+    ...(environment.auth.cookieDomain ? { domain: environment.auth.cookieDomain } : {}),
     path: "/",
   };
 }

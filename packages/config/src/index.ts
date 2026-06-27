@@ -31,6 +31,7 @@ const apiEnvironmentSchema = z
     AUTH_SESSION_TTL_MINUTES: z.coerce.number().int().min(5).max(43_200).default(480),
     AUTH_COOKIE_NAME: z.string().trim().min(1).default("jzoom_session"),
     AUTH_CSRF_COOKIE_NAME: z.string().trim().min(1).default("jzoom_csrf"),
+    AUTH_COOKIE_DOMAIN: z.string().trim().min(1).optional(),
     AUTH_COOKIE_SECURE: optionalBooleanSchema,
     AUTH_EXPOSE_TEST_TOKENS: optionalBooleanSchema,
     AUTH_MAX_LOGIN_ATTEMPTS: z.coerce.number().int().min(3).max(20).default(5),
@@ -80,6 +81,7 @@ export interface ApiEnvironment {
     sessionTtlMinutes: number;
     cookieName: string;
     csrfCookieName: string;
+    cookieDomain?: string;
     cookieSecure: boolean;
     exposeTestTokens: boolean;
     maxLoginAttempts: number;
@@ -143,6 +145,7 @@ export function parseApiEnvironment(input: NodeJS.ProcessEnv): ApiEnvironment {
       sessionTtlMinutes: environment.AUTH_SESSION_TTL_MINUTES,
       cookieName: environment.AUTH_COOKIE_NAME,
       csrfCookieName: environment.AUTH_CSRF_COOKIE_NAME,
+      ...(environment.AUTH_COOKIE_DOMAIN ? { cookieDomain: environment.AUTH_COOKIE_DOMAIN } : {}),
       cookieSecure:
         environment.AUTH_COOKIE_SECURE ?? environment.NODE_ENV === ("production" as const),
       exposeTestTokens: environment.AUTH_EXPOSE_TEST_TOKENS ?? false,

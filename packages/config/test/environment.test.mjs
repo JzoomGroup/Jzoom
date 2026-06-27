@@ -16,6 +16,7 @@ test("API environment applies safe non-production defaults", () => {
   assert.equal(environment.port, 4000);
   assert.equal(environment.openApiEnabled, true);
   assert.equal(environment.auth.cookieName, "jzoom_session");
+  assert.equal(environment.auth.cookieDomain, undefined);
   assert.equal(environment.auth.cookieSecure, false);
 });
 
@@ -27,6 +28,16 @@ test("Swagger UI is disabled by default in production", () => {
 
   assert.equal(environment.openApiEnabled, false);
   assert.equal(environment.auth.cookieSecure, true);
+});
+
+test("API environment supports shared auth cookies across subdomains", () => {
+  const environment = parseApiEnvironment({
+    DATABASE_URL: "postgresql://user:password@localhost:5432/jzoom",
+    NODE_ENV: "production",
+    AUTH_COOKIE_DOMAIN: ".jzoom.sa",
+  });
+
+  assert.equal(environment.auth.cookieDomain, ".jzoom.sa");
 });
 
 test("bootstrap Admin credentials must be explicitly paired", () => {

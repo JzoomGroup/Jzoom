@@ -170,6 +170,7 @@ API_PORT=4000
 DATABASE_URL=paste the internal PostgreSQL URL from Coolify here
 WEB_ORIGIN=https://your-web-url
 AUTH_COOKIE_SECURE=true
+AUTH_COOKIE_DOMAIN=.your-domain.com
 AUTH_EXPOSE_TEST_TOKENS=false
 OPENAPI_ENABLED=false
 BOOTSTRAP_ADMIN_EMAIL=admin@example.com
@@ -179,6 +180,9 @@ Important:
 
 - DATABASE_URL must be the internal PostgreSQL URL from Coolify.
 - WEB_ORIGIN must exactly match the final web URL.
+- AUTH_COOKIE_DOMAIN must be the shared parent domain when Web and API use sibling subdomains.
+  Example:
+  .jzoom.sa
 - BOOTSTRAP_ADMIN_PASSWORD must be at least 12 characters.
 
 Example:
