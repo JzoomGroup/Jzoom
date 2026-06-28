@@ -505,12 +505,36 @@ describe("Client portal UI", () => {
     expect(screen.getByText("Deliverables to review")).toBeInTheDocument();
     expect(screen.getAllByText("Requested documents").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Next action").length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: "Review deliverables" })).toHaveAttribute(
+      "href",
+      "#client-deliverables",
+    );
+    expect(screen.getByText("Waiting for your review")).toBeInTheDocument();
+    expect(screen.getByText("Accepted by you")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Accept output" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Return output" })).toHaveLength(1);
+    expect(screen.getByText("Upload required")).toBeInTheDocument();
+    expect(screen.getByLabelText("Request")).toHaveValue("document-request-1");
     expect(screen.getByRole("button", { name: "Upload metadata" })).toBeInTheDocument();
     expect(
       screen.getByText("This deliverable is no longer waiting for a client decision."),
     ).toBeInTheDocument();
+  });
+
+  it("prioritizes document upload when there are no deliverables awaiting review", () => {
+    const request = serviceRequest({
+      status: "WAITING_CLIENT",
+      documentRequests: [documentRequest()],
+    });
+
+    render(<ClientRequestDetail request={request} />);
+
+    expect(screen.getByRole("link", { name: "Upload documents" })).toHaveAttribute(
+      "href",
+      "#client-documents",
+    );
+    expect(screen.getByText("Upload required")).toBeInTheDocument();
+    expect(screen.getByLabelText("Request")).toHaveValue("document-request-1");
   });
 
   it("hides client request actions when no client decision or upload is pending", () => {

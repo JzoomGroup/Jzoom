@@ -12,8 +12,88 @@ import {
 import type { ServiceRequest } from "../../lib/request-types";
 import { formatRiyadhDateTime } from "../../lib/stable-date";
 
+type ClientDocumentStatus = ServiceRequest["documentRequests"][number]["status"];
+type ClientOutputStatus = ServiceRequest["outputs"][number]["status"];
+
 function dateTime(value: string | null): string {
   return formatRiyadhDateTime(value);
+}
+
+function fileSize(sizeBytes: number): string {
+  if (sizeBytes >= 1_000_000) {
+    return `${(sizeBytes / 1_000_000).toFixed(1)} MB`;
+  }
+
+  if (sizeBytes >= 1_000) {
+    return `${(sizeBytes / 1_000).toFixed(1)} KB`;
+  }
+
+  return `${sizeBytes} bytes`;
+}
+
+function outputStatusLabel(status: ClientOutputStatus): string {
+  switch (status) {
+    case "SHARED_WITH_CLIENT":
+      return "Waiting for your review";
+    case "ACCEPTED_BY_CLIENT":
+      return "Accepted by you";
+    case "RETURNED_BY_CLIENT":
+      return "Returned for revision";
+    case "CLOSED":
+      return "Closed";
+    case "APPROVED_INTERNAL":
+      return "Approved internally";
+    case "INTERNAL_REVIEW":
+      return "Under Jzoom review";
+    case "REVISION_REQUESTED":
+      return "Revision requested";
+    case "DRAFT":
+    default:
+      return "Draft";
+  }
+}
+
+function outputActionCopy(status: ClientOutputStatus): string {
+  switch (status) {
+    case "SHARED_WITH_CLIENT":
+      return "Please review this deliverable and either accept it or return it with comments.";
+    case "ACCEPTED_BY_CLIENT":
+      return "You accepted this deliverable. No further action is needed.";
+    case "RETURNED_BY_CLIENT":
+      return "Jzoom has your return note and will prepare the next revision.";
+    case "CLOSED":
+      return "This deliverable is closed and kept here for reference.";
+    default:
+      return "This deliverable is not waiting for a client decision.";
+  }
+}
+
+function documentStatusLabel(status: ClientDocumentStatus): string {
+  switch (status) {
+    case "REQUESTED":
+      return "Upload required";
+    case "UPLOADED":
+      return "Uploaded";
+    case "CLOSED":
+      return "Accepted";
+    case "CANCELLED":
+    default:
+      return "Cancelled";
+  }
+}
+
+function documentActionCopy(status: ClientDocumentStatus): string {
+  switch (status) {
+    case "REQUESTED":
+      return "Upload the requested document so Jzoom can continue the work.";
+    case "UPLOADED":
+      return "Your upload is with Jzoom for review.";
+    case "CLOSED":
+      return "This document request has been accepted and closed.";
+    case "CANCELLED":
+    default:
+      return "This document request is no longer active.";
+  }
 }
 
 const activeClientRequestStatuses = [
@@ -24,6 +104,13 @@ const activeClientRequestStatuses = [
   "WAITING_CLIENT",
   "WAITING_SUPERVISOR",
   "RETURNED",
+];
+
+const clientVisibleOutputStatuses: ClientOutputStatus[] = [
+  "SHARED_WITH_CLIENT",
+  "ACCEPTED_BY_CLIENT",
+  "RETURNED_BY_CLIENT",
+  "CLOSED",
 ];
 
 export function ClientRequestDetail({ request: initialRequest }: { request: ServiceRequest }) {
@@ -76,17 +163,18 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
 
   function submitUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!selectedDocumentRequestId) {
+      setError("Select a requested document before uploading.");
+      return;
+    }
+
     void run(async () => {
-      const updated = await uploadClientRequestedDocument(
-        request.id,
-        uploadForm.documentRequestId,
-        {
-          mimeType: uploadForm.mimeType,
-          originalName: uploadForm.originalName,
-          sha256: uploadForm.sha256,
-          sizeBytes: Number(uploadForm.sizeBytes),
-        },
-      );
+      const updated = await uploadClientRequestedDocument(request.id, selectedDocumentRequestId, {
+        mimeType: uploadForm.mimeType,
+        originalName: uploadForm.originalName,
+        sha256: uploadForm.sha256,
+        sizeBytes: Number(uploadForm.sizeBytes),
+      });
       setUploadForm({
         documentRequestId: "",
         mimeType: "",
@@ -99,9 +187,7 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
   }
 
   const sharedOutputs = request.outputs.filter((output) =>
-    ["SHARED_WITH_CLIENT", "ACCEPTED_BY_CLIENT", "RETURNED_BY_CLIENT", "CLOSED"].includes(
-      output.status,
-    ),
+    clientVisibleOutputStatuses.includes(output.status),
   );
   const outputsAwaitingDecision = sharedOutputs.filter(
     (output) => output.status === "SHARED_WITH_CLIENT",
@@ -123,6 +209,23 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
       ? ["Jzoom is waiting for your response on this request."]
       : []),
   ];
+  const uploadSelectionIsValid = requestedDocuments.some(
+    (documentRequest) => documentRequest.id === uploadForm.documentRequestId,
+  );
+  const selectedDocumentRequestId = uploadSelectionIsValid
+    ? uploadForm.documentRequestId
+    : requestedDocuments.length === 1
+      ? (requestedDocuments[0]?.id ?? "")
+      : "";
+  const selectedDocumentRequest = requestedDocuments.find(
+    (documentRequest) => documentRequest.id === selectedDocumentRequestId,
+  );
+  const primaryAction =
+    outputsAwaitingDecision.length > 0
+      ? { href: "#client-deliverables", label: "Review deliverables" }
+      : requestedDocuments.length > 0
+        ? { href: "#client-documents", label: "Upload documents" }
+        : null;
   const isActiveRequest = activeClientRequestStatuses.includes(request.status);
 
   return (
@@ -187,6 +290,17 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
             ))
           )}
         </div>
+        <div className="row-actions">
+          {primaryAction ? (
+            <a className="button-primary" href={primaryAction.href}>
+              {primaryAction.label}
+            </a>
+          ) : (
+            <Link className="button-secondary" href="/client/requests">
+              View all requests
+            </Link>
+          )}
+        </div>
       </section>
 
       <section className="quote-summary-grid">
@@ -233,20 +347,37 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
       </section>
 
       <section className="quote-summary-grid">
-        <article className="catalog-panel">
-          <h2>Shared outputs</h2>
+        <article className="catalog-panel" id="client-deliverables">
+          <p className="eyebrow">Deliverables</p>
+          <h2>Work shared with you</h2>
           <div className="activity-list">
             {sharedOutputs.length === 0 ? (
               <p>No shared outputs yet.</p>
             ) : (
               sharedOutputs.map((output) => (
                 <article key={output.id}>
-                  <strong>{output.title}</strong>
-                  <small>
-                    {output.status} · shared {dateTime(output.sharedAt)}
-                  </small>
+                  <div className="entity-card-heading">
+                    <div>
+                      <strong>{output.title}</strong>
+                      <small>Revision {output.revision}</small>
+                    </div>
+                    <span className={`status-badge status-${output.status.toLowerCase()}`}>
+                      {outputStatusLabel(output.status)}
+                    </span>
+                  </div>
+                  <dl className="quote-definition-list">
+                    <div>
+                      <dt>Shared</dt>
+                      <dd>{dateTime(output.sharedAt)}</dd>
+                    </div>
+                    <div>
+                      <dt>Decision</dt>
+                      <dd>{dateTime(output.clientDecidedAt)}</dd>
+                    </div>
+                  </dl>
                   {output.description && <p>{output.description}</p>}
                   {output.clientReturnReason && <p>Return note: {output.clientReturnReason}</p>}
+                  <p>{outputActionCopy(output.status)}</p>
                   {output.status === "SHARED_WITH_CLIENT" ? (
                     <div className="row-actions">
                       <button
@@ -281,7 +412,8 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
           </div>
         </article>
 
-        <article className="catalog-panel">
+        <article className="catalog-panel" id="client-documents">
+          <p className="eyebrow">Documents</p>
           <h2>Requested documents</h2>
           {requestedDocuments.length === 0 ? (
             <p>No document upload is currently required from you.</p>
@@ -291,7 +423,7 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
                 Request
                 <select
                   required
-                  value={uploadForm.documentRequestId}
+                  value={selectedDocumentRequestId}
                   onChange={(event) =>
                     setUploadForm({ ...uploadForm, documentRequestId: event.target.value })
                   }
@@ -304,6 +436,14 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
                   ))}
                 </select>
               </label>
+              {selectedDocumentRequest && (
+                <div className="form-span">
+                  <p>
+                    {selectedDocumentRequest.instructions ??
+                      "Upload the requested document metadata for Jzoom review."}
+                  </p>
+                </div>
+              )}
               <label>
                 File name
                 <input
@@ -357,12 +497,23 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
             ) : (
               request.documentRequests.map((documentRequest) => (
                 <article key={documentRequest.id}>
-                  <strong>{documentRequest.title}</strong>
-                  <small>
-                    {documentRequest.status} · due {dateTime(documentRequest.dueAt)}
-                  </small>
+                  <div className="entity-card-heading">
+                    <div>
+                      <strong>{documentRequest.title}</strong>
+                      <small>Due {dateTime(documentRequest.dueAt)}</small>
+                    </div>
+                    <span className={`status-badge status-${documentRequest.status.toLowerCase()}`}>
+                      {documentStatusLabel(documentRequest.status)}
+                    </span>
+                  </div>
+                  <p>{documentActionCopy(documentRequest.status)}</p>
                   {documentRequest.instructions && <p>{documentRequest.instructions}</p>}
-                  {documentRequest.file && <p>Uploaded: {documentRequest.file.originalName}</p>}
+                  {documentRequest.file && (
+                    <p>
+                      Uploaded: {documentRequest.file.originalName} -{" "}
+                      {fileSize(documentRequest.file.sizeBytes)}
+                    </p>
+                  )}
                 </article>
               ))
             )}
