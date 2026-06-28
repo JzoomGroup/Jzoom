@@ -222,6 +222,17 @@ export function RequestDetail({
   const canAttachMetadata = canAddOperationalContext;
   const canStartWork = canExecute && startableStatuses.includes(request.status);
   const workspace = roleWorkspace(currentUser);
+  const taskAssignmentCandidates = assignmentCandidates
+    ? [
+        ...new Map(
+          [
+            ...assignmentCandidates.specialists,
+            ...assignmentCandidates.supervisors,
+            ...assignmentCandidates.accountManagers,
+          ].map((candidate) => [candidate.id, candidate]),
+        ).values(),
+      ]
+    : [];
   const openTasks = request.tasks.filter((task) => openTaskStatuses.includes(task.status));
   const reviewOutputs = request.outputs.filter((output) => output.status === "INTERNAL_REVIEW");
   const readyOutputs = request.outputs.filter((output) => output.status === "APPROVED_INTERNAL");
@@ -839,13 +850,36 @@ export function RequestDetail({
                   onChange={(event) => setTaskForm({ ...taskForm, title: event.target.value })}
                 />
               </label>
-              <label>
-                Assignee ID
-                <input
-                  value={taskForm.assigneeId}
-                  onChange={(event) => setTaskForm({ ...taskForm, assigneeId: event.target.value })}
-                />
-              </label>
+              {assignmentCandidates ? (
+                <label>
+                  Assignee
+                  <select
+                    value={taskForm.assigneeId}
+                    onChange={(event) =>
+                      setTaskForm({ ...taskForm, assigneeId: event.target.value })
+                    }
+                  >
+                    <option value="">No assignee</option>
+                    {taskAssignmentCandidates.map((candidate) => (
+                      <option key={candidate.id} value={candidate.id}>
+                        {assignmentCandidateLabel(candidate)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                canAssign && (
+                  <label>
+                    Assignee ID
+                    <input
+                      value={taskForm.assigneeId}
+                      onChange={(event) =>
+                        setTaskForm({ ...taskForm, assigneeId: event.target.value })
+                      }
+                    />
+                  </label>
+                )
+              )}
               <label>
                 Priority
                 <select

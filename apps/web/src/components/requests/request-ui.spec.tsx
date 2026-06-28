@@ -381,6 +381,28 @@ describe("Request lifecycle UI", () => {
     expect(await screen.findByText("Specialist User")).toBeInTheDocument();
   });
 
+  it("creates checklist items with a friendly assignee selector", async () => {
+    const fetchMock = jest.mocked(fetch);
+    fetchMock.mockImplementationOnce(() => jsonResponse(serviceRequest()));
+
+    renderRequestDetail(serviceRequest(), currentUser(), assignmentCandidates());
+    fireEvent.change(screen.getByLabelText("Task title"), { target: { value: "Review draft" } });
+    fireEvent.change(screen.getByLabelText("Assignee"), {
+      target: { value: "specialist-user-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add checklist item" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "http://localhost:4000/api/v1/requests/request-1/tasks",
+    );
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      assigneeId: "specialist-user-1",
+      priority: "NORMAL",
+      title: "Review draft",
+    });
+  });
+
   it("renders submitted template answers separately on request detail", () => {
     const request = {
       ...serviceRequest(),
