@@ -3,25 +3,48 @@ import type { ReactNode } from "react";
 import { LogoutButton } from "../logout-button";
 
 const navigation = [
-  { href: "/client", label: "Overview" },
-  { href: "/client/quotes", label: "Quotes" },
-  { href: "/client/invoices", label: "Invoices" },
-  { href: "/client/requests", label: "Requests" },
-  { href: "/client/reports", label: "Reports" },
-  { href: "/notifications", label: "Notifications" },
+  { href: "/client", labelEn: "Overview", labelAr: "الرئيسية" },
+  { href: "/client/quotes", labelEn: "Quotes", labelAr: "العروض" },
+  { href: "/client/invoices", labelEn: "Invoices", labelAr: "الفواتير" },
+  { href: "/client/requests", labelEn: "Requests", labelAr: "الطلبات" },
+  { href: "/client/reports", labelEn: "Reports", labelAr: "التقارير" },
+  { href: "/notifications", labelEn: "Notifications", labelAr: "الإشعارات" },
 ] as const;
 
 export function ClientShell({
   activePath,
   children,
   displayName,
+  locale = "en",
 }: {
   activePath: string;
   children: ReactNode;
   displayName: string;
+  locale?: string;
 }) {
+  const isArabic = locale.toLowerCase().startsWith("ar");
+  const copy = isArabic
+    ? {
+        brandSubtitle: "بوابة العميل",
+        navigationLabel: "تنقل بوابة العميل",
+        profile: "الملف الشخصي",
+        signOut: "تسجيل الخروج",
+        signingOut: "جاري الخروج...",
+      }
+    : {
+        brandSubtitle: "Client Portal",
+        navigationLabel: "Client portal navigation",
+        profile: "Profile",
+        signOut: "Sign out",
+        signingOut: "Signing out...",
+      };
+
   return (
-    <div className="pricing-shell client-shell">
+    <div
+      className="pricing-shell client-shell"
+      dir={isArabic ? "rtl" : "ltr"}
+      lang={isArabic ? "ar" : "en"}
+    >
       <header className="pricing-topbar client-topbar">
         <Link className="admin-brand" href="/client">
           <span className="brand-mark" aria-hidden="true">
@@ -29,22 +52,25 @@ export function ClientShell({
           </span>
           <span>
             <strong>Jzoom</strong>
-            <small>Client Portal</small>
+            <small>{copy.brandSubtitle}</small>
           </span>
         </Link>
-        <nav aria-label="Client portal navigation">
+        <nav aria-label={copy.navigationLabel}>
           {navigation.map((item) => (
             <Link
               key={item.href}
+              className="client-nav-link"
               href={item.href}
               aria-current={activePath === item.href ? "page" : undefined}
             >
-              {item.label}
+              {isArabic ? item.labelAr : item.labelEn}
             </Link>
           ))}
-          <Link href="/profile">Profile</Link>
-          <span>{displayName}</span>
-          <LogoutButton />
+          <Link className="client-nav-link" href="/profile">
+            {copy.profile}
+          </Link>
+          <span className="client-user-chip">{displayName}</span>
+          <LogoutButton label={copy.signOut} submittingLabel={copy.signingOut} />
         </nav>
       </header>
       <main className="quote-main">{children}</main>

@@ -16,7 +16,11 @@ export default async function ClientPortalPage() {
   ]);
 
   return (
-    <ClientShell activePath="/client" displayName={account.user.displayName}>
+    <ClientShell
+      activePath="/client"
+      displayName={account.user.displayName}
+      locale={account.user.preferredLocale}
+    >
       <ClientOverview account={account} quotes={quotes} invoices={invoices} requests={requests} />
     </ClientShell>
   );

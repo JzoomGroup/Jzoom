@@ -15,7 +15,11 @@ export default async function ClientRequestDetailPage({
   ]);
 
   return (
-    <ClientShell activePath="/client/requests" displayName={account.user.displayName}>
+    <ClientShell
+      activePath="/client/requests"
+      displayName={account.user.displayName}
+      locale={account.user.preferredLocale}
+    >
       <ClientRequestDetail request={request} />
     </ClientShell>
   );

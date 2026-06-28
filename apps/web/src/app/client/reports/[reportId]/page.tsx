@@ -12,7 +12,11 @@ export default async function ClientReportDetailPage({
   const [user, report] = await Promise.all([getCurrentUser(), requireClientReport(reportId)]);
 
   return (
-    <ClientShell activePath="/client/reports" displayName={user?.displayName ?? "Client"}>
+    <ClientShell
+      activePath="/client/reports"
+      displayName={user?.displayName ?? "Client"}
+      locale={user?.preferredLocale ?? "en"}
+    >
       <ClientReportDetail report={report} />
     </ClientShell>
   );

@@ -9,7 +9,11 @@ export default async function ClientQuotesPage() {
   ]);
 
   return (
-    <ClientShell activePath="/client/quotes" displayName={account.user.displayName}>
+    <ClientShell
+      activePath="/client/quotes"
+      displayName={account.user.displayName}
+      locale={account.user.preferredLocale}
+    >
       <ClientQuoteList quotes={quotes} />
     </ClientShell>
   );

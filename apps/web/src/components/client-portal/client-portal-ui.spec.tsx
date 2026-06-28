@@ -6,6 +6,7 @@ import { ClientQuoteDetail } from "./client-quote-detail";
 import { ClientQuoteList } from "./client-quote-list";
 import { ClientRequestDetail } from "./client-request-detail";
 import { ClientRequestList } from "./client-request-list";
+import { ClientShell } from "./client-shell";
 import {
   acceptClientRequestOutput,
   addClientRequestComment,
@@ -420,6 +421,22 @@ describe("Client portal UI", () => {
     jest.mocked(returnClientRequestOutput).mockReset();
     jest.mocked(uploadClientRequestedDocument).mockReset();
     jest.mocked(fetchActiveRequestTemplate).mockReset();
+  });
+
+  it("localizes the client shell for Arabic RTL users", () => {
+    const { container } = render(
+      <ClientShell activePath="/client/requests" displayName="Faisal" locale="ar-SA">
+        <div>Client content</div>
+      </ClientShell>,
+    );
+
+    expect(container.firstElementChild).toHaveAttribute("dir", "rtl");
+    expect(container.firstElementChild).toHaveAttribute("lang", "ar");
+    expect(screen.getByRole("navigation", { name: "تنقل بوابة العميل" })).toBeInTheDocument();
+    expect(screen.getByText("بوابة العميل")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "الطلبات" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "الملف الشخصي" })).toHaveAttribute("href", "/profile");
+    expect(screen.getByRole("button", { name: "تسجيل الخروج" })).toBeInTheDocument();
   });
 
   it("renders overview account context and record counts", () => {

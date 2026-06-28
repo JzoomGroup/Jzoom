@@ -12,7 +12,11 @@ export default async function ClientInvoicesPage() {
   ]);
 
   return (
-    <ClientShell activePath="/client/invoices" displayName={account.user.displayName}>
+    <ClientShell
+      activePath="/client/invoices"
+      displayName={account.user.displayName}
+      locale={account.user.preferredLocale}
+    >
       <ClientInvoiceList invoices={invoices} />
     </ClientShell>
   );

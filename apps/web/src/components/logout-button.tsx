@@ -11,7 +11,13 @@ function readCookie(name: string): string | undefined {
     ?.slice(name.length + 1);
 }
 
-export function LogoutButton() {
+export function LogoutButton({
+  label = "Sign out",
+  submittingLabel = "Signing out...",
+}: {
+  label?: string;
+  submittingLabel?: string;
+}) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
 
@@ -33,7 +39,7 @@ export function LogoutButton() {
 
   return (
     <button type="button" className="secondary-button" onClick={logout} disabled={submitting}>
-      {submitting ? "Signing out…" : "Sign out"}
+      {submitting ? submittingLabel : label}
     </button>
   );
 }

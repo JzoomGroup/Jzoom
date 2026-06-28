@@ -2114,6 +2114,22 @@ h3 {
     rgba(13, 19, 33, 0.94);
 }
 
+.client-topbar nav {
+  gap: 8px;
+}
+
+.client-topbar .client-nav-link,
+.client-topbar .client-user-chip {
+  white-space: nowrap;
+}
+
+.client-topbar .client-user-chip {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.9);
+}
+
 .pricing-topbar nav {
   min-width: 0;
   flex-wrap: wrap;
@@ -2791,6 +2807,16 @@ input[type="radio"] {
   .pricing-topbar nav button {
     flex: 0 0 auto;
   }
+
+  .client-topbar nav {
+    scroll-snap-type: x proximity;
+  }
+
+  .client-topbar .client-nav-link,
+  .client-topbar .client-user-chip,
+  .client-topbar nav button {
+    scroll-snap-align: start;
+  }
 }
 
 @media (max-width: 760px) {
@@ -2865,6 +2891,17 @@ input[type="radio"] {
     position: sticky;
     top: 0;
     padding: 14px;
+  }
+
+  .client-topbar .admin-brand {
+    width: 100%;
+  }
+
+  .client-topbar nav a,
+  .client-topbar nav span,
+  .client-topbar nav button {
+    min-height: 42px;
+    padding-inline: 13px;
   }
 
   .catalog-panel,
