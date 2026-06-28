@@ -10,9 +10,10 @@ import {
   uploadClientRequestedDocument,
 } from "../../lib/request-client";
 import type { ServiceRequest } from "../../lib/request-types";
+import { formatRiyadhDateTime } from "../../lib/stable-date";
 
 function dateTime(value: string | null): string {
-  return value ? new Date(value).toLocaleString("en-SA") : "Not set";
+  return formatRiyadhDateTime(value);
 }
 
 export function ClientRequestDetail({ request: initialRequest }: { request: ServiceRequest }) {

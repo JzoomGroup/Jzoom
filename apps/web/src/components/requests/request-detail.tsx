@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import {
   addAttachmentMetadata,
   addInternalNote,
@@ -25,6 +25,7 @@ import {
   updateRequestTask,
 } from "../../lib/request-client";
 import type { RequestStatus, ServiceRequest } from "../../lib/request-types";
+import { formatRiyadhDateTime, riyadhDateInputValue } from "../../lib/stable-date";
 
 const statuses: RequestStatus[] = [
   "NEW",
@@ -40,7 +41,7 @@ const statuses: RequestStatus[] = [
 ];
 
 function dateTime(value: string | null): string {
-  return value ? new Date(value).toLocaleString("en-SA") : "Not set";
+  return formatRiyadhDateTime(value);
 }
 
 function assignee(value: ServiceRequest["assignments"]["specialist"]): string {
@@ -89,7 +90,7 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
     billable: true,
     hours: "1",
     notes: "",
-    workDate: new Date().toISOString().slice(0, 10),
+    workDate: "",
   });
   const [reviewReason, setReviewReason] = useState("");
   const [fileForm, setFileForm] = useState({
@@ -99,6 +100,12 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
     sha256: "",
     visibility: "INTERNAL" as "INTERNAL" | "CLIENT_VISIBLE",
   });
+
+  useEffect(() => {
+    setTimeForm((current) =>
+      current.workDate ? current : { ...current, workDate: riyadhDateInputValue() },
+    );
+  }, []);
 
   async function run(label: string, action: () => Promise<ServiceRequest>) {
     setSaving(label);
@@ -288,7 +295,7 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
         billable: true,
         hours: "1",
         notes: "",
-        workDate: new Date().toISOString().slice(0, 10),
+        workDate: riyadhDateInputValue(),
       });
       return updated;
     });
