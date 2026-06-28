@@ -591,6 +591,9 @@ describe("Client portal UI", () => {
     expect(screen.queryByLabelText("Client ID")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Subscription service ID")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Service item revision ID")).not.toBeInTheDocument();
+    expect(screen.getByText("Request setup")).toBeInTheDocument();
+    expect(screen.getByText("Selected service summary")).toBeInTheDocument();
+    expect(screen.getByText("Included service items")).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Service item"), {
       target: { value: "service-item-revision-1" },
@@ -598,6 +601,7 @@ describe("Client portal UI", () => {
     await waitFor(() =>
       expect(fetchActiveRequestTemplate).toHaveBeenCalledWith("service-item-revision-1"),
     );
+    expect(screen.getByText("Expected output: Employee letter")).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Title"), {
       target: { value: "Need employee letter" },
@@ -605,7 +609,9 @@ describe("Client portal UI", () => {
     fireEvent.change(screen.getByLabelText("Description"), {
       target: { value: "Please prepare an employee letter." },
     });
-    fireEvent.submit(screen.getByRole("button", { name: "Create request" }).closest("form")!);
+    fireEvent.submit(
+      screen.getByRole("button", { name: "Submit request to Jzoom" }).closest("form")!,
+    );
 
     await waitFor(() =>
       expect(createClientServiceRequest).toHaveBeenCalledWith({
@@ -618,5 +624,16 @@ describe("Client portal UI", () => {
       }),
     );
     expect(pushMock).toHaveBeenCalledWith("/client/requests/request-2");
+  });
+
+  it("shows a clear request creation empty state without subscriptions", () => {
+    render(<ClientRequestList account={account()} requests={[]} />);
+
+    expect(
+      screen.getByText("No active subscribed services are available for request creation yet."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Submit request to Jzoom" }),
+    ).not.toBeInTheDocument();
   });
 });

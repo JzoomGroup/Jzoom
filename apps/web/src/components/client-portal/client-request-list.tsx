@@ -28,7 +28,29 @@ function optional(value: string): string | undefined {
 }
 
 function serviceLabel(service: ClientPortalSubscribedMonthlyService): string {
-  return `${service.service.nameEn} / ${service.serviceLevel.labelEn ?? service.serviceLevel.code}`;
+  return `${service.service.nameEn} - ${service.serviceLevel.labelEn ?? service.serviceLevel.code}`;
+}
+
+function priorityLabel(priority: (typeof priorities)[number]): string {
+  switch (priority) {
+    case "LOW":
+      return "Low";
+    case "HIGH":
+      return "High";
+    case "URGENT":
+      return "Urgent";
+    case "NORMAL":
+    default:
+      return "Normal";
+  }
+}
+
+function openRequestCount(requests: RequestSummary[], subscriptionServiceId: string): number {
+  return requests.filter(
+    (request) =>
+      request.service.subscriptionServiceId === subscriptionServiceId &&
+      !["COMPLETED", "CLOSED", "REJECTED"].includes(request.status),
+  ).length;
 }
 
 export function ClientRequestList({
@@ -61,6 +83,19 @@ export function ClientRequestList({
   });
   const selectedService =
     services.find((service) => service.id === form.subscriptionServiceId) ?? null;
+  const selectedClient =
+    account.clients.find((client) => client.id === form.clientId) ?? account.clients[0] ?? null;
+  const selectedServiceItem =
+    selectedService?.serviceItems.find((item) => item.id === form.serviceItemRevisionId) ?? null;
+  const selectedServiceItems = selectedService?.serviceItems ?? [];
+  const selectedServiceOpenRequests = selectedService
+    ? openRequestCount(items, selectedService.id)
+    : 0;
+  const templateRequiredFields =
+    activeTemplate?.fields.filter((field) => field.required).length ?? 0;
+  const templateOptionalFields = activeTemplate
+    ? activeTemplate.fields.length - templateRequiredFields
+    : 0;
 
   async function loadTemplate(serviceItemRevisionId = form.serviceItemRevisionId) {
     const selectedServiceItemRevisionId = optional(serviceItemRevisionId);
@@ -166,6 +201,54 @@ export function ClientRequestList({
           </div>
         ) : (
           <form className="catalog-form wide-form" onSubmit={submit}>
+            <div className="pricing-total-grid form-span">
+              <div>
+                <span>Client</span>
+                <strong>{selectedClient?.code ?? "Client"}</strong>
+              </div>
+              <div>
+                <span>Monthly hours</span>
+                <strong>{selectedService?.hoursAllocated ?? 0}</strong>
+              </div>
+              <div>
+                <span>Open on service</span>
+                <strong>{selectedServiceOpenRequests}</strong>
+              </div>
+              <div>
+                <span>Included service items</span>
+                <strong>{selectedServiceItems.length}</strong>
+              </div>
+              <div className="primary">
+                <span>Template fields</span>
+                <strong>{activeTemplate ? activeTemplate.fields.length : "Auto"}</strong>
+              </div>
+            </div>
+
+            <div className="activity-list form-span">
+              <article>
+                <strong>Request setup</strong>
+                <small>Step 1 of 3 - choose the subscribed service and the exact work item.</small>
+                <p>
+                  Pick the service closest to your need. Jzoom will route the request to the right
+                  team and show any item-specific questions automatically.
+                </p>
+              </article>
+              {selectedService && (
+                <article>
+                  <strong>Selected service summary</strong>
+                  <small>
+                    {serviceLabel(selectedService)} - {selectedService.client.name}
+                  </small>
+                  <p>{selectedService.service.description}</p>
+                  <div className="hours-strip">
+                    <span>{selectedService.service.category.nameEn}</span>
+                    <span>{selectedService.service.domain}</span>
+                    <span>{selectedService.hoursAllocated} monthly hours</span>
+                  </div>
+                </article>
+              )}
+            </div>
+
             <label>
               Service
               <select
@@ -175,7 +258,7 @@ export function ClientRequestList({
               >
                 {services.map((service) => (
                   <option key={service.id} value={service.id}>
-                    {serviceLabel(service)} / {service.client.code} / {service.hoursAllocated}h
+                    {serviceLabel(service)} - {service.client.code} - {service.hoursAllocated}h
                   </option>
                 ))}
               </select>
@@ -186,19 +269,37 @@ export function ClientRequestList({
                 value={form.serviceItemRevisionId}
                 onChange={(event) => selectServiceItem(event.target.value)}
               >
-                <option value="">General service request</option>
-                {selectedService?.serviceItems.map((item) => (
+                <option value="">General service request - no specific item</option>
+                {selectedServiceItems.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.nameEn}
+                    {item.expectedOutput ? ` - ${item.expectedOutput}` : ""}
                   </option>
                 ))}
               </select>
             </label>
-            {selectedService?.service.description && (
+            {selectedServiceItem ? (
               <p className="catalog-feedback success form-span">
-                {selectedService.service.description}
+                Expected output: {selectedServiceItem.expectedOutput ?? selectedServiceItem.nameEn}
+                {selectedServiceItem.requiresFile ? " - attachment details may be required." : ""}
+              </p>
+            ) : (
+              <p className="catalog-feedback success form-span">
+                General requests are routed to Jzoom for triage when the work does not match a
+                specific service item.
               </p>
             )}
+
+            <div className="activity-list form-span">
+              <article>
+                <strong>Request details</strong>
+                <small>Step 2 of 3 - describe what you need in plain language.</small>
+                <p>
+                  Use a clear title and include the business context, deadline, and any important
+                  notes. You can add files later if Jzoom requests them.
+                </p>
+              </article>
+            </div>
             <label>
               Title
               <input
@@ -217,7 +318,7 @@ export function ClientRequestList({
               >
                 {priorities.map((priority) => (
                   <option key={priority} value={priority}>
-                    {priority}
+                    {priorityLabel(priority)}
                   </option>
                 ))}
               </select>
@@ -231,17 +332,17 @@ export function ClientRequestList({
               />
             </label>
             <details className="form-span">
-              <summary>Link to quote or invoice</summary>
+              <summary>Optional commercial reference</summary>
               <div className="catalog-form wide-form">
                 <label>
-                  Source quote ID
+                  Quote reference ID
                   <input
                     value={form.sourceQuoteId}
                     onChange={(event) => setForm({ ...form, sourceQuoteId: event.target.value })}
                   />
                 </label>
                 <label>
-                  Source invoice ID
+                  Invoice reference ID
                   <input
                     value={form.sourceInvoiceId}
                     onChange={(event) => setForm({ ...form, sourceInvoiceId: event.target.value })}
@@ -263,14 +364,42 @@ export function ClientRequestList({
             {templateNotice && (
               <p className="catalog-feedback success form-span">{templateNotice}</p>
             )}
+            {activeTemplate && (
+              <div className="pricing-total-grid form-span">
+                <div>
+                  <span>Template version</span>
+                  <strong>v{activeTemplate.version}</strong>
+                </div>
+                <div>
+                  <span>Required fields</span>
+                  <strong>{templateRequiredFields}</strong>
+                </div>
+                <div>
+                  <span>Optional fields</span>
+                  <strong>{templateOptionalFields}</strong>
+                </div>
+                <div>
+                  <span>Documents</span>
+                  <strong>{activeTemplate.documentChecklist.length}</strong>
+                </div>
+                <div className="primary">
+                  <span>Files</span>
+                  <strong>{activeTemplate.downloadableFiles.length}</strong>
+                </div>
+              </div>
+            )}
             <RequestTemplateFields
               template={activeTemplate}
               values={templateAnswers}
               onChange={setTemplateAnswer}
             />
             {error && <p className="form-error form-span">{error}</p>}
-            <button className="button-primary" type="submit" disabled={saving || loadingTemplate}>
-              {saving ? "Creating..." : "Create request"}
+            <button
+              className="button-primary"
+              type="submit"
+              disabled={saving || loadingTemplate || !form.subscriptionServiceId}
+            >
+              {saving ? "Creating..." : "Submit request to Jzoom"}
             </button>
           </form>
         )}
