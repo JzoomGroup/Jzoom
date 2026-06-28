@@ -117,6 +117,12 @@ export class RequestsController {
     return this.requests.queue({ ...input, queue }, request.auth!);
   }
 
+  @Get("assignment-candidates")
+  @ApiOperation({ summary: "List active internal users eligible for request assignment" })
+  assignmentCandidates(@Req() request: RequestWithId) {
+    return this.requests.assignmentCandidates(request.auth!);
+  }
+
   @Get(":id")
   @ApiOperation({ summary: "Retrieve an internal service request detail view" })
   get(@Param("id") id: string, @Req() request: RequestWithId) {

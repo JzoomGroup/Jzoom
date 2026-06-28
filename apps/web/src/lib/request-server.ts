@@ -1,6 +1,11 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import type { RequestQueueResponse, RequestSummary, ServiceRequest } from "./request-types";
+import type {
+  RequestAssignmentCandidates,
+  RequestQueueResponse,
+  RequestSummary,
+  ServiceRequest,
+} from "./request-types";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
 
@@ -41,6 +46,10 @@ export function requireRequestQueue(
 
 export function requireRequest(id: string): Promise<ServiceRequest> {
   return requireRequestResponse<ServiceRequest>(`requests/${id}`);
+}
+
+export function requireRequestAssignmentCandidates(): Promise<RequestAssignmentCandidates> {
+  return requireRequestResponse<RequestAssignmentCandidates>("requests/assignment-candidates");
 }
 
 export function requireClientRequests(): Promise<RequestSummary[]> {

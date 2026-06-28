@@ -16,6 +16,16 @@ export interface RequestUser {
   displayName: string;
 }
 
+export interface RequestAssignmentCandidate extends RequestUser {
+  roleCodes: string[];
+}
+
+export interface RequestAssignmentCandidates {
+  specialists: RequestAssignmentCandidate[];
+  supervisors: RequestAssignmentCandidate[];
+  accountManagers: RequestAssignmentCandidate[];
+}
+
 export interface RequestSummary {
   id: string;
   requestNumber: string;

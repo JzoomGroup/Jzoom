@@ -88,6 +88,25 @@ const userSummarySelect = {
   displayName: true,
 } satisfies Prisma.UserSelect;
 
+const assignmentCandidateSelect = {
+  id: true,
+  email: true,
+  displayName: true,
+  roles: {
+    select: {
+      role: {
+        select: {
+          code: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.UserSelect;
+
+type AssignmentCandidateRecord = Prisma.UserGetPayload<{
+  select: typeof assignmentCandidateSelect;
+}>;
+
 const requestSummaryInclude = {
   client: {
     select: {
@@ -303,6 +322,42 @@ export class RequestsService {
   async get(id: string, principal: AuthenticatedPrincipal) {
     const request = await this.requireAccessibleRequest(id, principal);
     return this.detailView(request, false);
+  }
+
+  async assignmentCandidates(principal: AuthenticatedPrincipal) {
+    if (!hasGlobalAccess(principal) && !principal.roles.includes(SUPERVISOR_ROLE_CODE)) {
+      throw new ForbiddenException({
+        code: "REQUEST_ASSIGNMENT_CANDIDATES_FORBIDDEN",
+        message: "Assignment candidates are available to supervisors, management, and admins",
+      });
+    }
+
+    const roleCodes = [SPECIALIST_ROLE_CODE, SUPERVISOR_ROLE_CODE, ACCOUNT_MANAGER_ROLE_CODE];
+    const users = await this.database.prisma.user.findMany({
+      where: {
+        status: "ACTIVE",
+        userType: "INTERNAL",
+        roles: {
+          some: {
+            role: {
+              code: { in: roleCodes },
+              status: "ACTIVE",
+            },
+          },
+        },
+      },
+      orderBy: [{ displayName: "asc" }, { email: "asc" }],
+      select: assignmentCandidateSelect,
+    });
+    const candidates = users.map((user) => this.assignmentCandidateView(user));
+    const byRole = (roleCode: string) =>
+      candidates.filter((candidate) => candidate.roleCodes.includes(roleCode));
+
+    return {
+      specialists: byRole(SPECIALIST_ROLE_CODE),
+      supervisors: byRole(SUPERVISOR_ROLE_CODE),
+      accountManagers: byRole(ACCOUNT_MANAGER_ROLE_CODE),
+    };
   }
 
   async queue(input: RequestQueueQueryDto, principal: AuthenticatedPrincipal) {
@@ -2579,6 +2634,15 @@ export class RequestsService {
       specialist: request.assignedSpecialist,
       supervisor: request.assignedSupervisor,
       accountManager: request.accountManager,
+    };
+  }
+
+  private assignmentCandidateView(user: AssignmentCandidateRecord) {
+    return {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      roleCodes: user.roles.map(({ role }) => role.code),
     };
   }
 

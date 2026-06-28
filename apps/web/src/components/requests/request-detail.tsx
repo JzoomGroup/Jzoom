@@ -25,7 +25,12 @@ import {
   updateRequestTask,
 } from "../../lib/request-client";
 import type { CurrentUser } from "../../lib/auth";
-import type { RequestStatus, ServiceRequest } from "../../lib/request-types";
+import type {
+  RequestAssignmentCandidate,
+  RequestAssignmentCandidates,
+  RequestStatus,
+  ServiceRequest,
+} from "../../lib/request-types";
 import { formatRiyadhDateTime, riyadhDateInputValue } from "../../lib/stable-date";
 
 const statuses: RequestStatus[] = [
@@ -81,6 +86,10 @@ function assignmentValue(value: string): string | null | undefined {
   return trimmed.toLowerCase() === "clear" ? null : trimmed;
 }
 
+function assignmentCandidateLabel(candidate: RequestAssignmentCandidate): string {
+  return `${candidate.displayName} (${candidate.email})`;
+}
+
 function hasRole(user: CurrentUser, role: string): boolean {
   return user.roles.includes(role);
 }
@@ -132,9 +141,11 @@ function roleWorkspace(user: CurrentUser): { title: string; description: string 
 }
 
 export function RequestDetail({
+  assignmentCandidates,
   currentUser,
   initialRequest,
 }: {
+  assignmentCandidates?: RequestAssignmentCandidates | null;
   currentUser: CurrentUser;
   initialRequest: ServiceRequest;
 }) {
@@ -573,42 +584,112 @@ export function RequestDetail({
           </dl>
           {canAssign ? (
             <form className="catalog-form" onSubmit={submitAssignment}>
-              <label>
-                Specialist ID
-                <input
-                  placeholder="UUID or clear"
-                  value={assignmentForm.assignedSpecialistId}
-                  onChange={(event) =>
-                    setAssignmentForm({
-                      ...assignmentForm,
-                      assignedSpecialistId: event.target.value,
-                    })
-                  }
-                />
-              </label>
-              <label>
-                Supervisor ID
-                <input
-                  placeholder="UUID or clear"
-                  value={assignmentForm.assignedSupervisorId}
-                  onChange={(event) =>
-                    setAssignmentForm({
-                      ...assignmentForm,
-                      assignedSupervisorId: event.target.value,
-                    })
-                  }
-                />
-              </label>
-              <label>
-                Account manager ID
-                <input
-                  placeholder="UUID or clear"
-                  value={assignmentForm.accountManagerId}
-                  onChange={(event) =>
-                    setAssignmentForm({ ...assignmentForm, accountManagerId: event.target.value })
-                  }
-                />
-              </label>
+              {assignmentCandidates ? (
+                <>
+                  <label>
+                    Specialist
+                    <select
+                      value={assignmentForm.assignedSpecialistId}
+                      onChange={(event) =>
+                        setAssignmentForm({
+                          ...assignmentForm,
+                          assignedSpecialistId: event.target.value,
+                        })
+                      }
+                    >
+                      <option value="">Keep current specialist</option>
+                      <option value="clear">Clear specialist</option>
+                      {assignmentCandidates.specialists.map((candidate) => (
+                        <option key={candidate.id} value={candidate.id}>
+                          {assignmentCandidateLabel(candidate)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Supervisor
+                    <select
+                      value={assignmentForm.assignedSupervisorId}
+                      onChange={(event) =>
+                        setAssignmentForm({
+                          ...assignmentForm,
+                          assignedSupervisorId: event.target.value,
+                        })
+                      }
+                    >
+                      <option value="">Keep current supervisor</option>
+                      <option value="clear">Clear supervisor</option>
+                      {assignmentCandidates.supervisors.map((candidate) => (
+                        <option key={candidate.id} value={candidate.id}>
+                          {assignmentCandidateLabel(candidate)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Account manager
+                    <select
+                      value={assignmentForm.accountManagerId}
+                      onChange={(event) =>
+                        setAssignmentForm({
+                          ...assignmentForm,
+                          accountManagerId: event.target.value,
+                        })
+                      }
+                    >
+                      <option value="">Keep current account manager</option>
+                      <option value="clear">Clear account manager</option>
+                      {assignmentCandidates.accountManagers.map((candidate) => (
+                        <option key={candidate.id} value={candidate.id}>
+                          {assignmentCandidateLabel(candidate)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              ) : (
+                <>
+                  <label>
+                    Specialist ID
+                    <input
+                      placeholder="UUID or clear"
+                      value={assignmentForm.assignedSpecialistId}
+                      onChange={(event) =>
+                        setAssignmentForm({
+                          ...assignmentForm,
+                          assignedSpecialistId: event.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Supervisor ID
+                    <input
+                      placeholder="UUID or clear"
+                      value={assignmentForm.assignedSupervisorId}
+                      onChange={(event) =>
+                        setAssignmentForm({
+                          ...assignmentForm,
+                          assignedSupervisorId: event.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Account manager ID
+                    <input
+                      placeholder="UUID or clear"
+                      value={assignmentForm.accountManagerId}
+                      onChange={(event) =>
+                        setAssignmentForm({
+                          ...assignmentForm,
+                          accountManagerId: event.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                </>
+              )}
               <label>
                 Reason
                 <input

@@ -4,7 +4,12 @@ import { RequestDetail } from "./request-detail";
 import { RequestList } from "./request-list";
 import { RequestQueue } from "./request-queue";
 import type { CurrentUser } from "../../lib/auth";
-import type { RequestQueueResponse, RequestSummary, ServiceRequest } from "../../lib/request-types";
+import type {
+  RequestAssignmentCandidates,
+  RequestQueueResponse,
+  RequestSummary,
+  ServiceRequest,
+} from "../../lib/request-types";
 
 const pushMock = jest.fn();
 
@@ -233,6 +238,35 @@ function requestQueue(): RequestQueueResponse {
   };
 }
 
+function assignmentCandidates(): RequestAssignmentCandidates {
+  return {
+    accountManagers: [
+      {
+        id: "am-1",
+        email: "am@example.com",
+        displayName: "Account Manager",
+        roleCodes: ["ROLE-AM"],
+      },
+    ],
+    specialists: [
+      {
+        id: "specialist-user-1",
+        email: "specialist@example.com",
+        displayName: "Specialist User",
+        roleCodes: ["ROLE-SPECIALIST"],
+      },
+    ],
+    supervisors: [
+      {
+        id: "supervisor-user-1",
+        email: "supervisor@example.com",
+        displayName: "Supervisor User",
+        roleCodes: ["ROLE-SUPERVISOR"],
+      },
+    ],
+  };
+}
+
 function currentUser(overrides: Partial<CurrentUser> = {}): CurrentUser {
   return {
     id: "admin-user-1",
@@ -249,8 +283,10 @@ function currentUser(overrides: Partial<CurrentUser> = {}): CurrentUser {
 function renderRequestDetail(
   request: ServiceRequest = serviceRequest(),
   user: CurrentUser = currentUser(),
+  candidates?: RequestAssignmentCandidates,
 ) {
-  return render(<RequestDetail currentUser={user} initialRequest={request} />);
+  const assignmentProps = candidates ? { assignmentCandidates: candidates } : {};
+  return render(<RequestDetail {...assignmentProps} currentUser={user} initialRequest={request} />);
 }
 
 function jsonResponse(body: unknown): Promise<Response> {
@@ -302,6 +338,47 @@ describe("Request lifecycle UI", () => {
       status: "TRIAGE",
     });
     expect(await screen.findByText("TRIAGE")).toBeInTheDocument();
+  });
+
+  it("assigns users through friendly assignment candidate selectors", async () => {
+    const fetchMock = jest.mocked(fetch);
+    fetchMock.mockImplementationOnce(() =>
+      jsonResponse({
+        ...serviceRequest(),
+        assignments: {
+          ...serviceRequest().assignments,
+          specialist: {
+            id: "specialist-user-1",
+            email: "specialist@example.com",
+            displayName: "Specialist User",
+          },
+          supervisor: {
+            id: "supervisor-user-1",
+            email: "supervisor@example.com",
+            displayName: "Supervisor User",
+          },
+        },
+      }),
+    );
+
+    renderRequestDetail(serviceRequest(), currentUser(), assignmentCandidates());
+    fireEvent.change(screen.getByLabelText("Specialist"), {
+      target: { value: "specialist-user-1" },
+    });
+    fireEvent.change(screen.getByLabelText("Supervisor"), {
+      target: { value: "supervisor-user-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save assignment" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "http://localhost:4000/api/v1/requests/request-1/assignment",
+    );
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      assignedSpecialistId: "specialist-user-1",
+      assignedSupervisorId: "supervisor-user-1",
+    });
+    expect(await screen.findByText("Specialist User")).toBeInTheDocument();
   });
 
   it("renders submitted template answers separately on request detail", () => {

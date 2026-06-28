@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "../../lib/auth";
-import { requireRequest, requireRequests } from "../../lib/request-server";
+import {
+  requireRequest,
+  requireRequestAssignmentCandidates,
+  requireRequests,
+} from "../../lib/request-server";
 import { QuoteShell } from "../quotes/quote-shell";
 import { RequestDetail } from "./request-detail";
 import { RequestList } from "./request-list";
@@ -16,6 +20,10 @@ function canUseRequests(
   );
 }
 
+function canUseAssignmentCandidates(user: NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>) {
+  return user.roles.some((role) => ["ROLE-ADMIN", "ROLE-MGMT", "ROLE-SUPERVISOR"].includes(role));
+}
+
 export async function RequestsPage({ requestId }: { requestId?: string }) {
   const [user, content] = await Promise.all([
     getCurrentUser(),
@@ -27,6 +35,10 @@ export async function RequestsPage({ requestId }: { requestId?: string }) {
   if (!canUseRequests(user)) {
     redirect("/403");
   }
+  const assignmentCandidates =
+    requestId && !Array.isArray(content) && canUseAssignmentCandidates(user)
+      ? await requireRequestAssignmentCandidates()
+      : null;
 
   return (
     <QuoteShell
@@ -38,7 +50,11 @@ export async function RequestsPage({ requestId }: { requestId?: string }) {
       {Array.isArray(content) ? (
         <RequestList requests={content} />
       ) : (
-        <RequestDetail currentUser={user} initialRequest={content} />
+        <RequestDetail
+          assignmentCandidates={assignmentCandidates}
+          currentUser={user}
+          initialRequest={content}
+        />
       )}
     </QuoteShell>
   );
