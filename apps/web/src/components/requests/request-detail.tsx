@@ -24,6 +24,7 @@ import {
   supervisorReviewRequest,
   updateRequestTask,
 } from "../../lib/request-client";
+import type { CurrentUser } from "../../lib/auth";
 import type { RequestStatus, ServiceRequest } from "../../lib/request-types";
 import { formatRiyadhDateTime, riyadhDateInputValue } from "../../lib/stable-date";
 
@@ -47,6 +48,23 @@ const startableStatuses: RequestStatus[] = [
   "RETURNED",
 ];
 
+type RequestTaskStatus = ServiceRequest["tasks"][number]["status"];
+type RequestOutputStatus = ServiceRequest["outputs"][number]["status"];
+type RequestTimeEntryStatus = ServiceRequest["timeEntries"][number]["status"];
+
+const openTaskStatuses: RequestTaskStatus[] = ["PENDING", "TODO", "IN_PROGRESS", "BLOCKED"];
+const submittableOutputStatuses: RequestOutputStatus[] = [
+  "DRAFT",
+  "REVISION_REQUESTED",
+  "RETURNED_BY_CLIENT",
+];
+const closableOutputStatuses: RequestOutputStatus[] = [
+  "SHARED_WITH_CLIENT",
+  "ACCEPTED_BY_CLIENT",
+  "RETURNED_BY_CLIENT",
+];
+const submittableTimeEntryStatuses: RequestTimeEntryStatus[] = ["DRAFT", "REJECTED"];
+
 function dateTime(value: string | null): string {
   return formatRiyadhDateTime(value);
 }
@@ -63,7 +81,63 @@ function assignmentValue(value: string): string | null | undefined {
   return trimmed.toLowerCase() === "clear" ? null : trimmed;
 }
 
-export function RequestDetail({ initialRequest }: { initialRequest: ServiceRequest }) {
+function hasRole(user: CurrentUser, role: string): boolean {
+  return user.roles.includes(role);
+}
+
+function userMatches(user: CurrentUser, assigned: ServiceRequest["assignments"]["specialist"]) {
+  return assigned?.id === user.id;
+}
+
+function hours(entries: ServiceRequest["timeEntries"]): string {
+  const total = entries.reduce((sum, entry) => sum + Number(entry.hours), 0);
+  return `${total.toFixed(total % 1 === 0 ? 0 : 2)}h`;
+}
+
+function roleWorkspace(user: CurrentUser): { title: string; description: string } {
+  if (hasRole(user, "ROLE-ADMIN")) {
+    return {
+      title: "Admin operations control",
+      description: "Full request control, assignment, review, delivery, and hours oversight.",
+    };
+  }
+  if (hasRole(user, "ROLE-MGMT")) {
+    return {
+      title: "Management review",
+      description: "Executive visibility with escalation and approval access.",
+    };
+  }
+  if (hasRole(user, "ROLE-SUPERVISOR")) {
+    return {
+      title: "Supervisor review",
+      description: "Quality review, delivery approval, workload, and hours decisions.",
+    };
+  }
+  if (hasRole(user, "ROLE-SPECIALIST")) {
+    return {
+      title: "Specialist workbench",
+      description: "Assigned execution, checklist work, document requests, deliverables, and time.",
+    };
+  }
+  if (hasRole(user, "ROLE-AM")) {
+    return {
+      title: "Account manager follow-up",
+      description: "Client context, relationship notes, document follow-up, and status visibility.",
+    };
+  }
+  return {
+    title: "Request workspace",
+    description: "Scoped request visibility.",
+  };
+}
+
+export function RequestDetail({
+  currentUser,
+  initialRequest,
+}: {
+  currentUser: CurrentUser;
+  initialRequest: ServiceRequest;
+}) {
   const [request, setRequest] = useState(initialRequest);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
@@ -113,6 +187,68 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
       current.workDate ? current : { ...current, workDate: riyadhDateInputValue() },
     );
   }, []);
+
+  const hasGlobalOperations =
+    hasRole(currentUser, "ROLE-ADMIN") || hasRole(currentUser, "ROLE-MGMT");
+  const isSupervisor = hasRole(currentUser, "ROLE-SUPERVISOR");
+  const isSpecialist = hasRole(currentUser, "ROLE-SPECIALIST");
+  const isAccountManager = hasRole(currentUser, "ROLE-AM");
+  const assignedAsSpecialist = userMatches(currentUser, request.assignments.specialist);
+  const assignedAsSupervisor = userMatches(currentUser, request.assignments.supervisor);
+  const assignedAsAccountManager = userMatches(currentUser, request.assignments.accountManager);
+  const assignedTask = request.tasks.some((task) => task.assignee?.id === currentUser.id);
+  const canAssign = hasGlobalOperations || isSupervisor;
+  const canExecute =
+    hasGlobalOperations || (isSpecialist && (assignedAsSpecialist || assignedTask)) || assignedTask;
+  const canSupervise = hasGlobalOperations || (isSupervisor && assignedAsSupervisor);
+  const canManageLifecycle = hasGlobalOperations || canSupervise;
+  const canAddOperationalContext =
+    hasGlobalOperations ||
+    canExecute ||
+    canSupervise ||
+    (isAccountManager && assignedAsAccountManager);
+  const canRequestDocuments = canAddOperationalContext;
+  const canAttachMetadata = canAddOperationalContext;
+  const canStartWork = canExecute && startableStatuses.includes(request.status);
+  const workspace = roleWorkspace(currentUser);
+  const openTasks = request.tasks.filter((task) => openTaskStatuses.includes(task.status));
+  const reviewOutputs = request.outputs.filter((output) => output.status === "INTERNAL_REVIEW");
+  const readyOutputs = request.outputs.filter((output) => output.status === "APPROVED_INTERNAL");
+  const returnedOutputs = request.outputs.filter((output) =>
+    ["RETURNED_BY_CLIENT", "REVISION_REQUESTED"].includes(output.status),
+  );
+  const submittedTimeEntries = request.timeEntries.filter((entry) => entry.status === "SUBMITTED");
+  const approvedTimeEntries = request.timeEntries.filter((entry) => entry.status === "APPROVED");
+  const clientDocumentRequests = request.documentRequests.filter(
+    (documentRequest) => documentRequest.status === "REQUESTED",
+  );
+  const uploadedDocumentRequests = request.documentRequests.filter(
+    (documentRequest) => documentRequest.status === "UPLOADED",
+  );
+  const nextActions = [
+    ...(canAssign && !request.assignments.specialist
+      ? ["Assign a specialist before execution starts."]
+      : []),
+    ...(canStartWork ? ["Start work and move the request into execution."] : []),
+    ...(canExecute && returnedOutputs.length > 0
+      ? [`Revise ${returnedOutputs.length} returned deliverable(s).`]
+      : []),
+    ...(canSupervise && reviewOutputs.length > 0
+      ? [`Review ${reviewOutputs.length} deliverable(s) waiting for supervisor approval.`]
+      : []),
+    ...(canSupervise && readyOutputs.length > 0
+      ? [`Share ${readyOutputs.length} approved deliverable(s) with the client.`]
+      : []),
+    ...(canSupervise && submittedTimeEntries.length > 0
+      ? [`Approve or reject ${submittedTimeEntries.length} submitted time entry(s).`]
+      : []),
+    ...(canRequestDocuments && uploadedDocumentRequests.length > 0
+      ? [`Close ${uploadedDocumentRequests.length} uploaded client document request(s).`]
+      : []),
+    ...(request.status === "WAITING_CLIENT"
+      ? ["Request is waiting for a client response or document upload."]
+      : []),
+  ];
 
   async function run(label: string, action: () => Promise<ServiceRequest>) {
     setSaving(label);
@@ -344,6 +480,49 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
 
       {error && <p className="form-error">{error}</p>}
 
+      <section className="catalog-panel">
+        <p className="eyebrow">Operations workbench</p>
+        <h2>{workspace.title}</h2>
+        <p>{workspace.description}</p>
+        <div className="metric-grid" aria-label="Request operations summary">
+          <article>
+            <span>Open tasks</span>
+            <strong>{openTasks.length}</strong>
+            <small>{request.tasks.length} total checklist items</small>
+          </article>
+          <article>
+            <span>Supervisor review</span>
+            <strong>{reviewOutputs.length}</strong>
+            <small>{readyOutputs.length} approved and ready to share</small>
+          </article>
+          <article>
+            <span>Client documents</span>
+            <strong>{clientDocumentRequests.length}</strong>
+            <small>{uploadedDocumentRequests.length} uploaded by client</small>
+          </article>
+          <article>
+            <span>Submitted hours</span>
+            <strong>{hours(submittedTimeEntries)}</strong>
+            <small>{hours(approvedTimeEntries)} approved</small>
+          </article>
+        </div>
+        <div className="activity-list">
+          {nextActions.length === 0 ? (
+            <article>
+              <strong>No blocking operation right now.</strong>
+              <p>The request has no role-specific pending action for your workspace.</p>
+            </article>
+          ) : (
+            nextActions.map((action) => (
+              <article key={action}>
+                <strong>Next action</strong>
+                <p>{action}</p>
+              </article>
+            ))
+          )}
+        </div>
+      </section>
+
       <section className="quote-summary-grid">
         <article className="catalog-panel">
           <h2>Request context</h2>
@@ -392,90 +571,98 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
               <dd>{assignee(request.assignments.accountManager)}</dd>
             </div>
           </dl>
-          <form className="catalog-form" onSubmit={submitAssignment}>
-            <label>
-              Specialist ID
-              <input
-                placeholder="UUID or clear"
-                value={assignmentForm.assignedSpecialistId}
-                onChange={(event) =>
-                  setAssignmentForm({
-                    ...assignmentForm,
-                    assignedSpecialistId: event.target.value,
-                  })
-                }
-              />
-            </label>
-            <label>
-              Supervisor ID
-              <input
-                placeholder="UUID or clear"
-                value={assignmentForm.assignedSupervisorId}
-                onChange={(event) =>
-                  setAssignmentForm({
-                    ...assignmentForm,
-                    assignedSupervisorId: event.target.value,
-                  })
-                }
-              />
-            </label>
-            <label>
-              Account manager ID
-              <input
-                placeholder="UUID or clear"
-                value={assignmentForm.accountManagerId}
-                onChange={(event) =>
-                  setAssignmentForm({ ...assignmentForm, accountManagerId: event.target.value })
-                }
-              />
-            </label>
-            <label>
-              Reason
-              <input
-                value={assignmentForm.reason}
-                onChange={(event) =>
-                  setAssignmentForm({ ...assignmentForm, reason: event.target.value })
-                }
-              />
-            </label>
-            <button className="button-primary" type="submit" disabled={saving === "assignment"}>
-              Save assignment
-            </button>
-          </form>
+          {canAssign ? (
+            <form className="catalog-form" onSubmit={submitAssignment}>
+              <label>
+                Specialist ID
+                <input
+                  placeholder="UUID or clear"
+                  value={assignmentForm.assignedSpecialistId}
+                  onChange={(event) =>
+                    setAssignmentForm({
+                      ...assignmentForm,
+                      assignedSpecialistId: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                Supervisor ID
+                <input
+                  placeholder="UUID or clear"
+                  value={assignmentForm.assignedSupervisorId}
+                  onChange={(event) =>
+                    setAssignmentForm({
+                      ...assignmentForm,
+                      assignedSupervisorId: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                Account manager ID
+                <input
+                  placeholder="UUID or clear"
+                  value={assignmentForm.accountManagerId}
+                  onChange={(event) =>
+                    setAssignmentForm({ ...assignmentForm, accountManagerId: event.target.value })
+                  }
+                />
+              </label>
+              <label>
+                Reason
+                <input
+                  value={assignmentForm.reason}
+                  onChange={(event) =>
+                    setAssignmentForm({ ...assignmentForm, reason: event.target.value })
+                  }
+                />
+              </label>
+              <button className="button-primary" type="submit" disabled={saving === "assignment"}>
+                Save assignment
+              </button>
+            </form>
+          ) : (
+            <p>Assignment changes are limited to admin, management, or supervisor workspaces.</p>
+          )}
         </article>
       </section>
 
       <section className="catalog-panel">
         <h2>Lifecycle</h2>
-        <form className="catalog-form" onSubmit={submitStatus}>
-          <label>
-            Status
-            <select
-              value={statusForm.status}
-              onChange={(event) =>
-                setStatusForm({ ...statusForm, status: event.target.value as RequestStatus })
-              }
-            >
-              {statuses.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Reason
-            <input
-              value={statusForm.reason}
-              onChange={(event) => setStatusForm({ ...statusForm, reason: event.target.value })}
-            />
-          </label>
-          <button className="button-primary" type="submit" disabled={saving === "status"}>
-            Update status
-          </button>
-        </form>
+        {canManageLifecycle ? (
+          <form className="catalog-form" onSubmit={submitStatus}>
+            <label>
+              Status
+              <select
+                value={statusForm.status}
+                onChange={(event) =>
+                  setStatusForm({ ...statusForm, status: event.target.value as RequestStatus })
+                }
+              >
+                {statuses.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Reason
+              <input
+                value={statusForm.reason}
+                onChange={(event) => setStatusForm({ ...statusForm, reason: event.target.value })}
+              />
+            </label>
+            <button className="button-primary" type="submit" disabled={saving === "status"}>
+              Update status
+            </button>
+          </form>
+        ) : (
+          <p>Status changes are handled by the assigned supervisor, management, or admin.</p>
+        )}
         <div className="row-actions">
-          {startableStatuses.includes(request.status) && (
+          {canStartWork && (
             <button
               className="button-secondary"
               disabled={saving === "start"}
@@ -485,40 +672,44 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
               Start work
             </button>
           )}
-          <input
-            aria-label="Supervisor review reason"
-            placeholder="Supervisor review reason"
-            value={reviewReason}
-            onChange={(event) => setReviewReason(event.target.value)}
-          />
-          <button
-            className="button-secondary"
-            type="button"
-            onClick={() => supervisorAction("APPROVE")}
-          >
-            Approve request
-          </button>
-          <button
-            className="button-secondary"
-            type="button"
-            onClick={() => supervisorAction("RETURN")}
-          >
-            Return changes
-          </button>
-          <button
-            className="button-danger"
-            type="button"
-            onClick={() => supervisorAction("REJECT")}
-          >
-            Reject
-          </button>
-          <button
-            className="button-secondary"
-            type="button"
-            onClick={() => supervisorAction("ESCALATE")}
-          >
-            Escalate
-          </button>
+          {canSupervise && (
+            <>
+              <input
+                aria-label="Supervisor review reason"
+                placeholder="Supervisor review reason"
+                value={reviewReason}
+                onChange={(event) => setReviewReason(event.target.value)}
+              />
+              <button
+                className="button-secondary"
+                type="button"
+                onClick={() => supervisorAction("APPROVE")}
+              >
+                Approve request
+              </button>
+              <button
+                className="button-secondary"
+                type="button"
+                onClick={() => supervisorAction("RETURN")}
+              >
+                Return changes
+              </button>
+              <button
+                className="button-danger"
+                type="button"
+                onClick={() => supervisorAction("REJECT")}
+              >
+                Reject
+              </button>
+              <button
+                className="button-secondary"
+                type="button"
+                onClick={() => supervisorAction("ESCALATE")}
+              >
+                Escalate
+              </button>
+            </>
+          )}
         </div>
       </section>
 
@@ -557,59 +748,65 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
       <section className="quote-summary-grid">
         <article className="catalog-panel">
           <h2>Internal checklist</h2>
-          <form className="catalog-form" onSubmit={submitTask}>
-            <label>
-              Task title
-              <input
-                required
-                value={taskForm.title}
-                onChange={(event) => setTaskForm({ ...taskForm, title: event.target.value })}
-              />
-            </label>
-            <label>
-              Assignee ID
-              <input
-                value={taskForm.assigneeId}
-                onChange={(event) => setTaskForm({ ...taskForm, assigneeId: event.target.value })}
-              />
-            </label>
-            <label>
-              Priority
-              <select
-                value={taskForm.priority}
-                onChange={(event) =>
-                  setTaskForm({
-                    ...taskForm,
-                    priority: event.target.value as typeof taskForm.priority,
-                  })
-                }
-              >
-                {["LOW", "NORMAL", "HIGH", "URGENT"].map((priority) => (
-                  <option key={priority} value={priority}>
-                    {priority}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Due at
-              <input
-                type="datetime-local"
-                value={taskForm.dueAt}
-                onChange={(event) => setTaskForm({ ...taskForm, dueAt: event.target.value })}
-              />
-            </label>
-            <label className="form-span">
-              Description
-              <textarea
-                value={taskForm.description}
-                onChange={(event) => setTaskForm({ ...taskForm, description: event.target.value })}
-              />
-            </label>
-            <button className="button-primary" type="submit" disabled={saving === "task"}>
-              Add checklist item
-            </button>
-          </form>
+          {canAddOperationalContext ? (
+            <form className="catalog-form" onSubmit={submitTask}>
+              <label>
+                Task title
+                <input
+                  required
+                  value={taskForm.title}
+                  onChange={(event) => setTaskForm({ ...taskForm, title: event.target.value })}
+                />
+              </label>
+              <label>
+                Assignee ID
+                <input
+                  value={taskForm.assigneeId}
+                  onChange={(event) => setTaskForm({ ...taskForm, assigneeId: event.target.value })}
+                />
+              </label>
+              <label>
+                Priority
+                <select
+                  value={taskForm.priority}
+                  onChange={(event) =>
+                    setTaskForm({
+                      ...taskForm,
+                      priority: event.target.value as typeof taskForm.priority,
+                    })
+                  }
+                >
+                  {["LOW", "NORMAL", "HIGH", "URGENT"].map((priority) => (
+                    <option key={priority} value={priority}>
+                      {priority}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Due at
+                <input
+                  type="datetime-local"
+                  value={taskForm.dueAt}
+                  onChange={(event) => setTaskForm({ ...taskForm, dueAt: event.target.value })}
+                />
+              </label>
+              <label className="form-span">
+                Description
+                <textarea
+                  value={taskForm.description}
+                  onChange={(event) =>
+                    setTaskForm({ ...taskForm, description: event.target.value })
+                  }
+                />
+              </label>
+              <button className="button-primary" type="submit" disabled={saving === "task"}>
+                Add checklist item
+              </button>
+            </form>
+          ) : (
+            <p>Checklist updates are limited to assigned internal workspaces.</p>
+          )}
           <div className="activity-list">
             {request.tasks.length === 0 ? (
               <p>No internal checklist items yet.</p>
@@ -621,43 +818,45 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
                     {task.status} · {task.priority} · {task.assignee?.displayName ?? "Unassigned"}
                   </small>
                   {task.description && <p>{task.description}</p>}
-                  <div className="row-actions">
-                    <button
-                      className="button-secondary"
-                      type="button"
-                      onClick={() => setTaskStatus(task.id, "PENDING")}
-                    >
-                      Pending
-                    </button>
-                    <button
-                      className="button-secondary"
-                      type="button"
-                      onClick={() => setTaskStatus(task.id, "IN_PROGRESS")}
-                    >
-                      Start
-                    </button>
-                    <button
-                      className="button-secondary"
-                      type="button"
-                      onClick={() => setTaskStatus(task.id, "DONE")}
-                    >
-                      Done
-                    </button>
-                    <button
-                      className="button-secondary"
-                      type="button"
-                      onClick={() => setTaskStatus(task.id, "NOT_APPLICABLE")}
-                    >
-                      N/A
-                    </button>
-                    <button
-                      className="button-secondary"
-                      type="button"
-                      onClick={() => setTaskStatus(task.id, "BLOCKED")}
-                    >
-                      Blocked
-                    </button>
-                  </div>
+                  {canAddOperationalContext && (
+                    <div className="row-actions">
+                      <button
+                        className="button-secondary"
+                        type="button"
+                        onClick={() => setTaskStatus(task.id, "PENDING")}
+                      >
+                        Pending
+                      </button>
+                      <button
+                        className="button-secondary"
+                        type="button"
+                        onClick={() => setTaskStatus(task.id, "IN_PROGRESS")}
+                      >
+                        Start
+                      </button>
+                      <button
+                        className="button-secondary"
+                        type="button"
+                        onClick={() => setTaskStatus(task.id, "DONE")}
+                      >
+                        Done
+                      </button>
+                      <button
+                        className="button-secondary"
+                        type="button"
+                        onClick={() => setTaskStatus(task.id, "NOT_APPLICABLE")}
+                      >
+                        N/A
+                      </button>
+                      <button
+                        className="button-secondary"
+                        type="button"
+                        onClick={() => setTaskStatus(task.id, "BLOCKED")}
+                      >
+                        Blocked
+                      </button>
+                    </div>
+                  )}
                 </article>
               ))
             )}
@@ -666,36 +865,40 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
 
         <article className="catalog-panel">
           <h2>Internal outputs</h2>
-          <form className="catalog-form" onSubmit={submitOutput}>
-            <label>
-              Output code
-              <input
-                required
-                value={outputForm.code}
-                onChange={(event) => setOutputForm({ ...outputForm, code: event.target.value })}
-              />
-            </label>
-            <label>
-              Title
-              <input
-                required
-                value={outputForm.title}
-                onChange={(event) => setOutputForm({ ...outputForm, title: event.target.value })}
-              />
-            </label>
-            <label className="form-span">
-              Description
-              <textarea
-                value={outputForm.description}
-                onChange={(event) =>
-                  setOutputForm({ ...outputForm, description: event.target.value })
-                }
-              />
-            </label>
-            <button className="button-primary" type="submit" disabled={saving === "output"}>
-              Create internal output
-            </button>
-          </form>
+          {canExecute ? (
+            <form className="catalog-form" onSubmit={submitOutput}>
+              <label>
+                Output code
+                <input
+                  required
+                  value={outputForm.code}
+                  onChange={(event) => setOutputForm({ ...outputForm, code: event.target.value })}
+                />
+              </label>
+              <label>
+                Title
+                <input
+                  required
+                  value={outputForm.title}
+                  onChange={(event) => setOutputForm({ ...outputForm, title: event.target.value })}
+                />
+              </label>
+              <label className="form-span">
+                Description
+                <textarea
+                  value={outputForm.description}
+                  onChange={(event) =>
+                    setOutputForm({ ...outputForm, description: event.target.value })
+                  }
+                />
+              </label>
+              <button className="button-primary" type="submit" disabled={saving === "output"}>
+                Create internal output
+              </button>
+            </form>
+          ) : (
+            <p>Deliverable preparation is available to assigned specialists and global roles.</p>
+          )}
           <div className="activity-list">
             {request.outputs.length === 0 ? (
               <p>No internal outputs prepared yet.</p>
@@ -716,48 +919,58 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
                     <p>Client return note: {output.clientReturnReason}</p>
                   )}
                   <div className="row-actions">
-                    <button
-                      className="button-secondary"
-                      type="button"
-                      onClick={() => submitOutputForReview(output.id)}
-                    >
-                      Submit
-                    </button>
-                    <button
-                      className="button-secondary"
-                      type="button"
-                      onClick={() => reviewOutput(output.id, "APPROVE")}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      className="button-secondary"
-                      type="button"
-                      onClick={() => reviewOutput(output.id, "RETURN")}
-                    >
-                      Return
-                    </button>
-                    <button
-                      className="button-danger"
-                      type="button"
-                      onClick={() => reviewOutput(output.id, "REJECT")}
-                    >
-                      Reject
-                    </button>
-                    <button
-                      className="button-secondary"
-                      type="button"
-                      onClick={() => shareOutput(output.id)}
-                    >
-                      Share with client
-                    </button>
-                    <button
-                      className="button-secondary"
-                      type="button"
-                      onClick={() => closeOutput(output.id)}
-                    >
-                      Close delivery
-                    </button>
+                    {canExecute && submittableOutputStatuses.includes(output.status) && (
+                      <button
+                        className="button-secondary"
+                        type="button"
+                        onClick={() => submitOutputForReview(output.id)}
+                      >
+                        Submit
+                      </button>
+                    )}
+                    {canSupervise && output.status === "INTERNAL_REVIEW" && (
+                      <>
+                        <button
+                          className="button-secondary"
+                          type="button"
+                          onClick={() => reviewOutput(output.id, "APPROVE")}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="button-secondary"
+                          type="button"
+                          onClick={() => reviewOutput(output.id, "RETURN")}
+                        >
+                          Return
+                        </button>
+                        <button
+                          className="button-danger"
+                          type="button"
+                          onClick={() => reviewOutput(output.id, "REJECT")}
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
+                    {canSupervise && output.status === "APPROVED_INTERNAL" && (
+                      <button
+                        className="button-secondary"
+                        type="button"
+                        onClick={() => shareOutput(output.id)}
+                      >
+                        Share with client
+                      </button>
+                    )}
+                    {canSupervise && closableOutputStatuses.includes(output.status) && (
+                      <button
+                        className="button-secondary"
+                        type="button"
+                        onClick={() => closeOutput(output.id)}
+                      >
+                        Close delivery
+                      </button>
+                    )}
                   </div>
                 </article>
               ))
@@ -769,44 +982,48 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
       <section className="quote-summary-grid">
         <article className="catalog-panel">
           <h2>Client document requests</h2>
-          <form className="catalog-form" onSubmit={submitDocumentRequest}>
-            <label>
-              Document title
-              <input
-                required
-                value={documentForm.title}
-                onChange={(event) =>
-                  setDocumentForm({ ...documentForm, title: event.target.value })
-                }
-              />
-            </label>
-            <label>
-              Due at
-              <input
-                type="datetime-local"
-                value={documentForm.dueAt}
-                onChange={(event) =>
-                  setDocumentForm({ ...documentForm, dueAt: event.target.value })
-                }
-              />
-            </label>
-            <label className="form-span">
-              Instructions
-              <textarea
-                value={documentForm.instructions}
-                onChange={(event) =>
-                  setDocumentForm({ ...documentForm, instructions: event.target.value })
-                }
-              />
-            </label>
-            <button
-              className="button-primary"
-              type="submit"
-              disabled={saving === "document-request"}
-            >
-              Request document
-            </button>
-          </form>
+          {canRequestDocuments ? (
+            <form className="catalog-form" onSubmit={submitDocumentRequest}>
+              <label>
+                Document title
+                <input
+                  required
+                  value={documentForm.title}
+                  onChange={(event) =>
+                    setDocumentForm({ ...documentForm, title: event.target.value })
+                  }
+                />
+              </label>
+              <label>
+                Due at
+                <input
+                  type="datetime-local"
+                  value={documentForm.dueAt}
+                  onChange={(event) =>
+                    setDocumentForm({ ...documentForm, dueAt: event.target.value })
+                  }
+                />
+              </label>
+              <label className="form-span">
+                Instructions
+                <textarea
+                  value={documentForm.instructions}
+                  onChange={(event) =>
+                    setDocumentForm({ ...documentForm, instructions: event.target.value })
+                  }
+                />
+              </label>
+              <button
+                className="button-primary"
+                type="submit"
+                disabled={saving === "document-request"}
+              >
+                Request document
+              </button>
+            </form>
+          ) : (
+            <p>Client document requests are available to assigned internal workspaces.</p>
+          )}
           <div className="activity-list">
             {request.documentRequests.length === 0 ? (
               <p>No client documents requested yet.</p>
@@ -819,22 +1036,28 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
                   </small>
                   {documentRequest.instructions && <p>{documentRequest.instructions}</p>}
                   {documentRequest.file && <p>Uploaded: {documentRequest.file.originalName}</p>}
-                  <div className="row-actions">
-                    <button
-                      className="button-secondary"
-                      type="button"
-                      onClick={() => setDocumentRequestStatus(documentRequest.id, "CLOSED")}
-                    >
-                      Close
-                    </button>
-                    <button
-                      className="button-danger"
-                      type="button"
-                      onClick={() => setDocumentRequestStatus(documentRequest.id, "CANCELLED")}
-                    >
-                      Cancel
-                    </button>
-                  </div>
+                  {canRequestDocuments && (
+                    <div className="row-actions">
+                      {["REQUESTED", "UPLOADED"].includes(documentRequest.status) && (
+                        <button
+                          className="button-secondary"
+                          type="button"
+                          onClick={() => setDocumentRequestStatus(documentRequest.id, "CLOSED")}
+                        >
+                          Close
+                        </button>
+                      )}
+                      {documentRequest.status === "REQUESTED" && (
+                        <button
+                          className="button-danger"
+                          type="button"
+                          onClick={() => setDocumentRequestStatus(documentRequest.id, "CANCELLED")}
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </article>
               ))
             )}
@@ -843,47 +1066,51 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
 
         <article className="catalog-panel">
           <h2>Basic time entries</h2>
-          <form className="catalog-form" onSubmit={submitTimeEntry}>
-            <label>
-              Work date
-              <input
-                required
-                type="date"
-                value={timeForm.workDate}
-                onChange={(event) => setTimeForm({ ...timeForm, workDate: event.target.value })}
-              />
-            </label>
-            <label>
-              Hours
-              <input
-                required
-                max="24"
-                min="0.01"
-                step="0.25"
-                type="number"
-                value={timeForm.hours}
-                onChange={(event) => setTimeForm({ ...timeForm, hours: event.target.value })}
-              />
-            </label>
-            <label className="checkbox-label">
-              <input
-                checked={timeForm.billable}
-                type="checkbox"
-                onChange={(event) => setTimeForm({ ...timeForm, billable: event.target.checked })}
-              />
-              Billable
-            </label>
-            <label className="form-span">
-              Note
-              <textarea
-                value={timeForm.notes}
-                onChange={(event) => setTimeForm({ ...timeForm, notes: event.target.value })}
-              />
-            </label>
-            <button className="button-primary" type="submit" disabled={saving === "time-entry"}>
-              Add time
-            </button>
-          </form>
+          {canExecute ? (
+            <form className="catalog-form" onSubmit={submitTimeEntry}>
+              <label>
+                Work date
+                <input
+                  required
+                  type="date"
+                  value={timeForm.workDate}
+                  onChange={(event) => setTimeForm({ ...timeForm, workDate: event.target.value })}
+                />
+              </label>
+              <label>
+                Hours
+                <input
+                  required
+                  max="24"
+                  min="0.01"
+                  step="0.25"
+                  type="number"
+                  value={timeForm.hours}
+                  onChange={(event) => setTimeForm({ ...timeForm, hours: event.target.value })}
+                />
+              </label>
+              <label className="checkbox-label">
+                <input
+                  checked={timeForm.billable}
+                  type="checkbox"
+                  onChange={(event) => setTimeForm({ ...timeForm, billable: event.target.checked })}
+                />
+                Billable
+              </label>
+              <label className="form-span">
+                Note
+                <textarea
+                  value={timeForm.notes}
+                  onChange={(event) => setTimeForm({ ...timeForm, notes: event.target.value })}
+                />
+              </label>
+              <button className="button-primary" type="submit" disabled={saving === "time-entry"}>
+                Add time
+              </button>
+            </form>
+          ) : (
+            <p>Time registration is available to assigned execution users and global roles.</p>
+          )}
           <div className="activity-list">
             {request.timeEntries.length === 0 ? (
               <p>No time entries yet.</p>
@@ -900,27 +1127,34 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
                   {entry.notes && <p>{entry.notes}</p>}
                   {entry.decisionReason && <p>Decision note: {entry.decisionReason}</p>}
                   <div className="row-actions">
-                    <button
-                      className="button-secondary"
-                      type="button"
-                      onClick={() => submitTimeEntryForReview(entry.id)}
-                    >
-                      Submit
-                    </button>
-                    <button
-                      className="button-secondary"
-                      type="button"
-                      onClick={() => reviewTimeEntry(entry.id, "APPROVE")}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      className="button-danger"
-                      type="button"
-                      onClick={() => reviewTimeEntry(entry.id, "REJECT")}
-                    >
-                      Reject
-                    </button>
+                    {(hasGlobalOperations || entry.user.id === currentUser.id) &&
+                      submittableTimeEntryStatuses.includes(entry.status) && (
+                        <button
+                          className="button-secondary"
+                          type="button"
+                          onClick={() => submitTimeEntryForReview(entry.id)}
+                        >
+                          Submit
+                        </button>
+                      )}
+                    {canSupervise && entry.status === "SUBMITTED" && (
+                      <>
+                        <button
+                          className="button-secondary"
+                          type="button"
+                          onClick={() => reviewTimeEntry(entry.id, "APPROVE")}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="button-danger"
+                          type="button"
+                          onClick={() => reviewTimeEntry(entry.id, "REJECT")}
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
                   </div>
                 </article>
               ))
@@ -999,62 +1233,68 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
       <section className="quote-summary-grid">
         <article className="catalog-panel">
           <h2>Attachment metadata</h2>
-          <form className="catalog-form" onSubmit={submitAttachment}>
-            <label>
-              Original name
-              <input
-                required
-                value={fileForm.originalName}
-                onChange={(event) => setFileForm({ ...fileForm, originalName: event.target.value })}
-              />
-            </label>
-            <label>
-              MIME type
-              <input
-                required
-                value={fileForm.mimeType}
-                onChange={(event) => setFileForm({ ...fileForm, mimeType: event.target.value })}
-              />
-            </label>
-            <label>
-              Size bytes
-              <input
-                required
-                min="1"
-                type="number"
-                value={fileForm.sizeBytes}
-                onChange={(event) => setFileForm({ ...fileForm, sizeBytes: event.target.value })}
-              />
-            </label>
-            <label>
-              SHA-256
-              <input
-                required
-                minLength={64}
-                maxLength={64}
-                value={fileForm.sha256}
-                onChange={(event) => setFileForm({ ...fileForm, sha256: event.target.value })}
-              />
-            </label>
-            <label>
-              Visibility
-              <select
-                value={fileForm.visibility}
-                onChange={(event) =>
-                  setFileForm({
-                    ...fileForm,
-                    visibility: event.target.value as typeof fileForm.visibility,
-                  })
-                }
-              >
-                <option value="INTERNAL">Internal</option>
-                <option value="CLIENT_VISIBLE">Client visible</option>
-              </select>
-            </label>
-            <button className="button-primary" type="submit" disabled={saving === "attachment"}>
-              Add metadata
-            </button>
-          </form>
+          {canAttachMetadata ? (
+            <form className="catalog-form" onSubmit={submitAttachment}>
+              <label>
+                Original name
+                <input
+                  required
+                  value={fileForm.originalName}
+                  onChange={(event) =>
+                    setFileForm({ ...fileForm, originalName: event.target.value })
+                  }
+                />
+              </label>
+              <label>
+                MIME type
+                <input
+                  required
+                  value={fileForm.mimeType}
+                  onChange={(event) => setFileForm({ ...fileForm, mimeType: event.target.value })}
+                />
+              </label>
+              <label>
+                Size bytes
+                <input
+                  required
+                  min="1"
+                  type="number"
+                  value={fileForm.sizeBytes}
+                  onChange={(event) => setFileForm({ ...fileForm, sizeBytes: event.target.value })}
+                />
+              </label>
+              <label>
+                SHA-256
+                <input
+                  required
+                  minLength={64}
+                  maxLength={64}
+                  value={fileForm.sha256}
+                  onChange={(event) => setFileForm({ ...fileForm, sha256: event.target.value })}
+                />
+              </label>
+              <label>
+                Visibility
+                <select
+                  value={fileForm.visibility}
+                  onChange={(event) =>
+                    setFileForm({
+                      ...fileForm,
+                      visibility: event.target.value as typeof fileForm.visibility,
+                    })
+                  }
+                >
+                  <option value="INTERNAL">Internal</option>
+                  <option value="CLIENT_VISIBLE">Client visible</option>
+                </select>
+              </label>
+              <button className="button-primary" type="submit" disabled={saving === "attachment"}>
+                Add metadata
+              </button>
+            </form>
+          ) : (
+            <p>Attachment metadata updates are available to assigned internal workspaces.</p>
+          )}
           <div className="activity-list">
             {request.attachments.map((file) => (
               <article key={file.id}>

@@ -137,7 +137,7 @@ export interface RequestTask {
   id: string;
   title: string;
   description: string | null;
-  status: "TODO" | "IN_PROGRESS" | "DONE" | "BLOCKED" | "CANCELLED";
+  status: "PENDING" | "TODO" | "IN_PROGRESS" | "DONE" | "NOT_APPLICABLE" | "BLOCKED" | "CANCELLED";
   priority: string;
   assignee: RequestUser | null;
   dueAt: string | null;

@@ -38,7 +38,7 @@ export async function RequestsPage({ requestId }: { requestId?: string }) {
       {Array.isArray(content) ? (
         <RequestList requests={content} />
       ) : (
-        <RequestDetail initialRequest={content} />
+        <RequestDetail currentUser={user} initialRequest={content} />
       )}
     </QuoteShell>
   );

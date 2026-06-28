@@ -3,6 +3,7 @@ import { ClientRequestDetail } from "../client-portal/client-request-detail";
 import { RequestDetail } from "./request-detail";
 import { RequestList } from "./request-list";
 import { RequestQueue } from "./request-queue";
+import type { CurrentUser } from "../../lib/auth";
 import type { RequestQueueResponse, RequestSummary, ServiceRequest } from "../../lib/request-types";
 
 const pushMock = jest.fn();
@@ -232,6 +233,26 @@ function requestQueue(): RequestQueueResponse {
   };
 }
 
+function currentUser(overrides: Partial<CurrentUser> = {}): CurrentUser {
+  return {
+    id: "admin-user-1",
+    email: "admin@example.com",
+    displayName: "Admin User",
+    permissions: [],
+    preferredLocale: "en",
+    roles: ["ROLE-ADMIN"],
+    userType: "INTERNAL",
+    ...overrides,
+  };
+}
+
+function renderRequestDetail(
+  request: ServiceRequest = serviceRequest(),
+  user: CurrentUser = currentUser(),
+) {
+  return render(<RequestDetail currentUser={user} initialRequest={request} />);
+}
+
 function jsonResponse(body: unknown): Promise<Response> {
   return Promise.resolve({
     ok: true,
@@ -269,7 +290,7 @@ describe("Request lifecycle UI", () => {
       }),
     );
 
-    render(<RequestDetail initialRequest={serviceRequest()} />);
+    renderRequestDetail();
     fireEvent.change(screen.getByLabelText("Status"), { target: { value: "TRIAGE" } });
     fireEvent.click(screen.getByRole("button", { name: "Update status" }));
 
@@ -320,7 +341,7 @@ describe("Request lifecycle UI", () => {
       },
     };
 
-    render(<RequestDetail initialRequest={request} />);
+    renderRequestDetail(request);
 
     expect(screen.getByRole("heading", { name: "Template answers" })).toBeInTheDocument();
     expect(screen.getByText("Request description")).toBeInTheDocument();
@@ -329,14 +350,112 @@ describe("Request lifecycle UI", () => {
   });
 
   it("exposes start work only when the request status can move to in progress", () => {
-    const { unmount } = render(<RequestDetail initialRequest={serviceRequest()} />);
+    const { unmount } = renderRequestDetail();
 
     expect(screen.queryByRole("button", { name: "Start work" })).not.toBeInTheDocument();
 
     unmount();
-    render(<RequestDetail initialRequest={{ ...serviceRequest(), status: "ASSIGNED" }} />);
+    renderRequestDetail({ ...serviceRequest(), status: "ASSIGNED" });
 
     expect(screen.getByRole("button", { name: "Start work" })).toBeInTheDocument();
+  });
+
+  it("shows assigned specialists an execution workbench without supervisor controls", () => {
+    const request = {
+      ...serviceRequest(),
+      status: "ASSIGNED" as const,
+      assignments: {
+        ...serviceRequest().assignments,
+        specialist: {
+          id: "specialist-user-1",
+          email: "specialist@example.com",
+          displayName: "Specialist User",
+        },
+      },
+    };
+
+    renderRequestDetail(
+      request,
+      currentUser({
+        id: "specialist-user-1",
+        email: "specialist@example.com",
+        displayName: "Specialist User",
+        roles: ["ROLE-SPECIALIST"],
+      }),
+    );
+
+    expect(screen.getByRole("heading", { name: "Specialist workbench" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start work" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create internal output" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add time" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Approve request" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Update status" })).not.toBeInTheDocument();
+  });
+
+  it("shows assigned supervisors review controls without execution forms", () => {
+    const request = {
+      ...serviceRequest(),
+      assignments: {
+        ...serviceRequest().assignments,
+        supervisor: {
+          id: "supervisor-user-1",
+          email: "supervisor@example.com",
+          displayName: "Supervisor User",
+        },
+      },
+    };
+    request.outputs[0] = {
+      ...request.outputs[0]!,
+      status: "INTERNAL_REVIEW",
+      title: "Submitted output",
+    };
+    request.timeEntries[0] = {
+      ...request.timeEntries[0]!,
+      status: "SUBMITTED",
+      user: { id: "specialist-user-1", email: "specialist@example.com", displayName: "Specialist" },
+    };
+
+    renderRequestDetail(
+      request,
+      currentUser({
+        id: "supervisor-user-1",
+        email: "supervisor@example.com",
+        displayName: "Supervisor User",
+        roles: ["ROLE-SUPERVISOR"],
+      }),
+    );
+
+    expect(screen.getByRole("heading", { name: "Supervisor review" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Approve request" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Approve" }).length).toBeGreaterThanOrEqual(2);
+    expect(
+      screen.queryByRole("button", { name: "Create internal output" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add time" })).not.toBeInTheDocument();
+  });
+
+  it("keeps account managers in follow-up mode without technical delivery approvals", () => {
+    const request = serviceRequest();
+    request.outputs[0] = {
+      ...request.outputs[0]!,
+      status: "APPROVED_INTERNAL",
+      title: "Approved output",
+    };
+
+    renderRequestDetail(
+      request,
+      currentUser({
+        id: "am-1",
+        email: "am@example.com",
+        displayName: "Account Manager",
+        roles: ["ROLE-AM"],
+      }),
+    );
+
+    expect(screen.getByRole("heading", { name: "Account manager follow-up" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add comment" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Share with client" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Approve request" })).not.toBeInTheDocument();
   });
 
   it("loads filtered internal work queues through the backend API", async () => {
@@ -374,7 +493,7 @@ describe("Request lifecycle UI", () => {
       title: "Approved internal output",
     };
 
-    render(<RequestDetail initialRequest={request} />);
+    renderRequestDetail(request);
     fireEvent.click(screen.getByRole("button", { name: "Share with client" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
