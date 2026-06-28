@@ -157,8 +157,8 @@ export function ClientRequestList({
       <section className="catalog-panel editor-panel">
         <h2>Create request</h2>
         <p>
-          Select one of your subscribed services, choose the service item, then complete the
-          related request details. If the item has an active template, it loads automatically.
+          Select one of your subscribed services, choose the service item, then complete the related
+          request details. If the item has an active template, it loads automatically.
         </p>
         {services.length === 0 ? (
           <div className="catalog-empty">

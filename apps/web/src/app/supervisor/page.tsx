@@ -13,9 +13,7 @@ export default async function SupervisorDashboardPage() {
     redirect("/login");
   }
   if (
-    !user.roles.some((role) =>
-      supervisorRoles.includes(role as (typeof supervisorRoles)[number]),
-    )
+    !user.roles.some((role) => supervisorRoles.includes(role as (typeof supervisorRoles)[number]))
   ) {
     redirect("/403");
   }

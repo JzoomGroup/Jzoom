@@ -18,12 +18,9 @@ export function QuoteShell({
   const hasRole = (role: string) => roles.includes(role) || isAdmin;
   const hasAnyRole = (allowed: string[]) => allowed.some((role) => hasRole(role));
   const hasPermission = (permission: string) => permissions.includes(permission);
-  const canUsePricing =
-    hasAnyRole(["ROLE-AM"]) && hasPermission("PERM-USE-PRICING-STUDIO");
-  const canManageQuotes =
-    hasAnyRole(["ROLE-AM"]) && hasPermission("PERM-MANAGE-QUOTES");
-  const canManageInvoices =
-    hasAnyRole(["ROLE-AM"]) && hasPermission("PERM-MANAGE-INVOICES");
+  const canUsePricing = hasAnyRole(["ROLE-AM"]) && hasPermission("PERM-USE-PRICING-STUDIO");
+  const canManageQuotes = hasAnyRole(["ROLE-AM"]) && hasPermission("PERM-MANAGE-QUOTES");
+  const canManageInvoices = hasAnyRole(["ROLE-AM"]) && hasPermission("PERM-MANAGE-INVOICES");
   const canViewReports = hasAnyRole(["ROLE-MGMT", "ROLE-AM"]);
 
   return (

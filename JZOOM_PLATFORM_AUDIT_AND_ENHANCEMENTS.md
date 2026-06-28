@@ -47,111 +47,111 @@ Important testing note: the in-app visual browser was unavailable during the aud
 
 ## 4. Role Coverage Matrix
 
-| Role | Expected menus | Exists? | Works end-to-end? | Notes | Risk |
-|---|---:|---:|---:|---|---|
-| Admin | Full Admin Console | Partial | Partial | Catalog, clients, pricing rules, request templates, and platform config exist. Missing dashboard, users UI, permission matrix, subscription UI, audit UI. | High |
-| Client | Client portal | Partial | Partial | Quotes, invoices, reports, requests, and notifications work. New request flow requires raw IDs and active templates are missing. | High |
-| Specialist | Assigned work | Partial | Partial | Can access assigned requests, tasks, notes, outputs, and hours. No dedicated dashboard; workflow is raw. | Medium |
-| Supervisor | Review, approval, workload | Partial | Partial | Review, approval, and hours review exist in request detail. No real supervisor dashboard or workload UI. | Medium |
-| Account Manager | Portfolio and relationship | Partial | Partial | Portfolio and reports foundation exist. Missing opportunities, relationship notes, renewals, and deeper client profile. | Medium |
-| Management | Executive visibility | Partial | Partial | Can see broad requests, reports, and portfolio. Missing executive dashboard; operational power is too broad. | High |
+| Role            |             Expected menus | Exists? | Works end-to-end? | Notes                                                                                                                                                     | Risk   |
+| --------------- | -------------------------: | ------: | ----------------: | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| Admin           |         Full Admin Console | Partial |           Partial | Catalog, clients, pricing rules, request templates, and platform config exist. Missing dashboard, users UI, permission matrix, subscription UI, audit UI. | High   |
+| Client          |              Client portal | Partial |           Partial | Quotes, invoices, reports, requests, and notifications work. New request flow requires raw IDs and active templates are missing.                          | High   |
+| Specialist      |              Assigned work | Partial |           Partial | Can access assigned requests, tasks, notes, outputs, and hours. No dedicated dashboard; workflow is raw.                                                  | Medium |
+| Supervisor      | Review, approval, workload | Partial |           Partial | Review, approval, and hours review exist in request detail. No real supervisor dashboard or workload UI.                                                  | Medium |
+| Account Manager | Portfolio and relationship | Partial |           Partial | Portfolio and reports foundation exist. Missing opportunities, relationship notes, renewals, and deeper client profile.                                   | Medium |
+| Management      |       Executive visibility | Partial |           Partial | Can see broad requests, reports, and portfolio. Missing executive dashboard; operational power is too broad.                                              | High   |
 
 ## 5. Admin Feature Matrix
 
-| Admin feature | Exists? | Current implementation | Gap | Recommended action | Risk if added |
-|---|---:|---|---|---|---|
-| Admin Dashboard | No | No route or menu | No KPI overview | Add read-only metrics dashboard first | Medium |
-| Client Management | Partial | Create, edit, status, portal user | No profile, team assignment, subscription linking UI | Extend client profile safely | Medium |
-| Subscription Management | No UI | DB models and seeded data exist | No admin editor for packages, dates, hours, services, overrides | Add versioned subscription UI | High |
-| Monthly Services | Yes | Real revision-safe catalog UI/API | Needs usability polish | Keep and improve | Low |
-| One-Time Services | Yes | Real Build/Digital catalog UI/API | Not fully connected to client request/project flow | Keep and integrate | Medium |
-| Service Items | Partial | Real item management and package matrix | No friendly form builder per item | Add visual field builder | High |
-| Dynamic Fields | Partial | JSON template editor and field library | 0 active templates; suggested templates are generic | Build active service-specific templates | High |
-| Users And Permissions | API partial | Invitation, status, roles, permission APIs exist | No users page | Add Admin Users UI | High |
-| Permission Matrix | No UI | Backend permissions exist | No safe visual matrix | Add read-only matrix first, then controlled edits | High |
-| Workflow Builder | Partial | JSON workflow template foundation | No visual workflow builder | Add versioned builder later | High |
-| Hours Rules | Partial | Time entries, approval, ledger | Rules are hardcoded or not admin-configurable | Add hours rule settings after workflow design | Medium |
-| Reports And Closing | Partial | Reports and closings work | Raw client IDs, limited recommendations/notes | Add pickers and report editor | Medium |
-| Audit And System Data | Partial | Audit logs are written | No admin audit viewer | Add audit log UI with filters | Medium |
-| Platform Settings | Partial | Settings, localization, PDF, notifications as JSON | Too technical for normal admin | Add safer forms for common settings | Medium |
+| Admin feature           |     Exists? | Current implementation                             | Gap                                                             | Recommended action                                | Risk if added |
+| ----------------------- | ----------: | -------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------- | ------------- |
+| Admin Dashboard         |          No | No route or menu                                   | No KPI overview                                                 | Add read-only metrics dashboard first             | Medium        |
+| Client Management       |     Partial | Create, edit, status, portal user                  | No profile, team assignment, subscription linking UI            | Extend client profile safely                      | Medium        |
+| Subscription Management |       No UI | DB models and seeded data exist                    | No admin editor for packages, dates, hours, services, overrides | Add versioned subscription UI                     | High          |
+| Monthly Services        |         Yes | Real revision-safe catalog UI/API                  | Needs usability polish                                          | Keep and improve                                  | Low           |
+| One-Time Services       |         Yes | Real Build/Digital catalog UI/API                  | Not fully connected to client request/project flow              | Keep and integrate                                | Medium        |
+| Service Items           |     Partial | Real item management and package matrix            | No friendly form builder per item                               | Add visual field builder                          | High          |
+| Dynamic Fields          |     Partial | JSON template editor and field library             | 0 active templates; suggested templates are generic             | Build active service-specific templates           | High          |
+| Users And Permissions   | API partial | Invitation, status, roles, permission APIs exist   | No users page                                                   | Add Admin Users UI                                | High          |
+| Permission Matrix       |       No UI | Backend permissions exist                          | No safe visual matrix                                           | Add read-only matrix first, then controlled edits | High          |
+| Workflow Builder        |     Partial | JSON workflow template foundation                  | No visual workflow builder                                      | Add versioned builder later                       | High          |
+| Hours Rules             |     Partial | Time entries, approval, ledger                     | Rules are hardcoded or not admin-configurable                   | Add hours rule settings after workflow design     | Medium        |
+| Reports And Closing     |     Partial | Reports and closings work                          | Raw client IDs, limited recommendations/notes                   | Add pickers and report editor                     | Medium        |
+| Audit And System Data   |     Partial | Audit logs are written                             | No admin audit viewer                                           | Add audit log UI with filters                     | Medium        |
+| Platform Settings       |     Partial | Settings, localization, PDF, notifications as JSON | Too technical for normal admin                                  | Add safer forms for common settings               | Medium        |
 
 ## 6. Client Feature Matrix
 
-| Feature | Exists? | Works end-to-end? | Gap | Recommended action | Risk |
-|---|---:|---:|---|---|---|
-| Client dashboard | Partial | Partial | Missing used hours, remaining hours, waiting actions, deliverable approval summary | Add KPI cards and action queue | Medium |
-| Service catalog | Partial | Partial | Services show, but request flow does not start cleanly from service/item selection | Add service to item to form flow | High |
-| New request | Partial | Weak | Requires raw IDs; no friendly picker; templates inactive | Replace IDs with pickers and activate templates | High |
-| Dynamic item forms | Partial | No | Backend exists, but 0 active templates and generic suggested fields | Create active templates per item | High |
-| My requests | Yes | Partial | Listing/detail works, UX is basic | Add status timeline and clearer actions | Medium |
-| Requested documents | Partial | Partial | Metadata-only upload, not real files | Add private file upload | High |
-| Deliverables | Partial | Partial | Accept/return exists for shared outputs | Improve versioning/download UX | Medium |
-| Hours and usage | Partial | No | Client dashboard does not show clear usage balance | Add client-safe usage API/UI | Medium |
-| Monthly reports | Yes | Partial | Published reports visible | Add richer report layout and notes | Low |
-| Notifications | Yes | Partial | In-app works; external channels future-ready only | Keep in-app, add email/WhatsApp later | Low |
-| Client isolation | Yes | Yes | Cross-client checks passed | Keep direct URL/API tests | High |
+| Feature             | Exists? | Works end-to-end? | Gap                                                                                | Recommended action                              | Risk   |
+| ------------------- | ------: | ----------------: | ---------------------------------------------------------------------------------- | ----------------------------------------------- | ------ |
+| Client dashboard    | Partial |           Partial | Missing used hours, remaining hours, waiting actions, deliverable approval summary | Add KPI cards and action queue                  | Medium |
+| Service catalog     | Partial |           Partial | Services show, but request flow does not start cleanly from service/item selection | Add service to item to form flow                | High   |
+| New request         | Partial |              Weak | Requires raw IDs; no friendly picker; templates inactive                           | Replace IDs with pickers and activate templates | High   |
+| Dynamic item forms  | Partial |                No | Backend exists, but 0 active templates and generic suggested fields                | Create active templates per item                | High   |
+| My requests         |     Yes |           Partial | Listing/detail works, UX is basic                                                  | Add status timeline and clearer actions         | Medium |
+| Requested documents | Partial |           Partial | Metadata-only upload, not real files                                               | Add private file upload                         | High   |
+| Deliverables        | Partial |           Partial | Accept/return exists for shared outputs                                            | Improve versioning/download UX                  | Medium |
+| Hours and usage     | Partial |                No | Client dashboard does not show clear usage balance                                 | Add client-safe usage API/UI                    | Medium |
+| Monthly reports     |     Yes |           Partial | Published reports visible                                                          | Add richer report layout and notes              | Low    |
+| Notifications       |     Yes |           Partial | In-app works; external channels future-ready only                                  | Keep in-app, add email/WhatsApp later           | Low    |
+| Client isolation    |     Yes |               Yes | Cross-client checks passed                                                         | Keep direct URL/API tests                       | High   |
 
 ## 7. Specialist Feature Matrix
 
-| Feature | Exists? | Works end-to-end? | Gap | Recommended action | Risk |
-|---|---:|---:|---|---|---|
-| Specialist dashboard | Partial | Partial | Work queues exist, no dedicated specialist dashboard | Add My Tasks dashboard | Medium |
-| My assigned requests | Yes | Partial | Scoped access works | Improve filters and grouping | Low |
-| Request details | Yes | Partial | Rich detail exists | Improve layout and role-focused actions | Medium |
-| Internal notes | Yes | Yes | Internal notes separated from client | Keep and test leakage | High |
-| Request documents from client | Yes | Partial | Metadata upload only | Add real file upload | High |
-| Deliverable preparation | Yes | Partial | Output workflow exists | Add file attachment/version support | Medium |
-| Register hours | Yes | Partial | Time entries exist | Add clearer hour rules and balance preview | Medium |
-| Permission limits | Partial | Partial | Specialist blocked from admin/pricing/reports | Add tests for all direct actions | High |
+| Feature                       | Exists? | Works end-to-end? | Gap                                                  | Recommended action                         | Risk   |
+| ----------------------------- | ------: | ----------------: | ---------------------------------------------------- | ------------------------------------------ | ------ |
+| Specialist dashboard          | Partial |           Partial | Work queues exist, no dedicated specialist dashboard | Add My Tasks dashboard                     | Medium |
+| My assigned requests          |     Yes |           Partial | Scoped access works                                  | Improve filters and grouping               | Low    |
+| Request details               |     Yes |           Partial | Rich detail exists                                   | Improve layout and role-focused actions    | Medium |
+| Internal notes                |     Yes |               Yes | Internal notes separated from client                 | Keep and test leakage                      | High   |
+| Request documents from client |     Yes |           Partial | Metadata upload only                                 | Add real file upload                       | High   |
+| Deliverable preparation       |     Yes |           Partial | Output workflow exists                               | Add file attachment/version support        | Medium |
+| Register hours                |     Yes |           Partial | Time entries exist                                   | Add clearer hour rules and balance preview | Medium |
+| Permission limits             | Partial |           Partial | Specialist blocked from admin/pricing/reports        | Add tests for all direct actions           | High   |
 
 ## 8. Supervisor Feature Matrix
 
-| Feature | Exists? | Works end-to-end? | Gap | Recommended action | Risk |
-|---|---:|---:|---|---|---|
-| Supervisor dashboard | Partial | Partial | Queues exist, no true performance dashboard | Add review/workload dashboard | Medium |
-| Team requests | Partial | Partial | Assigned supervisor scope works | Add team/workstream model if needed | Medium |
-| Assign and reassign | Partial | Partial | Exists but uses raw user IDs | Add user picker and validation UX | Medium |
-| Deliverable review | Yes | Partial | Review/return/share exists | Add file/version review UX | Medium |
-| Hours approval | Yes | Partial | Approval exists | Prevent self-approval explicitly in tests | High |
-| Workload management | Partial | No | No workload redistribution UI | Add workload board | Medium |
-| Escalation | Partial | Partial | Escalate action exists, weak management flow | Add escalation reason and queue | Medium |
+| Feature              | Exists? | Works end-to-end? | Gap                                          | Recommended action                        | Risk   |
+| -------------------- | ------: | ----------------: | -------------------------------------------- | ----------------------------------------- | ------ |
+| Supervisor dashboard | Partial |           Partial | Queues exist, no true performance dashboard  | Add review/workload dashboard             | Medium |
+| Team requests        | Partial |           Partial | Assigned supervisor scope works              | Add team/workstream model if needed       | Medium |
+| Assign and reassign  | Partial |           Partial | Exists but uses raw user IDs                 | Add user picker and validation UX         | Medium |
+| Deliverable review   |     Yes |           Partial | Review/return/share exists                   | Add file/version review UX                | Medium |
+| Hours approval       |     Yes |           Partial | Approval exists                              | Prevent self-approval explicitly in tests | High   |
+| Workload management  | Partial |                No | No workload redistribution UI                | Add workload board                        | Medium |
+| Escalation           | Partial |           Partial | Escalate action exists, weak management flow | Add escalation reason and queue           | Medium |
 
 ## 9. Account Manager Feature Matrix
 
-| Feature | Exists? | Works end-to-end? | Gap | Recommended action | Risk |
-|---|---:|---:|---|---|---|
-| Portfolio dashboard | Partial | Partial | Foundation health cards exist | Add assigned-client filters and richer KPIs | Medium |
-| My clients | Partial | Partial | Portfolio exists, no deep client profile | Add client profile view | Medium |
-| Subscription tracking | Partial | No | Data visible indirectly, no management UI | Add subscription panel | High |
-| Reports | Yes | Partial | Can prepare/publish reports with raw client ID | Add client picker and report editor | Medium |
-| Opportunities | No | No | No upgrade, renewal, or opportunity module | Add after subscription/profile | Low |
-| Follow-up and escalation | Partial | Partial | Requests/notifications exist | Add relationship notes and follow-up tasks | Medium |
-| Permission limits | Partial | Partial | Blocked from admin; can access pricing/reports | Tighten execution permissions | High |
+| Feature                  | Exists? | Works end-to-end? | Gap                                            | Recommended action                          | Risk   |
+| ------------------------ | ------: | ----------------: | ---------------------------------------------- | ------------------------------------------- | ------ |
+| Portfolio dashboard      | Partial |           Partial | Foundation health cards exist                  | Add assigned-client filters and richer KPIs | Medium |
+| My clients               | Partial |           Partial | Portfolio exists, no deep client profile       | Add client profile view                     | Medium |
+| Subscription tracking    | Partial |                No | Data visible indirectly, no management UI      | Add subscription panel                      | High   |
+| Reports                  |     Yes |           Partial | Can prepare/publish reports with raw client ID | Add client picker and report editor         | Medium |
+| Opportunities            |      No |                No | No upgrade, renewal, or opportunity module     | Add after subscription/profile              | Low    |
+| Follow-up and escalation | Partial |           Partial | Requests/notifications exist                   | Add relationship notes and follow-up tasks  | Medium |
+| Permission limits        | Partial |           Partial | Blocked from admin; can access pricing/reports | Tighten execution permissions               | High   |
 
 ## 10. Management Feature Matrix
 
-| Feature | Exists? | Works end-to-end? | Gap | Recommended action | Risk |
-|---|---:|---:|---|---|---|
-| Executive dashboard | No | No | No executive KPI page | Add read-only dashboard | Medium |
-| Client indicators | Partial | Partial | Portfolio health exists | Add management-specific client indicators | Medium |
-| Operational indicators | Partial | Partial | Request queues/reports exist | Add aggregate analytics | Medium |
-| Reports | Yes | Partial | Monthly reports visible | Add management report filters | Low |
-| Approvals and escalations | Partial | Partial | Escalation status exists, no dedicated approval queue | Add escalation queue | Medium |
-| Commercial opportunities | No | No | Not implemented | Add after AM opportunities module | Low |
-| Management decisions | Partial | Weak | Notes/status actions exist indirectly | Add decision records with audit | Medium |
-| Permission limits | Partial | Risky | Management has broad operational power | Make management mostly read/approve | High |
+| Feature                   | Exists? | Works end-to-end? | Gap                                                   | Recommended action                        | Risk   |
+| ------------------------- | ------: | ----------------: | ----------------------------------------------------- | ----------------------------------------- | ------ |
+| Executive dashboard       |      No |                No | No executive KPI page                                 | Add read-only dashboard                   | Medium |
+| Client indicators         | Partial |           Partial | Portfolio health exists                               | Add management-specific client indicators | Medium |
+| Operational indicators    | Partial |           Partial | Request queues/reports exist                          | Add aggregate analytics                   | Medium |
+| Reports                   |     Yes |           Partial | Monthly reports visible                               | Add management report filters             | Low    |
+| Approvals and escalations | Partial |           Partial | Escalation status exists, no dedicated approval queue | Add escalation queue                      | Medium |
+| Commercial opportunities  |      No |                No | Not implemented                                       | Add after AM opportunities module         | Low    |
+| Management decisions      | Partial |              Weak | Notes/status actions exist indirectly                 | Add decision records with audit           | Medium |
+| Permission limits         | Partial |             Risky | Management has broad operational power                | Make management mostly read/approve       | High   |
 
 ## 11. Shared Core Matrix
 
-| Area | Exists? | Current state | Main risk | Recommended action |
-|---|---:|---|---|---|
-| Backend RBAC | Yes | Role, permission, and scope guards exist | Action-level permissions still broad | Add explicit permission tests |
-| Client data isolation | Yes | Cross-client checks passed | Future endpoints may leak if untested | Keep direct API tests |
-| Snapshots | Yes | Quote, invoice, report, closing, and request answers snapshot model exists | Old data mutation if new features bypass snapshots | Keep immutable snapshots |
-| File uploads | Partial | Metadata only | No real document/deliverable files | Add private object storage |
-| Worker/jobs | Partial/No | Worker exists but has 0 jobs | Outbox/background features do not run | Add worker app/jobs later |
-| Localization | Partial | RTL enabled, many labels English | Arabic UX not production-ready | Translate UI through localization system |
-| Dashboards | Partial | Foundation views only | Not useful enough for daily operations | Add aggregate endpoints and role dashboards |
+| Area                  |    Exists? | Current state                                                              | Main risk                                          | Recommended action                          |
+| --------------------- | ---------: | -------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------- |
+| Backend RBAC          |        Yes | Role, permission, and scope guards exist                                   | Action-level permissions still broad               | Add explicit permission tests               |
+| Client data isolation |        Yes | Cross-client checks passed                                                 | Future endpoints may leak if untested              | Keep direct API tests                       |
+| Snapshots             |        Yes | Quote, invoice, report, closing, and request answers snapshot model exists | Old data mutation if new features bypass snapshots | Keep immutable snapshots                    |
+| File uploads          |    Partial | Metadata only                                                              | No real document/deliverable files                 | Add private object storage                  |
+| Worker/jobs           | Partial/No | Worker exists but has 0 jobs                                               | Outbox/background features do not run              | Add worker app/jobs later                   |
+| Localization          |    Partial | RTL enabled, many labels English                                           | Arabic UX not production-ready                     | Translate UI through localization system    |
+| Dashboards            |    Partial | Foundation views only                                                      | Not useful enough for daily operations             | Add aggregate endpoints and role dashboards |
 
 ## 12. Dynamic Service Item Forms Review
 

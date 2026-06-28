@@ -46,9 +46,7 @@ export function AdminDashboard({
   const completedRequests = requests.filter((request) =>
     completedStatuses.has(request.status),
   ).length;
-  const highRiskClients = portfolio.portfolio.filter(
-    (entry) => entry.health.code === "ATTENTION",
-  );
+  const highRiskClients = portfolio.portfolio.filter((entry) => entry.health.code === "ATTENTION");
   const watchClients = portfolio.portfolio.filter((entry) => entry.health.code === "WATCH");
   const publishedReports = reports.filter((report) => report.status === "PUBLISHED").length;
   const latestRequests = [...requests]
@@ -156,7 +154,9 @@ export function AdminDashboard({
           </Link>
         </div>
         {attentionClients.length === 0 ? (
-          <div className="catalog-empty">No high-risk or watch clients in the current portfolio.</div>
+          <div className="catalog-empty">
+            No high-risk or watch clients in the current portfolio.
+          </div>
         ) : (
           <div className="entity-grid">
             {attentionClients.map((entry) => (

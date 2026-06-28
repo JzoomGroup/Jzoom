@@ -142,7 +142,10 @@ async function loadServiceCandidates(database: Client): Promise<ServiceCandidate
   return result.rows;
 }
 
-function selectServicesForClient(services: ServiceCandidate[], clientIndex: number): ServiceCandidate[] {
+function selectServicesForClient(
+  services: ServiceCandidate[],
+  clientIndex: number,
+): ServiceCandidate[] {
   const selected = [
     services[(clientIndex * 2) % services.length],
     services[(clientIndex * 2 + 1) % services.length],
@@ -323,7 +326,13 @@ async function ensureSubscriptionService(
       )
       returning id
     `,
-    [subscriptionId, service.revisionId, service.serviceLevelId, service.hours, JSON.stringify(snapshot)],
+    [
+      subscriptionId,
+      service.revisionId,
+      service.serviceLevelId,
+      service.hours,
+      JSON.stringify(snapshot),
+    ],
   );
 
   await database.query(

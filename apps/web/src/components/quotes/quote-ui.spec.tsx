@@ -190,10 +190,7 @@ describe("Quote snapshot UI", () => {
       </QuoteShell>,
     );
 
-    expect(screen.getByRole("link", { name: "Specialist" })).toHaveAttribute(
-      "href",
-      "/specialist",
-    );
+    expect(screen.getByRole("link", { name: "Specialist" })).toHaveAttribute("href", "/specialist");
     expect(screen.getByRole("link", { name: "Requests" })).toHaveAttribute("href", "/requests");
     expect(screen.queryByRole("link", { name: "Pricing drafts" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Quotes" })).not.toBeInTheDocument();
@@ -203,11 +200,7 @@ describe("Quote snapshot UI", () => {
       <QuoteShell
         displayName="Account Manager"
         isAdmin={false}
-        permissions={[
-          "PERM-USE-PRICING-STUDIO",
-          "PERM-MANAGE-QUOTES",
-          "PERM-MANAGE-INVOICES",
-        ]}
+        permissions={["PERM-USE-PRICING-STUDIO", "PERM-MANAGE-QUOTES", "PERM-MANAGE-INVOICES"]}
         roles={["ROLE-AM"]}
       >
         <p>Account manager dashboard</p>
@@ -222,10 +215,7 @@ describe("Quote snapshot UI", () => {
       "href",
       "/pricing",
     );
-    expect(screen.getByRole("link", { name: "Quotes" })).toHaveAttribute(
-      "href",
-      "/pricing/quotes",
-    );
+    expect(screen.getByRole("link", { name: "Quotes" })).toHaveAttribute("href", "/pricing/quotes");
     expect(screen.getByRole("link", { name: "Invoices" })).toHaveAttribute(
       "href",
       "/pricing/invoices",

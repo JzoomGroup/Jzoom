@@ -268,9 +268,7 @@ function ClientCard({
           <dd>
             {client.users.length === 0
               ? "No portal users"
-              : client.users
-                  .map((user) => `${user.displayName} (${user.email})`)
-                  .join(", ")}
+              : client.users.map((user) => `${user.displayName} (${user.email})`).join(", ")}
           </dd>
         </div>
       </div>

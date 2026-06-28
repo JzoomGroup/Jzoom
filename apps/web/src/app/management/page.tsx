@@ -17,9 +17,7 @@ export default async function ManagementDashboardPage() {
     redirect("/login");
   }
   if (
-    !user.roles.some((role) =>
-      managementRoles.includes(role as (typeof managementRoles)[number]),
-    )
+    !user.roles.some((role) => managementRoles.includes(role as (typeof managementRoles)[number]))
   ) {
     redirect("/403");
   }

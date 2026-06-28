@@ -130,7 +130,9 @@ async function loadDemoClients(database: Client): Promise<ClientRow[]> {
     [demoClientCodes],
   );
   if (result.rows.length !== demoClientCodes.length) {
-    throw new Error(`Expected ${demoClientCodes.length} demo clients, found ${result.rows.length}.`);
+    throw new Error(
+      `Expected ${demoClientCodes.length} demo clients, found ${result.rows.length}.`,
+    );
   }
   return result.rows;
 }

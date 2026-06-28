@@ -13,9 +13,7 @@ export default async function SpecialistDashboardPage() {
     redirect("/login");
   }
   if (
-    !user.roles.some((role) =>
-      specialistRoles.includes(role as (typeof specialistRoles)[number]),
-    )
+    !user.roles.some((role) => specialistRoles.includes(role as (typeof specialistRoles)[number]))
   ) {
     redirect("/403");
   }
