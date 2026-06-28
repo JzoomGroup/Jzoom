@@ -278,13 +278,24 @@ describe("Operations foundation UI", () => {
   it("renders client-safe published reports", () => {
     render(<ClientReportList reports={[report()]} />);
 
+    expect(screen.getByRole("heading", { name: "Monthly operating summary" })).toBeInTheDocument();
+    expect(screen.getByText("Published reports")).toBeInTheDocument();
+    expect(screen.getByText("Approved hours")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View report" })).toHaveAttribute(
       "href",
       "/client/reports/report-1",
     );
 
     render(<ClientReportDetail report={report()} />);
+    expect(screen.getByRole("heading", { name: "What happened this month" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Request mix" })).toBeInTheDocument();
+    expect(screen.getByText("Output - ACCEPTED_BY_CLIENT")).toBeInTheDocument();
+    expect(screen.getByText("Document - UPLOADED")).toBeInTheDocument();
     expect(screen.getByText("Output shared with client")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open request" })).toHaveAttribute(
+      "href",
+      "/client/requests/request-1",
+    );
     expect(screen.queryByText("Account Manager")).not.toBeInTheDocument();
   });
 
