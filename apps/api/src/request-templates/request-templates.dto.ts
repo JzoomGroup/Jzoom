@@ -1,5 +1,6 @@
 import { Type } from "class-transformer";
 import {
+  Allow,
   IsArray,
   IsBoolean,
   IsIn,
@@ -441,5 +442,6 @@ export class RequestTemplateAnswerInputDto {
   fieldCode!: string;
 
   @ApiProperty({ type: Object })
+  @Allow()
   value!: unknown;
 }

@@ -93,6 +93,7 @@ test("web environment documents API and CSRF cookie defaults", () => {
   assert.deepEqual(environment, {
     nodeEnvironment: "development",
     apiBaseUrl: "http://localhost:4000/api/v1",
+    cookieName: "jzoom_session",
     csrfCookieName: "jzoom_csrf",
   });
 });
