@@ -328,6 +328,17 @@ describe("Request lifecycle UI", () => {
     expect(screen.getByText("SEO operations")).toBeInTheDocument();
   });
 
+  it("exposes start work only when the request status can move to in progress", () => {
+    const { unmount } = render(<RequestDetail initialRequest={serviceRequest()} />);
+
+    expect(screen.queryByRole("button", { name: "Start work" })).not.toBeInTheDocument();
+
+    unmount();
+    render(<RequestDetail initialRequest={{ ...serviceRequest(), status: "ASSIGNED" }} />);
+
+    expect(screen.getByRole("button", { name: "Start work" })).toBeInTheDocument();
+  });
+
   it("loads filtered internal work queues through the backend API", async () => {
     const fetchMock = jest.mocked(fetch);
     fetchMock.mockImplementationOnce(() =>

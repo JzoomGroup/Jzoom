@@ -40,6 +40,13 @@ const statuses: RequestStatus[] = [
   "REJECTED",
 ];
 
+const startableStatuses: RequestStatus[] = [
+  "ASSIGNED",
+  "WAITING_CLIENT",
+  "WAITING_SUPERVISOR",
+  "RETURNED",
+];
+
 function dateTime(value: string | null): string {
   return formatRiyadhDateTime(value);
 }
@@ -129,6 +136,9 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
   }
 
   function startWork() {
+    if (!startableStatuses.includes(request.status)) {
+      return;
+    }
     void run("start", () => startRequestWork(request.id));
   }
 
@@ -465,9 +475,16 @@ export function RequestDetail({ initialRequest }: { initialRequest: ServiceReque
           </button>
         </form>
         <div className="row-actions">
-          <button className="button-secondary" type="button" onClick={startWork}>
-            Start work
-          </button>
+          {startableStatuses.includes(request.status) && (
+            <button
+              className="button-secondary"
+              disabled={saving === "start"}
+              type="button"
+              onClick={startWork}
+            >
+              Start work
+            </button>
+          )}
           <input
             aria-label="Supervisor review reason"
             placeholder="Supervisor review reason"
