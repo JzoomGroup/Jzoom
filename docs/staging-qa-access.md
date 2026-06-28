@@ -25,7 +25,7 @@ Use the temporary staging portal QA password provided by the project owner for t
 | Management      | `demo.management@jzoom.sa`      |
 
 The portal temporary QA password is also stored in Coolify `jzoom-staging-web` as
-`QA_ACCESS_STAGING_PORTAL_TEMP_PASSWORD`.
+`QA_ACCESS_STAGING_PORTAL_UNIFIED_PASSWORD`.
 
 ## QA Access Steps
 
