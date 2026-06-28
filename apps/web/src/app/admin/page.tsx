@@ -30,7 +30,7 @@ export default async function AdminDashboardPage() {
   }
 
   return (
-    <AdminShell activePath="/admin" displayName={user.displayName}>
+    <AdminShell activePath="/admin" displayName={user.displayName} locale={user.preferredLocale}>
       <AdminDashboard
         clientsSnapshot={clientsSnapshot}
         portfolio={portfolio}

@@ -177,6 +177,22 @@ describe("Admin catalog UI", () => {
     );
   });
 
+  it("localizes the admin shell for Arabic RTL users", () => {
+    const { container } = render(
+      <AdminShell activePath="/admin/clients" displayName="Faisal" locale="ar-SA">
+        <p>Admin content</p>
+      </AdminShell>,
+    );
+
+    expect(container.firstElementChild).toHaveAttribute("dir", "rtl");
+    expect(container.firstElementChild).toHaveAttribute("lang", "ar");
+    expect(screen.getByRole("navigation", { name: "إدارة المنصة" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "لوحة التحكم" })).toHaveAttribute("href", "/admin");
+    expect(screen.getByRole("link", { name: "العملاء" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "الإعدادات" })).toHaveAttribute("href", "/settings");
+    expect(screen.getByRole("button", { name: "تسجيل الخروج" })).toBeInTheDocument();
+  });
+
   it("renders the current seeded catalog snapshot instead of hardcoded cards", () => {
     render(<CatalogOverview snapshot={catalogSnapshot()} />);
 

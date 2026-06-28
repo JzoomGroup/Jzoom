@@ -29,8 +29,10 @@ export async function InvoicesPage({ invoiceId }: { invoiceId?: string }) {
 
   return (
     <QuoteShell
+      activePath="/pricing/invoices"
       displayName={user.displayName}
       isAdmin={user.roles.includes("ROLE-ADMIN")}
+      locale={user.preferredLocale}
       permissions={user.permissions}
       roles={user.roles}
     >

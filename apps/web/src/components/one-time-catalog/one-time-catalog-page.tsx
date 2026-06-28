@@ -21,7 +21,11 @@ export async function OneTimeCatalogPage({
   }
 
   return (
-    <AdminShell activePath={activePath} displayName={user.displayName}>
+    <AdminShell
+      activePath={activePath}
+      displayName={user.displayName}
+      locale={user.preferredLocale}
+    >
       {section === "categories" ? (
         <OneTimeCategoryManager initialSnapshot={snapshot} />
       ) : (

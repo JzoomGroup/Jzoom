@@ -29,8 +29,10 @@ export async function QuotesPage({ quoteId }: { quoteId?: string }) {
 
   return (
     <QuoteShell
+      activePath="/pricing/quotes"
       displayName={user.displayName}
       isAdmin={user.roles.includes("ROLE-ADMIN")}
+      locale={user.preferredLocale}
       permissions={user.permissions}
       roles={user.roles}
     >

@@ -24,8 +24,10 @@ export default async function SpecialistDashboardPage() {
 
   return (
     <QuoteShell
+      activePath="/specialist"
       displayName={user.displayName}
       isAdmin={user.roles.includes("ROLE-ADMIN")}
+      locale={user.preferredLocale}
       permissions={user.permissions}
       roles={user.roles}
     >

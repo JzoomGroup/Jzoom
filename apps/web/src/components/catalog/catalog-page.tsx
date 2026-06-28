@@ -21,7 +21,11 @@ export async function CatalogPage({
   }
 
   return (
-    <AdminShell activePath={activePath} displayName={user.displayName}>
+    <AdminShell
+      activePath={activePath}
+      displayName={user.displayName}
+      locale={user.preferredLocale}
+    >
       <CatalogWorkspace initialSnapshot={snapshot} section={section} />
     </AdminShell>
   );

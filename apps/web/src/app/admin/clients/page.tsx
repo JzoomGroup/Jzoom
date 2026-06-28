@@ -15,7 +15,11 @@ export default async function AdminClientsPage() {
   }
 
   return (
-    <AdminShell activePath="/admin/clients" displayName={user.displayName}>
+    <AdminShell
+      activePath="/admin/clients"
+      displayName={user.displayName}
+      locale={user.preferredLocale}
+    >
       <ClientManager initialSnapshot={snapshot} />
     </AdminShell>
   );

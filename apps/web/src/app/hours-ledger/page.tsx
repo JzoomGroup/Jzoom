@@ -38,8 +38,10 @@ export default async function HoursLedgerPage() {
 
   return (
     <QuoteShell
+      activePath="/hours-ledger"
       displayName={user.displayName}
       isAdmin={user.roles.includes("ROLE-ADMIN")}
+      locale={user.preferredLocale}
       permissions={user.permissions}
       roles={user.roles}
     >

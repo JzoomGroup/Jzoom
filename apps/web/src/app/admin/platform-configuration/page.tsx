@@ -18,7 +18,11 @@ export default async function AdminPlatformConfigurationPage() {
   }
 
   return (
-    <AdminShell activePath="/admin/platform-configuration" displayName={user.displayName}>
+    <AdminShell
+      activePath="/admin/platform-configuration"
+      displayName={user.displayName}
+      locale={user.preferredLocale}
+    >
       <PlatformConfigurationManager initialSnapshot={snapshot} />
     </AdminShell>
   );

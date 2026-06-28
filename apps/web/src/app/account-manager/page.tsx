@@ -21,8 +21,10 @@ export default async function AccountManagerPage() {
 
   return (
     <QuoteShell
+      activePath="/account-manager"
       displayName={user.displayName}
       isAdmin={user.roles.includes("ROLE-ADMIN")}
+      locale={user.preferredLocale}
       permissions={user.permissions}
       roles={user.roles}
     >

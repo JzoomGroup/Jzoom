@@ -18,7 +18,11 @@ export default async function AdminRequestTemplatesPage() {
   }
 
   return (
-    <AdminShell activePath="/admin/request-templates" displayName={user.displayName}>
+    <AdminShell
+      activePath="/admin/request-templates"
+      displayName={user.displayName}
+      locale={user.preferredLocale}
+    >
       <RequestTemplateManager initialSnapshot={snapshot} />
     </AdminShell>
   );

@@ -30,8 +30,10 @@ export default async function ManagementDashboardPage() {
 
   return (
     <QuoteShell
+      activePath="/management"
       displayName={user.displayName}
       isAdmin={user.roles.includes("ROLE-ADMIN")}
+      locale={user.preferredLocale}
       permissions={user.permissions}
       roles={user.roles}
     >

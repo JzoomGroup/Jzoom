@@ -13,7 +13,11 @@ export default async function NotificationsPage() {
 
   if (user.roles.includes("ROLE-CLIENT")) {
     return (
-      <ClientShell activePath="/notifications" displayName={user.displayName}>
+      <ClientShell
+        activePath="/notifications"
+        displayName={user.displayName}
+        locale={user.preferredLocale}
+      >
         <NotificationInbox initial={notifications} />
       </ClientShell>
     );
@@ -21,8 +25,10 @@ export default async function NotificationsPage() {
 
   return (
     <QuoteShell
+      activePath="/notifications"
       displayName={user.displayName}
       isAdmin={user.roles.includes("ROLE-ADMIN")}
+      locale={user.preferredLocale}
       permissions={user.permissions}
       roles={user.roles}
     >

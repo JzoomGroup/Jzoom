@@ -42,8 +42,10 @@ export async function RequestsPage({ requestId }: { requestId?: string }) {
 
   return (
     <QuoteShell
+      activePath="/requests"
       displayName={user.displayName}
       isAdmin={user.roles.includes("ROLE-ADMIN")}
+      locale={user.preferredLocale}
       permissions={user.permissions}
       roles={user.roles}
     >

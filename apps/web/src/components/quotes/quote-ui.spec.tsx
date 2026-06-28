@@ -222,6 +222,29 @@ describe("Quote snapshot UI", () => {
     );
   });
 
+  it("localizes the internal shell for Arabic RTL users", () => {
+    const { container } = render(
+      <QuoteShell
+        activePath="/requests"
+        displayName="Faisal"
+        isAdmin={false}
+        locale="ar-SA"
+        permissions={[]}
+        roles={["ROLE-SPECIALIST"]}
+      >
+        <p>Specialist content</p>
+      </QuoteShell>,
+    );
+
+    expect(container.firstElementChild).toHaveAttribute("dir", "rtl");
+    expect(container.firstElementChild).toHaveAttribute("lang", "ar");
+    expect(screen.getByRole("navigation", { name: "تنقل منصة التشغيل" })).toBeInTheDocument();
+    expect(screen.getByText("منصة التشغيل")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "الأخصائي" })).toHaveAttribute("href", "/specialist");
+    expect(screen.getByRole("link", { name: "الطلبات" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "تسجيل الخروج" })).toBeInTheDocument();
+  });
+
   it("renders snapshotted content and advances lifecycle through explicit backend actions", async () => {
     const fetchMock = jest.mocked(fetch);
     fetchMock

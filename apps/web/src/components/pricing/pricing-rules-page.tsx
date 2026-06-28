@@ -17,7 +17,11 @@ export async function PricingRulesPage() {
   }
 
   return (
-    <AdminShell activePath="/admin/pricing-rules" displayName={user.displayName}>
+    <AdminShell
+      activePath="/admin/pricing-rules"
+      displayName={user.displayName}
+      locale={user.preferredLocale}
+    >
       <PricingRuleManager initialSnapshot={snapshot} />
     </AdminShell>
   );
