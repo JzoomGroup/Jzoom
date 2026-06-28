@@ -1,5 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { directionForLocale, htmlLangForLocale, normalizeLocale } from "../../lib/i18n";
+import { LanguageSwitcher } from "../language-switcher";
+import { LocaleDocumentSync } from "../locale-document-sync";
 import { LogoutButton } from "../logout-button";
 
 export function QuoteShell({
@@ -19,7 +22,8 @@ export function QuoteShell({
   permissions?: string[];
   roles?: string[];
 }) {
-  const isArabic = locale.toLowerCase().startsWith("ar");
+  const normalizedLocale = normalizeLocale(locale);
+  const isArabic = normalizedLocale === "ar";
   const hasRole = (role: string) => roles.includes(role) || isAdmin;
   const hasAnyRole = (allowed: string[]) => allowed.some((role) => hasRole(role));
   const hasPermission = (permission: string) => permissions.includes(permission);
@@ -82,9 +86,10 @@ export function QuoteShell({
   return (
     <div
       className="pricing-shell internal-shell"
-      dir={isArabic ? "rtl" : "ltr"}
-      lang={isArabic ? "ar" : "en"}
+      dir={directionForLocale(normalizedLocale)}
+      lang={htmlLangForLocale(normalizedLocale)}
     >
+      <LocaleDocumentSync locale={normalizedLocale} />
       <header className="pricing-topbar internal-topbar">
         <Link className="admin-brand" href={isAdmin ? "/admin" : "/profile"}>
           <span className="brand-mark" aria-hidden="true">
@@ -217,6 +222,7 @@ export function QuoteShell({
           >
             {copy.profile}
           </Link>
+          <LanguageSwitcher locale={normalizedLocale} />
           <span className="internal-user-chip">{displayName}</span>
           <LogoutButton label={copy.signOut} submittingLabel={copy.signingOut} />
         </nav>

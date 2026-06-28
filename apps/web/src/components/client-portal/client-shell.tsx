@@ -1,5 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { directionForLocale, htmlLangForLocale, normalizeLocale } from "../../lib/i18n";
+import { LanguageSwitcher } from "../language-switcher";
+import { LocaleDocumentSync } from "../locale-document-sync";
 import { LogoutButton } from "../logout-button";
 
 const navigation = [
@@ -22,7 +25,8 @@ export function ClientShell({
   displayName: string;
   locale?: string;
 }) {
-  const isArabic = locale.toLowerCase().startsWith("ar");
+  const normalizedLocale = normalizeLocale(locale);
+  const isArabic = normalizedLocale === "ar";
   const copy = isArabic
     ? {
         brandSubtitle: "بوابة العميل",
@@ -42,9 +46,10 @@ export function ClientShell({
   return (
     <div
       className="pricing-shell client-shell"
-      dir={isArabic ? "rtl" : "ltr"}
-      lang={isArabic ? "ar" : "en"}
+      dir={directionForLocale(normalizedLocale)}
+      lang={htmlLangForLocale(normalizedLocale)}
     >
+      <LocaleDocumentSync locale={normalizedLocale} />
       <header className="pricing-topbar client-topbar">
         <Link className="admin-brand" href="/client">
           <span className="brand-mark" aria-hidden="true">
@@ -69,6 +74,7 @@ export function ClientShell({
           <Link className="client-nav-link" href="/profile">
             {copy.profile}
           </Link>
+          <LanguageSwitcher locale={normalizedLocale} />
           <span className="client-user-chip">{displayName}</span>
           <LogoutButton label={copy.signOut} submittingLabel={copy.signingOut} />
         </nav>

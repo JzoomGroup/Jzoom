@@ -35,6 +35,7 @@ import {
   PasswordResetRequestDto,
   ReplaceRolePermissionsDto,
   ReplaceUserRolesDto,
+  UpdateProfilePreferencesDto,
   UpdateUserStatusDto,
 } from "./auth.dto.js";
 import { AuthService } from "./auth.service.js";
@@ -73,6 +74,7 @@ function publicPrincipal(principal: NonNullable<RequestWithId["auth"]>) {
   PasswordResetRequestDto,
   ReplaceRolePermissionsDto,
   ReplaceUserRolesDto,
+  UpdateProfilePreferencesDto,
   UpdateUserStatusDto,
 )
 @Controller("auth")
@@ -122,6 +124,23 @@ export class AuthController {
   @ApiOperation({ summary: "Return the authenticated profile and effective access" })
   me(@Req() request: RequestWithId) {
     return { user: publicPrincipal(request.auth!) };
+  }
+
+  @Patch("me/preferences")
+  @ApiCookieAuth()
+  @ApiOperation({ summary: "Update the authenticated user's interface preferences" })
+  async updatePreferences(
+    @Body() input: UpdateProfilePreferencesDto,
+    @Req() request: RequestWithId,
+  ) {
+    await this.auth.updatePreferredLocale(
+      request.auth!.userId,
+      input.preferredLocale,
+      metadata(request),
+    );
+    return {
+      user: publicPrincipal({ ...request.auth!, preferredLocale: input.preferredLocale }),
+    };
   }
 
   @Public()

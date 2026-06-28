@@ -103,6 +103,37 @@ export class AuthService {
     );
   }
 
+  async updatePreferredLocale(
+    userId: string,
+    preferredLocale: "ar" | "en",
+    metadata: RequestMetadata,
+  ): Promise<void> {
+    const user = await this.database.prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferredLocale: true },
+    });
+    if (!user || user.preferredLocale === preferredLocale) {
+      return;
+    }
+
+    await this.database.prisma.user.update({
+      where: { id: userId },
+      data: { preferredLocale },
+    });
+    await this.audit.record(
+      {
+        actorId: userId,
+        eventCode: "AUTH_PROFILE_PREFERENCES_UPDATED",
+        entityType: "User",
+        entityId: userId,
+        before: { preferredLocale: user.preferredLocale },
+        after: { preferredLocale },
+        severity: "LOW",
+      },
+      metadata,
+    );
+  }
+
   async requestPasswordReset(
     emailInput: string,
     metadata: RequestMetadata,

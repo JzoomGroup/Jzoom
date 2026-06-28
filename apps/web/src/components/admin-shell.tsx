@@ -1,5 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { directionForLocale, htmlLangForLocale, normalizeLocale } from "../lib/i18n";
+import { LanguageSwitcher } from "./language-switcher";
+import { LocaleDocumentSync } from "./locale-document-sync";
 import { LogoutButton } from "./logout-button";
 
 const navigation = [
@@ -45,7 +48,8 @@ export function AdminShell({
   displayName: string;
   locale?: string;
 }) {
-  const isArabic = locale.toLowerCase().startsWith("ar");
+  const normalizedLocale = normalizeLocale(locale);
+  const isArabic = normalizedLocale === "ar";
   const copy = isArabic
     ? {
         brandSubtitle: "لوحة التحكم",
@@ -69,9 +73,10 @@ export function AdminShell({
   return (
     <div
       className="admin-shell admin-console-shell"
-      dir={isArabic ? "rtl" : "ltr"}
-      lang={isArabic ? "ar" : "en"}
+      dir={directionForLocale(normalizedLocale)}
+      lang={htmlLangForLocale(normalizedLocale)}
     >
+      <LocaleDocumentSync locale={normalizedLocale} />
       <aside className="admin-sidebar">
         <Link className="admin-brand" href="/admin">
           <span className="brand-mark" aria-hidden="true">
@@ -103,6 +108,7 @@ export function AdminShell({
             <Link href="/profile">{copy.profile}</Link>
             <Link href="/settings">{copy.settings}</Link>
           </div>
+          <LanguageSwitcher locale={normalizedLocale} />
           <LogoutButton label={copy.signOut} submittingLabel={copy.signingOut} />
         </div>
       </aside>

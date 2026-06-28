@@ -2,18 +2,43 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { normalizeLocale, type SupportedLocale } from "../lib/i18n";
 import { postLoginRoute } from "../lib/route-access";
+import { syncDocumentLocale } from "./locale-document-sync";
 
 interface LoginResponse {
   user: {
+    preferredLocale?: string;
     roles: string[];
   };
 }
 
-export function LoginForm() {
+const copy: Record<
+  SupportedLocale,
+  { email: string; password: string; invalid: string; submit: string; submitting: string }
+> = {
+  ar: {
+    email: "البريد الإلكتروني",
+    password: "كلمة المرور",
+    invalid: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+    submit: "تسجيل الدخول",
+    submitting: "جاري تسجيل الدخول...",
+  },
+  en: {
+    email: "Email",
+    password: "Password",
+    invalid: "The email or password is incorrect.",
+    submit: "Sign in",
+    submitting: "Signing in...",
+  },
+};
+
+export function LoginForm({ locale = "en" }: { locale?: string }) {
   const router = useRouter();
   const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
+  const currentLocale = normalizeLocale(locale);
+  const labels = copy[currentLocale];
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,12 +60,13 @@ export function LoginForm() {
     ).catch(() => null);
 
     if (!response?.ok) {
-      setError("The email or password is incorrect.");
+      setError(labels.invalid);
       setSubmitting(false);
       return;
     }
 
     const body = (await response.json()) as LoginResponse;
+    syncDocumentLocale(body.user.preferredLocale ?? currentLocale);
     router.replace(postLoginRoute(body.user.roles));
     router.refresh();
   }
@@ -48,11 +74,11 @@ export function LoginForm() {
   return (
     <form className="auth-form" onSubmit={submit}>
       <label>
-        Email
+        {labels.email}
         <input name="email" type="email" autoComplete="email" required />
       </label>
       <label>
-        Password
+        {labels.password}
         <input
           name="password"
           type="password"
@@ -67,7 +93,7 @@ export function LoginForm() {
         </p>
       ) : null}
       <button type="submit" disabled={submitting}>
-        {submitting ? "Signing in…" : "Sign in"}
+        {submitting ? labels.submitting : labels.submit}
       </button>
     </form>
   );

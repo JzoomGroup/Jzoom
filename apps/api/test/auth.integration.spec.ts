@@ -178,6 +178,23 @@ describeWithDatabase("PR 3 PostgreSQL authentication and RBAC", () => {
     expect(response.body.user).not.toHaveProperty("passwordHash");
   });
 
+  it("lets authenticated users update their interface language preference", async () => {
+    const { agent, csrf } = await login("admin@pr3.test");
+
+    const update = await agent
+      .patch("/api/v1/auth/me/preferences")
+      .set("X-CSRF-Token", csrf)
+      .send({ preferredLocale: "en" })
+      .expect(200);
+    expect(update.body.user).toMatchObject({
+      email: "admin@pr3.test",
+      preferredLocale: "en",
+    });
+
+    const profile = await agent.get("/api/v1/auth/me").expect(200);
+    expect(profile.body.user.preferredLocale).toBe("en");
+  });
+
   it("returns safe failed-login errors with a request ID", async () => {
     const response = await request(app.getHttpServer())
       .post("/api/v1/auth/login")

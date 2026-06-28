@@ -84,6 +84,12 @@ export class UpdateUserStatusDto {
   status!: "ACTIVE" | "DISABLED" | "ARCHIVED";
 }
 
+export class UpdateProfilePreferencesDto {
+  @ApiProperty({ type: String, enum: ["ar", "en"] })
+  @IsIn(["ar", "en"])
+  preferredLocale!: "ar" | "en";
+}
+
 export class ReplaceUserRolesDto {
   @ApiProperty({ type: [String] })
   @IsArray()
