@@ -2351,6 +2351,50 @@ input[type="radio"] {
   background: rgba(244, 240, 231, 0.42);
 }
 
+.template-save-form,
+.template-builder,
+.template-builder-stack,
+.template-options {
+  display: grid;
+  gap: 16px;
+}
+
+.template-builder-section {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.54);
+  padding: 16px;
+}
+
+.template-builder-section > summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.template-fieldset {
+  padding: 16px;
+}
+
+.template-fieldset legend {
+  color: var(--muted-strong);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 0 8px;
+  text-transform: uppercase;
+}
+
+.template-options {
+  border-block-start: 1px solid var(--line);
+  margin-block-start: 16px;
+  padding-block-start: 16px;
+}
+
+.template-option-row {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
 .inclusion-option,
 .package-config-grid article {
   border-radius: var(--radius-md);

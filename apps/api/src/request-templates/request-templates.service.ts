@@ -58,6 +58,12 @@ const requestTemplateSnapshotInclude = {
   },
 } satisfies Prisma.RequestTemplateInclude;
 
+const optionFieldTypes = new Set<TemplateFieldConfig["fieldType"]>([
+  "DROPDOWN",
+  "MULTI_SELECT",
+  "RADIO",
+]);
+
 type RequestTemplateVersionRecord = Prisma.RequestTemplateVersionGetPayload<{
   include: typeof requestTemplateVersionInclude;
 }>;
@@ -193,6 +199,121 @@ function isEmptyAnswer(value: unknown): boolean {
     return Object.keys(value).length === 0;
   }
   return false;
+}
+
+function requireCleanCode(value: string, label: string): string {
+  const code = cleanCode(value);
+  if (!code) {
+    throw new BadRequestException({
+      code: "REQUEST_TEMPLATE_CODE_REQUIRED",
+      message: `${label} code is required`,
+    });
+  }
+  return code;
+}
+
+function assertUniqueCode(codes: string[], label: string): void {
+  const seen = new Set<string>();
+  for (const code of codes) {
+    if (seen.has(code)) {
+      throw new BadRequestException({
+        code: "REQUEST_TEMPLATE_DUPLICATE_CODE",
+        message: `${label} code must be unique: ${code}`,
+      });
+    }
+    seen.add(code);
+  }
+}
+
+function assertNonBlank(value: string, label: string): void {
+  if (!value.trim()) {
+    throw new BadRequestException({
+      code: "REQUEST_TEMPLATE_REQUIRED_TEXT",
+      message: `${label} is required`,
+    });
+  }
+}
+
+export function validateRequestTemplateDefinition(input: {
+  sections: TemplateSectionConfig[];
+  fields: TemplateFieldConfig[];
+  downloadableFiles?: TemplateFileConfig[];
+  documentChecklist?: TemplateDocumentConfig[];
+}): void {
+  if (input.sections.length === 0) {
+    throw new BadRequestException({
+      code: "REQUEST_TEMPLATE_SECTION_REQUIRED",
+      message: "At least one request template section is required",
+    });
+  }
+
+  const sectionCodes = input.sections.map((section) => requireCleanCode(section.code, "Section"));
+  assertUniqueCode(sectionCodes, "Section");
+  const sectionCodeSet = new Set(sectionCodes);
+  input.sections.forEach((section, index) => {
+    assertNonBlank(section.titleAr, `Section ${index + 1} Arabic title`);
+    assertNonBlank(section.titleEn, `Section ${index + 1} English title`);
+  });
+
+  const fieldCodes = input.fields.map((field) => requireCleanCode(field.code, "Field"));
+  assertUniqueCode(fieldCodes, "Field");
+  input.fields.forEach((field, index) => {
+    const fieldLabel = `Field ${index + 1}`;
+    assertNonBlank(field.labelAr, `${fieldLabel} Arabic label`);
+    assertNonBlank(field.labelEn, `${fieldLabel} English label`);
+
+    const sectionCode = cleanCode(field.sectionCode ?? "");
+    if (sectionCode && !sectionCodeSet.has(sectionCode)) {
+      throw new BadRequestException({
+        code: "REQUEST_TEMPLATE_SECTION_UNKNOWN",
+        message: `${fieldLabel} references an unknown section: ${field.sectionCode}`,
+      });
+    }
+
+    if (optionFieldTypes.has(field.fieldType)) {
+      const activeOptions = (field.options ?? []).filter((option) => option.active !== false);
+      if (activeOptions.length === 0) {
+        throw new BadRequestException({
+          code: "REQUEST_TEMPLATE_FIELD_OPTIONS_REQUIRED",
+          message: `${fieldLabel} requires at least one active option`,
+        });
+      }
+      const optionValues = (field.options ?? []).map((option) =>
+        requireCleanCode(option.value, `${fieldLabel} option`),
+      );
+      assertUniqueCode(optionValues, `${fieldLabel} option`);
+      field.options?.forEach((option, optionIndex) => {
+        assertNonBlank(option.labelAr, `${fieldLabel} option ${optionIndex + 1} Arabic label`);
+        assertNonBlank(option.labelEn, `${fieldLabel} option ${optionIndex + 1} English label`);
+      });
+      return;
+    }
+
+    if ((field.options ?? []).length > 0) {
+      throw new BadRequestException({
+        code: "REQUEST_TEMPLATE_FIELD_OPTIONS_NOT_ALLOWED",
+        message: `${fieldLabel} cannot define options for ${field.fieldType}`,
+      });
+    }
+  });
+
+  const fileCodes = (input.downloadableFiles ?? []).map((file) =>
+    requireCleanCode(file.code, "Reference file"),
+  );
+  assertUniqueCode(fileCodes, "Reference file");
+  input.downloadableFiles?.forEach((file, index) => {
+    assertNonBlank(file.titleAr, `Reference file ${index + 1} Arabic title`);
+    assertNonBlank(file.titleEn, `Reference file ${index + 1} English title`);
+  });
+
+  const documentCodes = (input.documentChecklist ?? []).map((document) =>
+    requireCleanCode(document.code, "Document"),
+  );
+  assertUniqueCode(documentCodes, "Document");
+  input.documentChecklist?.forEach((document, index) => {
+    assertNonBlank(document.labelAr, `Document ${index + 1} Arabic label`);
+    assertNonBlank(document.labelEn, `Document ${index + 1} English label`);
+  });
 }
 
 @Injectable()
@@ -466,6 +587,7 @@ export class RequestTemplatesService {
     actorId: string,
     metadata: RequestMetadata,
   ) {
+    validateRequestTemplateDefinition(input);
     const template = await this.ensureTemplate(serviceItemId);
     const created = await this.database.prisma.$transaction(async (tx) => {
       const versions = await tx.requestTemplateVersion.findMany({
@@ -837,6 +959,15 @@ export class RequestTemplatesService {
       where: { code: { in: input.fields.map((field) => cleanCode(field.libraryFieldCode ?? "")) } },
     });
     const libraryByCode = new Map(libraryItems.map((field) => [field.code, field]));
+    const missingLibraryCodes = input.fields
+      .map((field) => cleanCode(field.libraryFieldCode ?? ""))
+      .filter((code) => code && !libraryByCode.has(code));
+    if (missingLibraryCodes.length > 0) {
+      throw new BadRequestException({
+        code: "REQUEST_TEMPLATE_LIBRARY_FIELD_UNKNOWN",
+        message: `Unknown field library item: ${missingLibraryCodes[0]}`,
+      });
+    }
 
     for (const field of input.fields) {
       const sectionId = field.sectionCode
