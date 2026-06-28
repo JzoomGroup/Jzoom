@@ -141,6 +141,7 @@ export function ClientOverview({
   const completedRequests = requests.filter((request) =>
     ["COMPLETED", "CLOSED"].includes(request.status),
   );
+  const latestOpenRequests = openRequests.slice(0, 3);
   const subscribedHours = account.services.subscribedMonthly.reduce(
     (total, service) => total + service.hoursAllocated,
     0,
@@ -188,6 +189,75 @@ export function ClientOverview({
             <strong>{subscribedHours}</strong>
           </div>
         </div>
+      </section>
+
+      <section className="quote-summary-grid">
+        <article className="catalog-panel">
+          <div className="entity-card-heading">
+            <div>
+              <p className="eyebrow">Needs attention</p>
+              <h2>Client actions</h2>
+            </div>
+            <span>{waitingClientRequests.length}</span>
+          </div>
+          <div className="activity-list">
+            {waitingClientRequests.length === 0 ? (
+              <article>
+                <strong>No client action is pending.</strong>
+                <p>Jzoom will update you when a request needs a response or document.</p>
+              </article>
+            ) : (
+              waitingClientRequests.slice(0, 4).map((request) => (
+                <article key={request.id}>
+                  <strong>{request.title}</strong>
+                  <small>
+                    {request.requestNumber} · {request.service.monthlyService.nameEn}
+                  </small>
+                  <div className="row-actions">
+                    <Link className="button-secondary" href={`/client/requests/${request.id}`}>
+                      Open request
+                    </Link>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </article>
+
+        <article className="catalog-panel">
+          <div className="entity-card-heading">
+            <div>
+              <p className="eyebrow">Latest work</p>
+              <h2>Open requests</h2>
+            </div>
+            <span>{openRequests.length}</span>
+          </div>
+          <div className="activity-list">
+            {latestOpenRequests.length === 0 ? (
+              <article>
+                <strong>No open requests.</strong>
+                <p>Your completed work remains available in requests and reports.</p>
+              </article>
+            ) : (
+              latestOpenRequests.map((request) => (
+                <article key={request.id}>
+                  <strong>{request.title}</strong>
+                  <small>
+                    {request.status} · due{" "}
+                    {request.dueAt
+                      ? new Date(request.dueAt).toLocaleDateString("en-SA")
+                      : "Not set"}
+                  </small>
+                  <div className="row-actions">
+                    <Link className="button-secondary" href={`/client/requests/${request.id}`}>
+                      View details
+                    </Link>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </article>
       </section>
 
       <section className="quote-summary-grid">

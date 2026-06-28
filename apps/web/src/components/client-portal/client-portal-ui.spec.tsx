@@ -4,8 +4,15 @@ import { ClientInvoiceList } from "./client-invoice-list";
 import { ClientOverview } from "./client-overview";
 import { ClientQuoteDetail } from "./client-quote-detail";
 import { ClientQuoteList } from "./client-quote-list";
+import { ClientRequestDetail } from "./client-request-detail";
 import { ClientRequestList } from "./client-request-list";
-import { createClientServiceRequest } from "../../lib/request-client";
+import {
+  acceptClientRequestOutput,
+  addClientRequestComment,
+  createClientServiceRequest,
+  returnClientRequestOutput,
+  uploadClientRequestedDocument,
+} from "../../lib/request-client";
 import { fetchActiveRequestTemplate } from "../../lib/request-templates-client";
 import type {
   ClientInvoice,
@@ -14,7 +21,7 @@ import type {
   ClientQuote,
   ClientQuoteSummary,
 } from "../../lib/client-portal-types";
-import type { RequestSummary } from "../../lib/request-types";
+import type { RequestSummary, ServiceRequest } from "../../lib/request-types";
 
 const pushMock = jest.fn();
 
@@ -23,8 +30,12 @@ jest.mock("next/navigation", () => ({
 }));
 
 jest.mock("../../lib/request-client", () => ({
+  acceptClientRequestOutput: jest.fn(),
+  addClientRequestComment: jest.fn(),
   createClientServiceRequest: jest.fn(),
   requestErrorMessage: () => "Request failed",
+  returnClientRequestOutput: jest.fn(),
+  uploadClientRequestedDocument: jest.fn(),
 }));
 
 jest.mock("../../lib/request-templates-client", () => ({
@@ -332,10 +343,82 @@ function requestSummary(): RequestSummary {
   };
 }
 
+function serviceRequest(overrides: Partial<ServiceRequest> = {}): ServiceRequest {
+  return {
+    ...requestSummary(),
+    comments: [],
+    internalNotes: [],
+    attachments: [],
+    documentRequests: [],
+    activity: [],
+    outputs: [],
+    tasks: [],
+    templateResponse: null,
+    timeEntries: [],
+    ...overrides,
+  };
+}
+
+function requestOutput(
+  overrides: Partial<ServiceRequest["outputs"][number]> = {},
+): ServiceRequest["outputs"][number] {
+  return {
+    id: "output-1",
+    code: "OUT-1",
+    title: "Shared deliverable",
+    description: "Client-visible deliverable.",
+    contentSnapshot: {},
+    status: "SHARED_WITH_CLIENT",
+    dueAt: null,
+    submittedAt: "2026-06-22T00:00:00.000Z",
+    reviewedAt: "2026-06-22T00:00:00.000Z",
+    sharedAt: "2026-06-22T00:00:00.000Z",
+    clientDecidedAt: null,
+    closedAt: null,
+    reviewReason: null,
+    clientReturnReason: null,
+    revision: 1,
+    sortOrder: 1,
+    createdAt: "2026-06-22T00:00:00.000Z",
+    updatedAt: "2026-06-22T00:00:00.000Z",
+    createdBy: null,
+    reviewedBy: null,
+    sharedBy: null,
+    clientDecisionBy: null,
+    ...overrides,
+  };
+}
+
+function documentRequest(
+  overrides: Partial<ServiceRequest["documentRequests"][number]> = {},
+): ServiceRequest["documentRequests"][number] {
+  return {
+    id: "document-request-1",
+    title: "Commercial registration",
+    instructions: "Upload the current document.",
+    status: "REQUESTED",
+    dueAt: "2026-06-25T00:00:00.000Z",
+    requestedAt: "2026-06-22T00:00:00.000Z",
+    fulfilledAt: null,
+    closedAt: null,
+    cancelledAt: null,
+    createdAt: "2026-06-22T00:00:00.000Z",
+    updatedAt: "2026-06-22T00:00:00.000Z",
+    requestedBy: null,
+    fulfilledBy: null,
+    file: null,
+    ...overrides,
+  };
+}
+
 describe("Client portal UI", () => {
   beforeEach(() => {
     pushMock.mockReset();
+    jest.mocked(acceptClientRequestOutput).mockReset();
+    jest.mocked(addClientRequestComment).mockReset();
     jest.mocked(createClientServiceRequest).mockReset();
+    jest.mocked(returnClientRequestOutput).mockReset();
+    jest.mocked(uploadClientRequestedDocument).mockReset();
     jest.mocked(fetchActiveRequestTemplate).mockReset();
   });
 
@@ -352,7 +435,10 @@ describe("Client portal UI", () => {
     expect(screen.getByRole("heading", { name: "Welcome, Client User" })).toBeInTheDocument();
     expect(screen.getByText("CLIENT-1")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Requests and subscription" })).toBeInTheDocument();
-    expect(screen.getByText("Open requests")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Client actions" })).toBeInTheDocument();
+    expect(screen.getByText("No client action is pending.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Open requests" })).toBeInTheDocument();
+    expect(screen.getAllByText("Open requests").length).toBeGreaterThan(0);
     expect(screen.getByRole("heading", { name: "Service catalog" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View quotes" })).toHaveAttribute(
       "href",
@@ -395,6 +481,60 @@ describe("Client portal UI", () => {
     expect(document.body.textContent).not.toContain("Payment gateway");
     expect(document.body.textContent).not.toContain("Payment status");
     expect(document.body.textContent).not.toContain("ZATCA");
+  });
+
+  it("renders client request action center with only actionable controls", () => {
+    const request = serviceRequest({
+      status: "WAITING_CLIENT",
+      outputs: [
+        requestOutput(),
+        requestOutput({
+          id: "output-2",
+          code: "OUT-2",
+          title: "Accepted deliverable",
+          status: "ACCEPTED_BY_CLIENT",
+          clientDecidedAt: "2026-06-23T00:00:00.000Z",
+        }),
+      ],
+      documentRequests: [documentRequest()],
+    });
+
+    render(<ClientRequestDetail request={request} />);
+
+    expect(screen.getByText("Request action center")).toBeInTheDocument();
+    expect(screen.getByText("Deliverables to review")).toBeInTheDocument();
+    expect(screen.getAllByText("Requested documents").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Next action").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Accept output" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Return output" })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Upload metadata" })).toBeInTheDocument();
+    expect(
+      screen.getByText("This deliverable is no longer waiting for a client decision."),
+    ).toBeInTheDocument();
+  });
+
+  it("hides client request actions when no client decision or upload is pending", () => {
+    const request = serviceRequest({
+      status: "COMPLETED",
+      outputs: [
+        requestOutput({
+          status: "ACCEPTED_BY_CLIENT",
+          clientDecidedAt: "2026-06-23T00:00:00.000Z",
+        }),
+      ],
+    });
+
+    render(<ClientRequestDetail request={request} />);
+
+    expect(screen.queryByRole("button", { name: "Accept output" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Return output" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Upload metadata" })).not.toBeInTheDocument();
+    expect(
+      screen.getByText("This deliverable is no longer waiting for a client decision."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("No document upload is currently required from you."),
+    ).toBeInTheDocument();
   });
 
   it("creates client requests from subscribed service and service-item pickers", async () => {

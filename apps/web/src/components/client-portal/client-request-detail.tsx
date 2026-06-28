@@ -16,6 +16,16 @@ function dateTime(value: string | null): string {
   return formatRiyadhDateTime(value);
 }
 
+const activeClientRequestStatuses = [
+  "NEW",
+  "TRIAGE",
+  "ASSIGNED",
+  "IN_PROGRESS",
+  "WAITING_CLIENT",
+  "WAITING_SUPERVISOR",
+  "RETURNED",
+];
+
 export function ClientRequestDetail({ request: initialRequest }: { request: ServiceRequest }) {
   const [request, setRequest] = useState(initialRequest);
   const [body, setBody] = useState("");
@@ -88,6 +98,33 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
     });
   }
 
+  const sharedOutputs = request.outputs.filter((output) =>
+    ["SHARED_WITH_CLIENT", "ACCEPTED_BY_CLIENT", "RETURNED_BY_CLIENT", "CLOSED"].includes(
+      output.status,
+    ),
+  );
+  const outputsAwaitingDecision = sharedOutputs.filter(
+    (output) => output.status === "SHARED_WITH_CLIENT",
+  );
+  const requestedDocuments = request.documentRequests.filter(
+    (documentRequest) => documentRequest.status === "REQUESTED",
+  );
+  const uploadedDocuments = request.documentRequests.filter(
+    (documentRequest) => documentRequest.status === "UPLOADED",
+  );
+  const nextActions = [
+    ...(outputsAwaitingDecision.length > 0
+      ? [`Review ${outputsAwaitingDecision.length} shared deliverable(s).`]
+      : []),
+    ...(requestedDocuments.length > 0
+      ? [`Upload ${requestedDocuments.length} requested document(s).`]
+      : []),
+    ...(request.status === "WAITING_CLIENT"
+      ? ["Jzoom is waiting for your response on this request."]
+      : []),
+  ];
+  const isActiveRequest = activeClientRequestStatuses.includes(request.status);
+
   return (
     <>
       <header className="catalog-header">
@@ -109,6 +146,48 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
       </header>
 
       {error && <p className="form-error">{error}</p>}
+
+      <section className="catalog-panel">
+        <p className="eyebrow">Request action center</p>
+        <h2>{isActiveRequest ? "Work in progress" : "Request completed"}</h2>
+        <div className="pricing-total-grid">
+          <div>
+            <span>Deliverables to review</span>
+            <strong>{outputsAwaitingDecision.length}</strong>
+          </div>
+          <div>
+            <span>Requested documents</span>
+            <strong>{requestedDocuments.length}</strong>
+          </div>
+          <div>
+            <span>Uploaded documents</span>
+            <strong>{uploadedDocuments.length}</strong>
+          </div>
+          <div>
+            <span>Visible attachments</span>
+            <strong>{request.attachments.length}</strong>
+          </div>
+          <div className="primary">
+            <span>Comments</span>
+            <strong>{request.comments.length}</strong>
+          </div>
+        </div>
+        <div className="activity-list">
+          {nextActions.length === 0 ? (
+            <article>
+              <strong>No action is pending from you.</strong>
+              <p>Jzoom will share updates here when your review or documents are needed.</p>
+            </article>
+          ) : (
+            nextActions.map((action) => (
+              <article key={action}>
+                <strong>Next action</strong>
+                <p>{action}</p>
+              </article>
+            ))
+          )}
+        </div>
+      </section>
 
       <section className="quote-summary-grid">
         <article className="catalog-panel">
@@ -157,26 +236,18 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
         <article className="catalog-panel">
           <h2>Shared outputs</h2>
           <div className="activity-list">
-            {request.outputs.length === 0 ? (
+            {sharedOutputs.length === 0 ? (
               <p>No shared outputs yet.</p>
             ) : (
-              request.outputs
-                .filter((output) =>
-                  [
-                    "SHARED_WITH_CLIENT",
-                    "ACCEPTED_BY_CLIENT",
-                    "RETURNED_BY_CLIENT",
-                    "CLOSED",
-                  ].includes(output.status),
-                )
-                .map((output) => (
-                  <article key={output.id}>
-                    <strong>{output.title}</strong>
-                    <small>
-                      {output.status} · shared {dateTime(output.sharedAt)}
-                    </small>
-                    {output.description && <p>{output.description}</p>}
-                    {output.clientReturnReason && <p>Return note: {output.clientReturnReason}</p>}
+              sharedOutputs.map((output) => (
+                <article key={output.id}>
+                  <strong>{output.title}</strong>
+                  <small>
+                    {output.status} · shared {dateTime(output.sharedAt)}
+                  </small>
+                  {output.description && <p>{output.description}</p>}
+                  {output.clientReturnReason && <p>Return note: {output.clientReturnReason}</p>}
+                  {output.status === "SHARED_WITH_CLIENT" ? (
                     <div className="row-actions">
                       <button
                         className="button-secondary"
@@ -201,78 +272,85 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
                         Return output
                       </button>
                     </div>
-                  </article>
-                ))
+                  ) : (
+                    <p>This deliverable is no longer waiting for a client decision.</p>
+                  )}
+                </article>
+              ))
             )}
           </div>
         </article>
 
         <article className="catalog-panel">
           <h2>Requested documents</h2>
-          <form className="catalog-form" onSubmit={submitUpload}>
-            <label>
-              Request
-              <select
-                required
-                value={uploadForm.documentRequestId}
-                onChange={(event) =>
-                  setUploadForm({ ...uploadForm, documentRequestId: event.target.value })
-                }
-              >
-                <option value="">Select request</option>
-                {request.documentRequests
-                  .filter((documentRequest) => documentRequest.status === "REQUESTED")
-                  .map((documentRequest) => (
+          {requestedDocuments.length === 0 ? (
+            <p>No document upload is currently required from you.</p>
+          ) : (
+            <form className="catalog-form" onSubmit={submitUpload}>
+              <label>
+                Request
+                <select
+                  required
+                  value={uploadForm.documentRequestId}
+                  onChange={(event) =>
+                    setUploadForm({ ...uploadForm, documentRequestId: event.target.value })
+                  }
+                >
+                  <option value="">Select request</option>
+                  {requestedDocuments.map((documentRequest) => (
                     <option key={documentRequest.id} value={documentRequest.id}>
                       {documentRequest.title}
                     </option>
                   ))}
-              </select>
-            </label>
-            <label>
-              File name
-              <input
-                required
-                value={uploadForm.originalName}
-                onChange={(event) =>
-                  setUploadForm({ ...uploadForm, originalName: event.target.value })
-                }
-              />
-            </label>
-            <label>
-              MIME type
-              <input
-                required
-                value={uploadForm.mimeType}
-                onChange={(event) => setUploadForm({ ...uploadForm, mimeType: event.target.value })}
-              />
-            </label>
-            <label>
-              Size bytes
-              <input
-                required
-                min="1"
-                type="number"
-                value={uploadForm.sizeBytes}
-                onChange={(event) =>
-                  setUploadForm({ ...uploadForm, sizeBytes: event.target.value })
-                }
-              />
-            </label>
-            <label className="form-span">
-              SHA-256
-              <input
-                required
-                minLength={64}
-                maxLength={64}
-                value={uploadForm.sha256}
-                onChange={(event) => setUploadForm({ ...uploadForm, sha256: event.target.value })}
-              />
-            </label>
-            <button className="button-primary" type="submit" disabled={saving}>
-              Upload metadata
-            </button>
-          </form>
+                </select>
+              </label>
+              <label>
+                File name
+                <input
+                  required
+                  value={uploadForm.originalName}
+                  onChange={(event) =>
+                    setUploadForm({ ...uploadForm, originalName: event.target.value })
+                  }
+                />
+              </label>
+              <label>
+                MIME type
+                <input
+                  required
+                  value={uploadForm.mimeType}
+                  onChange={(event) =>
+                    setUploadForm({ ...uploadForm, mimeType: event.target.value })
+                  }
+                />
+              </label>
+              <label>
+                Size bytes
+                <input
+                  required
+                  min="1"
+                  type="number"
+                  value={uploadForm.sizeBytes}
+                  onChange={(event) =>
+                    setUploadForm({ ...uploadForm, sizeBytes: event.target.value })
+                  }
+                />
+              </label>
+              <label className="form-span">
+                SHA-256
+                <input
+                  required
+                  minLength={64}
+                  maxLength={64}
+                  value={uploadForm.sha256}
+                  onChange={(event) => setUploadForm({ ...uploadForm, sha256: event.target.value })}
+                />
+              </label>
+              <button className="button-primary" type="submit" disabled={saving}>
+                Upload metadata
+              </button>
+            </form>
+          )}
           <div className="activity-list">
             {request.documentRequests.length === 0 ? (
               <p>No documents requested yet.</p>
