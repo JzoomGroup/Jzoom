@@ -9,6 +9,10 @@ import {
 } from "../request-templates/request-template-fields";
 import { createClientServiceRequest, requestErrorMessage } from "../../lib/request-client";
 import { answersForTemplate, fetchActiveRequestTemplate } from "../../lib/request-templates-client";
+import type {
+  ClientPortalAccount,
+  ClientPortalSubscribedMonthlyService,
+} from "../../lib/client-portal-types";
 import type { RequestTemplateVersion, TemplateAnswerValue } from "../../lib/request-template-types";
 import type { RequestSummary } from "../../lib/request-types";
 
@@ -23,8 +27,20 @@ function optional(value: string): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-export function ClientRequestList({ requests }: { requests: RequestSummary[] }) {
+function serviceLabel(service: ClientPortalSubscribedMonthlyService): string {
+  return `${service.service.nameEn} / ${service.serviceLevel.labelEn ?? service.serviceLevel.code}`;
+}
+
+export function ClientRequestList({
+  account,
+  requests,
+}: {
+  account: ClientPortalAccount;
+  requests: RequestSummary[];
+}) {
   const router = useRouter();
+  const services = account.services.subscribedMonthly;
+  const defaultService = services[0];
   const [items, setItems] = useState(requests);
   const [saving, setSaving] = useState(false);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
@@ -33,8 +49,8 @@ export function ClientRequestList({ requests }: { requests: RequestSummary[] }) 
   const [activeTemplate, setActiveTemplate] = useState<RequestTemplateVersion | null>(null);
   const [templateAnswers, setTemplateAnswers] = useState<TemplateAnswerState>({});
   const [form, setForm] = useState({
-    clientId: requests[0]?.client.id ?? "",
-    subscriptionServiceId: "",
+    clientId: defaultService?.clientId ?? account.clients[0]?.id ?? "",
+    subscriptionServiceId: defaultService?.id ?? "",
     serviceItemRevisionId: "",
     sourceQuoteId: "",
     sourceInvoiceId: "",
@@ -43,18 +59,21 @@ export function ClientRequestList({ requests }: { requests: RequestSummary[] }) 
     priority: "NORMAL" as (typeof priorities)[number],
     dueAt: "",
   });
+  const selectedService =
+    services.find((service) => service.id === form.subscriptionServiceId) ?? null;
 
-  async function loadTemplate() {
-    const serviceItemRevisionId = optional(form.serviceItemRevisionId);
-    if (!serviceItemRevisionId) {
-      setTemplateNotice("Enter a service item revision ID first.");
+  async function loadTemplate(serviceItemRevisionId = form.serviceItemRevisionId) {
+    const selectedServiceItemRevisionId = optional(serviceItemRevisionId);
+    if (!selectedServiceItemRevisionId) {
+      setTemplateNotice("General service request selected. The generic request form will be used.");
       setActiveTemplate(null);
+      setTemplateAnswers({});
       return;
     }
     setLoadingTemplate(true);
     setError(null);
     try {
-      const response = await fetchActiveRequestTemplate(serviceItemRevisionId);
+      const response = await fetchActiveRequestTemplate(selectedServiceItemRevisionId);
       setActiveTemplate(response.template);
       setTemplateAnswers({});
       setTemplateNotice(
@@ -68,6 +87,24 @@ export function ClientRequestList({ requests }: { requests: RequestSummary[] }) 
     } finally {
       setLoadingTemplate(false);
     }
+  }
+
+  function selectService(subscriptionServiceId: string) {
+    const service = services.find((candidate) => candidate.id === subscriptionServiceId);
+    setForm((current) => ({
+      ...current,
+      clientId: service?.clientId ?? current.clientId,
+      subscriptionServiceId,
+      serviceItemRevisionId: "",
+    }));
+    setActiveTemplate(null);
+    setTemplateAnswers({});
+    setTemplateNotice(null);
+  }
+
+  function selectServiceItem(serviceItemRevisionId: string) {
+    setForm((current) => ({ ...current, serviceItemRevisionId }));
+    void loadTemplate(serviceItemRevisionId);
   }
 
   function setTemplateAnswer(code: string, value: TemplateAnswerValue) {
@@ -120,112 +157,123 @@ export function ClientRequestList({ requests }: { requests: RequestSummary[] }) 
       <section className="catalog-panel editor-panel">
         <h2>Create request</h2>
         <p>
-          If the selected service item has an active template, load it and complete the dynamic
-          fields. Otherwise the generic request form remains available.
+          Select one of your subscribed services, choose the service item, then complete the
+          related request details. If the item has an active template, it loads automatically.
         </p>
-        <form className="catalog-form wide-form" onSubmit={submit}>
-          <label>
-            Client ID
-            <input
-              required
-              value={form.clientId}
-              onChange={(event) => setForm({ ...form, clientId: event.target.value })}
-            />
-          </label>
-          <label>
-            Subscription service ID
-            <input
-              required
-              value={form.subscriptionServiceId}
-              onChange={(event) => setForm({ ...form, subscriptionServiceId: event.target.value })}
-            />
-          </label>
-          <label>
-            Service item revision ID
-            <input
-              value={form.serviceItemRevisionId}
-              onChange={(event) => {
-                setForm({ ...form, serviceItemRevisionId: event.target.value });
-                setActiveTemplate(null);
-                setTemplateAnswers({});
-                setTemplateNotice(null);
-              }}
-            />
-          </label>
-          <div className="form-actions">
-            <button
-              className="button-secondary"
-              type="button"
-              disabled={loadingTemplate || !form.serviceItemRevisionId.trim()}
-              onClick={() => void loadTemplate()}
-            >
-              {loadingTemplate ? "Loading template..." : "Load request template"}
-            </button>
+        {services.length === 0 ? (
+          <div className="catalog-empty">
+            No active subscribed services are available for request creation yet.
           </div>
-          <label>
-            Source quote ID
-            <input
-              value={form.sourceQuoteId}
-              onChange={(event) => setForm({ ...form, sourceQuoteId: event.target.value })}
+        ) : (
+          <form className="catalog-form wide-form" onSubmit={submit}>
+            <label>
+              Service
+              <select
+                required
+                value={form.subscriptionServiceId}
+                onChange={(event) => selectService(event.target.value)}
+              >
+                {services.map((service) => (
+                  <option key={service.id} value={service.id}>
+                    {serviceLabel(service)} / {service.client.code} / {service.hoursAllocated}h
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Service item
+              <select
+                value={form.serviceItemRevisionId}
+                onChange={(event) => selectServiceItem(event.target.value)}
+              >
+                <option value="">General service request</option>
+                {selectedService?.serviceItems.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.nameEn}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {selectedService?.service.description && (
+              <p className="catalog-feedback success form-span">
+                {selectedService.service.description}
+              </p>
+            )}
+            <label>
+              Title
+              <input
+                required
+                value={form.title}
+                onChange={(event) => setForm({ ...form, title: event.target.value })}
+              />
+            </label>
+            <label>
+              Priority
+              <select
+                value={form.priority}
+                onChange={(event) =>
+                  setForm({ ...form, priority: event.target.value as typeof form.priority })
+                }
+              >
+                {priorities.map((priority) => (
+                  <option key={priority} value={priority}>
+                    {priority}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Due at
+              <input
+                type="datetime-local"
+                value={form.dueAt}
+                onChange={(event) => setForm({ ...form, dueAt: event.target.value })}
+              />
+            </label>
+            <details className="form-span">
+              <summary>Link to quote or invoice</summary>
+              <div className="catalog-form wide-form">
+                <label>
+                  Source quote ID
+                  <input
+                    value={form.sourceQuoteId}
+                    onChange={(event) => setForm({ ...form, sourceQuoteId: event.target.value })}
+                  />
+                </label>
+                <label>
+                  Source invoice ID
+                  <input
+                    value={form.sourceInvoiceId}
+                    onChange={(event) => setForm({ ...form, sourceInvoiceId: event.target.value })}
+                  />
+                </label>
+              </div>
+            </details>
+            <label className="form-span">
+              Description
+              <textarea
+                required
+                value={form.description}
+                onChange={(event) => setForm({ ...form, description: event.target.value })}
+              />
+            </label>
+            {loadingTemplate && (
+              <p className="catalog-feedback success form-span">Loading request template...</p>
+            )}
+            {templateNotice && (
+              <p className="catalog-feedback success form-span">{templateNotice}</p>
+            )}
+            <RequestTemplateFields
+              template={activeTemplate}
+              values={templateAnswers}
+              onChange={setTemplateAnswer}
             />
-          </label>
-          <label>
-            Source invoice ID
-            <input
-              value={form.sourceInvoiceId}
-              onChange={(event) => setForm({ ...form, sourceInvoiceId: event.target.value })}
-            />
-          </label>
-          <label>
-            Title
-            <input
-              required
-              value={form.title}
-              onChange={(event) => setForm({ ...form, title: event.target.value })}
-            />
-          </label>
-          <label>
-            Priority
-            <select
-              value={form.priority}
-              onChange={(event) =>
-                setForm({ ...form, priority: event.target.value as typeof form.priority })
-              }
-            >
-              {priorities.map((priority) => (
-                <option key={priority} value={priority}>
-                  {priority}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Due at
-            <input
-              type="datetime-local"
-              value={form.dueAt}
-              onChange={(event) => setForm({ ...form, dueAt: event.target.value })}
-            />
-          </label>
-          <label className="form-span">
-            Description
-            <textarea
-              required
-              value={form.description}
-              onChange={(event) => setForm({ ...form, description: event.target.value })}
-            />
-          </label>
-          {templateNotice && <p className="catalog-feedback success form-span">{templateNotice}</p>}
-          <RequestTemplateFields
-            template={activeTemplate}
-            values={templateAnswers}
-            onChange={setTemplateAnswer}
-          />
-          {error && <p className="form-error form-span">{error}</p>}
-          <button className="button-primary" type="submit" disabled={saving}>
-            {saving ? "Creating..." : "Create request"}
-          </button>
-        </form>
+            {error && <p className="form-error form-span">{error}</p>}
+            <button className="button-primary" type="submit" disabled={saving || loadingTemplate}>
+              {saving ? "Creating..." : "Create request"}
+            </button>
+          </form>
+        )}
       </section>
 
       <section className="catalog-panel">

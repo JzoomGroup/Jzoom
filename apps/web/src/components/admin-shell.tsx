@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { LogoutButton } from "./logout-button";
 
 const navigation = [
+  { href: "/admin", label: "Dashboard" },
   { href: "/admin/clients", label: "Clients" },
   { href: "/admin/catalog", label: "Catalog overview" },
   { href: "/admin/catalog/categories", label: "Categories" },
@@ -29,7 +30,7 @@ export function AdminShell({
   return (
     <div className="admin-shell admin-console-shell">
       <aside className="admin-sidebar">
-        <Link className="admin-brand" href="/admin/catalog">
+        <Link className="admin-brand" href="/admin">
           <span className="brand-mark" aria-hidden="true">
             J
           </span>
@@ -39,7 +40,7 @@ export function AdminShell({
           </span>
         </Link>
 
-        <nav className="admin-nav" aria-label="Catalog administration">
+        <nav className="admin-nav" aria-label="Platform administration">
           {navigation.map((item) => (
             <Link
               key={item.href}

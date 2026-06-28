@@ -24,8 +24,12 @@ describe("frontend authorization routing", () => {
   });
 
   it("uses a role-aware destination after login", () => {
-    expect(postLoginRoute(["ROLE-ADMIN"])).toBe("/settings");
+    expect(postLoginRoute(["ROLE-ADMIN"])).toBe("/admin");
     expect(postLoginRoute(["ROLE-CLIENT"])).toBe("/client");
-    expect(postLoginRoute(["ROLE-SPECIALIST"])).toBe("/profile");
+    expect(postLoginRoute(["ROLE-MGMT"])).toBe("/management");
+    expect(postLoginRoute(["ROLE-AM"])).toBe("/account-manager");
+    expect(postLoginRoute(["ROLE-SUPERVISOR"])).toBe("/supervisor");
+    expect(postLoginRoute(["ROLE-SPECIALIST"])).toBe("/specialist");
+    expect(postLoginRoute(["ROLE-UNKNOWN"])).toBe("/profile");
   });
 });

@@ -28,7 +28,12 @@ export async function InvoicesPage({ invoiceId }: { invoiceId?: string }) {
   }
 
   return (
-    <QuoteShell displayName={user.displayName} isAdmin={user.roles.includes("ROLE-ADMIN")}>
+    <QuoteShell
+      displayName={user.displayName}
+      isAdmin={user.roles.includes("ROLE-ADMIN")}
+      permissions={user.permissions}
+      roles={user.roles}
+    >
       {Array.isArray(content) ? (
         <InvoiceList invoices={content} />
       ) : (

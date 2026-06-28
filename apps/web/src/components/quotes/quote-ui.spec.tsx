@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Quote, QuoteSummary } from "../../lib/quote-types";
 import { QuoteDetail } from "./quote-detail";
 import { QuoteList } from "./quote-list";
+import { QuoteShell } from "./quote-shell";
 
 const pushMock = jest.fn();
 
@@ -175,6 +176,60 @@ describe("Quote snapshot UI", () => {
       configurable: true,
       value: jest.fn(() => ""),
     });
+  });
+
+  it("shows role-relevant internal navigation", () => {
+    const { rerender } = render(
+      <QuoteShell
+        displayName="Specialist User"
+        isAdmin={false}
+        permissions={[]}
+        roles={["ROLE-SPECIALIST"]}
+      >
+        <p>Specialist dashboard</p>
+      </QuoteShell>,
+    );
+
+    expect(screen.getByRole("link", { name: "Specialist" })).toHaveAttribute(
+      "href",
+      "/specialist",
+    );
+    expect(screen.getByRole("link", { name: "Requests" })).toHaveAttribute("href", "/requests");
+    expect(screen.queryByRole("link", { name: "Pricing drafts" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Quotes" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Invoices" })).not.toBeInTheDocument();
+
+    rerender(
+      <QuoteShell
+        displayName="Account Manager"
+        isAdmin={false}
+        permissions={[
+          "PERM-USE-PRICING-STUDIO",
+          "PERM-MANAGE-QUOTES",
+          "PERM-MANAGE-INVOICES",
+        ]}
+        roles={["ROLE-AM"]}
+      >
+        <p>Account manager dashboard</p>
+      </QuoteShell>,
+    );
+
+    expect(screen.getByRole("link", { name: "Account Manager" })).toHaveAttribute(
+      "href",
+      "/account-manager",
+    );
+    expect(screen.getByRole("link", { name: "Pricing drafts" })).toHaveAttribute(
+      "href",
+      "/pricing",
+    );
+    expect(screen.getByRole("link", { name: "Quotes" })).toHaveAttribute(
+      "href",
+      "/pricing/quotes",
+    );
+    expect(screen.getByRole("link", { name: "Invoices" })).toHaveAttribute(
+      "href",
+      "/pricing/invoices",
+    );
   });
 
   it("renders snapshotted content and advances lifecycle through explicit backend actions", async () => {

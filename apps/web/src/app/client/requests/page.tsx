@@ -11,7 +11,7 @@ export default async function ClientRequestsPage() {
 
   return (
     <ClientShell activePath="/client/requests" displayName={account.user.displayName}>
-      <ClientRequestList requests={requests} />
+      <ClientRequestList account={account} requests={requests} />
     </ClientShell>
   );
 }

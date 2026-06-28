@@ -20,7 +20,12 @@ export default async function ReportsPage() {
   }
 
   return (
-    <QuoteShell displayName={user.displayName} isAdmin={user.roles.includes("ROLE-ADMIN")}>
+    <QuoteShell
+      displayName={user.displayName}
+      isAdmin={user.roles.includes("ROLE-ADMIN")}
+      permissions={user.permissions}
+      roles={user.roles}
+    >
       <MonthlyReports initialReports={reports} />
     </QuoteShell>
   );

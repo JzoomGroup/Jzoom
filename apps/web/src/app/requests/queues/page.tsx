@@ -23,7 +23,12 @@ export default async function RequestQueuesPage() {
   }
 
   return (
-    <QuoteShell displayName={user.displayName} isAdmin={user.roles.includes("ROLE-ADMIN")}>
+    <QuoteShell
+      displayName={user.displayName}
+      isAdmin={user.roles.includes("ROLE-ADMIN")}
+      permissions={user.permissions}
+      roles={user.roles}
+    >
       <RequestQueue initialQueue={queue} />
     </QuoteShell>
   );

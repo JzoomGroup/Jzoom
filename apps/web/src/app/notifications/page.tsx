@@ -20,7 +20,12 @@ export default async function NotificationsPage() {
   }
 
   return (
-    <QuoteShell displayName={user.displayName} isAdmin={user.roles.includes("ROLE-ADMIN")}>
+    <QuoteShell
+      displayName={user.displayName}
+      isAdmin={user.roles.includes("ROLE-ADMIN")}
+      permissions={user.permissions}
+      roles={user.roles}
+    >
       <NotificationInbox initial={notifications} />
     </QuoteShell>
   );

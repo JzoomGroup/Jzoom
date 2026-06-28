@@ -35,6 +35,6 @@ describe("HomePage", () => {
 
     await HomePage();
 
-    expect(redirectMock).toHaveBeenCalledWith("/settings");
+    expect(redirectMock).toHaveBeenCalledWith("/admin");
   });
 });

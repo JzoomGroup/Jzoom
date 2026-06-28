@@ -7,6 +7,7 @@ import type {
   ClientPortalSubscribedMonthlyService,
   ClientQuoteSummary,
 } from "../../lib/client-portal-types";
+import type { RequestSummary } from "../../lib/request-types";
 import { sar } from "./client-format";
 
 function SubscribedServiceCard({ service }: { service: ClientPortalSubscribedMonthlyService }) {
@@ -124,13 +125,26 @@ export function ClientOverview({
   account,
   invoices,
   quotes,
+  requests,
 }: {
   account: ClientPortalAccount;
   invoices: ClientInvoiceSummary[];
   quotes: ClientQuoteSummary[];
+  requests: RequestSummary[];
 }) {
   const availableCount =
     account.services.availableMonthly.length + account.services.availableOneTime.length;
+  const openRequests = requests.filter(
+    (request) => !["CLOSED", "COMPLETED", "REJECTED"].includes(request.status),
+  );
+  const waitingClientRequests = requests.filter((request) => request.status === "WAITING_CLIENT");
+  const completedRequests = requests.filter((request) =>
+    ["COMPLETED", "CLOSED"].includes(request.status),
+  );
+  const subscribedHours = account.services.subscribedMonthly.reduce(
+    (total, service) => total + service.hoursAllocated,
+    0,
+  );
 
   return (
     <>
@@ -141,6 +155,40 @@ export function ClientOverview({
           <p>View your services, issued quotes, accepted quotes, invoices, and request activity.</p>
         </div>
       </header>
+
+      <section className="catalog-panel">
+        <div className="entity-card-heading">
+          <div>
+            <p className="eyebrow">Action summary</p>
+            <h2>Requests and subscription</h2>
+          </div>
+          <Link className="button-secondary" href="/client/requests">
+            New request
+          </Link>
+        </div>
+        <div className="pricing-total-grid">
+          <div>
+            <span>Open requests</span>
+            <strong>{openRequests.length}</strong>
+          </div>
+          <div>
+            <span>Waiting on you</span>
+            <strong>{waitingClientRequests.length}</strong>
+          </div>
+          <div>
+            <span>Completed</span>
+            <strong>{completedRequests.length}</strong>
+          </div>
+          <div>
+            <span>Active services</span>
+            <strong>{account.services.subscribedMonthly.length}</strong>
+          </div>
+          <div className="primary">
+            <span>Monthly hours</span>
+            <strong>{subscribedHours}</strong>
+          </div>
+        </div>
+      </section>
 
       <section className="quote-summary-grid">
         <article className="catalog-panel">

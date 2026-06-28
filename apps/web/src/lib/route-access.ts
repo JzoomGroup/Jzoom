@@ -1,5 +1,14 @@
 import type { CurrentUser } from "./auth";
 
+type PostLoginRoute =
+  | "/admin"
+  | "/client"
+  | "/management"
+  | "/account-manager"
+  | "/supervisor"
+  | "/specialist"
+  | "/profile";
+
 export function protectedRouteRedirect(
   user: CurrentUser | null,
   adminOnly = false,
@@ -11,12 +20,24 @@ export function protectedRouteRedirect(
   return adminOnly && !user.roles.includes("ROLE-ADMIN") ? "/403" : null;
 }
 
-export function postLoginRoute(roles: string[]): "/client" | "/settings" | "/profile" {
+export function postLoginRoute(roles: string[]): PostLoginRoute {
   if (roles.includes("ROLE-ADMIN")) {
-    return "/settings";
+    return "/admin";
   }
   if (roles.includes("ROLE-CLIENT")) {
     return "/client";
+  }
+  if (roles.includes("ROLE-MGMT")) {
+    return "/management";
+  }
+  if (roles.includes("ROLE-AM")) {
+    return "/account-manager";
+  }
+  if (roles.includes("ROLE-SUPERVISOR")) {
+    return "/supervisor";
+  }
+  if (roles.includes("ROLE-SPECIALIST")) {
+    return "/specialist";
   }
   return "/profile";
 }

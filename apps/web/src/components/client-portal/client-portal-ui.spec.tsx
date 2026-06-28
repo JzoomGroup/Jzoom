@@ -1,9 +1,12 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ClientInvoiceDetail } from "./client-invoice-detail";
 import { ClientInvoiceList } from "./client-invoice-list";
 import { ClientOverview } from "./client-overview";
 import { ClientQuoteDetail } from "./client-quote-detail";
 import { ClientQuoteList } from "./client-quote-list";
+import { ClientRequestList } from "./client-request-list";
+import { createClientServiceRequest } from "../../lib/request-client";
+import { fetchActiveRequestTemplate } from "../../lib/request-templates-client";
 import type {
   ClientInvoice,
   ClientInvoiceSummary,
@@ -11,6 +14,23 @@ import type {
   ClientQuote,
   ClientQuoteSummary,
 } from "../../lib/client-portal-types";
+import type { RequestSummary } from "../../lib/request-types";
+
+const pushMock = jest.fn();
+
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: pushMock }),
+}));
+
+jest.mock("../../lib/request-client", () => ({
+  createClientServiceRequest: jest.fn(),
+  requestErrorMessage: () => "Request failed",
+}));
+
+jest.mock("../../lib/request-templates-client", () => ({
+  answersForTemplate: jest.fn(() => []),
+  fetchActiveRequestTemplate: jest.fn(),
+}));
 
 function account(): ClientPortalAccount {
   return {
@@ -198,18 +218,141 @@ function invoice(): ClientInvoice {
   };
 }
 
+function accountWithSubscription(): ClientPortalAccount {
+  const base = account();
+  return {
+    ...base,
+    services: {
+      ...base.services,
+      subscribedMonthly: [
+        {
+          id: "subscription-service-1",
+          subscriptionId: "subscription-1",
+          clientId: "client-1",
+          client: {
+            id: "client-1",
+            code: "CLIENT-1",
+            name: "Client One",
+          },
+          status: "ACTIVE",
+          startsAt: "2026-06-01T00:00:00.000Z",
+          endsAt: null,
+          hoursAllocated: 20,
+          service: {
+            id: "service-1",
+            code: "MS-HR",
+            revisionId: "service-revision-1",
+            nameAr: "خدمة الموارد البشرية",
+            nameEn: "HR Support",
+            serviceLine: "Operate",
+            domain: "HR",
+            description: "Monthly HR operating support.",
+            category: {
+              id: "category-1",
+              code: "HR",
+              nameAr: "الموارد البشرية",
+              nameEn: "Human Resources",
+            },
+          },
+          serviceLevel: {
+            id: "level-1",
+            code: "CORE",
+            labelAr: "أساسي",
+            labelEn: "Core",
+          },
+          serviceItems: [
+            {
+              id: "service-item-revision-1",
+              itemId: "service-item-1",
+              code: "SI-HR-001",
+              nameAr: "خطاب موظف",
+              nameEn: "Employee letter",
+              expectedOutput: "Employee letter",
+              requiresFile: false,
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
+function requestSummary(): RequestSummary {
+  return {
+    id: "request-1",
+    requestNumber: "REQ-1",
+    status: "NEW",
+    title: "Existing request",
+    description: "Existing description",
+    priority: "NORMAL",
+    dueAt: null,
+    closedAt: null,
+    createdAt: "2026-06-22T00:00:00.000Z",
+    updatedAt: "2026-06-22T00:00:00.000Z",
+    client: account().clients[0] as RequestSummary["client"],
+    service: {
+      subscriptionServiceId: "subscription-service-1",
+      subscriptionId: "subscription-1",
+      hoursAllocated: 20,
+      status: "ACTIVE",
+      monthlyService: {
+        id: "service-1",
+        code: "MS-HR",
+        revisionId: "service-revision-1",
+        nameAr: "خدمة الموارد البشرية",
+        nameEn: "HR Support",
+        serviceLine: "Operate",
+        domain: "HR",
+      },
+      serviceLevel: {
+        id: "level-1",
+        code: "CORE",
+        labelAr: "أساسي",
+        labelEn: "Core",
+      },
+    },
+    serviceItem: null,
+    sourceQuote: null,
+    sourceInvoice: null,
+    assignments: {
+      specialist: null,
+      supervisor: null,
+      accountManager: null,
+    },
+    counts: {
+      comments: 0,
+      documentRequests: 0,
+      files: 0,
+      internalNotes: 0,
+      outputs: 0,
+      tasks: 0,
+      timeEntries: 0,
+      workflowEvents: 0,
+    },
+  };
+}
+
 describe("Client portal UI", () => {
+  beforeEach(() => {
+    pushMock.mockReset();
+    jest.mocked(createClientServiceRequest).mockReset();
+    jest.mocked(fetchActiveRequestTemplate).mockReset();
+  });
+
   it("renders overview account context and record counts", () => {
     render(
       <ClientOverview
         account={account()}
         quotes={[quoteSummary()]}
         invoices={[invoiceSummary()]}
+        requests={[requestSummary()]}
       />,
     );
 
     expect(screen.getByRole("heading", { name: "Welcome, Client User" })).toBeInTheDocument();
     expect(screen.getByText("CLIENT-1")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Requests and subscription" })).toBeInTheDocument();
+    expect(screen.getByText("Open requests")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Service catalog" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View quotes" })).toHaveAttribute(
       "href",
@@ -252,5 +395,64 @@ describe("Client portal UI", () => {
     expect(document.body.textContent).not.toContain("Payment gateway");
     expect(document.body.textContent).not.toContain("Payment status");
     expect(document.body.textContent).not.toContain("ZATCA");
+  });
+
+  it("creates client requests from subscribed service and service-item pickers", async () => {
+    jest.mocked(fetchActiveRequestTemplate).mockResolvedValue({
+      serviceItemRevision: {
+        id: "service-item-revision-1",
+        serviceItemId: "service-item-1",
+        nameAr: "خطاب موظف",
+        nameEn: "Employee letter",
+        expectedOutput: "Employee letter",
+        requiresFile: false,
+      },
+      serviceItem: {
+        id: "service-item-1",
+        code: "SI-HR-001",
+        monthlyService: { id: "service-1", code: "MS-HR" },
+      },
+      template: null,
+    });
+    const createdRequest = {
+      ...requestSummary(),
+      id: "request-2",
+      requestNumber: "REQ-2",
+      title: "Need employee letter",
+    } as Awaited<ReturnType<typeof createClientServiceRequest>>;
+    jest.mocked(createClientServiceRequest).mockResolvedValue(createdRequest);
+
+    render(<ClientRequestList account={accountWithSubscription()} requests={[requestSummary()]} />);
+
+    expect(screen.queryByLabelText("Client ID")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Subscription service ID")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Service item revision ID")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Service item"), {
+      target: { value: "service-item-revision-1" },
+    });
+    await waitFor(() =>
+      expect(fetchActiveRequestTemplate).toHaveBeenCalledWith("service-item-revision-1"),
+    );
+
+    fireEvent.change(screen.getByLabelText("Title"), {
+      target: { value: "Need employee letter" },
+    });
+    fireEvent.change(screen.getByLabelText("Description"), {
+      target: { value: "Please prepare an employee letter." },
+    });
+    fireEvent.submit(screen.getByRole("button", { name: "Create request" }).closest("form")!);
+
+    await waitFor(() =>
+      expect(createClientServiceRequest).toHaveBeenCalledWith({
+        clientId: "client-1",
+        subscriptionServiceId: "subscription-service-1",
+        serviceItemRevisionId: "service-item-revision-1",
+        title: "Need employee letter",
+        description: "Please prepare an employee letter.",
+        priority: "NORMAL",
+      }),
+    );
+    expect(pushMock).toHaveBeenCalledWith("/client/requests/request-2");
   });
 });
