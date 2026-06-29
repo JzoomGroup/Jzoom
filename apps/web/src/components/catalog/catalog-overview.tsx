@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { CatalogSnapshot } from "../../lib/catalog-types";
+import { ControlDeck, ControlTile, MetricCard, SectionCard, SmartTable } from "../premium-os";
 import { SectionHeader, StatusBadge } from "./catalog-shared";
 
 export function CatalogOverview({ snapshot }: { snapshot: CatalogSnapshot }) {
@@ -15,75 +15,29 @@ export function CatalogOverview({ snapshot }: { snapshot: CatalogSnapshot }) {
       />
 
       <section className="metric-grid" aria-label="Catalog summary">
-        <article>
-          <span>Categories</span>
-          <strong>{snapshot.categories.length}</strong>
-        </article>
-        <article>
-          <span>Monthly services</span>
-          <strong>{snapshot.services.length}</strong>
-          <small>{activeServices} active</small>
-        </article>
-        <article>
-          <span>Service items</span>
-          <strong>{snapshot.items.length}</strong>
-          <small>{activeItems} active</small>
-        </article>
-        <article>
-          <span>Package levels</span>
-          <strong>{snapshot.levels.length}</strong>
-        </article>
+        <MetricCard label="Categories" value={snapshot.categories.length} detail="Monthly groups" />
+        <MetricCard label="Monthly services" value={snapshot.services.length} detail={`${activeServices} active`} accent />
+        <MetricCard label="Service items" value={snapshot.items.length} detail={`${activeItems} active`} />
+        <MetricCard label="Package levels" value={snapshot.levels.length} detail="Subscription tiers" />
       </section>
 
-      <section className="catalog-panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Administration areas</h2>
-            <p>Each change is authorized by the backend and written to the audit log.</p>
-          </div>
-        </div>
-        <div className="admin-area-grid">
-          <Link href="/admin/catalog/categories">
-            <span>01</span>
-            <strong>Categories</strong>
-            <p>Localized grouping, ordering, and lifecycle controls.</p>
-          </Link>
-          <Link href="/admin/catalog/monthly-services">
-            <span>02</span>
-            <strong>Monthly services</strong>
-            <p>Revision-safe names, hours, rates, fees, and package availability.</p>
-          </Link>
-          <Link href="/admin/catalog/service-items">
-            <span>03</span>
-            <strong>Service items</strong>
-            <p>Item definitions and the complete package inclusion matrix.</p>
-          </Link>
-          <Link href="/admin/catalog/service-levels">
-            <span>04</span>
-            <strong>Service levels</strong>
-            <p>Basic, Growth, Advanced, Partnership, and future configurable levels.</p>
-          </Link>
-          <Link href="/admin/catalog/one-time-categories">
-            <span>05</span>
-            <strong>One-time categories</strong>
-            <p>Localized Build and Digital groupings with safe lifecycle controls.</p>
-          </Link>
-          <Link href="/admin/catalog/one-time-services">
-            <span>06</span>
-            <strong>One-time services</strong>
-            <p>Revisioned pricing, phases, deliverables, tasks, and duration.</p>
-          </Link>
-        </div>
-      </section>
+      <ControlDeck
+        title="Administration areas"
+        description="Each change is authorized by the backend and written to the audit log."
+      >
+        <ControlTile href="/admin/catalog/categories" meta="01" title="Categories" description="Localized grouping, ordering, and lifecycle controls." />
+        <ControlTile href="/admin/catalog/monthly-services" meta="02" title="Monthly services" description="Revision-safe names, hours, rates, fees, and package availability." />
+        <ControlTile href="/admin/catalog/service-items" meta="03" title="Service items" description="Item definitions and the complete package inclusion matrix." />
+        <ControlTile href="/admin/catalog/service-levels" meta="04" title="Service levels" description="Basic, Growth, Advanced, Partnership, and future configurable levels." />
+        <ControlTile href="/admin/catalog/one-time-categories" meta="05" title="One-time categories" description="Localized Build and Digital groupings with safe lifecycle controls." />
+        <ControlTile href="/admin/catalog/one-time-services" meta="06" title="One-time services" description="Revisioned pricing, phases, deliverables, tasks, and duration." />
+      </ControlDeck>
 
-      <section className="catalog-panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Seeded catalog visibility</h2>
-            <p>The current live service revisions loaded from Excel V3.</p>
-          </div>
-        </div>
-        <div className="compact-table-wrap">
+      <SectionCard
+        title="Seeded catalog visibility"
+        description="The current live service revisions loaded from Excel V3."
+      >
+        <SmartTable>
           <table className="catalog-table">
             <thead>
               <tr>
@@ -111,8 +65,8 @@ export function CatalogOverview({ snapshot }: { snapshot: CatalogSnapshot }) {
               ))}
             </tbody>
           </table>
-        </div>
-      </section>
+        </SmartTable>
+      </SectionCard>
     </>
   );
 }

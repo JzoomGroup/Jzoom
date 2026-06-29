@@ -138,7 +138,7 @@ export function ServiceManager({
         title="Monthly services"
         description="Edit names, package hours, selling rates, internal costs, and setup fees through revision-safe backend APIs."
         action={
-          <button className="button-primary" type="button" onClick={openCreate}>
+          <button className="os-button os-button-primary" type="button" onClick={openCreate}>
             Add monthly service
           </button>
         }
@@ -454,7 +454,7 @@ export function ServiceManager({
                 />
                 <div className="entity-card-actions">
                   <button
-                    className="button-secondary"
+                    className="os-button os-button-secondary"
                     type="button"
                     disabled={service.status === "ARCHIVED"}
                     onClick={() => openEdit(service)}

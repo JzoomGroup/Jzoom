@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { QuoteSummary } from "../../lib/quote-types";
+import { EmptyState, MetricCard, PageHeader, SectionCard, StatusChip } from "../premium-os";
 import { QuoteLifecycleActions } from "./quote-lifecycle-actions";
 
 function sar(value: number): string {
@@ -15,25 +16,30 @@ function sar(value: number): string {
 
 export function QuoteList({ quotes }: { quotes: QuoteSummary[] }) {
   const [items, setItems] = useState(quotes);
+  const totalValue = items.reduce((sum, quote) => sum + (quote.totals?.finalTotal ?? 0), 0);
 
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">Immutable commercial records</p>
-          <h1>Quotes</h1>
-          <p>
-            Quotes are created from saved pricing drafts. Their client, service, pricing-rule,
-            terms, and total snapshots never change.
-          </p>
-        </div>
-        <Link className="button-primary" href="/pricing">
-          Open Pricing Studio
-        </Link>
-      </header>
-      <section className="catalog-panel">
+      <PageHeader
+        eyebrow="Commercial records"
+        title="Quotes"
+        description="Quotes are created from saved pricing drafts. Client, service, pricing-rule, terms, and total snapshots remain immutable."
+        actions={[{ href: "/pricing", label: "Open Pricing Studio", variant: "primary" }]}
+      />
+
+      <section className="os-bento-grid compact">
+        <MetricCard accent label="Quotes" value={items.length} detail="Snapshot records" />
+        <MetricCard label="Total value" value={sar(totalValue)} detail="Across listed quotes" />
+        <MetricCard
+          label="Issued"
+          value={items.filter((quote) => quote.status === "ISSUED").length}
+          detail="Ready for client flow"
+        />
+      </section>
+
+      <SectionCard eyebrow="Quote library" title="Commercial snapshots">
         {items.length === 0 ? (
-          <div className="catalog-empty">No quotes have been created yet.</div>
+          <EmptyState title="No quotes yet">No quotes have been created yet.</EmptyState>
         ) : (
           <div className="quote-list-grid">
             {items.map((quote) => (
@@ -45,10 +51,8 @@ export function QuoteList({ quotes }: { quotes: QuoteSummary[] }) {
                     <p>{quote.client.name}</p>
                   </div>
                   <div className="quote-list-meta">
-                    <span className={`status-badge status-${quote.status.toLowerCase()}`}>
-                      {quote.status}
-                    </span>
-                    <strong>{quote.totals ? sar(quote.totals.finalTotal) : "—"}</strong>
+                    <StatusChip status={quote.status} label={quote.status} />
+                    <strong>{quote.totals ? sar(quote.totals.finalTotal) : "-"}</strong>
                     <small>{quote.itemCount} items</small>
                   </div>
                 </Link>
@@ -70,7 +74,7 @@ export function QuoteList({ quotes }: { quotes: QuoteSummary[] }) {
             ))}
           </div>
         )}
-      </section>
+      </SectionCard>
     </>
   );
 }

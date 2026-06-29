@@ -11,6 +11,7 @@ import {
 } from "../../lib/request-client";
 import type { ServiceRequest } from "../../lib/request-types";
 import { formatRiyadhDateTime } from "../../lib/stable-date";
+import { PageHeader, StatusChip } from "../premium-os";
 
 type ClientDocumentStatus = ServiceRequest["documentRequests"][number]["status"];
 type ClientOutputStatus = ServiceRequest["outputs"][number]["status"];
@@ -230,23 +231,18 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
 
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">Request detail</p>
-          <h1>{request.title}</h1>
-          <p>
-            {request.requestNumber} · {request.service.monthlyService.nameEn}
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Request detail"
+        title={request.title}
+        description={`${request.requestNumber} - ${request.service.monthlyService.nameEn}`}
+        meta={<StatusChip status={request.status} label={request.status} />}
+      >
         <div className="quote-header-actions">
-          <span className={`status-badge status-${request.status.toLowerCase()}`}>
-            {request.status}
-          </span>
-          <Link className="button-secondary" href="/client/requests">
+          <Link className="os-button os-button-secondary" href="/client/requests">
             Back to requests
           </Link>
         </div>
-      </header>
+      </PageHeader>
 
       {error && <p className="form-error">{error}</p>}
 
@@ -292,11 +288,11 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
         </div>
         <div className="row-actions">
           {primaryAction ? (
-            <a className="button-primary" href={primaryAction.href}>
+            <a className="os-button os-button-primary" href={primaryAction.href}>
               {primaryAction.label}
             </a>
           ) : (
-            <Link className="button-secondary" href="/client/requests">
+            <Link className="os-button os-button-secondary" href="/client/requests">
               View all requests
             </Link>
           )}
@@ -361,9 +357,7 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
                       <strong>{output.title}</strong>
                       <small>Revision {output.revision}</small>
                     </div>
-                    <span className={`status-badge status-${output.status.toLowerCase()}`}>
-                      {outputStatusLabel(output.status)}
-                    </span>
+                    <StatusChip status={output.status} label={outputStatusLabel(output.status)} />
                   </div>
                   <dl className="quote-definition-list">
                     <div>
@@ -381,7 +375,7 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
                   {output.status === "SHARED_WITH_CLIENT" ? (
                     <div className="row-actions">
                       <button
-                        className="button-secondary"
+                        className="os-button os-button-secondary"
                         disabled={saving}
                         type="button"
                         onClick={() => acceptOutput(output.id)}
@@ -395,7 +389,7 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
                         onChange={(event) => setReturnReason(event.target.value)}
                       />
                       <button
-                        className="button-secondary"
+                        className="os-button os-button-secondary"
                         disabled={saving || !returnReason.trim()}
                         type="button"
                         onClick={() => returnOutput(output.id)}
@@ -486,7 +480,7 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
                   onChange={(event) => setUploadForm({ ...uploadForm, sha256: event.target.value })}
                 />
               </label>
-              <button className="button-primary" type="submit" disabled={saving}>
+              <button className="os-button os-button-primary" type="submit" disabled={saving}>
                 Upload metadata
               </button>
             </form>
@@ -502,9 +496,10 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
                       <strong>{documentRequest.title}</strong>
                       <small>Due {dateTime(documentRequest.dueAt)}</small>
                     </div>
-                    <span className={`status-badge status-${documentRequest.status.toLowerCase()}`}>
-                      {documentStatusLabel(documentRequest.status)}
-                    </span>
+                    <StatusChip
+                      status={documentRequest.status}
+                      label={documentStatusLabel(documentRequest.status)}
+                    />
                   </div>
                   <p>{documentActionCopy(documentRequest.status)}</p>
                   {documentRequest.instructions && <p>{documentRequest.instructions}</p>}
@@ -526,11 +521,10 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
           <h2>Submitted template answers</h2>
           <p>
             Completeness:{" "}
-            <span
-              className={`status-badge status-${request.templateResponse.completenessStatus.toLowerCase()}`}
-            >
-              {request.templateResponse.completenessStatus}
-            </span>
+            <StatusChip
+              status={request.templateResponse.completenessStatus}
+              label={request.templateResponse.completenessStatus}
+            />
           </p>
           <div className="activity-list">
             {request.templateResponse.answers.length === 0 ? (
@@ -559,7 +553,7 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
             Add comment
             <textarea required value={body} onChange={(event) => setBody(event.target.value)} />
           </label>
-          <button className="button-primary" type="submit" disabled={saving}>
+          <button className="os-button os-button-primary" type="submit" disabled={saving}>
             Add comment
           </button>
         </form>

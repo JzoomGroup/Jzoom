@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { CreateInvoiceAction } from "../invoices/create-invoice-action";
 import { quotePdfUrl } from "../../lib/quote-client";
 import type { Quote } from "../../lib/quote-types";
+import { CreateInvoiceAction } from "../invoices/create-invoice-action";
+import { PageHeader, SectionCard, SmartTable, StatusChip } from "../premium-os";
 import { QuoteLifecycleActions } from "./quote-lifecycle-actions";
 
 function sar(value: number): string {
@@ -20,21 +21,15 @@ export function QuoteDetail({ initialQuote }: { initialQuote: Quote }) {
 
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">Immutable quote snapshot</p>
-          <h1>{quote.quoteNumber}</h1>
-          <p>
-            Created from {quote.sourceDraft.title} at calculation version {quote.sourceDraftVersion}
-            . Snapshot hash: {quote.snapshotHash?.slice(0, 16)}…
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Commercial snapshot"
+        title={quote.quoteNumber}
+        description={`Created from ${quote.sourceDraft.title} at calculation version ${quote.sourceDraftVersion}. Snapshot hash: ${quote.snapshotHash?.slice(0, 16) ?? "not available"}.`}
+        meta={<StatusChip status={quote.status} label={quote.status} />}
+      >
         <div className="quote-header-actions">
-          <span className={`status-badge status-${quote.status.toLowerCase()}`}>
-            {quote.status}
-          </span>
           <a
-            className="button-primary"
+            className="os-button os-button-primary"
             href={quotePdfUrl(quote.id)}
             target="_blank"
             rel="noreferrer"
@@ -42,32 +37,27 @@ export function QuoteDetail({ initialQuote }: { initialQuote: Quote }) {
             View PDF
           </a>
           <CreateInvoiceAction quote={quote} />
-          <Link className="button-secondary" href={`/pricing/${quote.sourcePricingDraftId}`}>
+          <Link className="os-button os-button-secondary" href={`/pricing/${quote.sourcePricingDraftId}`}>
             Source draft
           </Link>
-          <Link className="button-secondary" href="/pricing/quotes">
+          <Link className="os-button os-button-secondary" href="/pricing/quotes">
             All quotes
           </Link>
         </div>
-      </header>
+      </PageHeader>
 
       {quote.status === "DRAFT" || quote.status === "ISSUED" ? (
-        <section className="catalog-panel quote-lifecycle">
-          <div>
-            <h2>Lifecycle</h2>
-            <p>
-              Acceptance, rejection, expiration, and cancellation are audited and never rewrite
-              quote content.
-            </p>
-          </div>
+        <SectionCard
+          eyebrow="Governance"
+          title="Lifecycle"
+          description="Acceptance, rejection, expiration, and cancellation are audited and never rewrite quote content."
+        >
           <QuoteLifecycleActions quoteId={quote.id} status={quote.status} onUpdated={setQuote} />
-        </section>
+        </SectionCard>
       ) : null}
 
       <section className="quote-summary-grid">
-        <article className="catalog-panel">
-          <p className="eyebrow">Client snapshot</p>
-          <h2>{quote.client.name}</h2>
+        <SectionCard eyebrow="Client snapshot" title={quote.client.name}>
           <dl className="quote-definition-list">
             <div>
               <dt>Code</dt>
@@ -86,10 +76,8 @@ export function QuoteDetail({ initialQuote }: { initialQuote: Quote }) {
               <dd>{quote.client.authorizedApprover}</dd>
             </div>
           </dl>
-        </article>
-        <article className="catalog-panel">
-          <p className="eyebrow">Terms snapshot</p>
-          <h2>Commercial terms</h2>
+        </SectionCard>
+        <SectionCard eyebrow="Terms snapshot" title="Commercial terms">
           <dl className="quote-definition-list">
             <div>
               <dt>Valid until</dt>
@@ -108,17 +96,15 @@ export function QuoteDetail({ initialQuote }: { initialQuote: Quote }) {
               <dd>{quote.terms.additionalTerms ?? "None"}</dd>
             </div>
           </dl>
-        </article>
+        </SectionCard>
       </section>
 
-      <section className="catalog-panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Snapshotted services</h2>
-            <p>{quote.items.length} immutable quote lines.</p>
-          </div>
-        </div>
-        <div className="table-wrap">
+      <SectionCard
+        eyebrow="Quote lines"
+        title="Snapshotted services"
+        description={`${quote.items.length} immutable quote lines.`}
+      >
+        <SmartTable>
           <table className="catalog-table pricing-lines">
             <thead>
               <tr>
@@ -146,7 +132,7 @@ export function QuoteDetail({ initialQuote }: { initialQuote: Quote }) {
                   </td>
                   <td>
                     {item.lineType === "MONTHLY" ? "Monthly" : "One-time"}
-                    <small>{item.serviceSnapshot.serviceLevelLabel ?? "—"}</small>
+                    <small>{item.serviceSnapshot.serviceLevelLabel ?? "-"}</small>
                   </td>
                   <td>{item.quantity}</td>
                   <td>{sar(item.serviceSnapshot.baseAmount)}</td>
@@ -156,10 +142,10 @@ export function QuoteDetail({ initialQuote }: { initialQuote: Quote }) {
               ))}
             </tbody>
           </table>
-        </div>
-      </section>
+        </SmartTable>
+      </SectionCard>
 
-      <section className="catalog-panel">
+      <SectionCard eyebrow="Financial snapshot" title="Totals">
         <div className="pricing-total-grid">
           <div>
             <span>Monthly</span>
@@ -175,7 +161,7 @@ export function QuoteDetail({ initialQuote }: { initialQuote: Quote }) {
           </div>
           <div>
             <span>Discount</span>
-            <strong>− {sar(quote.totals.discountTotal)}</strong>
+            <strong>- {sar(quote.totals.discountTotal)}</strong>
           </div>
           <div>
             <span>Tax snapshot</span>
@@ -200,7 +186,7 @@ export function QuoteDetail({ initialQuote }: { initialQuote: Quote }) {
             {quote.pricingRules.map((rule) => `${rule.code} v${rule.version}`).join(", ")}
           </p>
         )}
-      </section>
+      </SectionCard>
     </>
   );
 }

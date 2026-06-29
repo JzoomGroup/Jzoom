@@ -1,42 +1,35 @@
 import Link from "next/link";
 import { clientInvoicePdfUrl } from "../../lib/client-portal-client";
 import type { ClientInvoice } from "../../lib/client-portal-types";
+import { PageHeader, SectionCard, SmartTable, StatusChip } from "../premium-os";
 import { dateLabel, sar } from "./client-format";
 
 export function ClientInvoiceDetail({ invoice }: { invoice: ClientInvoice }) {
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">Immutable invoice snapshot</p>
-          <h1>{invoice.invoiceNumber}</h1>
-          <p>
-            This invoice is displayed from the stored invoice snapshot created from accepted quote{" "}
-            {invoice.quoteNumber}.
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Invoice snapshot"
+        title={invoice.invoiceNumber}
+        description={`This invoice is displayed from the stored snapshot created from accepted quote ${invoice.quoteNumber}.`}
+        meta={<StatusChip status={invoice.status} label={invoice.status} />}
+      >
         <div className="quote-header-actions">
-          <span className={`status-badge status-${invoice.status.toLowerCase()}`}>
-            {invoice.status}
-          </span>
           <a
-            className="button-primary"
+            className="os-button os-button-primary"
             href={clientInvoicePdfUrl(invoice.id)}
             target="_blank"
             rel="noreferrer"
           >
             View PDF
           </a>
-          <Link className="button-secondary" href="/client/invoices">
+          <Link className="os-button os-button-secondary" href="/client/invoices">
             All invoices
           </Link>
         </div>
-      </header>
+      </PageHeader>
 
       <section className="quote-summary-grid">
-        <article className="catalog-panel">
-          <p className="eyebrow">Client details</p>
-          <h2>{invoice.client.legalName ?? invoice.client.name}</h2>
+        <SectionCard eyebrow="Client details" title={invoice.client.legalName ?? invoice.client.name}>
           <dl className="quote-definition-list">
             <div>
               <dt>Client code</dt>
@@ -51,10 +44,8 @@ export function ClientInvoiceDetail({ invoice }: { invoice: ClientInvoice }) {
               <dd>{dateLabel(invoice.issueDate)}</dd>
             </div>
           </dl>
-        </article>
-        <article className="catalog-panel">
-          <p className="eyebrow">Terms</p>
-          <h2>Invoice terms</h2>
+        </SectionCard>
+        <SectionCard eyebrow="Terms" title="Invoice terms">
           <dl className="quote-definition-list">
             <div>
               <dt>Payment</dt>
@@ -69,17 +60,15 @@ export function ClientInvoiceDetail({ invoice }: { invoice: ClientInvoice }) {
               <dd>{invoice.terms.additionalTerms ?? "None"}</dd>
             </div>
           </dl>
-        </article>
+        </SectionCard>
       </section>
 
-      <section className="catalog-panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Invoice lines</h2>
-            <p>{invoice.items.length} snapshotted invoice lines.</p>
-          </div>
-        </div>
-        <div className="table-wrap">
+      <SectionCard
+        eyebrow="Invoice lines"
+        title="Invoice lines"
+        description={`${invoice.items.length} snapshotted invoice lines.`}
+      >
+        <SmartTable>
           <table className="catalog-table pricing-lines">
             <thead>
               <tr>
@@ -100,7 +89,7 @@ export function ClientInvoiceDetail({ invoice }: { invoice: ClientInvoice }) {
                   </td>
                   <td>
                     {item.itemSnapshot.lineType === "MONTHLY" ? "Monthly" : "One-time"}
-                    <small>{item.itemSnapshot.serviceSnapshot.serviceLevelLabel ?? "—"}</small>
+                    <small>{item.itemSnapshot.serviceSnapshot.serviceLevelLabel ?? "-"}</small>
                   </td>
                   <td>{item.quantity}</td>
                   <td>{sar(item.unitPrice)}</td>
@@ -110,10 +99,10 @@ export function ClientInvoiceDetail({ invoice }: { invoice: ClientInvoice }) {
               ))}
             </tbody>
           </table>
-        </div>
-      </section>
+        </SmartTable>
+      </SectionCard>
 
-      <section className="catalog-panel">
+      <SectionCard eyebrow="Financial snapshot" title="Invoice total">
         <div className="pricing-total-grid">
           <div>
             <span>Discount</span>
@@ -124,7 +113,7 @@ export function ClientInvoiceDetail({ invoice }: { invoice: ClientInvoice }) {
             <strong>{sar(invoice.finalDueNoTax)}</strong>
           </div>
         </div>
-      </section>
+      </SectionCard>
     </>
   );
 }

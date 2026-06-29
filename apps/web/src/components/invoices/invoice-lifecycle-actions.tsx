@@ -57,7 +57,11 @@ export function InvoiceLifecycleActions({
       <div className="row-actions">
         {actions.map((action) => (
           <button
-            className={action.tone === "danger" ? "button-danger" : "button-secondary"}
+            className={
+              action.tone === "danger"
+                ? "os-button os-button-danger"
+                : "os-button os-button-secondary"
+            }
             disabled={pending !== null}
             key={action.status}
             type="button"

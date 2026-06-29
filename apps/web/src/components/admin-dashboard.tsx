@@ -6,21 +6,22 @@ import type {
   MonthlyUsageResponse,
 } from "../lib/operations-types";
 import type { RequestQueueResponse, RequestSummary } from "../lib/request-types";
+import {
+  ActionCard,
+  BentoGrid,
+  EmptyState,
+  MetricCard,
+  PageHeader,
+  PriorityChip,
+  SectionCard,
+  SmartTable,
+  StatusChip,
+} from "./premium-os";
 
 const completedStatuses = new Set(["COMPLETED", "CLOSED", "REJECTED"]);
 
 function hours(value: number | undefined): string {
   return `${Number(value ?? 0).toFixed(2)}h`;
-}
-
-function metric(label: string, value: string | number, detail?: string) {
-  return (
-    <article>
-      <span>{label}</span>
-      <strong>{value}</strong>
-      {detail ? <small>{detail}</small> : null}
-    </article>
-  );
 }
 
 export function AdminDashboard({
@@ -56,42 +57,30 @@ export function AdminDashboard({
 
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">Admin Console</p>
-          <h1>Operating dashboard</h1>
-          <p>
-            A read-only control room for clients, request queues, hours usage, reports, and client
-            health using the current backend data contracts.
-          </p>
-        </div>
-        <Link className="button-secondary" href="/admin/clients">
-          Manage clients
-        </Link>
-      </header>
+      <PageHeader
+        eyebrow="Admin Console"
+        title="Operating dashboard"
+        description="A premium control room for clients, request queues, hours usage, reports, and client health using the current backend data contracts."
+        actions={[{ href: "/admin/clients", label: "Manage clients", variant: "secondary" }]}
+      />
 
-      <section className="metric-grid" aria-label="Admin operating summary">
-        {metric("Total clients", clientsSnapshot.clients.length, `${activeClients.length} active`)}
-        {metric("Open requests", requestQueue.counters.open, `${completedRequests} completed`)}
-        {metric("Delayed requests", requestQueue.counters.overdue, "From request queues")}
-        {metric("Used hours", hours(usage.totals.approvedHours), `Period ${usage.period.key}`)}
-        {metric("Client action", waitingClientRequests, "Waiting on client")}
-        {metric("Portal users", portalUsers, "Linked to managed clients")}
-        {metric("Client health", highRiskClients.length, `${watchClients.length} watch`)}
-        {metric("Monthly reports", reports.length, `${publishedReports} published`)}
-      </section>
+      <BentoGrid>
+        <MetricCard label="Total clients" value={clientsSnapshot.clients.length} detail={`${activeClients.length} active`} />
+        <MetricCard label="Open requests" value={requestQueue.counters.open} detail={`${completedRequests} completed`} accent />
+        <MetricCard label="Delayed requests" value={requestQueue.counters.overdue} detail="From request queues" />
+        <MetricCard label="Used hours" value={hours(usage.totals.approvedHours)} detail={`Period ${usage.period.key}`} />
+        <MetricCard label="Client action" value={waitingClientRequests} detail="Waiting on client" />
+        <MetricCard label="Portal users" value={portalUsers} detail="Linked to managed clients" />
+        <MetricCard label="Client health" value={highRiskClients.length} detail={`${watchClients.length} watch`} />
+        <MetricCard label="Monthly reports" value={reports.length} detail={`${publishedReports} published`} />
+      </BentoGrid>
 
       <section className="quote-summary-grid">
-        <article className="catalog-panel">
-          <div className="panel-heading">
-            <div>
-              <h2>Operations queues</h2>
-              <p>Backend-scoped request counts for internal execution.</p>
-            </div>
-            <Link className="button-secondary" href="/requests/queues">
-              Open queues
-            </Link>
-          </div>
+        <SectionCard
+          title="Operations queues"
+          description="Backend-scoped request counts for internal execution."
+          action={<Link className="os-button os-button-secondary" href="/requests/queues">Open queues</Link>}
+        >
           <div className="pricing-total-grid">
             <div>
               <span>Specialist</span>
@@ -110,18 +99,13 @@ export function AdminDashboard({
               <strong>{requestQueue.counters.overdue}</strong>
             </div>
           </div>
-        </article>
+        </SectionCard>
 
-        <article className="catalog-panel">
-          <div className="panel-heading">
-            <div>
-              <h2>Hours usage</h2>
-              <p>Approved and pending time for the current ledger period.</p>
-            </div>
-            <Link className="button-secondary" href="/hours-ledger">
-              View ledger
-            </Link>
-          </div>
+        <SectionCard
+          title="Hours usage"
+          description="Approved and pending time for the current ledger period."
+          action={<Link className="os-button os-button-secondary" href="/hours-ledger">View ledger</Link>}
+        >
           <div className="pricing-total-grid">
             <div>
               <span>Approved</span>
@@ -140,23 +124,16 @@ export function AdminDashboard({
               <strong>{usage.clients.length}</strong>
             </div>
           </div>
-        </article>
+        </SectionCard>
       </section>
 
-      <section className="catalog-panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Client health watchlist</h2>
-            <p>Clients that need account-manager or management attention.</p>
-          </div>
-          <Link className="button-secondary" href="/account-manager">
-            Portfolio
-          </Link>
-        </div>
+      <SectionCard
+        title="Client health watchlist"
+        description="Clients that need account-manager or management attention."
+        action={<Link className="os-button os-button-secondary" href="/account-manager">Portfolio</Link>}
+      >
         {attentionClients.length === 0 ? (
-          <div className="catalog-empty">
-            No high-risk or watch clients in the current portfolio.
-          </div>
+          <EmptyState title="Portfolio is stable">No high-risk or watch clients in the current portfolio.</EmptyState>
         ) : (
           <div className="entity-grid">
             {attentionClients.map((entry) => (
@@ -193,22 +170,17 @@ export function AdminDashboard({
             ))}
           </div>
         )}
-      </section>
+      </SectionCard>
 
-      <section className="catalog-panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Recently updated requests</h2>
-            <p>Fast access to live work without exposing client-only screens.</p>
-          </div>
-          <Link className="button-secondary" href="/requests">
-            All requests
-          </Link>
-        </div>
+      <SectionCard
+        title="Recently updated requests"
+        description="Fast access to live work without exposing client-only screens."
+        action={<Link className="os-button os-button-secondary" href="/requests">All requests</Link>}
+      >
         {latestRequests.length === 0 ? (
-          <div className="catalog-empty">No service requests have been created yet.</div>
+          <EmptyState>No service requests have been created yet.</EmptyState>
         ) : (
-          <div className="compact-table-wrap">
+          <SmartTable>
             <table className="catalog-table">
               <thead>
                 <tr>
@@ -216,6 +188,7 @@ export function AdminDashboard({
                   <th>Client</th>
                   <th>Service</th>
                   <th>Status</th>
+                  <th>Priority</th>
                   <th>Updated</th>
                 </tr>
               </thead>
@@ -231,49 +204,29 @@ export function AdminDashboard({
                     <td>{request.client.name}</td>
                     <td>{request.service.monthlyService.nameEn}</td>
                     <td>
-                      <span className={`status-pill status-${request.status.toLowerCase()}`}>
-                        {request.status}
-                      </span>
+                      <StatusChip status={request.status} />
                     </td>
+                    <td><PriorityChip priority={request.priority} /></td>
                     <td>{new Date(request.updatedAt).toLocaleDateString("en-SA")}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </SmartTable>
         )}
-      </section>
+      </SectionCard>
 
-      <section className="catalog-panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Administration shortcuts</h2>
-            <p>Core setup areas that currently have backend-backed management screens.</p>
-          </div>
-        </div>
+      <SectionCard
+        title="Administration shortcuts"
+        description="Core setup areas that currently have backend-backed management screens."
+      >
         <div className="admin-area-grid">
-          <Link href="/admin/clients">
-            <span>01</span>
-            <strong>Client management</strong>
-            <p>Client profiles, status, contacts, and linked portal users.</p>
-          </Link>
-          <Link href="/admin/catalog">
-            <span>02</span>
-            <strong>Monthly catalog</strong>
-            <p>Monthly services, levels, items, package inclusion, and revisions.</p>
-          </Link>
-          <Link href="/admin/request-templates">
-            <span>03</span>
-            <strong>Request templates</strong>
-            <p>Dynamic service-item forms used by client request intake.</p>
-          </Link>
-          <Link href="/admin/platform-configuration">
-            <span>04</span>
-            <strong>Platform configuration</strong>
-            <p>Settings, workflow states, notifications, and document templates.</p>
-          </Link>
+          <ActionCard href="/admin/clients" index="01" title="Client management" description="Client profiles, status, contacts, and linked portal users." />
+          <ActionCard href="/admin/catalog" index="02" title="Monthly catalog" description="Monthly services, levels, items, package inclusion, and revisions." />
+          <ActionCard href="/admin/request-templates" index="03" title="Request templates" description="Dynamic service-item forms used by client request intake." />
+          <ActionCard href="/admin/platform-configuration" index="04" title="Platform configuration" description="Settings, workflow states, notifications, and document templates." />
         </div>
-      </section>
+      </SectionCard>
     </>
   );
 }

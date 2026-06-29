@@ -18,6 +18,7 @@ import {
   StatusBadge,
   useCatalogMutation,
 } from "../catalog/catalog-shared";
+import { MetricCard, SectionCard } from "../premium-os";
 
 function dateTimeInput(value?: string | null): string {
   const date = value ? new Date(value) : new Date();
@@ -98,6 +99,10 @@ export function PricingRuleManager({ initialSnapshot }: { initialSnapshot: Prici
   }
 
   const current = editing?.revision;
+  const activeRules = snapshot.rules.filter((rule) => rule.status === "ACTIVE").length;
+  const enabledRules = snapshot.rules.filter((rule) => rule.revision?.isEnabled).length;
+  const formulaRules = snapshot.rules.filter((rule) => rule.revision?.ruleType === "FORMULA").length;
+  const archivedRules = snapshot.rules.filter((rule) => rule.status === "ARCHIVED").length;
 
   return (
     <>
@@ -106,12 +111,19 @@ export function PricingRuleManager({ initialSnapshot }: { initialSnapshot: Prici
         title="Pricing rules"
         description="Configure effective-dated rate cards, setup fees, margins, discounts, and taxes. Changes create revisions instead of rewriting prior calculations."
         action={
-          <button className="button-primary" type="button" onClick={openCreate}>
+          <button className="os-button os-button-primary" type="button" onClick={openCreate}>
             Add pricing rule
           </button>
         }
       />
       <CatalogFeedback error={mutation.error} success={mutation.success} />
+
+      <section className="metric-grid" aria-label="Pricing rules summary">
+        <MetricCard label="Rules" value={snapshot.rules.length} detail={`${activeRules} active`} accent />
+        <MetricCard label="Enabled" value={enabledRules} detail="Effective calculations" />
+        <MetricCard label="Formula rules" value={formulaRules} detail="Rule engine entries" />
+        <MetricCard label="Archived" value={archivedRules} detail="Preserved history" />
+      </section>
 
       {(creating || editing) && (
         <section className="catalog-panel editor-panel">
@@ -278,13 +290,7 @@ export function PricingRuleManager({ initialSnapshot }: { initialSnapshot: Prici
         </section>
       )}
 
-      <section className="catalog-panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Configured rules</h2>
-            <p>{snapshot.rules.length} revision-safe rules.</p>
-          </div>
-        </div>
+      <SectionCard title="Configured rules" description={`${snapshot.rules.length} revision-safe rules.`}>
         <div className="entity-grid">
           {snapshot.rules.map((rule) => (
             <article className="entity-card" key={rule.id}>
@@ -328,7 +334,7 @@ export function PricingRuleManager({ initialSnapshot }: { initialSnapshot: Prici
               />
               <div className="entity-card-actions">
                 <button
-                  className="button-secondary"
+                  className="os-button os-button-secondary"
                   type="button"
                   disabled={rule.status === "ARCHIVED"}
                   onClick={() => {
@@ -349,7 +355,7 @@ export function PricingRuleManager({ initialSnapshot }: { initialSnapshot: Prici
             </article>
           ))}
         </div>
-      </section>
+      </SectionCard>
     </>
   );
 }

@@ -17,6 +17,7 @@ import type {
   RequestTemplatesSnapshot,
 } from "../../lib/request-template-types";
 import { CatalogFeedback, EmptyState, SectionHeader } from "../catalog/catalog-shared";
+import { MetricCard, SectionCard } from "../premium-os";
 
 const fieldTypes: RequestTemplateFieldType[] = [
   "SHORT_TEXT",
@@ -577,7 +578,7 @@ function FieldLibraryPanel({
             onChange={(event) => setForm({ ...form, systemKey: event.target.value })}
           />
         </label>
-        <button className="button-primary" type="submit">
+        <button className="os-button os-button-primary" type="submit">
           Add library field
         </button>
       </form>
@@ -754,7 +755,7 @@ function TemplateBuilder({
             <h3>Group client-facing fields</h3>
           </div>
           <button
-            className="button-secondary"
+            className="os-button os-button-secondary"
             type="button"
             onClick={() =>
               setConfig({
@@ -831,7 +832,7 @@ function TemplateBuilder({
                   Active section
                 </label>
                 <button
-                  className="button-danger"
+                  className="os-button os-button-danger"
                   type="button"
                   onClick={() => removeSection(index)}
                 >
@@ -850,7 +851,7 @@ function TemplateBuilder({
             <h3>Build the request form</h3>
           </div>
           <button
-            className="button-secondary"
+            className="os-button os-button-secondary"
             type="button"
             onClick={() =>
               setConfig({
@@ -1021,7 +1022,7 @@ function TemplateBuilder({
                     </div>
                   </details>
                   <button
-                    className="button-danger"
+                    className="os-button os-button-danger"
                     type="button"
                     onClick={() => removeField(index)}
                   >
@@ -1036,7 +1037,7 @@ function TemplateBuilder({
                         <h4>{field.labelEn || field.code}</h4>
                       </div>
                       <button
-                        className="button-quiet"
+                        className="os-button os-button-quiet"
                         type="button"
                         onClick={() => addOption(index)}
                       >
@@ -1099,7 +1100,7 @@ function TemplateBuilder({
                           Active
                         </label>
                         <button
-                          className="button-danger"
+                          className="os-button os-button-danger"
                           type="button"
                           onClick={() => removeOption(index, optionIndex)}
                         >
@@ -1122,7 +1123,7 @@ function TemplateBuilder({
             <h3>Client upload checklist</h3>
           </div>
           <button
-            className="button-secondary"
+            className="os-button os-button-secondary"
             type="button"
             onClick={() =>
               setConfig({
@@ -1220,7 +1221,7 @@ function TemplateBuilder({
                     Upload required
                   </label>
                   <button
-                    className="button-danger"
+                    className="os-button os-button-danger"
                     type="button"
                     onClick={() =>
                       setConfig({
@@ -1247,7 +1248,7 @@ function TemplateBuilder({
             <h3>Reference file metadata</h3>
           </div>
           <button
-            className="button-secondary"
+            className="os-button os-button-secondary"
             type="button"
             onClick={() =>
               setConfig({
@@ -1322,7 +1323,7 @@ function TemplateBuilder({
                 Return upload required
               </label>
               <button
-                className="button-danger"
+                className="os-button os-button-danger"
                 type="button"
                 onClick={() =>
                   setConfig({
@@ -1440,32 +1441,19 @@ export function RequestTemplateManager({
       />
       <CatalogFeedback error={error} success={success} />
 
-      <section className="pricing-total-grid">
-        <div>
-          <span>Service items</span>
-          <strong>{snapshot.serviceItems.length}</strong>
-        </div>
-        <div>
-          <span>Active templates</span>
-          <strong>{templateCounts.active}</strong>
-        </div>
-        <div>
-          <span>Suggested templates</span>
-          <strong>{templateCounts.suggested}</strong>
-        </div>
-        <div className="primary">
-          <span>Missing active</span>
-          <strong>{templateCounts.missing}</strong>
-        </div>
+      <section className="metric-grid" aria-label="Request template summary">
+        <MetricCard label="Service items" value={snapshot.serviceItems.length} detail="Template-capable items" />
+        <MetricCard label="Active templates" value={templateCounts.active} detail="Client-facing forms" accent />
+        <MetricCard label="Suggested templates" value={templateCounts.suggested} detail="Ready to apply" />
+        <MetricCard label="Missing active" value={templateCounts.missing} detail="Needs configuration" />
       </section>
 
       <section className="quote-summary-grid">
-        <article className="catalog-panel">
-          <h2>Service item template status</h2>
+        <SectionCard title="Service item template status" description="Select a service item to inspect, apply, archive, or revise its request form.">
           <div className="activity-list">
             {snapshot.serviceItems.map((item) => (
               <button
-                className="button-quiet"
+                className="os-button os-button-quiet"
                 key={item.id}
                 type="button"
                 aria-pressed={item.id === selectedServiceItemId}
@@ -1480,18 +1468,19 @@ export function RequestTemplateManager({
               </button>
             ))}
           </div>
-        </article>
+        </SectionCard>
 
         <FieldLibraryPanel fields={snapshot.fieldLibrary} onSaved={saved} onError={setError} />
       </section>
 
       <section className="quote-summary-grid">
-        <article className="catalog-panel">
-          <h2>{selected?.latestRevision?.nameEn ?? "Select a service item"}</h2>
-          <p>
-            {selected?.latestRevision?.expectedOutput ??
-              "Choose a service item to inspect, apply, or revise its request template."}
-          </p>
+        <SectionCard
+          title={selected?.latestRevision?.nameEn ?? "Select a service item"}
+          description={
+            selected?.latestRevision?.expectedOutput ??
+            "Choose a service item to inspect, apply, or revise its request template."
+          }
+        >
           <dl className="quote-definition-list">
             <div>
               <dt>Service item</dt>
@@ -1508,7 +1497,7 @@ export function RequestTemplateManager({
           </dl>
           <div className="row-actions">
             <button
-              className="button-secondary"
+              className="os-button os-button-secondary"
               type="button"
               disabled={!selected?.template?.suggested}
               onClick={() => void applySuggested()}
@@ -1516,7 +1505,7 @@ export function RequestTemplateManager({
               Apply suggested
             </button>
             <button
-              className="button-danger"
+              className="os-button os-button-danger"
               type="button"
               disabled={!selected?.template?.active}
               onClick={() => void archiveActive()}
@@ -1525,14 +1514,12 @@ export function RequestTemplateManager({
             </button>
           </div>
           <TemplatePreview version={currentVersion} />
-        </article>
+        </SectionCard>
 
-        <article className="catalog-panel editor-panel">
-          <h2>Build template version</h2>
-          <p>
-            Add sections, fields, options, and document requirements. Save as Draft for review or
-            Active to publish it immediately for client request creation.
-          </p>
+        <SectionCard
+          title="Build template version"
+          description="Add sections, fields, options, and document requirements. Save as Draft for review or Active to publish it immediately for client request creation."
+        >
           <form className="template-save-form" onSubmit={submitRevision}>
             <TemplateBuilder
               config={editor}
@@ -1541,18 +1528,18 @@ export function RequestTemplateManager({
             />
             <div className="form-actions">
               <button
-                className="button-secondary"
+                className="os-button os-button-secondary"
                 type="button"
                 onClick={() => setEditor(versionToEditableConfig(currentVersion))}
               >
                 Reset editor
               </button>
-              <button className="button-primary" type="submit" disabled={!selected}>
+              <button className="os-button os-button-primary" type="submit" disabled={!selected}>
                 Save new template version
               </button>
             </div>
           </form>
-        </article>
+        </SectionCard>
       </section>
     </>
   );

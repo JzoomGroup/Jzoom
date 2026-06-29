@@ -1,42 +1,35 @@
 import Link from "next/link";
 import { clientQuotePdfUrl } from "../../lib/client-portal-client";
 import type { ClientQuote } from "../../lib/client-portal-types";
+import { PageHeader, SectionCard, SmartTable, StatusChip } from "../premium-os";
 import { dateLabel, sar } from "./client-format";
 
 export function ClientQuoteDetail({ quote }: { quote: ClientQuote }) {
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">Immutable quote snapshot</p>
-          <h1>{quote.quoteNumber}</h1>
-          <p>
-            This quote is displayed from its stored snapshot. Later catalog or pricing changes do
-            not alter this record.
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Quote snapshot"
+        title={quote.quoteNumber}
+        description="This quote is displayed from its stored snapshot. Later catalog or pricing changes do not alter this record."
+        meta={<StatusChip status={quote.status} label={quote.status} />}
+      >
         <div className="quote-header-actions">
-          <span className={`status-badge status-${quote.status.toLowerCase()}`}>
-            {quote.status}
-          </span>
           <a
-            className="button-primary"
+            className="os-button os-button-primary"
             href={clientQuotePdfUrl(quote.id)}
             target="_blank"
             rel="noreferrer"
           >
             View PDF
           </a>
-          <Link className="button-secondary" href="/client/quotes">
+          <Link className="os-button os-button-secondary" href="/client/quotes">
             All quotes
           </Link>
         </div>
-      </header>
+      </PageHeader>
 
       <section className="quote-summary-grid">
-        <article className="catalog-panel">
-          <p className="eyebrow">Client details</p>
-          <h2>{quote.client.legalName ?? quote.client.name}</h2>
+        <SectionCard eyebrow="Client details" title={quote.client.legalName ?? quote.client.name}>
           <dl className="quote-definition-list">
             <div>
               <dt>Code</dt>
@@ -51,10 +44,8 @@ export function ClientQuoteDetail({ quote }: { quote: ClientQuote }) {
               <dd>{quote.client.authorizedApprover ?? "Not specified"}</dd>
             </div>
           </dl>
-        </article>
-        <article className="catalog-panel">
-          <p className="eyebrow">Terms</p>
-          <h2>Commercial terms</h2>
+        </SectionCard>
+        <SectionCard eyebrow="Terms" title="Commercial terms">
           <dl className="quote-definition-list">
             <div>
               <dt>Valid until</dt>
@@ -69,17 +60,15 @@ export function ClientQuoteDetail({ quote }: { quote: ClientQuote }) {
               <dd>{quote.terms.deliveryTerms ?? "Not specified"}</dd>
             </div>
           </dl>
-        </article>
+        </SectionCard>
       </section>
 
-      <section className="catalog-panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Selected services</h2>
-            <p>{quote.items.length} snapshotted service lines.</p>
-          </div>
-        </div>
-        <div className="table-wrap">
+      <SectionCard
+        eyebrow="Quote lines"
+        title="Selected services"
+        description={`${quote.items.length} snapshotted service lines.`}
+      >
+        <SmartTable>
           <table className="catalog-table pricing-lines">
             <thead>
               <tr>
@@ -107,7 +96,7 @@ export function ClientQuoteDetail({ quote }: { quote: ClientQuote }) {
                   </td>
                   <td>
                     {item.lineType === "MONTHLY" ? "Monthly" : "One-time"}
-                    <small>{item.serviceSnapshot.serviceLevelLabel ?? "—"}</small>
+                    <small>{item.serviceSnapshot.serviceLevelLabel ?? "-"}</small>
                   </td>
                   <td>{item.quantity}</td>
                   <td>{sar(item.serviceSnapshot.baseAmount)}</td>
@@ -117,10 +106,10 @@ export function ClientQuoteDetail({ quote }: { quote: ClientQuote }) {
               ))}
             </tbody>
           </table>
-        </div>
-      </section>
+        </SmartTable>
+      </SectionCard>
 
-      <section className="catalog-panel">
+      <SectionCard eyebrow="Financial snapshot" title="Totals">
         <div className="pricing-total-grid">
           <div>
             <span>Monthly</span>
@@ -147,7 +136,7 @@ export function ClientQuoteDetail({ quote }: { quote: ClientQuote }) {
             <strong>{sar(quote.totals.finalTotal)}</strong>
           </div>
         </div>
-      </section>
+      </SectionCard>
     </>
   );
 }

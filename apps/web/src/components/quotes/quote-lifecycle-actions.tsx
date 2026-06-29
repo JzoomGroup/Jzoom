@@ -91,7 +91,11 @@ export function QuoteLifecycleActions({
           <button
             key={action.status}
             type="button"
-            className={action.tone === "danger" ? "button-danger" : "button-primary"}
+            className={
+              action.tone === "danger"
+                ? "os-button os-button-danger"
+                : "os-button os-button-primary"
+            }
             disabled={Boolean(submitting)}
             onClick={() => void run(action)}
           >

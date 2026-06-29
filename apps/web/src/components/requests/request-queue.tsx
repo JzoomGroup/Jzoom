@@ -4,6 +4,15 @@ import Link from "next/link";
 import { type FormEvent, useState } from "react";
 import { refreshRequestQueue, requestErrorMessage } from "../../lib/request-client";
 import type { RequestQueueResponse } from "../../lib/request-types";
+import {
+  BentoGrid,
+  EmptyState,
+  MetricCard,
+  PageHeader,
+  PriorityChip,
+  SectionCard,
+  StatusChip,
+} from "../premium-os";
 
 const queues: RequestQueueResponse["queue"][] = [
   "all",
@@ -76,50 +85,26 @@ export function RequestQueue({ initialQueue }: { initialQueue: RequestQueueRespo
 
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">Internal execution</p>
-          <h1>Request work queues</h1>
-          <p>
-            Track specialist, supervisor, and account-manager work from backend-scoped request
-            queues.
-          </p>
-        </div>
-        <Link className="button-secondary" href="/requests">
-          All requests
-        </Link>
-      </header>
+      <PageHeader
+        eyebrow="Internal execution"
+        title="Request work queues"
+        description="Track specialist, supervisor, and account-manager work from backend-scoped request queues."
+        actions={[{ href: "/requests", label: "All requests", variant: "secondary" }]}
+      />
 
-      <section className="catalog-panel">
-        <div className="metric-grid">
-          <article>
-            <small>Open</small>
-            <strong>{queue.counters.open}</strong>
-          </article>
-          <article>
-            <small>Specialist</small>
-            <strong>{queue.counters.specialist}</strong>
-          </article>
-          <article>
-            <small>Supervisor</small>
-            <strong>{queue.counters.supervisor}</strong>
-          </article>
-          <article>
-            <small>Account manager</small>
-            <strong>{queue.counters.accountManager}</strong>
-          </article>
-          <article>
-            <small>Overdue</small>
-            <strong>{queue.counters.overdue}</strong>
-          </article>
-        </div>
-      </section>
+      <BentoGrid>
+        <MetricCard label="Open" value={queue.counters.open} detail="Visible active work" accent />
+        <MetricCard label="Specialist" value={queue.counters.specialist} detail="Execution queue" />
+        <MetricCard label="Supervisor" value={queue.counters.supervisor} detail="Review queue" />
+        <MetricCard label="Account manager" value={queue.counters.accountManager} detail="Client follow-up" />
+        <MetricCard label="Overdue" value={queue.counters.overdue} detail="Needs attention" />
+      </BentoGrid>
 
-      <section className="catalog-panel">
+      <SectionCard eyebrow="Queue filters" title="Segment and refine work">
         <div className="row-actions">
           {queues.map((item) => (
             <button
-              className={item === queue.queue ? "button-primary" : "button-secondary"}
+              className={item === queue.queue ? "os-button os-button-primary" : "os-button os-button-secondary"}
               disabled={loading}
               key={item}
               type="button"
@@ -185,16 +170,16 @@ export function RequestQueue({ initialQueue }: { initialQueue: RequestQueueRespo
               onChange={(event) => setFilters({ ...filters, dueTo: event.target.value })}
             />
           </label>
-          <button className="button-primary" disabled={loading} type="submit">
+          <button className="os-button os-button-primary" disabled={loading} type="submit">
             Apply filters
           </button>
         </form>
         {error && <p className="form-error">{error}</p>}
-      </section>
+      </SectionCard>
 
-      <section className="catalog-panel">
+      <SectionCard eyebrow="Queue results" title={`${queue.queue} queue`}>
         {queue.requests.length === 0 ? (
-          <div className="catalog-empty">No requests match this queue.</div>
+          <EmptyState>No requests match this queue.</EmptyState>
         ) : (
           <div className="quote-list-grid">
             {queue.requests.map((request) => (
@@ -208,10 +193,8 @@ export function RequestQueue({ initialQueue }: { initialQueue: RequestQueueRespo
                     </p>
                   </div>
                   <div className="quote-list-meta">
-                    <span className={`status-badge status-${request.status.toLowerCase()}`}>
-                      {request.status}
-                    </span>
-                    <small>{request.priority}</small>
+                    <StatusChip status={request.status} />
+                    <PriorityChip priority={request.priority} />
                     <small>Due {displayDate(request.dueAt)}</small>
                   </div>
                 </Link>
@@ -219,7 +202,7 @@ export function RequestQueue({ initialQueue }: { initialQueue: RequestQueueRespo
             ))}
           </div>
         )}
-      </section>
+      </SectionCard>
     </>
   );
 }

@@ -69,7 +69,7 @@ export function LevelManager({
         description="Manage package labels and governance. Active dependencies protect levels from unsafe disabling or archiving."
         action={
           <button
-            className="button-primary"
+            className="os-button os-button-primary"
             type="button"
             onClick={() => {
               mutation.clearFeedback();
@@ -191,7 +191,7 @@ export function LevelManager({
                 />
                 <div className="entity-card-actions">
                   <button
-                    className="button-secondary"
+                    className="os-button os-button-secondary"
                     type="button"
                     disabled={level.status === "ARCHIVED"}
                     onClick={() => {

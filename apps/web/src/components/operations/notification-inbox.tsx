@@ -8,6 +8,7 @@ import {
   operationsErrorMessage,
 } from "../../lib/operations-client";
 import type { AppNotification, NotificationListResponse } from "../../lib/operations-types";
+import { BentoGrid, EmptyState, MetricCard, PageHeader, SectionCard, StatusChip } from "../premium-os";
 
 function displayDate(value: string): string {
   return new Date(value).toLocaleString("en-SA");
@@ -45,64 +46,82 @@ export function NotificationInbox({ initial }: { initial: NotificationListRespon
 
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">In-app notifications</p>
-          <h1>Notification center</h1>
-          <p>
-            Important request, delivery, document, report, and hours events appear here. External
-            channels remain future-ready through the outbox.
-          </p>
+      <PageHeader
+        eyebrow="مركز التنبيهات"
+        title="التنبيهات"
+        description="إشارات الطلبات والمخرجات والمستندات والتقارير والساعات في مكان واحد داخل المنصة."
+      >
+        <div className="os-page-actions">
+          <button
+            className="os-button os-button-primary"
+            type="button"
+            onClick={readAll}
+            disabled={unreadCount === 0}
+          >
+            تعيين الكل كمقروء ({unreadCount})
+          </button>
         </div>
-        <button
-          className="button-primary"
-          type="button"
-          onClick={readAll}
-          disabled={unreadCount === 0}
-        >
-          Mark all read ({unreadCount})
-        </button>
-      </header>
+      </PageHeader>
+
+      <BentoGrid compact>
+        <MetricCard accent label="غير مقروءة" value={unreadCount} detail="تحتاج متابعة" />
+        <MetricCard label="إجمالي التنبيهات" value={notifications.length} detail="داخل النظام" />
+        <MetricCard
+          label="آخر نشاط"
+          value={notifications[0] ? displayDate(notifications[0].createdAt) : "لا يوجد"}
+          detail="حسب أحدث تنبيه"
+        />
+      </BentoGrid>
 
       {error && <p className="form-error">{error}</p>}
 
-      <section className="catalog-panel">
-        <div className="entity-grid">
-          {notifications.map((notification) => (
-            <article className="entity-card" key={notification.id}>
-              <div className="entity-card-heading">
-                <div>
-                  <span
-                    className={`status-pill ${notification.readAt ? "status-closed" : "status-new"}`}
-                  >
-                    {notification.readAt ? "Read" : "Unread"}
-                  </span>
-                  <h3>{notification.messageEn ?? notification.event}</h3>
+      <SectionCard
+        eyebrow="Notification stream"
+        title="سجل التنبيهات"
+        description="كل تنبيه يحتفظ بالرابط العميق والسياق التشغيلي بدون إرسال خارجي."
+      >
+        {notifications.length === 0 ? (
+          <EmptyState title="لا توجد تنبيهات">ستظهر هنا تنبيهات الطلبات والمخرجات عند حدوثها.</EmptyState>
+        ) : (
+          <div className="entity-grid">
+            {notifications.map((notification) => (
+              <article className="entity-card" key={notification.id}>
+                <div className="entity-card-heading">
+                  <div>
+                    <StatusChip
+                      status={notification.readAt ? "CLOSED" : "NEW"}
+                      label={notification.readAt ? "مقروء" : "غير مقروء"}
+                    />
+                    <h3>{notification.messageAr ?? notification.messageEn ?? notification.event}</h3>
+                  </div>
+                  <span>{displayDate(notification.createdAt)}</span>
                 </div>
-                <span>{displayDate(notification.createdAt)}</span>
-              </div>
-              {notification.messageAr && <p dir="rtl">{notification.messageAr}</p>}
-              <div className="entity-meta">
-                <span>Event</span>
-                <strong>{notification.event}</strong>
-                <span>Target</span>
-                <strong>{notification.targetType}</strong>
-              </div>
-              <div className="entity-card-actions">
-                <Link className="button-secondary" href={notification.deepLink}>
-                  Open
-                </Link>
-                {!notification.readAt && (
-                  <button type="button" onClick={() => readOne(notification)}>
-                    Mark read
-                  </button>
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
-        {notifications.length === 0 && <p>No notifications yet.</p>}
-      </section>
+                {notification.messageEn && <p>{notification.messageEn}</p>}
+                <div className="entity-meta">
+                  <span>الحدث</span>
+                  <strong>{notification.event}</strong>
+                  <span>الوجهة</span>
+                  <strong>{notification.targetType}</strong>
+                </div>
+                <div className="entity-card-actions">
+                  <Link className="os-button os-button-secondary" href={notification.deepLink}>
+                    فتح
+                  </Link>
+                  {!notification.readAt && (
+                    <button
+                      className="os-button os-button-secondary"
+                      type="button"
+                      onClick={() => readOne(notification)}
+                    >
+                      تعيين كمقروء
+                    </button>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </SectionCard>
     </>
   );
 }

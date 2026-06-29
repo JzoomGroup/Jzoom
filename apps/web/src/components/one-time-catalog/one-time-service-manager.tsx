@@ -314,7 +314,7 @@ export function OneTimeServiceManager({
         title="One-time services"
         description="Configure Build and Digital services, pricing, duration, phases, deliverables, and tasks through revision-safe APIs."
         action={
-          <button className="button-primary" type="button" onClick={openCreate}>
+          <button className="os-button os-button-primary" type="button" onClick={openCreate}>
             Add one-time service
           </button>
         }
@@ -457,7 +457,7 @@ export function OneTimeServiceManager({
               <legend>Service phases</legend>
               <div className="template-toolbar">
                 <p>Phase codes remain stable inside each revision.</p>
-                <button className="button-secondary" type="button" onClick={addPhase}>
+                <button className="os-button os-button-secondary" type="button" onClick={addPhase}>
                   Add phase
                 </button>
               </div>
@@ -470,7 +470,7 @@ export function OneTimeServiceManager({
                       <div className="template-card-heading">
                         <strong>Phase {index + 1}</strong>
                         <button
-                          className="button-danger"
+                          className="os-button os-button-danger"
                           type="button"
                           onClick={() => removePhase(index)}
                         >
@@ -565,7 +565,7 @@ export function OneTimeServiceManager({
               <legend>Deliverables and tasks</legend>
               <div className="template-toolbar">
                 <p>Each task belongs to one deliverable in this revision.</p>
-                <button className="button-secondary" type="button" onClick={addDeliverable}>
+                <button className="os-button os-button-secondary" type="button" onClick={addDeliverable}>
                   Add deliverable
                 </button>
               </div>
@@ -581,7 +581,7 @@ export function OneTimeServiceManager({
                       <div className="template-card-heading">
                         <strong>Deliverable {deliverableIndex + 1}</strong>
                         <button
-                          className="button-danger"
+                          className="os-button os-button-danger"
                           type="button"
                           onClick={() =>
                             setDeliverables((current) =>
@@ -716,7 +716,7 @@ export function OneTimeServiceManager({
                         <div className="template-toolbar">
                           <strong>Tasks</strong>
                           <button
-                            className="button-quiet"
+                            className="os-button os-button-secondary"
                             type="button"
                             onClick={() => addTask(deliverableIndex)}
                           >
@@ -817,7 +817,7 @@ export function OneTimeServiceManager({
                               Required
                             </label>
                             <button
-                              className="button-danger"
+                              className="os-button os-button-danger"
                               type="button"
                               onClick={() => removeTask(deliverableIndex, taskIndex)}
                             >
@@ -937,7 +937,7 @@ export function OneTimeServiceManager({
                 />
                 <div className="entity-card-actions">
                   <button
-                    className="button-secondary"
+                    className="os-button os-button-secondary"
                     type="button"
                     disabled={service.status === "ARCHIVED"}
                     onClick={() => openEdit(service)}

@@ -3,13 +3,10 @@
 import { useState, type ReactNode } from "react";
 import { catalogErrorMessage, catalogRequest, refreshCatalog } from "../../lib/catalog-client";
 import type { CatalogSnapshot, CatalogStatus } from "../../lib/catalog-types";
+import { EmptyState as PremiumEmptyState, PageHeader, StatusChip } from "../premium-os";
 
 export function StatusBadge({ status }: { status: CatalogStatus }) {
-  return (
-    <span className={`status-badge status-${status.toLowerCase()}`}>
-      {status === "INACTIVE" ? "Inactive" : status[0] + status.slice(1).toLowerCase()}
-    </span>
-  );
+  return <StatusChip status={status} label={status === "INACTIVE" ? "Inactive" : status[0] + status.slice(1).toLowerCase()} />;
 }
 
 export function SectionHeader({
@@ -24,19 +21,14 @@ export function SectionHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="catalog-header">
-      <div>
-        <p className="eyebrow">{eyebrow}</p>
-        <h1>{title}</h1>
-        <p>{description}</p>
-      </div>
-      {action}
-    </header>
+    <PageHeader eyebrow={eyebrow} title={title} description={description}>
+      {action ? <div className="os-page-actions">{action}</div> : null}
+    </PageHeader>
   );
 }
 
 export function EmptyState({ children }: { children: ReactNode }) {
-  return <div className="catalog-empty">{children}</div>;
+  return <PremiumEmptyState>{children}</PremiumEmptyState>;
 }
 
 export function FormActions({
@@ -50,11 +42,11 @@ export function FormActions({
 }) {
   return (
     <div className="form-actions">
-      <button type="button" className="button-secondary" onClick={onCancel}>
+      <button type="button" className="os-button os-button-secondary" onClick={onCancel}>
         Cancel
       </button>
-      <button type="submit" className="button-primary" disabled={submitting}>
-        {submitting ? "Saving…" : submitLabel}
+      <button type="submit" className="os-button os-button-primary" disabled={submitting}>
+        {submitting ? "Saving..." : submitLabel}
       </button>
     </div>
   );
@@ -166,7 +158,7 @@ export function LifecycleActions({
       {status !== "ACTIVE" ? (
         <button
           type="button"
-          className="button-quiet"
+          className="os-button os-button-secondary"
           disabled={disabled}
           onClick={() => void change("ACTIVE")}
         >
@@ -175,7 +167,7 @@ export function LifecycleActions({
       ) : (
         <button
           type="button"
-          className="button-quiet"
+          className="os-button os-button-secondary"
           disabled={disabled}
           onClick={() => void change("INACTIVE")}
         >
@@ -184,7 +176,7 @@ export function LifecycleActions({
       )}
       <button
         type="button"
-        className="button-danger"
+        className="os-button os-button-danger"
         disabled={disabled}
         onClick={() => void change("ARCHIVED")}
       >
@@ -222,7 +214,7 @@ export function OrderControl({
       </label>
       <button
         type="button"
-        className="button-quiet"
+        className="os-button os-button-secondary"
         disabled={disabled || value === current}
         onClick={() =>
           void mutate(

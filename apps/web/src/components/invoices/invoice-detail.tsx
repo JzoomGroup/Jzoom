@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { invoicePdfUrl } from "../../lib/invoice-client";
 import type { Invoice } from "../../lib/invoice-types";
+import { PageHeader, SectionCard, SmartTable, StatusChip } from "../premium-os";
 import { InvoiceLifecycleActions } from "./invoice-lifecycle-actions";
 
 function sar(value: number): string {
@@ -19,57 +20,46 @@ export function InvoiceDetail({ initialInvoice }: { initialInvoice: Invoice }) {
 
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">Immutable invoice snapshot</p>
-          <h1>{invoice.invoiceNumber}</h1>
-          <p>
-            Created from accepted quote {invoice.quoteNumber}. Snapshot hash:{" "}
-            {invoice.snapshotHash?.slice(0, 16)}…
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Invoice snapshot"
+        title={invoice.invoiceNumber}
+        description={`Created from accepted quote ${invoice.quoteNumber}. Snapshot hash: ${invoice.snapshotHash?.slice(0, 16) ?? "not available"}.`}
+        meta={<StatusChip status={invoice.status} label={invoice.status} />}
+      >
         <div className="quote-header-actions">
-          <span className={`status-badge status-${invoice.status.toLowerCase()}`}>
-            {invoice.status}
-          </span>
           <a
-            className="button-primary"
+            className="os-button os-button-primary"
             href={invoicePdfUrl(invoice.id)}
             target="_blank"
             rel="noreferrer"
           >
             View PDF
           </a>
-          <Link className="button-secondary" href={`/pricing/quotes/${invoice.quoteId}`}>
+          <Link className="os-button os-button-secondary" href={`/pricing/quotes/${invoice.quoteId}`}>
             Source quote
           </Link>
-          <Link className="button-secondary" href="/pricing/invoices">
+          <Link className="os-button os-button-secondary" href="/pricing/invoices">
             All invoices
           </Link>
         </div>
-      </header>
+      </PageHeader>
 
       {invoice.status === "DRAFT" || invoice.status === "ISSUED" ? (
-        <section className="catalog-panel quote-lifecycle">
-          <div>
-            <h2>Lifecycle</h2>
-            <p>
-              Invoice issuance, cancellation, and voiding are audited and never rewrite invoice
-              content.
-            </p>
-          </div>
+        <SectionCard
+          eyebrow="Governance"
+          title="Lifecycle"
+          description="Invoice issuance, cancellation, and voiding are audited and never rewrite invoice content."
+        >
           <InvoiceLifecycleActions
             invoiceId={invoice.id}
             status={invoice.status}
             onUpdated={setInvoice}
           />
-        </section>
+        </SectionCard>
       ) : null}
 
       <section className="quote-summary-grid">
-        <article className="catalog-panel">
-          <p className="eyebrow">Client snapshot</p>
-          <h2>{invoice.client.name}</h2>
+        <SectionCard eyebrow="Client snapshot" title={invoice.client.name}>
           <dl className="quote-definition-list">
             <div>
               <dt>Code</dt>
@@ -88,10 +78,8 @@ export function InvoiceDetail({ initialInvoice }: { initialInvoice: Invoice }) {
               <dd>{invoice.client.authorizedApprover}</dd>
             </div>
           </dl>
-        </article>
-        <article className="catalog-panel">
-          <p className="eyebrow">Source quote snapshot</p>
-          <h2>{invoice.quoteNumber}</h2>
+        </SectionCard>
+        <SectionCard eyebrow="Source quote" title={invoice.quoteNumber}>
           <dl className="quote-definition-list">
             <div>
               <dt>Quote status at invoice creation</dt>
@@ -99,12 +87,12 @@ export function InvoiceDetail({ initialInvoice }: { initialInvoice: Invoice }) {
             </div>
             <div>
               <dt>Quote snapshot hash</dt>
-              <dd>{invoice.sourceQuoteSnapshotHash?.slice(0, 16)}…</dd>
+              <dd>{invoice.sourceQuoteSnapshotHash?.slice(0, 16) ?? "not available"}</dd>
             </div>
             <div>
               <dt>Issue date</dt>
               <dd>
-                {invoice.issueDate ? new Date(invoice.issueDate).toLocaleDateString("en-SA") : "—"}
+                {invoice.issueDate ? new Date(invoice.issueDate).toLocaleDateString("en-SA") : "-"}
               </dd>
             </div>
             <div>
@@ -112,17 +100,15 @@ export function InvoiceDetail({ initialInvoice }: { initialInvoice: Invoice }) {
               <dd>{invoice.statusReason ?? "None"}</dd>
             </div>
           </dl>
-        </article>
+        </SectionCard>
       </section>
 
-      <section className="catalog-panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Snapshotted invoice lines</h2>
-            <p>{invoice.items.length} immutable invoice lines.</p>
-          </div>
-        </div>
-        <div className="table-wrap">
+      <SectionCard
+        eyebrow="Invoice lines"
+        title="Snapshotted invoice lines"
+        description={`${invoice.items.length} immutable invoice lines.`}
+      >
+        <SmartTable>
           <table className="catalog-table pricing-lines">
             <thead>
               <tr>
@@ -143,7 +129,7 @@ export function InvoiceDetail({ initialInvoice }: { initialInvoice: Invoice }) {
                   </td>
                   <td>
                     {item.itemSnapshot.lineType === "MONTHLY" ? "Monthly" : "One-time"}
-                    <small>{item.itemSnapshot.serviceSnapshot.serviceLevelLabel ?? "—"}</small>
+                    <small>{item.itemSnapshot.serviceSnapshot.serviceLevelLabel ?? "-"}</small>
                   </td>
                   <td>{item.quantity}</td>
                   <td>{sar(item.unitPrice)}</td>
@@ -153,25 +139,25 @@ export function InvoiceDetail({ initialInvoice }: { initialInvoice: Invoice }) {
               ))}
             </tbody>
           </table>
-        </div>
-      </section>
+        </SmartTable>
+      </SectionCard>
 
-      <section className="catalog-panel">
+      <SectionCard
+        eyebrow="Financial snapshot"
+        title="Invoice total"
+        description="Generated from the immutable invoice snapshot. Tax QR codes, e-invoicing artifacts, payment gateways, and payment status remain outside this flow."
+      >
         <div className="pricing-total-grid">
           <div>
             <span>Discount</span>
-            <strong>− {sar(invoice.discountTotal)}</strong>
+            <strong>- {sar(invoice.discountTotal)}</strong>
           </div>
           <div className="primary">
             <span>Final due before tax</span>
             <strong>{sar(invoice.finalDueNoTax)}</strong>
           </div>
         </div>
-        <p className="pricing-muted">
-          This invoice PDF is generated from the immutable invoice snapshot. Tax QR codes,
-          e-invoicing artifacts, payment gateways, and payment status remain outside this PR.
-        </p>
-      </section>
+      </SectionCard>
     </>
   );
 }

@@ -19,6 +19,7 @@ import type {
   PricingStudioCatalog,
 } from "../../lib/pricing-types";
 import { LogoutButton } from "../logout-button";
+import { EmptyState, PageHeader, SmartTable } from "../premium-os";
 
 interface MonthlySelectionState {
   levelId: string;
@@ -61,12 +62,14 @@ function initialOneTimeSelections(draft?: PricingDraft | null): Map<string, numb
 
 export function PricingStudio({
   displayName,
+  embedded = false,
   isAdmin,
   initialCatalog,
   initialDrafts,
   initialDraft,
 }: {
   displayName: string;
+  embedded?: boolean;
   isAdmin: boolean;
   initialCatalog: PricingStudioCatalog;
   initialDrafts: PricingDraftSummary[];
@@ -242,25 +245,27 @@ export function PricingStudio({
   }
 
   return (
-    <div className="pricing-shell">
-      <header className="pricing-topbar">
-        <Link className="admin-brand" href="/pricing">
-          <span className="brand-mark" aria-hidden="true">
-            J
-          </span>
-          <span>
-            <strong>Jzoom</strong>
-            <small>Pricing Studio</small>
-          </span>
-        </Link>
-        <nav aria-label="Pricing account">
-          {isAdmin && <Link href="/admin/pricing-rules">Pricing rules</Link>}
-          <Link href="/pricing/quotes">Quotes</Link>
-          <Link href="/profile">Profile</Link>
-          <span>{displayName}</span>
-          <LogoutButton />
-        </nav>
-      </header>
+    <div className={embedded ? "pricing-shell pricing-shell-embedded" : "pricing-shell"}>
+      {!embedded && (
+        <header className="pricing-topbar">
+          <Link className="admin-brand" href="/pricing">
+            <span className="brand-mark" aria-hidden="true">
+              J
+            </span>
+            <span>
+              <strong>Jzoom</strong>
+              <small>Pricing Studio</small>
+            </span>
+          </Link>
+          <nav aria-label="Pricing account">
+            {isAdmin && <Link href="/admin/pricing-rules">Pricing rules</Link>}
+            <Link href="/pricing/quotes">Quotes</Link>
+            <Link href="/profile">Profile</Link>
+            <span>{displayName}</span>
+            <LogoutButton />
+          </nav>
+        </header>
+      )}
 
       <div className="pricing-layout">
         <aside className="pricing-drafts">
@@ -269,7 +274,7 @@ export function PricingStudio({
               <p className="eyebrow">Saved work</p>
               <h2>Pricing drafts</h2>
             </div>
-            <Link className="button-primary" href="/pricing">
+            <Link className="os-button os-button-primary" href="/pricing">
               New
             </Link>
           </div>
@@ -286,7 +291,7 @@ export function PricingStudio({
                   <strong>{draft.title}</strong>
                   <span>{draft.client.name}</span>
                   <small>
-                    {draft.draftNumber} · {draft.itemCount} items
+                    {draft.draftNumber} - {draft.itemCount} items
                   </small>
                 </Link>
               ))}
@@ -295,22 +300,18 @@ export function PricingStudio({
         </aside>
 
         <main className="pricing-main">
-          <header className="catalog-header">
-            <div>
-              <p className="eyebrow">Pricing Studio foundation</p>
-              <h1>{currentDraft ? currentDraft.title : "New pricing draft"}</h1>
-              <p>
-                Select active catalog revisions, recalculate through the backend, and save the
-                result without creating a quote.
-              </p>
-            </div>
+          <PageHeader
+            eyebrow="Pricing Studio foundation"
+            title={currentDraft ? currentDraft.title : "New pricing draft"}
+            description="Select active catalog revisions, recalculate through the backend, and save the result without creating a quote."
+          >
             {currentDraft && (
               <div className="pricing-draft-identity">
                 <strong>{currentDraft.draftNumber}</strong>
                 <span>Calculation v{currentDraft.calculationVersion}</span>
               </div>
             )}
-          </header>
+          </PageHeader>
 
           {(error || success) && (
             <p
@@ -458,7 +459,7 @@ export function PricingStudio({
                           >
                             {service.revision.levels.map((level) => (
                               <option key={level.id} value={level.id}>
-                                {level.labelEn ?? level.labelAr} · {level.hours}h
+                                {level.labelEn ?? level.labelAr} - {level.hours}h
                               </option>
                             ))}
                           </select>
@@ -562,28 +563,28 @@ export function PricingStudio({
               </div>
               <div className="row-actions">
                 <button
-                  className="button-secondary"
+                  className="os-button os-button-secondary"
                   type="button"
                   disabled={!canCalculate || submitting !== null}
                   onClick={() => void preview()}
                 >
-                  {submitting === "preview" ? "Calculating…" : "Recalculate preview"}
+                  {submitting === "preview" ? "Calculating..." : "Recalculate preview"}
                 </button>
                 <button
-                  className="button-primary"
+                  className="os-button os-button-primary"
                   type="button"
                   disabled={!canCalculate || submitting !== null}
                   onClick={() => void save()}
                 >
                   {submitting === "save"
-                    ? "Saving…"
+                    ? "Saving..."
                     : currentDraft
                       ? "Save draft changes"
                       : "Save pricing draft"}
                 </button>
                 {currentDraft && !isArchived && (
                   <button
-                    className="button-danger"
+                    className="os-button os-button-danger"
                     type="button"
                     disabled={submitting !== null}
                     onClick={() => void archive()}
@@ -593,7 +594,7 @@ export function PricingStudio({
                 )}
                 {currentDraft && calculation && !isArchived && (
                   <button
-                    className="button-secondary"
+                    className="os-button os-button-secondary"
                     type="button"
                     disabled={submitting !== null}
                     onClick={() => setShowQuoteForm((visible) => !visible)}
@@ -628,7 +629,7 @@ export function PricingStudio({
                   </div>
                   <div>
                     <span>Discounts</span>
-                    <strong>− {sar(calculation.totals.discountTotal)}</strong>
+                    <strong>- {sar(calculation.totals.discountTotal)}</strong>
                   </div>
                   <div>
                     <span>Tax</span>
@@ -647,7 +648,7 @@ export function PricingStudio({
                     <strong>{calculation.totals.marginPct}%</strong>
                   </div>
                 </div>
-                <div className="table-wrap">
+                <SmartTable>
                   <table className="catalog-table pricing-lines">
                     <thead>
                       <tr>
@@ -675,7 +676,7 @@ export function PricingStudio({
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </SmartTable>
                 {calculation.appliedRules.length > 0 && (
                   <p className="pricing-muted">
                     Applied rules:{" "}
@@ -686,9 +687,9 @@ export function PricingStudio({
                 )}
               </>
             ) : (
-              <div className="catalog-empty">
+              <EmptyState title="No preview yet">
                 Select at least one service, then recalculate through the backend.
-              </div>
+              </EmptyState>
             )}
           </section>
         </main>
@@ -768,11 +769,11 @@ function QuoteCreationForm({
         <textarea name="clientNotes" />
       </label>
       <div className="form-actions">
-        <button className="button-secondary" type="button" onClick={onCancel}>
+        <button className="os-button os-button-secondary" type="button" onClick={onCancel}>
           Cancel
         </button>
-        <button className="button-primary" type="submit" disabled={disabled || creating}>
-          {creating ? "Creating…" : "Create quote snapshot"}
+        <button className="os-button os-button-primary" type="submit" disabled={disabled || creating}>
+          {creating ? "Creating..." : "Create quote snapshot"}
         </button>
       </div>
     </form>

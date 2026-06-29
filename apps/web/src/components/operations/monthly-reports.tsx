@@ -7,6 +7,7 @@ import {
   publishMonthlyReport,
 } from "../../lib/operations-client";
 import type { MonthlyReport } from "../../lib/operations-types";
+import { EmptyState, PageHeader, SectionCard, StatusChip } from "../premium-os";
 
 function currentPeriod(): string {
   const now = new Date();
@@ -60,21 +61,15 @@ export function MonthlyReports({ initialReports }: { initialReports: MonthlyRepo
 
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">Monthly reports foundation</p>
-          <h1>Client monthly reports</h1>
-          <p>
-            Prepare a client-safe monthly summary from requests, shared outputs, document requests,
-            and basic hours. Publishing exposes the report to client portal users.
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Management reports"
+        title="Client monthly reports"
+        description="Prepare a client-safe monthly summary from requests, shared outputs, document requests, and basic hours. Publishing exposes the report to client portal users."
+      />
 
       {error && <p className="form-error">{error}</p>}
 
-      <section className="catalog-panel editor-panel">
-        <h2>Prepare report</h2>
+      <SectionCard eyebrow="Report builder" title="Prepare report">
         <form className="catalog-form" onSubmit={submit}>
           <label>
             Client ID
@@ -106,17 +101,15 @@ export function MonthlyReports({ initialReports }: { initialReports: MonthlyRepo
             </button>
           </div>
         </form>
-      </section>
+      </SectionCard>
 
-      <section className="catalog-panel">
+      <SectionCard eyebrow="Report library" title="Prepared reports">
         <div className="entity-grid">
           {reports.map((report) => (
             <article className="entity-card" key={report.id}>
               <div className="entity-card-heading">
                 <div>
-                  <span className={`status-pill status-${report.status.toLowerCase()}`}>
-                    {report.status}
-                  </span>
+                  <StatusChip status={report.status} />
                   <h3>{report.title}</h3>
                 </div>
                 <span>{report.period}</span>
@@ -149,8 +142,8 @@ export function MonthlyReports({ initialReports }: { initialReports: MonthlyRepo
             </article>
           ))}
         </div>
-        {reports.length === 0 && <p>No monthly reports have been prepared yet.</p>}
-      </section>
+        {reports.length === 0 && <EmptyState>No monthly reports have been prepared yet.</EmptyState>}
+      </SectionCard>
     </>
   );
 }

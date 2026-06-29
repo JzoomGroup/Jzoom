@@ -32,6 +32,7 @@ import type {
   ServiceRequest,
 } from "../../lib/request-types";
 import { formatRiyadhDateTime, riyadhDateInputValue } from "../../lib/stable-date";
+import { PageHeader, PriorityChip, StatusChip } from "../premium-os";
 
 const statuses: RequestStatus[] = [
   "NEW",
@@ -44,6 +45,17 @@ const statuses: RequestStatus[] = [
   "CLOSED",
   "RETURNED",
   "REJECTED",
+];
+
+const workflowStages: RequestStatus[] = [
+  "NEW",
+  "TRIAGE",
+  "ASSIGNED",
+  "IN_PROGRESS",
+  "WAITING_CLIENT",
+  "WAITING_SUPERVISOR",
+  "COMPLETED",
+  "CLOSED",
 ];
 
 const startableStatuses: RequestStatus[] = [
@@ -138,6 +150,87 @@ function roleWorkspace(user: CurrentUser): { title: string; description: string 
     title: "Request workspace",
     description: "Scoped request visibility.",
   };
+}
+
+function RequestDetailNav() {
+  const sections = [
+    ["#request-context", "Summary"],
+    ["#request-lifecycle", "Workflow"],
+    ["#request-checklist", "Checklist"],
+    ["#request-outputs", "Outputs"],
+    ["#request-documents", "Documents"],
+    ["#request-hours", "Hours"],
+    ["#request-notes", "Notes"],
+    ["#request-activity", "Activity"],
+  ] as const;
+
+  return (
+    <nav className="request-detail-nav" aria-label="Request detail sections">
+      {sections.map(([href, label]) => (
+        <a key={href} href={href}>
+          {label}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+function RequestSignalCard({
+  detail,
+  label,
+  value,
+}: {
+  detail: string;
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <article>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{detail}</small>
+    </article>
+  );
+}
+
+function workflowStageLabel(stage: RequestStatus) {
+  return stage
+    .toLowerCase()
+    .split("_")
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function WorkflowStepper({ status }: { status: RequestStatus }) {
+  const currentIndex = workflowStages.indexOf(status);
+
+  return (
+    <section className="request-workflow-stepper" aria-label="Request workflow progress">
+      <div className="request-workflow-heading">
+        <div>
+          <p className="eyebrow">Workflow</p>
+          <h2>Operating path</h2>
+        </div>
+        <StatusChip status={status} label={`Current: ${workflowStageLabel(status)}`} />
+      </div>
+      <ol>
+        {workflowStages.map((stage, index) => {
+          const isCurrent = stage === status;
+          const isPast = currentIndex > -1 && index < currentIndex;
+          return (
+            <li
+              className={isCurrent ? "current" : isPast ? "done" : undefined}
+              key={stage}
+              aria-current={isCurrent ? "step" : undefined}
+            >
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <strong>{workflowStageLabel(stage)}</strong>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
 }
 
 export function RequestDetail({
@@ -481,26 +574,52 @@ export function RequestDetail({
 
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">Request detail</p>
-          <h1>{request.title}</h1>
-          <p>
-            {request.requestNumber} · {request.client.name} ·{" "}
-            {request.service.monthlyService.nameEn}
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Request detail"
+        title={request.title}
+        description={`${request.requestNumber} - ${request.client.name} - ${request.service.monthlyService.nameEn}`}
+        meta={
+          <>
+            <StatusChip status={request.status} />
+            <PriorityChip priority={request.priority} />
+          </>
+        }
+      >
         <div className="quote-header-actions">
-          <span className={`status-badge status-${request.status.toLowerCase()}`}>
-            {request.status}
-          </span>
-          <Link className="button-secondary" href="/requests">
+          <Link className="os-button os-button-secondary" href="/requests">
             Back to requests
           </Link>
         </div>
-      </header>
+      </PageHeader>
 
       {error && <p className="form-error">{error}</p>}
+
+      <RequestDetailNav />
+
+      <section className="request-signal-strip" aria-label="Request operating signals">
+        <RequestSignalCard
+          label="Open tasks"
+          value={openTasks.length}
+          detail={`${request.tasks.length} total checklist items`}
+        />
+        <RequestSignalCard
+          label="Supervisor review"
+          value={reviewOutputs.length}
+          detail={`${readyOutputs.length} ready to share`}
+        />
+        <RequestSignalCard
+          label="Client documents"
+          value={clientDocumentRequests.length}
+          detail={`${uploadedDocumentRequests.length} uploaded`}
+        />
+        <RequestSignalCard
+          label="Submitted hours"
+          value={hours(submittedTimeEntries)}
+          detail={`${hours(approvedTimeEntries)} approved`}
+        />
+      </section>
+
+      <WorkflowStepper status={request.status} />
 
       <section className="catalog-panel">
         <p className="eyebrow">Operations workbench</p>
@@ -545,7 +664,7 @@ export function RequestDetail({
         </div>
       </section>
 
-      <section className="quote-summary-grid">
+      <section className="quote-summary-grid" id="request-context">
         <article className="catalog-panel">
           <h2>Request context</h2>
           <dl className="quote-definition-list">
@@ -710,7 +829,7 @@ export function RequestDetail({
                   }
                 />
               </label>
-              <button className="button-primary" type="submit" disabled={saving === "assignment"}>
+              <button className="os-button os-button-primary" type="submit" disabled={saving === "assignment"}>
                 Save assignment
               </button>
             </form>
@@ -720,7 +839,7 @@ export function RequestDetail({
         </article>
       </section>
 
-      <section className="catalog-panel">
+      <section className="catalog-panel" id="request-lifecycle">
         <h2>Lifecycle</h2>
         {canManageLifecycle ? (
           <form className="catalog-form" onSubmit={submitStatus}>
@@ -746,7 +865,7 @@ export function RequestDetail({
                 onChange={(event) => setStatusForm({ ...statusForm, reason: event.target.value })}
               />
             </label>
-            <button className="button-primary" type="submit" disabled={saving === "status"}>
+            <button className="os-button os-button-primary" type="submit" disabled={saving === "status"}>
               Update status
             </button>
           </form>
@@ -756,7 +875,7 @@ export function RequestDetail({
         <div className="row-actions">
           {canStartWork && (
             <button
-              className="button-secondary"
+              className="os-button os-button-secondary"
               disabled={saving === "start"}
               type="button"
               onClick={startWork}
@@ -773,28 +892,28 @@ export function RequestDetail({
                 onChange={(event) => setReviewReason(event.target.value)}
               />
               <button
-                className="button-secondary"
+                className="os-button os-button-secondary"
                 type="button"
                 onClick={() => supervisorAction("APPROVE")}
               >
                 Approve request
               </button>
               <button
-                className="button-secondary"
+                className="os-button os-button-secondary"
                 type="button"
                 onClick={() => supervisorAction("RETURN")}
               >
                 Return changes
               </button>
               <button
-                className="button-danger"
+                className="os-button os-button-danger"
                 type="button"
                 onClick={() => supervisorAction("REJECT")}
               >
                 Reject
               </button>
               <button
-                className="button-secondary"
+                className="os-button os-button-secondary"
                 type="button"
                 onClick={() => supervisorAction("ESCALATE")}
               >
@@ -806,15 +925,14 @@ export function RequestDetail({
       </section>
 
       {request.templateResponse && (
-        <section className="catalog-panel">
+        <section className="catalog-panel" id="request-template">
           <h2>Template answers</h2>
           <p>
             Completeness:{" "}
-            <span
-              className={`status-badge status-${request.templateResponse.completenessStatus.toLowerCase()}`}
-            >
-              {request.templateResponse.completenessStatus}
-            </span>
+            <StatusChip
+              status={request.templateResponse.completenessStatus}
+              label={request.templateResponse.completenessStatus}
+            />
           </p>
           <div className="activity-list">
             {request.templateResponse.answers.length === 0 ? (
@@ -838,7 +956,7 @@ export function RequestDetail({
       )}
 
       <section className="quote-summary-grid">
-        <article className="catalog-panel">
+        <article className="catalog-panel" id="request-checklist">
           <h2>Internal checklist</h2>
           {canAddOperationalContext ? (
             <form className="catalog-form" onSubmit={submitTask}>
@@ -915,7 +1033,7 @@ export function RequestDetail({
                   }
                 />
               </label>
-              <button className="button-primary" type="submit" disabled={saving === "task"}>
+              <button className="os-button os-button-primary" type="submit" disabled={saving === "task"}>
                 Add checklist item
               </button>
             </form>
@@ -936,35 +1054,35 @@ export function RequestDetail({
                   {canAddOperationalContext && (
                     <div className="row-actions">
                       <button
-                        className="button-secondary"
+                        className="os-button os-button-secondary"
                         type="button"
                         onClick={() => setTaskStatus(task.id, "PENDING")}
                       >
                         Pending
                       </button>
                       <button
-                        className="button-secondary"
+                        className="os-button os-button-secondary"
                         type="button"
                         onClick={() => setTaskStatus(task.id, "IN_PROGRESS")}
                       >
                         Start
                       </button>
                       <button
-                        className="button-secondary"
+                        className="os-button os-button-secondary"
                         type="button"
                         onClick={() => setTaskStatus(task.id, "DONE")}
                       >
                         Done
                       </button>
                       <button
-                        className="button-secondary"
+                        className="os-button os-button-secondary"
                         type="button"
                         onClick={() => setTaskStatus(task.id, "NOT_APPLICABLE")}
                       >
                         N/A
                       </button>
                       <button
-                        className="button-secondary"
+                        className="os-button os-button-secondary"
                         type="button"
                         onClick={() => setTaskStatus(task.id, "BLOCKED")}
                       >
@@ -978,7 +1096,7 @@ export function RequestDetail({
           </div>
         </article>
 
-        <article className="catalog-panel">
+        <article className="catalog-panel" id="request-outputs">
           <h2>Internal outputs</h2>
           {canExecute ? (
             <form className="catalog-form" onSubmit={submitOutput}>
@@ -1007,7 +1125,7 @@ export function RequestDetail({
                   }
                 />
               </label>
-              <button className="button-primary" type="submit" disabled={saving === "output"}>
+              <button className="os-button os-button-primary" type="submit" disabled={saving === "output"}>
                 Create internal output
               </button>
             </form>
@@ -1036,7 +1154,7 @@ export function RequestDetail({
                   <div className="row-actions">
                     {canExecute && submittableOutputStatuses.includes(output.status) && (
                       <button
-                        className="button-secondary"
+                        className="os-button os-button-secondary"
                         type="button"
                         onClick={() => submitOutputForReview(output.id)}
                       >
@@ -1046,21 +1164,21 @@ export function RequestDetail({
                     {canSupervise && output.status === "INTERNAL_REVIEW" && (
                       <>
                         <button
-                          className="button-secondary"
+                          className="os-button os-button-secondary"
                           type="button"
                           onClick={() => reviewOutput(output.id, "APPROVE")}
                         >
                           Approve
                         </button>
                         <button
-                          className="button-secondary"
+                          className="os-button os-button-secondary"
                           type="button"
                           onClick={() => reviewOutput(output.id, "RETURN")}
                         >
                           Return
                         </button>
                         <button
-                          className="button-danger"
+                          className="os-button os-button-danger"
                           type="button"
                           onClick={() => reviewOutput(output.id, "REJECT")}
                         >
@@ -1070,7 +1188,7 @@ export function RequestDetail({
                     )}
                     {canSupervise && output.status === "APPROVED_INTERNAL" && (
                       <button
-                        className="button-secondary"
+                        className="os-button os-button-secondary"
                         type="button"
                         onClick={() => shareOutput(output.id)}
                       >
@@ -1079,7 +1197,7 @@ export function RequestDetail({
                     )}
                     {canSupervise && closableOutputStatuses.includes(output.status) && (
                       <button
-                        className="button-secondary"
+                        className="os-button os-button-secondary"
                         type="button"
                         onClick={() => closeOutput(output.id)}
                       >
@@ -1095,7 +1213,7 @@ export function RequestDetail({
       </section>
 
       <section className="quote-summary-grid">
-        <article className="catalog-panel">
+        <article className="catalog-panel" id="request-documents">
           <h2>Client document requests</h2>
           {canRequestDocuments ? (
             <form className="catalog-form" onSubmit={submitDocumentRequest}>
@@ -1129,7 +1247,7 @@ export function RequestDetail({
                 />
               </label>
               <button
-                className="button-primary"
+                className="os-button os-button-primary"
                 type="submit"
                 disabled={saving === "document-request"}
               >
@@ -1155,7 +1273,7 @@ export function RequestDetail({
                     <div className="row-actions">
                       {["REQUESTED", "UPLOADED"].includes(documentRequest.status) && (
                         <button
-                          className="button-secondary"
+                          className="os-button os-button-secondary"
                           type="button"
                           onClick={() => setDocumentRequestStatus(documentRequest.id, "CLOSED")}
                         >
@@ -1164,7 +1282,7 @@ export function RequestDetail({
                       )}
                       {documentRequest.status === "REQUESTED" && (
                         <button
-                          className="button-danger"
+                          className="os-button os-button-danger"
                           type="button"
                           onClick={() => setDocumentRequestStatus(documentRequest.id, "CANCELLED")}
                         >
@@ -1179,7 +1297,7 @@ export function RequestDetail({
           </div>
         </article>
 
-        <article className="catalog-panel">
+        <article className="catalog-panel" id="request-hours">
           <h2>Basic time entries</h2>
           {canExecute ? (
             <form className="catalog-form" onSubmit={submitTimeEntry}>
@@ -1219,7 +1337,7 @@ export function RequestDetail({
                   onChange={(event) => setTimeForm({ ...timeForm, notes: event.target.value })}
                 />
               </label>
-              <button className="button-primary" type="submit" disabled={saving === "time-entry"}>
+              <button className="os-button os-button-primary" type="submit" disabled={saving === "time-entry"}>
                 Add time
               </button>
             </form>
@@ -1245,7 +1363,7 @@ export function RequestDetail({
                     {(hasGlobalOperations || entry.user.id === currentUser.id) &&
                       submittableTimeEntryStatuses.includes(entry.status) && (
                         <button
-                          className="button-secondary"
+                          className="os-button os-button-secondary"
                           type="button"
                           onClick={() => submitTimeEntryForReview(entry.id)}
                         >
@@ -1255,14 +1373,14 @@ export function RequestDetail({
                     {canSupervise && entry.status === "SUBMITTED" && (
                       <>
                         <button
-                          className="button-secondary"
+                          className="os-button os-button-secondary"
                           type="button"
                           onClick={() => reviewTimeEntry(entry.id, "APPROVE")}
                         >
                           Approve
                         </button>
                         <button
-                          className="button-danger"
+                          className="os-button os-button-danger"
                           type="button"
                           onClick={() => reviewTimeEntry(entry.id, "REJECT")}
                         >
@@ -1279,7 +1397,7 @@ export function RequestDetail({
       </section>
 
       <section className="quote-summary-grid">
-        <article className="catalog-panel">
+        <article className="catalog-panel" id="request-comments">
           <h2>Comments</h2>
           <form className="catalog-form" onSubmit={submitComment}>
             <label className="form-span">
@@ -1300,7 +1418,7 @@ export function RequestDetail({
               />
               Visible to client
             </label>
-            <button className="button-primary" type="submit" disabled={saving === "comment"}>
+            <button className="os-button os-button-primary" type="submit" disabled={saving === "comment"}>
               Add comment
             </button>
           </form>
@@ -1318,7 +1436,7 @@ export function RequestDetail({
           </div>
         </article>
 
-        <article className="catalog-panel">
+        <article className="catalog-panel" id="request-notes">
           <h2>Internal notes</h2>
           <form className="catalog-form" onSubmit={submitNote}>
             <label className="form-span">
@@ -1329,7 +1447,7 @@ export function RequestDetail({
                 onChange={(event) => setNoteBody(event.target.value)}
               />
             </label>
-            <button className="button-primary" type="submit" disabled={saving === "note"}>
+            <button className="os-button os-button-primary" type="submit" disabled={saving === "note"}>
               Add internal note
             </button>
           </form>
@@ -1346,7 +1464,7 @@ export function RequestDetail({
       </section>
 
       <section className="quote-summary-grid">
-        <article className="catalog-panel">
+        <article className="catalog-panel" id="request-attachments">
           <h2>Attachment metadata</h2>
           {canAttachMetadata ? (
             <form className="catalog-form" onSubmit={submitAttachment}>
@@ -1403,7 +1521,7 @@ export function RequestDetail({
                   <option value="CLIENT_VISIBLE">Client visible</option>
                 </select>
               </label>
-              <button className="button-primary" type="submit" disabled={saving === "attachment"}>
+              <button className="os-button os-button-primary" type="submit" disabled={saving === "attachment"}>
                 Add metadata
               </button>
             </form>
@@ -1422,7 +1540,7 @@ export function RequestDetail({
           </div>
         </article>
 
-        <article className="catalog-panel">
+        <article className="catalog-panel" id="request-activity">
           <h2>Activity</h2>
           <div className="activity-list">
             {request.activity.map((event) => (

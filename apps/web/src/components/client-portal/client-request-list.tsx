@@ -15,6 +15,15 @@ import type {
 } from "../../lib/client-portal-types";
 import type { RequestTemplateVersion, TemplateAnswerValue } from "../../lib/request-template-types";
 import type { RequestSummary } from "../../lib/request-types";
+import {
+  BentoGrid,
+  EmptyState,
+  MetricCard,
+  PageHeader,
+  PriorityChip,
+  SectionCard,
+  StatusChip,
+} from "../premium-os";
 
 const priorities = ["LOW", "NORMAL", "HIGH", "URGENT"] as const;
 
@@ -96,6 +105,10 @@ export function ClientRequestList({
   const templateOptionalFields = activeTemplate
     ? activeTemplate.fields.length - templateRequiredFields
     : 0;
+  const openRequests = items.filter(
+    (request) => !["COMPLETED", "CLOSED", "REJECTED"].includes(request.status),
+  ).length;
+  const waitingClientRequests = items.filter((request) => request.status === "WAITING_CLIENT").length;
 
   async function loadTemplate(serviceItemRevisionId = form.serviceItemRevisionId) {
     const selectedServiceItemRevisionId = optional(serviceItemRevisionId);
@@ -181,24 +194,32 @@ export function ClientRequestList({
 
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">Client portal</p>
-          <h1>Requests</h1>
-          <p>Track your onboarded service requests and client-visible comments.</p>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Client service center"
+        title="Requests"
+        description="Create, track, and review service requests tied to your active subscriptions."
+      />
 
-      <section className="catalog-panel editor-panel">
-        <h2>Create request</h2>
-        <p>
-          Select one of your subscribed services, choose the service item, then complete the related
-          request details. If the item has an active template, it loads automatically.
-        </p>
+      <BentoGrid compact>
+        <MetricCard accent label="Open requests" value={openRequests} detail="Still active" />
+        <MetricCard label="Waiting for you" value={waitingClientRequests} detail="Client action needed" />
+        <MetricCard label="Subscribed services" value={services.length} detail="Available for intake" />
+        <MetricCard
+          label="Selected service"
+          value={selectedService ? selectedService.hoursAllocated : 0}
+          detail="Monthly hours"
+        />
+      </BentoGrid>
+
+      <SectionCard
+        eyebrow="Request intake"
+        title="Create request"
+        description="Select a subscribed service, choose the exact work item, and complete any dynamic template questions."
+      >
         {services.length === 0 ? (
-          <div className="catalog-empty">
+          <EmptyState title="No subscribed services">
             No active subscribed services are available for request creation yet.
-          </div>
+          </EmptyState>
         ) : (
           <form className="catalog-form wide-form" onSubmit={submit}>
             <div className="pricing-total-grid form-span">
@@ -395,7 +416,7 @@ export function ClientRequestList({
             />
             {error && <p className="form-error form-span">{error}</p>}
             <button
-              className="button-primary"
+              className="os-button os-button-primary"
               type="submit"
               disabled={saving || loadingTemplate || !form.subscriptionServiceId}
             >
@@ -403,11 +424,17 @@ export function ClientRequestList({
             </button>
           </form>
         )}
-      </section>
+      </SectionCard>
 
-      <section className="catalog-panel">
+      <SectionCard
+        eyebrow="Request library"
+        title="Visible requests"
+        description="Every row keeps the original request detail route and workflow actions available."
+      >
         {items.length === 0 ? (
-          <div className="catalog-empty">No requests are currently visible for this account.</div>
+          <EmptyState title="No visible requests">
+            No requests are currently visible for this account.
+          </EmptyState>
         ) : (
           <div className="quote-list-grid">
             {items.map((request) => (
@@ -419,9 +446,8 @@ export function ClientRequestList({
                     <p>{request.service.monthlyService.nameEn}</p>
                   </div>
                   <div className="quote-list-meta">
-                    <span className={`status-badge status-${request.status.toLowerCase()}`}>
-                      {request.status}
-                    </span>
+                    <StatusChip status={request.status} label={request.status} />
+                    <PriorityChip priority={request.priority} />
                     <small>Due {displayDate(request.dueAt)}</small>
                   </div>
                 </Link>
@@ -429,7 +455,7 @@ export function ClientRequestList({
             ))}
           </div>
         )}
-      </section>
+      </SectionCard>
     </>
   );
 }

@@ -14,7 +14,7 @@ export function CreateInvoiceAction({ quote }: { quote: Quote }) {
 
   if (existing) {
     return (
-      <Link className="button-primary" href={`/pricing/invoices/${existing.id}`}>
+      <Link className="os-button os-button-primary" href={`/pricing/invoices/${existing.id}`}>
         View invoice {existing.invoiceNumber}
       </Link>
     );
@@ -38,7 +38,7 @@ export function CreateInvoiceAction({ quote }: { quote: Quote }) {
 
   return (
     <div className="quote-action-stack">
-      <button className="button-primary" disabled={creating} type="button" onClick={submit}>
+      <button className="os-button os-button-primary" disabled={creating} type="button" onClick={submit}>
         {creating ? "Creating invoice…" : "Create invoice"}
       </button>
       {error && <small className="quote-action-feedback error">{error}</small>}

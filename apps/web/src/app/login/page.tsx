@@ -9,9 +9,9 @@ export default async function LoginPage() {
   const copy =
     locale === "ar"
       ? {
-          eyebrow: "منصة جَزوم التشغيلية",
-          title: "مرحباً بعودتك.",
-          lead: "سجّل الدخول بحسابك المخصص للمنصة.",
+          eyebrow: "منصة جزوم التشغيلية",
+          title: "مرحبًا بعودتك.",
+          lead: "سجل الدخول بحسابك المخصص للمنصة.",
         }
       : {
           eyebrow: "Jzoom Operating Platform",

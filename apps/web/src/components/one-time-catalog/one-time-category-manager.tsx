@@ -69,7 +69,7 @@ export function OneTimeCategoryManager({
         description="Manage localized categories for Build and Digital services without deleting historical revisions."
         action={
           <button
-            className="button-primary"
+            className="os-button os-button-primary"
             type="button"
             onClick={() => {
               mutation.clearFeedback();
@@ -181,7 +181,7 @@ export function OneTimeCategoryManager({
                 />
                 <div className="entity-card-actions">
                   <button
-                    className="button-secondary"
+                    className="os-button os-button-secondary"
                     type="button"
                     disabled={category.status === "ARCHIVED"}
                     onClick={() => {

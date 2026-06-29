@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { clientsErrorMessage, clientsRequest, refreshClients } from "../../lib/clients-client";
 import type { ClientsSnapshot, ClientStatus, ManagedClient } from "../../lib/clients-types";
 import { CatalogFeedback, EmptyState, SectionHeader, StatusBadge } from "../catalog/catalog-shared";
+import { MetricCard, SectionCard } from "../premium-os";
 
 interface ClientPayload {
   name: string;
@@ -136,10 +137,10 @@ function ClientForm({
         <input name="urgency" defaultValue={client?.urgency ?? ""} />
       </label>
       <div className="form-actions">
-        <button type="button" className="button-secondary" onClick={onCancel}>
+        <button type="button" className="os-button os-button-secondary" onClick={onCancel}>
           Cancel
         </button>
-        <button type="submit" className="button-primary" disabled={submitting}>
+        <button type="submit" className="os-button os-button-primary" disabled={submitting}>
           {submitting ? "Saving..." : client ? "Save client" : "Create client"}
         </button>
       </div>
@@ -193,10 +194,10 @@ function PortalUserForm({
         </select>
       </label>
       <div className="form-actions">
-        <button type="button" className="button-secondary" onClick={onCancel}>
+        <button type="button" className="os-button os-button-secondary" onClick={onCancel}>
           Cancel
         </button>
-        <button type="submit" className="button-primary" disabled={submitting}>
+        <button type="submit" className="os-button os-button-primary" disabled={submitting}>
           {submitting ? "Creating..." : "Create portal user"}
         </button>
       </div>
@@ -276,7 +277,7 @@ function ClientCard({
         <div className="row-actions">
           <button
             type="button"
-            className="button-secondary"
+            className="os-button os-button-secondary"
             disabled={submitting}
             onClick={() => onEdit(client)}
           >
@@ -284,7 +285,7 @@ function ClientCard({
           </button>
           <button
             type="button"
-            className="button-secondary"
+            className="os-button os-button-secondary"
             disabled={submitting}
             onClick={() => onCreateUser(client)}
           >
@@ -293,7 +294,7 @@ function ClientCard({
           {client.status !== "ACTIVE" ? (
             <button
               type="button"
-              className="button-quiet"
+              className="os-button os-button-secondary"
               disabled={submitting}
               onClick={() => void onStatus(client, "ACTIVE")}
             >
@@ -302,7 +303,7 @@ function ClientCard({
           ) : (
             <button
               type="button"
-              className="button-quiet"
+              className="os-button os-button-secondary"
               disabled={submitting}
               onClick={() => void onStatus(client, "INACTIVE")}
             >
@@ -311,7 +312,7 @@ function ClientCard({
           )}
           <button
             type="button"
-            className="button-danger"
+            className="os-button os-button-danger"
             disabled={submitting}
             onClick={() => void onStatus(client, "ARCHIVED")}
           >
@@ -331,6 +332,10 @@ export function ClientManager({ initialSnapshot }: { initialSnapshot: ClientsSna
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
+  const activeClients = snapshot.clients.filter((client) => client.status === "ACTIVE").length;
+  const archivedClients = snapshot.clients.filter((client) => client.status === "ARCHIVED").length;
+  const portalUsers = snapshot.clients.reduce((sum, client) => sum + client.users.length, 0);
+  const openRequests = snapshot.clients.reduce((sum, client) => sum + client.counts.requests, 0);
 
   async function refresh(message: string) {
     setSnapshot(await refreshClients());
@@ -436,7 +441,7 @@ export function ClientManager({ initialSnapshot }: { initialSnapshot: ClientsSna
         action={
           <button
             type="button"
-            className="button-primary"
+            className="os-button os-button-primary"
             onClick={() => {
               setCreating(true);
               setEditing(null);
@@ -450,6 +455,13 @@ export function ClientManager({ initialSnapshot }: { initialSnapshot: ClientsSna
         }
       />
       <CatalogFeedback error={error} success={success} />
+
+      <section className="metric-grid" aria-label="Client administration summary">
+        <MetricCard label="Clients" value={snapshot.clients.length} detail={`${activeClients} active`} accent />
+        <MetricCard label="Portal users" value={portalUsers} detail="Linked client accounts" />
+        <MetricCard label="Request links" value={openRequests} detail="Historical and active requests" />
+        <MetricCard label="Archived" value={archivedClients} detail="Hidden from active operations" />
+      </section>
 
       {(creating || editing) && (
         <section className="catalog-panel editor-panel">
@@ -478,8 +490,7 @@ export function ClientManager({ initialSnapshot }: { initialSnapshot: ClientsSna
         </section>
       )}
 
-      <section className="catalog-panel">
-        <h2>Client list</h2>
+      <SectionCard title="Client list" description="Operational client records, account contacts, request links, and portal access.">
         {snapshot.clients.length === 0 ? (
           <EmptyState>No clients have been created yet.</EmptyState>
         ) : (
@@ -508,7 +519,7 @@ export function ClientManager({ initialSnapshot }: { initialSnapshot: ClientsSna
             ))}
           </div>
         )}
-      </section>
+      </SectionCard>
     </>
   );
 }

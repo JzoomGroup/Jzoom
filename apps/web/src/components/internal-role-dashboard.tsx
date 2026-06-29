@@ -5,6 +5,17 @@ import type {
   MonthlyUsageResponse,
 } from "../lib/operations-types";
 import type { RequestQueueResponse } from "../lib/request-types";
+import {
+  ActionCard,
+  BentoGrid,
+  EmptyState,
+  MetricCard,
+  PageHeader,
+  PriorityChip,
+  SectionCard,
+  SmartTable,
+  StatusChip,
+} from "./premium-os";
 
 type RoleDashboardMode = "management" | "specialist" | "supervisor";
 
@@ -37,16 +48,6 @@ const content: Record<
 
 function hours(value: number | undefined): string {
   return `${Number(value ?? 0).toFixed(2)}h`;
-}
-
-function metric(label: string, value: string | number, detail?: string) {
-  return (
-    <article>
-      <span>{label}</span>
-      <strong>{value}</strong>
-      {detail ? <small>{detail}</small> : null}
-    </article>
-  );
 }
 
 export function InternalRoleDashboard({
@@ -82,46 +83,41 @@ export function InternalRoleDashboard({
 
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">{page.eyebrow}</p>
-          <h1>{page.title}</h1>
-          <p>{page.description}</p>
-        </div>
-        <Link className="button-secondary" href="/requests/queues">
-          Open work queues
-        </Link>
-      </header>
+      <PageHeader
+        eyebrow={page.eyebrow}
+        title={page.title}
+        description={page.description}
+        actions={[{ href: "/requests/queues", label: "Open work queues", variant: "secondary" }]}
+      />
 
-      <section className="metric-grid" aria-label={`${page.title} summary`}>
-        {metric("Open requests", queue.counters.open, page.queueLabel)}
-        {metric("Delayed requests", queue.counters.overdue, "Needs attention")}
-        {metric("Waiting client", waitingClient.length, "Client action")}
-        {metric("Waiting supervisor", waitingSupervisor.length, "Review action")}
-        {metric("Approved hours", hours(usage.totals.approvedHours), `Period ${usage.period.key}`)}
-        {metric("Submitted hours", hours(usage.totals.submittedHours), "Pending approval")}
-        {mode === "management"
-          ? metric("Monthly reports", reports.length, "Prepared reports")
-          : metric("Tracked entries", usage.totals.entries, "Ledger entries")}
-        {mode === "management"
-          ? metric("Health watch", attentionClients.length, "Client portfolio")
-          : metric("Billable hours", hours(usage.totals.billableHours), "Approved or submitted")}
-      </section>
-
-      <section className="catalog-panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Priority work</h2>
-            <p>Recently updated requests from the backend-scoped queue for this role.</p>
-          </div>
-          <Link className="button-secondary" href="/requests">
-            Request list
-          </Link>
-        </div>
-        {latestRequests.length === 0 ? (
-          <div className="catalog-empty">No requests are currently visible in this queue.</div>
+      <BentoGrid>
+        <MetricCard label="Open requests" value={queue.counters.open} detail={page.queueLabel} accent />
+        <MetricCard label="Delayed requests" value={queue.counters.overdue} detail="Needs attention" />
+        <MetricCard label="Waiting client" value={waitingClient.length} detail="Client action" />
+        <MetricCard label="Waiting supervisor" value={waitingSupervisor.length} detail="Review action" />
+        <MetricCard label="Approved hours" value={hours(usage.totals.approvedHours)} detail={`Period ${usage.period.key}`} />
+        <MetricCard label="Submitted hours" value={hours(usage.totals.submittedHours)} detail="Pending approval" />
+        {mode === "management" ? (
+          <MetricCard label="Monthly reports" value={reports.length} detail="Prepared reports" />
         ) : (
-          <div className="compact-table-wrap">
+          <MetricCard label="Tracked entries" value={usage.totals.entries} detail="Ledger entries" />
+        )}
+        {mode === "management" ? (
+          <MetricCard label="Health watch" value={attentionClients.length} detail="Client portfolio" />
+        ) : (
+          <MetricCard label="Billable hours" value={hours(usage.totals.billableHours)} detail="Approved or submitted" />
+        )}
+      </BentoGrid>
+
+      <SectionCard
+        title="Priority work"
+        description="Recently updated requests from the backend-scoped queue for this role."
+        action={<Link className="os-button os-button-secondary" href="/requests">Request list</Link>}
+      >
+        {latestRequests.length === 0 ? (
+          <EmptyState>No requests are currently visible in this queue.</EmptyState>
+        ) : (
+          <SmartTable>
             <table className="catalog-table">
               <thead>
                 <tr>
@@ -143,33 +139,26 @@ export function InternalRoleDashboard({
                     </td>
                     <td>{request.client.name}</td>
                     <td>
-                      <span className={`status-pill status-${request.status.toLowerCase()}`}>
-                        {request.status}
-                      </span>
+                      <StatusChip status={request.status} />
                     </td>
-                    <td>{request.priority}</td>
+                    <td><PriorityChip priority={request.priority} /></td>
                     <td>{new Date(request.updatedAt).toLocaleDateString("en-SA")}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </SmartTable>
         )}
-      </section>
+      </SectionCard>
 
       {mode === "management" && (
-        <section className="catalog-panel">
-          <div className="panel-heading">
-            <div>
-              <h2>Client health watch</h2>
-              <p>Portfolio clients that require management or account-manager follow-up.</p>
-            </div>
-            <Link className="button-secondary" href="/account-manager">
-              Portfolio
-            </Link>
-          </div>
+        <SectionCard
+          title="Client health watch"
+          description="Portfolio clients that require management or account-manager follow-up."
+          action={<Link className="os-button os-button-secondary" href="/account-manager">Portfolio</Link>}
+        >
           {attentionClients.length === 0 ? (
-            <div className="catalog-empty">No at-risk clients in the visible portfolio.</div>
+            <EmptyState>No at-risk clients in the visible portfolio.</EmptyState>
           ) : (
             <div className="entity-grid">
               {attentionClients.map((entry) => (
@@ -206,43 +195,29 @@ export function InternalRoleDashboard({
               ))}
             </div>
           )}
-        </section>
+        </SectionCard>
       )}
 
-      <section className="catalog-panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Quick actions</h2>
-            <p>Role-safe destinations already protected by backend route guards.</p>
-          </div>
-        </div>
+      <SectionCard
+        title="Quick actions"
+        description="Role-safe destinations already protected by backend route guards."
+      >
         <div className="admin-area-grid">
-          <Link href="/requests/queues">
-            <span>01</span>
-            <strong>Work queues</strong>
-            <p>Filter assigned, review, account-manager, and all work queues.</p>
-          </Link>
-          <Link href="/requests">
-            <span>02</span>
-            <strong>Request details</strong>
-            <p>Open request execution, conversations, documents, hours, and deliverables.</p>
-          </Link>
-          <Link href="/hours-ledger">
-            <span>03</span>
-            <strong>Hours ledger</strong>
-            <p>Review submitted, approved, rejected, billable, and non-billable hours.</p>
-          </Link>
-          <Link href={mode === "management" ? "/reports" : "/notifications"}>
-            <span>04</span>
-            <strong>{mode === "management" ? "Reports" : "Notifications"}</strong>
-            <p>
-              {mode === "management"
+          <ActionCard href="/requests/queues" index="01" title="Work queues" description="Filter assigned, review, account-manager, and all work queues." />
+          <ActionCard href="/requests" index="02" title="Request details" description="Open request execution, conversations, documents, hours, and deliverables." />
+          <ActionCard href="/hours-ledger" index="03" title="Hours ledger" description="Review submitted, approved, rejected, billable, and non-billable hours." />
+          <ActionCard
+            href={mode === "management" ? "/reports" : "/notifications"}
+            index="04"
+            title={mode === "management" ? "Reports" : "Notifications"}
+            description={
+              mode === "management"
                 ? "Review monthly reports and client operating summaries."
-                : "Open messages tied to request and operations activity."}
-            </p>
-          </Link>
+                : "Open messages tied to request and operations activity."
+            }
+          />
         </div>
-      </section>
+      </SectionCard>
     </>
   );
 }

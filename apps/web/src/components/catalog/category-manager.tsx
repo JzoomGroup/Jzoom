@@ -67,7 +67,7 @@ export function CategoryManager({
         description="Organize monthly services into editable localized categories without changing historical service revisions."
         action={
           <button
-            className="button-primary"
+            className="os-button os-button-primary"
             type="button"
             onClick={() => {
               mutation.clearFeedback();
@@ -179,7 +179,7 @@ export function CategoryManager({
                 />
                 <div className="entity-card-actions">
                   <button
-                    className="button-secondary"
+                    className="os-button os-button-secondary"
                     type="button"
                     disabled={category.status === "ARCHIVED"}
                     onClick={() => {

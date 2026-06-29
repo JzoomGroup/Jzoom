@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { MonthlyReport } from "../../lib/operations-types";
+import { EmptyState, MetricCard, PageHeader, SectionCard, StatusChip } from "../premium-os";
 
 type ReportSummarySection = "requests" | "outputs" | "documentRequests";
 
@@ -13,13 +14,7 @@ function reportDate(value: string | null): string {
 }
 
 function metric(label: string, value: number | string, detail?: string) {
-  return (
-    <div>
-      <span>{label}</span>
-      <strong>{value}</strong>
-      {detail && <small>{detail}</small>}
-    </div>
-  );
+  return <MetricCard label={label} value={value} detail={detail} />;
 }
 
 function countFrom(report: MonthlyReport, section: ReportSummarySection): number {
@@ -57,74 +52,69 @@ export function ClientReportList({ reports }: { reports: MonthlyReport[] }) {
 
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">Client reports</p>
-          <h1>Monthly reports</h1>
-          <p>
-            Published monthly summaries for requests, deliverables, documents, and approved hours.
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Client reports"
+        title="Monthly reports"
+        description="Published monthly summaries for requests, deliverables, documents, and approved hours."
+      />
 
-      <section className="catalog-panel">
-        <p className="eyebrow">Report center</p>
-        <h2>Monthly operating summary</h2>
-        <div className="pricing-total-grid">
+      <SectionCard eyebrow="Report center" title="Monthly operating summary">
+        <section className="os-bento-grid compact">
           {metric("Published reports", publishedReports)}
           {metric("Latest period", latestReport?.period ?? "None")}
           {metric("Requests covered", totalRequests)}
           {metric("Approved hours", hours(totalHours))}
           {metric("Latest publish", reportDate(latestReport?.publishedAt ?? null))}
-        </div>
-      </section>
+        </section>
+      </SectionCard>
 
-      <section className="catalog-panel">
-        <div className="entity-grid">
-          {reports.map((report) => (
-            <article className="entity-card" key={report.id}>
-              <div className="entity-card-heading">
-                <div>
-                  <span className={`status-badge status-${report.status.toLowerCase()}`}>
-                    {report.status}
-                  </span>
-                  <h3>{report.title}</h3>
+      <SectionCard eyebrow="Report archive" title="Report library">
+        {reports.length === 0 ? (
+          <EmptyState title="No published monthly reports">
+            No published monthly reports yet.
+          </EmptyState>
+        ) : (
+          <div className="entity-grid">
+            {reports.map((report) => (
+              <article className="entity-card" key={report.id}>
+                <div className="entity-card-heading">
+                  <div>
+                    <StatusChip status={report.status} label={report.status} />
+                    <h3>{report.title}</h3>
+                  </div>
+                  <span>{report.period}</span>
                 </div>
-                <span>{report.period}</span>
-              </div>
-              <p>
-                {report.client.name} - published {reportDate(report.publishedAt)}
-              </p>
-              <dl className="entity-meta four-up">
-                <div>
-                  <dt>Requests</dt>
-                  <dd>{countFrom(report, "requests")}</dd>
-                </div>
-                <div>
-                  <dt>Deliverables</dt>
-                  <dd>{countFrom(report, "outputs")}</dd>
-                </div>
-                <div>
-                  <dt>Documents</dt>
-                  <dd>{countFrom(report, "documentRequests")}</dd>
-                </div>
-                <div>
-                  <dt>Hours</dt>
-                  <dd>
-                    {hours(report.summary.hours?.approvedTotal ?? report.summary.hours?.total)}
-                  </dd>
-                </div>
-              </dl>
-              <Link className="button-secondary" href={`/client/reports/${report.id}`}>
-                View report
-              </Link>
-            </article>
-          ))}
-        </div>
-        {reports.length === 0 && (
-          <div className="catalog-empty">No published monthly reports yet.</div>
+                <p>
+                  {report.client.name} - published {reportDate(report.publishedAt)}
+                </p>
+                <dl className="entity-meta four-up">
+                  <div>
+                    <dt>Requests</dt>
+                    <dd>{countFrom(report, "requests")}</dd>
+                  </div>
+                  <div>
+                    <dt>Deliverables</dt>
+                    <dd>{countFrom(report, "outputs")}</dd>
+                  </div>
+                  <div>
+                    <dt>Documents</dt>
+                    <dd>{countFrom(report, "documentRequests")}</dd>
+                  </div>
+                  <div>
+                    <dt>Hours</dt>
+                    <dd>
+                      {hours(report.summary.hours?.approvedTotal ?? report.summary.hours?.total)}
+                    </dd>
+                  </div>
+                </dl>
+                <Link className="os-button os-button-secondary" href={`/client/reports/${report.id}`}>
+                  View report
+                </Link>
+              </article>
+            ))}
+          </div>
         )}
-      </section>
+      </SectionCard>
     </>
   );
 }
@@ -140,39 +130,25 @@ export function ClientReportDetail({ report }: { report: MonthlyReport }) {
 
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">Monthly report - {report.period}</p>
-          <h1>{report.title}</h1>
-          <p>
-            {report.client.name} - published {reportDate(report.publishedAt)}
-          </p>
-        </div>
-        <Link className="button-secondary" href="/client/reports">
-          Back to reports
-        </Link>
-      </header>
+      <PageHeader
+        eyebrow={`Monthly report - ${report.period}`}
+        title={report.title}
+        description={`${report.client.name} - published ${reportDate(report.publishedAt)}`}
+        actions={[{ href: "/client/reports", label: "Back to reports" }]}
+      />
 
-      <section className="catalog-panel">
-        <p className="eyebrow">Usage snapshot</p>
-        <h2>What happened this month</h2>
-        <div className="pricing-total-grid">
+      <SectionCard eyebrow="Usage snapshot" title="What happened this month">
+        <section className="os-bento-grid compact">
           {metric("Requests", countFrom(report, "requests"))}
           {metric("Shared outputs", countFrom(report, "outputs"))}
           {metric("Document requests", countFrom(report, "documentRequests"))}
           {metric("Approved hours", hours(approvedHours), hoursSource(report))}
-          {metric(
-            "Billable hours",
-            hours(billableHours),
-            `${hours(nonBillableHours)} non-billable`,
-          )}
-        </div>
-      </section>
+          {metric("Billable hours", hours(billableHours), `${hours(nonBillableHours)} non-billable`)}
+        </section>
+      </SectionCard>
 
       <section className="quote-summary-grid">
-        <article className="catalog-panel">
-          <p className="eyebrow">Request status</p>
-          <h2>Request mix</h2>
+        <SectionCard eyebrow="Request status" title="Request mix">
           <div className="activity-list">
             {requestStatusItems.length === 0 ? (
               <p>No request status data in this report.</p>
@@ -185,11 +161,9 @@ export function ClientReportDetail({ report }: { report: MonthlyReport }) {
               ))
             )}
           </div>
-        </article>
+        </SectionCard>
 
-        <article className="catalog-panel">
-          <p className="eyebrow">Delivery status</p>
-          <h2>Deliverables and documents</h2>
+        <SectionCard eyebrow="Delivery status" title="Deliverables and documents">
           <div className="activity-list">
             {outputStatusItems.length === 0 && documentStatusItems.length === 0 ? (
               <p>No deliverable or document status data in this report.</p>
@@ -210,36 +184,40 @@ export function ClientReportDetail({ report }: { report: MonthlyReport }) {
               </>
             )}
           </div>
-        </article>
+        </SectionCard>
       </section>
 
-      <section className="catalog-panel">
-        <p className="eyebrow">Activity</p>
-        <h2>Recent client-visible activity</h2>
-        <div className="activity-list">
-          {recentActivity.map((activity) => (
-            <article key={activity.id}>
-              <strong>
-                {activity.request?.requestNumber ?? "Request"}
-                {activity.request?.title ? ` - ${activity.request.title}` : ""}
-              </strong>
-              <p>{activity.reason ?? "Client-visible activity"}</p>
-              <small>
-                {new Date(activity.occurredAt).toLocaleString("en-SA")}
-                {activity.request?.status ? ` - ${activity.request.status}` : ""}
-              </small>
-              {activity.request && (
-                <Link className="button-secondary" href={`/client/requests/${activity.request.id}`}>
-                  Open request
-                </Link>
-              )}
-            </article>
-          ))}
-        </div>
-        {recentActivity.length === 0 && (
-          <div className="catalog-empty">No client-visible activity recorded for this period.</div>
+      <SectionCard eyebrow="Activity" title="Recent client-visible activity">
+        {recentActivity.length === 0 ? (
+          <EmptyState title="No activity recorded">
+            No client-visible activity recorded for this period.
+          </EmptyState>
+        ) : (
+          <div className="activity-list">
+            {recentActivity.map((activity) => (
+              <article key={activity.id}>
+                <strong>
+                  {activity.request?.requestNumber ?? "Request"}
+                  {activity.request?.title ? ` - ${activity.request.title}` : ""}
+                </strong>
+                <p>{activity.reason ?? "Client-visible activity"}</p>
+                <small>
+                  {new Date(activity.occurredAt).toLocaleString("en-SA")}
+                  {activity.request?.status ? ` - ${activity.request.status}` : ""}
+                </small>
+                {activity.request && (
+                  <Link
+                    className="os-button os-button-secondary"
+                    href={`/client/requests/${activity.request.id}`}
+                  >
+                    Open request
+                  </Link>
+                )}
+              </article>
+            ))}
+          </div>
         )}
-      </section>
+      </SectionCard>
     </>
   );
 }

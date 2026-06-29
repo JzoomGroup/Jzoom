@@ -14,6 +14,15 @@ import type {
   MonthlyClosing,
   MonthlyUsageResponse,
 } from "../../lib/operations-types";
+import {
+  BentoGrid,
+  EmptyState,
+  MetricCard,
+  PageHeader,
+  SectionCard,
+  SmartTable,
+  StatusChip,
+} from "../premium-os";
 
 function currentPeriod(): string {
   const now = new Date();
@@ -118,22 +127,16 @@ export function HoursLedger({
 
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">Hours Ledger foundation</p>
-          <h1>Hours ledger and monthly closing</h1>
-          <p>
-            Internal, scope-protected view of submitted, approved, and rejected time entries with
-            immutable month-end closing snapshots.
-          </p>
-        </div>
-        <span>Period {ledger.period.key}</span>
-      </header>
+      <PageHeader
+        eyebrow="Time and utilization"
+        title="Hours ledger and monthly closing"
+        description="Internal, scope-protected view of submitted, approved, and rejected time entries with immutable month-end closing snapshots."
+        meta={<span>Period {ledger.period.key}</span>}
+      />
 
       {error && <p className="form-error">{error}</p>}
 
-      <section className="catalog-panel editor-panel">
-        <h2>Ledger filters</h2>
+      <SectionCard eyebrow="Ledger filters" title="Filter usage">
         <form className="catalog-form" onSubmit={refresh}>
           <label>
             Period
@@ -158,24 +161,20 @@ export function HoursLedger({
             </button>
           </div>
         </form>
-      </section>
+      </SectionCard>
 
-      <section className="catalog-panel">
-        <h2>Monthly totals</h2>
-        <div className="entity-meta four-up">
-          {metric("Entries", ledger.totals.entries)}
-          {metric("Approved", hours(ledger.totals.approvedHours))}
-          {metric("Submitted", hours(ledger.totals.submittedHours))}
-          {metric("Rejected", hours(ledger.totals.rejectedHours))}
-          {metric("Billable", hours(ledger.totals.billableHours))}
-          {metric("Non-billable", hours(ledger.totals.nonBillableHours))}
-          {metric("Tracked", hours(ledger.totals.hours))}
-          {metric("Clients", usage.clients.length)}
-        </div>
-      </section>
+      <BentoGrid>
+        <MetricCard label="Entries" value={ledger.totals.entries} detail="Ledger records" accent />
+        <MetricCard label="Approved" value={hours(ledger.totals.approvedHours)} detail="Approved time" />
+        <MetricCard label="Submitted" value={hours(ledger.totals.submittedHours)} detail="Pending approval" />
+        <MetricCard label="Rejected" value={hours(ledger.totals.rejectedHours)} detail="Rejected time" />
+        <MetricCard label="Billable" value={hours(ledger.totals.billableHours)} detail="Billable time" />
+        <MetricCard label="Non-billable" value={hours(ledger.totals.nonBillableHours)} detail="Non-billable time" />
+        <MetricCard label="Tracked" value={hours(ledger.totals.hours)} detail="All tracked hours" />
+        <MetricCard label="Clients" value={usage.clients.length} detail="Included clients" />
+      </BentoGrid>
 
-      <section className="catalog-panel">
-        <h2>Usage summary by client</h2>
+      <SectionCard title="Usage summary by client">
         <div className="entity-grid">
           {usage.clients.map((client) => (
             <article className="entity-card" key={client.id}>
@@ -195,12 +194,11 @@ export function HoursLedger({
             </article>
           ))}
         </div>
-        {usage.clients.length === 0 && <p>No submitted, approved, or rejected hours yet.</p>}
-      </section>
+        {usage.clients.length === 0 && <EmptyState>No submitted, approved, or rejected hours yet.</EmptyState>}
+      </SectionCard>
 
       {canManageClosings && (
-        <section className="catalog-panel editor-panel">
-          <h2>Prepare monthly closing</h2>
+        <SectionCard eyebrow="Closing workflow" title="Prepare monthly closing">
           <form className="catalog-form" onSubmit={prepare}>
             <label>
               Client ID
@@ -234,20 +232,17 @@ export function HoursLedger({
               </button>
             </div>
           </form>
-        </section>
+        </SectionCard>
       )}
 
       {canManageClosings && (
-        <section className="catalog-panel">
-          <h2>Monthly closing snapshots</h2>
+        <SectionCard title="Monthly closing snapshots">
           <div className="entity-grid">
             {closings.map((closing) => (
               <article className="entity-card" key={closing.id}>
                 <div className="entity-card-heading">
                   <div>
-                    <span className={`status-pill status-${closing.status.toLowerCase()}`}>
-                      {closing.status}
-                    </span>
+                    <StatusChip status={closing.status} />
                     <h3>{closing.title}</h3>
                   </div>
                   <span>{closing.period}</span>
@@ -271,13 +266,12 @@ export function HoursLedger({
               </article>
             ))}
           </div>
-          {closings.length === 0 && <p>No monthly closing snapshots have been prepared yet.</p>}
-        </section>
+          {closings.length === 0 && <EmptyState>No monthly closing snapshots have been prepared yet.</EmptyState>}
+        </SectionCard>
       )}
 
-      <section className="catalog-panel">
-        <h2>Time entries</h2>
-        <div className="table-scroll">
+      <SectionCard title="Time entries">
+        <SmartTable>
           <table className="catalog-table">
             <thead>
               <tr>
@@ -306,9 +300,9 @@ export function HoursLedger({
               ))}
             </tbody>
           </table>
-        </div>
-        {ledger.entries.length === 0 && <p>No ledger entries match this filter.</p>}
-      </section>
+        </SmartTable>
+        {ledger.entries.length === 0 && <EmptyState>No ledger entries match this filter.</EmptyState>}
+      </SectionCard>
     </>
   );
 }

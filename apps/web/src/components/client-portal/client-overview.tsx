@@ -8,6 +8,14 @@ import type {
   ClientQuoteSummary,
 } from "../../lib/client-portal-types";
 import type { RequestSummary } from "../../lib/request-types";
+import {
+  BentoGrid,
+  EmptyState,
+  MetricCard,
+  PageHeader,
+  SectionCard,
+  StatusChip,
+} from "../premium-os";
 import { sar } from "./client-format";
 
 function SubscribedServiceCard({ service }: { service: ClientPortalSubscribedMonthlyService }) {
@@ -47,7 +55,7 @@ function SubscribedServiceCard({ service }: { service: ClientPortalSubscribedMon
         </div>
       )}
       <div className="row-actions">
-        <Link className="button-secondary" href="/client/requests">
+        <Link className="os-button os-button-secondary" href="/client/requests">
           Create request
         </Link>
       </div>
@@ -149,63 +157,36 @@ export function ClientOverview({
 
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">Client portal</p>
-          <h1>Welcome, {account.user.displayName}</h1>
-          <p>View your services, issued quotes, accepted quotes, invoices, and request activity.</p>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Client service center"
+        title={`Welcome, ${account.user.displayName}`}
+        description="A clear operating center for your services, requests, documents, outputs, quotes, invoices, and reports."
+        actions={[{ href: "/client/requests", label: "Create new request", variant: "primary" }]}
+      />
 
-      <section className="catalog-panel">
-        <div className="entity-card-heading">
-          <div>
-            <p className="eyebrow">Action summary</p>
-            <h2>Requests and subscription</h2>
-          </div>
-          <Link className="button-secondary" href="/client/requests">
-            New request
-          </Link>
-        </div>
-        <div className="pricing-total-grid">
-          <div>
-            <span>Open requests</span>
-            <strong>{openRequests.length}</strong>
-          </div>
-          <div>
-            <span>Waiting on you</span>
-            <strong>{waitingClientRequests.length}</strong>
-          </div>
-          <div>
-            <span>Completed</span>
-            <strong>{completedRequests.length}</strong>
-          </div>
-          <div>
-            <span>Active services</span>
-            <strong>{account.services.subscribedMonthly.length}</strong>
-          </div>
-          <div className="primary">
-            <span>Monthly hours</span>
-            <strong>{subscribedHours}</strong>
-          </div>
-        </div>
-      </section>
+      <h2 className="sr-only">Requests and subscription</h2>
+      <BentoGrid>
+        <MetricCard label="Open requests" value={openRequests.length} detail="Currently active" accent />
+        <MetricCard label="Waiting on you" value={waitingClientRequests.length} detail="Client action required" />
+        <MetricCard label="Completed" value={completedRequests.length} detail="Closed or completed" />
+        <MetricCard label="Active services" value={account.services.subscribedMonthly.length} detail="Subscribed monthly services" />
+        <MetricCard label="Monthly hours" value={subscribedHours} detail="Allocated subscription hours" />
+        <MetricCard label="Quotes" value={quotes.length} detail="Issued commercial records" />
+        <MetricCard label="Invoices" value={invoices.length} detail="Billing records" />
+        <MetricCard label="Available services" value={availableCount} detail="Catalog options" />
+      </BentoGrid>
 
       <section className="quote-summary-grid">
-        <article className="catalog-panel">
-          <div className="entity-card-heading">
-            <div>
-              <p className="eyebrow">Needs attention</p>
-              <h2>Client actions</h2>
-            </div>
-            <span>{waitingClientRequests.length}</span>
-          </div>
+        <SectionCard
+          eyebrow="Needs attention"
+          title="Client actions"
+          action={<StatusChip status="WAITING_CLIENT" label={`${waitingClientRequests.length} pending`} />}
+        >
           <div className="activity-list">
             {waitingClientRequests.length === 0 ? (
-              <article>
-                <strong>No client action is pending.</strong>
-                <p>Jzoom will update you when a request needs a response or document.</p>
-              </article>
+              <EmptyState title="No client action is pending.">
+                Jzoom will update you when a request needs a response or document.
+              </EmptyState>
             ) : (
               waitingClientRequests.slice(0, 4).map((request) => (
                 <article key={request.id}>
@@ -214,7 +195,7 @@ export function ClientOverview({
                     {request.requestNumber} · {request.service.monthlyService.nameEn}
                   </small>
                   <div className="row-actions">
-                    <Link className="button-secondary" href={`/client/requests/${request.id}`}>
+                    <Link className="os-button os-button-secondary" href={`/client/requests/${request.id}`}>
                       Open request
                     </Link>
                   </div>
@@ -222,22 +203,18 @@ export function ClientOverview({
               ))
             )}
           </div>
-        </article>
+        </SectionCard>
 
-        <article className="catalog-panel">
-          <div className="entity-card-heading">
-            <div>
-              <p className="eyebrow">Latest work</p>
-              <h2>Open requests</h2>
-            </div>
-            <span>{openRequests.length}</span>
-          </div>
+        <SectionCard
+          eyebrow="Latest work"
+          title="Open requests"
+          action={<StatusChip status="IN_PROGRESS" label={`${openRequests.length} open`} />}
+        >
           <div className="activity-list">
             {latestOpenRequests.length === 0 ? (
-              <article>
-                <strong>No open requests.</strong>
-                <p>Your completed work remains available in requests and reports.</p>
-              </article>
+              <EmptyState title="No open requests">
+                Your completed work remains available in requests and reports.
+              </EmptyState>
             ) : (
               latestOpenRequests.map((request) => (
                 <article key={request.id}>
@@ -249,7 +226,7 @@ export function ClientOverview({
                       : "Not set"}
                   </small>
                   <div className="row-actions">
-                    <Link className="button-secondary" href={`/client/requests/${request.id}`}>
+                    <Link className="os-button os-button-secondary" href={`/client/requests/${request.id}`}>
                       View details
                     </Link>
                   </div>
@@ -257,13 +234,11 @@ export function ClientOverview({
               ))
             )}
           </div>
-        </article>
+        </SectionCard>
       </section>
 
       <section className="quote-summary-grid">
-        <article className="catalog-panel">
-          <p className="eyebrow">Account context</p>
-          <h2>{account.clients[0]?.name ?? "Client account"}</h2>
+        <SectionCard eyebrow="Account context" title={account.clients[0]?.name ?? "Client account"}>
           <dl className="quote-definition-list">
             <div>
               <dt>Email</dt>
@@ -278,10 +253,8 @@ export function ClientOverview({
               <dd>{account.clients[0]?.authorizedApprover ?? "Not specified"}</dd>
             </div>
           </dl>
-        </article>
-        <article className="catalog-panel">
-          <p className="eyebrow">Open records</p>
-          <h2>Commercial snapshots</h2>
+        </SectionCard>
+        <SectionCard eyebrow="Open records" title="Commercial snapshots">
           <div className="pricing-total-grid">
             <div>
               <span>Quotes</span>
@@ -297,26 +270,23 @@ export function ClientOverview({
             </div>
           </div>
           <div className="row-actions">
-            <Link className="button-secondary" href="/client/quotes">
+            <Link className="os-button os-button-secondary" href="/client/quotes">
               View quotes
             </Link>
-            <Link className="button-secondary" href="/client/invoices">
+            <Link className="os-button os-button-secondary" href="/client/invoices">
               View invoices
             </Link>
           </div>
-        </article>
+        </SectionCard>
       </section>
 
-      <section className="catalog-panel">
-        <div className="entity-card-heading">
-          <div>
-            <p className="eyebrow">My services</p>
-            <h2>Active monthly services</h2>
-          </div>
-          <span>{account.services.subscribedMonthly.length}</span>
-        </div>
+      <SectionCard
+        eyebrow="My services"
+        title="Active monthly services"
+        action={<StatusChip status="ACTIVE" label={`${account.services.subscribedMonthly.length} active`} />}
+      >
         {account.services.subscribedMonthly.length === 0 ? (
-          <div className="catalog-empty">No active subscription services are assigned yet.</div>
+          <EmptyState>No active subscription services are assigned yet.</EmptyState>
         ) : (
           <div className="entity-grid service-grid">
             {account.services.subscribedMonthly.map((service) => (
@@ -324,18 +294,15 @@ export function ClientOverview({
             ))}
           </div>
         )}
-      </section>
+      </SectionCard>
 
-      <section className="catalog-panel">
-        <div className="entity-card-heading">
-          <div>
-            <p className="eyebrow">Available services</p>
-            <h2>Service catalog</h2>
-          </div>
-          <span>{availableCount}</span>
-        </div>
+      <SectionCard
+        eyebrow="Available services"
+        title="Service catalog"
+        action={<StatusChip status="ACTIVE" label={`${availableCount} available`} />}
+      >
         {availableCount === 0 ? (
-          <div className="catalog-empty">No active catalog services are available yet.</div>
+          <EmptyState>No active catalog services are available yet.</EmptyState>
         ) : (
           <div className="entity-grid service-grid">
             {account.services.availableMonthly.map((service) => (
@@ -346,7 +313,7 @@ export function ClientOverview({
             ))}
           </div>
         )}
-      </section>
+      </SectionCard>
     </>
   );
 }

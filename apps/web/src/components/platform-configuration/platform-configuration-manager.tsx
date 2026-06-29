@@ -19,6 +19,7 @@ import type {
   WorkflowTemplateConfig,
 } from "../../lib/platform-configuration-types";
 import { CatalogFeedback, SectionHeader } from "../catalog/catalog-shared";
+import { ControlDeck, ControlTile, MetricCard, SectionCard, StatusChip } from "../premium-os";
 
 function pretty(value: unknown): string {
   if (typeof value === "string") return value;
@@ -75,9 +76,7 @@ function SettingCard({
     <article className="entity-card">
       <div className="entity-card-heading">
         <div>
-          <span className={`status-pill status-${setting.status.toLowerCase()}`}>
-            {setting.category}
-          </span>
+          <StatusChip status={setting.status} label={setting.category} />
           <h3>{setting.key}</h3>
         </div>
         <span>{currentLabel(setting.current?.version, setting.current?.status)}</span>
@@ -97,7 +96,7 @@ function SettingCard({
           <input name="reason" placeholder="Why is this changing?" />
         </label>
         <div className="form-actions">
-          <button type="submit" className="button-primary" disabled={setting.current?.masked}>
+          <button type="submit" className="os-button os-button-primary" disabled={setting.current?.masked}>
             Save revision
           </button>
         </div>
@@ -177,7 +176,7 @@ function NotificationCard({
           />
         </label>
         <div className="form-actions">
-          <button type="submit" className="button-primary">
+          <button type="submit" className="os-button os-button-primary">
             Save template revision
           </button>
         </div>
@@ -247,7 +246,7 @@ function PdfCard({
           <textarea name="technicalRule" rows={3} defaultValue={current?.technicalRule ?? ""} />
         </label>
         <div className="form-actions">
-          <button type="submit" className="button-primary">
+          <button type="submit" className="os-button os-button-primary">
             Save PDF settings revision
           </button>
         </div>
@@ -312,7 +311,7 @@ function WorkflowCard({
           />
         </label>
         <div className="form-actions">
-          <button type="submit" className="button-primary">
+          <button type="submit" className="os-button os-button-primary">
             Save draft revision
           </button>
         </div>
@@ -389,6 +388,7 @@ export function PlatformConfigurationManager({
       setting,
     ]);
   }
+  const activeSettings = snapshot.settings.filter((setting) => setting.status === "ACTIVE").length;
 
   return (
     <>
@@ -399,8 +399,25 @@ export function PlatformConfigurationManager({
       />
       <CatalogFeedback error={error} success={success} />
 
-      <section className="catalog-panel editor-panel">
-        <h2>Create setting</h2>
+      <section className="metric-grid" aria-label="Platform configuration summary">
+        <MetricCard label="Settings" value={snapshot.settings.length} detail={`${activeSettings} active`} accent />
+        <MetricCard label="Notifications" value={snapshot.notificationTemplates.length} detail="In-app templates" />
+        <MetricCard label="PDF templates" value={snapshot.pdfTemplates.length} detail="Document outputs" />
+        <MetricCard label="Workflows" value={snapshot.workflows.length} detail="Checklist foundations" />
+      </section>
+
+      <ControlDeck
+        title="Configuration map"
+        description="Jump across settings, notifications, document templates, localization, and workflow foundations."
+      >
+        <ControlTile href="#platform-settings" meta="01" title="Settings" description="Business, branding, and platform values with revision history." />
+        <ControlTile href="#notification-templates" meta="02" title="Notifications" description="In-app/outbox templates and recipient rules." />
+        <ControlTile href="#pdf-templates" meta="03" title="PDF templates" description="Quote and invoice output structure and content schemas." />
+        <ControlTile href="#localization-labels" meta="04" title="Localization" description="Arabic and English label revisions." />
+        <ControlTile href="#workflow-templates" meta="05" title="Workflows" description="Checklist and default-step configuration." />
+      </ControlDeck>
+
+      <SectionCard id="platform-settings" eyebrow="Settings registry" title="Create setting">
         <form className="catalog-form wide-form" onSubmit={createSetting}>
           <label>
             Key
@@ -425,30 +442,32 @@ export function PlatformConfigurationManager({
             <textarea name="value" rows={3} required />
           </label>
           <div className="form-actions">
-            <button type="submit" className="button-primary">
+            <button type="submit" className="os-button os-button-primary">
               Add setting
             </button>
           </div>
         </form>
-      </section>
+      </SectionCard>
 
       {[...settingsByCategory.entries()].map(([category, settings]) => (
-        <section className="catalog-panel" key={category}>
-          <h2>{category.replaceAll("_", " ")} settings</h2>
+        <SectionCard
+          key={category}
+          title={`${category.replaceAll("_", " ")} settings`}
+          description="Revision-safe configuration records. Masked values stay protected."
+        >
           <div className="entity-grid">
             {settings.map((setting) => (
               <SettingCard key={setting.id} setting={setting} onError={onError} onSaved={onSaved} />
             ))}
           </div>
-        </section>
+        </SectionCard>
       ))}
 
-      <section className="catalog-panel">
-        <h2>Notification templates</h2>
-        <p>
-          In-app/outbox templates only. External email, SMS, and WhatsApp sending remain
-          future-ready.
-        </p>
+      <SectionCard
+        id="notification-templates"
+        title="Notification templates"
+        description="In-app/outbox templates only. External email, SMS, and WhatsApp sending remain future-ready."
+      >
         <div className="entity-grid">
           {snapshot.notificationTemplates.map((template) => (
             <NotificationCard
@@ -459,23 +478,21 @@ export function PlatformConfigurationManager({
             />
           ))}
         </div>
-      </section>
+      </SectionCard>
 
-      <section className="catalog-panel">
-        <h2>PDF template settings</h2>
-        <p>
-          Quote and invoice PDFs keep using immutable quote/invoice snapshots as their source of
-          truth.
-        </p>
+      <SectionCard
+        id="pdf-templates"
+        title="PDF template settings"
+        description="Quote and invoice PDFs keep using immutable quote/invoice snapshots as their source of truth."
+      >
         <div className="entity-grid">
           {snapshot.pdfTemplates.map((template) => (
             <PdfCard key={template.id} template={template} onError={onError} onSaved={onSaved} />
           ))}
         </div>
-      </section>
+      </SectionCard>
 
-      <section className="catalog-panel editor-panel">
-        <h2>Localization labels</h2>
+      <SectionCard id="localization-labels" title="Localization labels" description="Publish focused Arabic and English label revisions.">
         <form className="catalog-form wide-form" onSubmit={publishLabel}>
           <label>
             Key
@@ -501,19 +518,18 @@ export function PlatformConfigurationManager({
             <textarea name="value" rows={2} required />
           </label>
           <div className="form-actions">
-            <button type="submit" className="button-primary">
+            <button type="submit" className="os-button os-button-primary">
               Publish label revision
             </button>
           </div>
         </form>
-      </section>
+      </SectionCard>
 
-      <section className="catalog-panel">
-        <h2>Workflow/checklist templates</h2>
-        <p>
-          Simple JSON checklist/default-step configuration only. Full visual Workflow Builder is
-          excluded.
-        </p>
+      <SectionCard
+        id="workflow-templates"
+        title="Workflow/checklist templates"
+        description="Simple JSON checklist/default-step configuration only. Full visual Workflow Builder is excluded."
+      >
         <div className="entity-grid">
           {snapshot.workflows.map((workflow) => (
             <WorkflowCard
@@ -524,7 +540,7 @@ export function PlatformConfigurationManager({
             />
           ))}
         </div>
-      </section>
+      </SectionCard>
     </>
   );
 }

@@ -144,7 +144,7 @@ export function ItemManager({
         title="Service items"
         description="Manage service-item revisions and the package inclusion matrix used by future service cards and requests."
         action={
-          <button className="button-primary" type="button" onClick={openCreate}>
+          <button className="os-button os-button-primary" type="button" onClick={openCreate}>
             Add service item
           </button>
         }
@@ -413,7 +413,7 @@ export function ItemManager({
                 />
                 <div className="entity-card-actions">
                   <button
-                    className="button-secondary"
+                    className="os-button os-button-secondary"
                     type="button"
                     disabled={item.status === "ARCHIVED"}
                     onClick={() => openEdit(item)}

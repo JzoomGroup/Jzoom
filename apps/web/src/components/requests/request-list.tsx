@@ -11,6 +11,13 @@ import { createServiceRequest, requestErrorMessage } from "../../lib/request-cli
 import { answersForTemplate, fetchActiveRequestTemplate } from "../../lib/request-templates-client";
 import type { RequestTemplateVersion, TemplateAnswerValue } from "../../lib/request-template-types";
 import type { RequestSummary } from "../../lib/request-types";
+import {
+  EmptyState,
+  PageHeader,
+  PriorityChip,
+  SectionCard,
+  StatusChip,
+} from "../premium-os";
 
 const priorities = ["LOW", "NORMAL", "HIGH", "URGENT"] as const;
 
@@ -119,26 +126,18 @@ export function RequestList({ requests }: { requests: RequestSummary[] }) {
 
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">Request lifecycle foundation</p>
-          <h1>Service requests</h1>
-          <p>
-            Create and triage service requests for onboarded active clients. Client users only see
-            their own request-safe view after account creation.
-          </p>
-        </div>
-        <Link className="button-primary" href="/requests/queues">
-          Open work queues
-        </Link>
-      </header>
+      <PageHeader
+        eyebrow="Request command center"
+        title="Service requests"
+        description="Create, triage, and operate service requests for onboarded active clients while preserving the current backend contract."
+        actions={[{ href: "/requests/queues", label: "Open work queues", variant: "primary" }]}
+      />
 
-      <section className="catalog-panel editor-panel">
-        <h2>Create request</h2>
-        <p>
-          Foundation form: paste the active client and subscription service IDs from the operating
-          records. Rich pickers can be layered on later without changing the backend contract.
-        </p>
+      <SectionCard
+        eyebrow="Intake"
+        title="Create request"
+        description="Paste the active client and subscription service IDs from operating records. Rich pickers can be layered on without changing the backend contract."
+      >
         <form className="catalog-form wide-form" onSubmit={submit}>
           <label>
             Client ID
@@ -170,7 +169,7 @@ export function RequestList({ requests }: { requests: RequestSummary[] }) {
           </label>
           <div className="form-actions">
             <button
-              className="button-secondary"
+              className="os-button os-button-secondary"
               type="button"
               disabled={loadingTemplate || !form.serviceItemRevisionId.trim()}
               onClick={() => void loadTemplate()}
@@ -259,15 +258,15 @@ export function RequestList({ requests }: { requests: RequestSummary[] }) {
             onChange={setTemplateAnswer}
           />
           {error && <p className="form-error form-span">{error}</p>}
-          <button className="button-primary" type="submit" disabled={creating}>
+          <button className="os-button os-button-primary" type="submit" disabled={creating}>
             {creating ? "Creating..." : "Create request"}
           </button>
         </form>
-      </section>
+      </SectionCard>
 
-      <section className="catalog-panel">
+      <SectionCard eyebrow="Live operations" title="Request list">
         {items.length === 0 ? (
-          <div className="catalog-empty">No service requests have been created yet.</div>
+          <EmptyState>No service requests have been created yet.</EmptyState>
         ) : (
           <div className="quote-list-grid">
             {items.map((request) => (
@@ -281,10 +280,8 @@ export function RequestList({ requests }: { requests: RequestSummary[] }) {
                     </p>
                   </div>
                   <div className="quote-list-meta">
-                    <span className={`status-badge status-${request.status.toLowerCase()}`}>
-                      {request.status}
-                    </span>
-                    <small>{request.priority}</small>
+                    <StatusChip status={request.status} />
+                    <PriorityChip priority={request.priority} />
                     <small>Due {displayDate(request.dueAt)}</small>
                   </div>
                 </Link>
@@ -292,7 +289,7 @@ export function RequestList({ requests }: { requests: RequestSummary[] }) {
             ))}
           </div>
         )}
-      </section>
+      </SectionCard>
     </>
   );
 }

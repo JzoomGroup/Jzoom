@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { InvoiceSummary } from "../../lib/invoice-types";
+import { EmptyState, MetricCard, PageHeader, SectionCard, StatusChip } from "../premium-os";
 import { InvoiceLifecycleActions } from "./invoice-lifecycle-actions";
 
 function sar(value: number): string {
@@ -15,25 +16,32 @@ function sar(value: number): string {
 
 export function InvoiceList({ invoices }: { invoices: InvoiceSummary[] }) {
   const [items, setItems] = useState(invoices);
+  const totalDue = items.reduce((sum, invoice) => sum + invoice.finalDueNoTax, 0);
 
   return (
     <>
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">Immutable commercial records</p>
-          <h1>Invoices</h1>
-          <p>
-            Invoices are created only from accepted quote snapshots. They do not recalculate live
-            catalog, pricing-rule, or quote data.
-          </p>
-        </div>
-        <Link className="button-secondary" href="/pricing/quotes">
-          Accepted quotes
-        </Link>
-      </header>
-      <section className="catalog-panel">
+      <PageHeader
+        eyebrow="Commercial operations"
+        title="Invoices"
+        description="Invoices are created only from accepted quote snapshots and never recalculate live catalog, pricing-rule, or quote data."
+        actions={[{ href: "/pricing/quotes", label: "Accepted quotes" }]}
+      />
+
+      <section className="os-bento-grid compact">
+        <MetricCard accent label="Invoices" value={items.length} detail="Snapshot records" />
+        <MetricCard label="Total due" value={sar(totalDue)} detail="Before tax" />
+        <MetricCard
+          label="Issued"
+          value={items.filter((invoice) => invoice.status === "ISSUED").length}
+          detail="Ready for downstream handling"
+        />
+      </section>
+
+      <SectionCard eyebrow="Invoice library" title="Commercial snapshots">
         {items.length === 0 ? (
-          <div className="catalog-empty">No invoices have been created yet.</div>
+          <EmptyState title="No invoices yet">
+            Accepted quote snapshots can be converted into invoices when the flow is ready.
+          </EmptyState>
         ) : (
           <div className="quote-list-grid">
             {items.map((invoice) => (
@@ -43,13 +51,11 @@ export function InvoiceList({ invoices }: { invoices: InvoiceSummary[] }) {
                     <small>{invoice.invoiceNumber}</small>
                     <h2>{invoice.title}</h2>
                     <p>
-                      {invoice.client.name} · Quote {invoice.quoteNumber}
+                      {invoice.client.name} - Quote {invoice.quoteNumber}
                     </p>
                   </div>
                   <div className="quote-list-meta">
-                    <span className={`status-badge status-${invoice.status.toLowerCase()}`}>
-                      {invoice.status}
-                    </span>
+                    <StatusChip status={invoice.status} label={invoice.status} />
                     <strong>{sar(invoice.finalDueNoTax)}</strong>
                     <small>{invoice.itemCount} items</small>
                   </div>
@@ -77,7 +83,7 @@ export function InvoiceList({ invoices }: { invoices: InvoiceSummary[] }) {
             ))}
           </div>
         )}
-      </section>
+      </SectionCard>
     </>
   );
 }
