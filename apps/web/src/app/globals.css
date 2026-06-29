@@ -3216,25 +3216,19 @@ body {
 }
 
 .premium-shell {
-  display: grid;
+  display: flex;
   min-height: 100vh;
-  grid-template-columns: 286px minmax(0, 1fr);
-  grid-template-areas: "sidebar workspace";
   background: #ffffff;
   color: var(--ink);
 }
 
-[dir="rtl"].premium-shell {
-  grid-template-columns: minmax(0, 1fr) 286px;
-  grid-template-areas: "workspace sidebar";
-}
-
 .premium-shell .premium-sidebar {
-  grid-area: sidebar;
+  flex: 0 0 286px;
 }
 
 .premium-shell .premium-workspace {
-  grid-area: workspace;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .premium-sidebar {
