@@ -27,9 +27,9 @@ export async function OneTimeCatalogPage({
       locale={user.preferredLocale}
     >
       {section === "categories" ? (
-        <OneTimeCategoryManager initialSnapshot={snapshot} />
+        <OneTimeCategoryManager initialSnapshot={snapshot} locale={user.preferredLocale} />
       ) : (
-        <OneTimeServiceManager initialSnapshot={snapshot} />
+        <OneTimeServiceManager initialSnapshot={snapshot} locale={user.preferredLocale} />
       )}
     </AdminShell>
   );

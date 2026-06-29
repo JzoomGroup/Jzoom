@@ -30,7 +30,14 @@ const statusTone: Record<string, ChipTone> = {
   INTERNAL_REVIEW: "accent",
   SHARED_WITH_CLIENT: "accent",
   ASSIGNED: "accent",
+  CRITICAL: "danger",
+  DISABLED: "danger",
+  HIGH: "warning",
   IN_PROGRESS: "accent",
+  INVITED: "warning",
+  LOCKED: "danger",
+  LOW: "neutral",
+  MEDIUM: "accent",
   WAITING_CLIENT: "warning",
   WAITING_SUPERVISOR: "warning",
   WAITING_MANAGEMENT: "warning",
@@ -121,7 +128,9 @@ export function BentoGrid({
   children: ReactNode;
   compact?: boolean;
 }) {
-  return <section className={compact ? "os-bento-grid compact" : "os-bento-grid"}>{children}</section>;
+  return (
+    <section className={compact ? "os-bento-grid compact" : "os-bento-grid"}>{children}</section>
+  );
 }
 
 export function MetricCard({

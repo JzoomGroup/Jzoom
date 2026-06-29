@@ -10,24 +10,27 @@ import { ServiceManager } from "./service-manager";
 
 export function CatalogWorkspace({
   initialSnapshot,
+  locale,
   section,
 }: {
   initialSnapshot: CatalogSnapshot;
+  locale?: string;
   section: CatalogSection;
 }) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
+  const localeProps = locale ? { locale } : {};
 
   if (section === "categories") {
-    return <CategoryManager snapshot={snapshot} setSnapshot={setSnapshot} />;
+    return <CategoryManager {...localeProps} snapshot={snapshot} setSnapshot={setSnapshot} />;
   }
   if (section === "services") {
-    return <ServiceManager snapshot={snapshot} setSnapshot={setSnapshot} />;
+    return <ServiceManager {...localeProps} snapshot={snapshot} setSnapshot={setSnapshot} />;
   }
   if (section === "items") {
-    return <ItemManager snapshot={snapshot} setSnapshot={setSnapshot} />;
+    return <ItemManager {...localeProps} snapshot={snapshot} setSnapshot={setSnapshot} />;
   }
   if (section === "levels") {
-    return <LevelManager snapshot={snapshot} setSnapshot={setSnapshot} />;
+    return <LevelManager {...localeProps} snapshot={snapshot} setSnapshot={setSnapshot} />;
   }
-  return <CatalogOverview snapshot={snapshot} />;
+  return <CatalogOverview {...localeProps} snapshot={snapshot} />;
 }

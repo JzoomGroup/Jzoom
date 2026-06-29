@@ -126,7 +126,7 @@ function invoiceSummary(status: Invoice["status"] = "DRAFT"): InvoiceSummary {
       name: fullInvoice.client.name,
       legalName: fullInvoice.client.legalName,
     },
-    title: "Acme accepted quote",
+    title: "Acme externally confirmed quote",
     itemCount: fullInvoice.items.length,
     totals: fullInvoice.totals,
     finalDueNoTax: fullInvoice.finalDueNoTax,
@@ -147,6 +147,10 @@ describe("Invoice foundation UI", () => {
       configurable: true,
       writable: true,
       value: jest.fn(),
+    });
+    Object.defineProperty(window, "confirm", {
+      configurable: true,
+      value: jest.fn(() => true),
     });
   });
 
@@ -185,6 +189,10 @@ describe("Invoice foundation UI", () => {
     fetchMock.mockImplementationOnce(() => jsonResponse(invoice("VOIDED")));
 
     render(<InvoiceList invoices={[invoiceSummary("ISSUED")]} />);
+
+    expect(screen.getByRole("button", { name: "All statuses" })).toBeInTheDocument();
+    expect(screen.getByText("Next step")).toBeInTheDocument();
+    expect(screen.getAllByText("Ready for internal handling").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Void invoice" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));

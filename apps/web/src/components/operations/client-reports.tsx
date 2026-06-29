@@ -6,7 +6,9 @@ import {
   clientDateTime,
   clientLocale,
   clientNumber,
+  documentStatusLabel,
   localizedFreeText,
+  outputStatusLabel,
   requestStatusLabel,
   type ClientDisplayLocale,
 } from "../client-portal/client-format";
@@ -70,7 +72,8 @@ const copy = {
     deliverables: "Deliverables",
     deliverablesAndDocuments: "Deliverables and documents",
     deliveryStatus: "Delivery status",
-    description: "Published monthly summaries for requests, deliverables, documents, and approved hours.",
+    description:
+      "Published monthly summaries for requests, deliverables, documents, and approved hours.",
     documentRequests: "Document requests",
     document: "Document",
     documents: "Documents",
@@ -197,7 +200,10 @@ export function ClientReportList({
               <article className="entity-card" key={report.id}>
                 <div className="entity-card-heading">
                   <div>
-                    <StatusChip status={report.status} label={reportStatusLabel(report.status, locale)} />
+                    <StatusChip
+                      status={report.status}
+                      label={reportStatusLabel(report.status, locale)}
+                    />
                     <h3>{localizedFreeText(report.title, locale, t.monthlyReport)}</h3>
                   </div>
                   <span>{report.period}</span>
@@ -221,11 +227,17 @@ export function ClientReportList({
                   <div>
                     <dt>{t.hours}</dt>
                     <dd>
-                      {hours(report.summary.hours?.approvedTotal ?? report.summary.hours?.total, locale)}
+                      {hours(
+                        report.summary.hours?.approvedTotal ?? report.summary.hours?.total,
+                        locale,
+                      )}
                     </dd>
                   </div>
                 </dl>
-                <Link className="os-button os-button-secondary" href={`/client/reports/${report.id}`}>
+                <Link
+                  className="os-button os-button-secondary"
+                  href={`/client/reports/${report.id}`}
+                >
                   {locale === "ar" ? "عرض التقرير" : "View report"}
                 </Link>
               </article>
@@ -303,7 +315,9 @@ export function ClientReportDetail({
               <>
                 {outputStatusItems.map(([status, count]) => (
                   <article key={`output-${status}`}>
-                    <strong>{t.output} - {requestStatusLabel(status, locale)}</strong>
+                    <strong>
+                      {t.output} - {outputStatusLabel(status, locale)}
+                    </strong>
                     <small>
                       {clientNumber(count, locale)} {t.item}
                     </small>
@@ -311,7 +325,9 @@ export function ClientReportDetail({
                 ))}
                 {documentStatusItems.map(([status, count]) => (
                   <article key={`document-${status}`}>
-                    <strong>{t.document} - {requestStatusLabel(status, locale)}</strong>
+                    <strong>
+                      {t.document} - {documentStatusLabel(status, locale)}
+                    </strong>
                     <small>
                       {clientNumber(count, locale)} {t.item}
                     </small>
@@ -345,7 +361,9 @@ export function ClientReportDetail({
                 </p>
                 <small>
                   {clientDateTime(activity.occurredAt, locale)}
-                  {activity.request?.status ? ` - ${requestStatusLabel(activity.request.status, locale)}` : ""}
+                  {activity.request?.status
+                    ? ` - ${requestStatusLabel(activity.request.status, locale)}`
+                    : ""}
                 </small>
                 {activity.request && (
                   <Link

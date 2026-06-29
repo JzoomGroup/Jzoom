@@ -83,7 +83,9 @@ export class InvoicesController {
   }
 
   @Post()
-  @ApiOperation({ summary: "Create an immutable invoice from an accepted quote snapshot" })
+  @ApiOperation({
+    summary: "Create an immutable invoice from an externally confirmed quote snapshot",
+  })
   create(@Body() input: CreateInvoiceDto, @Req() request: RequestWithId) {
     return this.invoices.create(input, request.auth!, metadata(request));
   }

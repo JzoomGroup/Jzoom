@@ -37,9 +37,9 @@ export async function QuotesPage({ quoteId }: { quoteId?: string }) {
       roles={user.roles}
     >
       {Array.isArray(content) ? (
-        <QuoteList quotes={content} />
+        <QuoteList locale={user.preferredLocale} quotes={content} />
       ) : (
-        <QuoteDetail initialQuote={content} />
+        <QuoteDetail initialQuote={content} locale={user.preferredLocale} />
       )}
     </QuoteShell>
   );

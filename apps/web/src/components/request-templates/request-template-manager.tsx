@@ -231,6 +231,398 @@ function defaultFile(index: number): EditableFile {
   };
 }
 
+type TemplatePresetId =
+  | "general"
+  | "hr_document"
+  | "policy"
+  | "finance"
+  | "reporting"
+  | "digital"
+  | "legal";
+
+type TemplatePresetDefinition = {
+  description: string;
+  id: TemplatePresetId;
+  title: string;
+};
+
+const templatePresetDefinitions: TemplatePresetDefinition[] = [
+  {
+    id: "general",
+    title: "نموذج عام مرن",
+    description: "ملخص الطلب، السياق، الأولوية، الموعد، ومعيار النجاح.",
+  },
+  {
+    id: "hr_document",
+    title: "مستندات الموارد البشرية",
+    description: "بيانات موظف، غرض المستند، جهة الاستخدام، ومرفقات داعمة.",
+  },
+  {
+    id: "policy",
+    title: "سياسات وإجراءات",
+    description: "نطاق السياسة، الوضع الحالي، صاحب الاعتماد، وملاحظات التطبيق.",
+  },
+  {
+    id: "finance",
+    title: "مالية وضريبة",
+    description: "الفترة المالية، المبلغ، علاقة الضريبة، ومستندات الإثبات.",
+  },
+  {
+    id: "reporting",
+    title: "تقارير وتحليلات",
+    description: "فترة التقرير، الجمهور، المؤشرات المطلوبة، وصيغة العرض.",
+  },
+  {
+    id: "digital",
+    title: "تقني ومنصات",
+    description: "النظام، صلاحيات الدخول، القيود، والنتيجة التقنية المستهدفة.",
+  },
+  {
+    id: "legal",
+    title: "عقود ومستندات قانونية",
+    description: "الطرف الآخر، نوع المستند، نقاط الخطر، والمرفقات القانونية.",
+  },
+];
+
+const defaultAcceptedFileTypes =
+  '["application/pdf","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document","application/vnd.ms-excel","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","image/png","image/jpeg"]';
+
+function presetOption(
+  value: string,
+  labelAr: string,
+  labelEn: string,
+  sortOrder: number,
+): EditableOption {
+  return { active: true, value, labelAr, labelEn, sortOrder };
+}
+
+function presetField(
+  input: Partial<EditableField> & Pick<EditableField, "code" | "labelAr" | "labelEn">,
+): EditableField {
+  return {
+    clientVisible: true,
+    defaultValue: "",
+    fieldType: "SHORT_TEXT",
+    helpTextAr: "",
+    helpTextEn: "",
+    libraryFieldCode: "",
+    options: [],
+    required: false,
+    sectionCode: "execution_details",
+    sortOrder: 1,
+    systemKey: "",
+    validation: "",
+    ...input,
+  };
+}
+
+function presetDocument(input: Partial<EditableDocument> = {}): EditableDocument {
+  return {
+    acceptedFileTypes: defaultAcceptedFileTypes,
+    code: "supporting_documents",
+    descriptionAr: "أرفق أي ملفات أو صور أو جداول تساعد فريق جزوم على تنفيذ الطلب.",
+    descriptionEn: "Attach any files, screenshots, or sheets that help Jzoom complete the work.",
+    labelAr: "المستندات الداعمة",
+    labelEn: "Supporting documents",
+    required: false,
+    sortOrder: 1,
+    uploadRequired: false,
+    ...input,
+  };
+}
+
+function classifyPreset(item: RequestTemplateServiceItem | null): TemplatePresetId {
+  const text = [
+    item?.code,
+    item?.latestRevision?.nameAr,
+    item?.latestRevision?.nameEn,
+    item?.latestRevision?.expectedOutput,
+    item?.monthlyService.code,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  if (/(employee|letter|hr|موظف|خطاب|تعريف|موارد|راتب)/i.test(text)) return "hr_document";
+  if (/(policy|procedure|sop|سياسة|إجراء|لائحة)/i.test(text)) return "policy";
+  if (/(finance|account|invoice|vat|tax|مالية|فاتورة|ضريبة)/i.test(text)) return "finance";
+  if (/(report|dashboard|analytics|تقرير|تحليل|مؤشر|لوحة)/i.test(text)) return "reporting";
+  if (/(digital|system|integration|website|app|data|منصة|نظام|تكامل|بيانات)/i.test(text)) {
+    return "digital";
+  }
+  if (/(legal|contract|agreement|عقد|اتفاقية|قانون)/i.test(text)) return "legal";
+  return "general";
+}
+
+function buildPresetConfig(
+  presetId: TemplatePresetId,
+  item: RequestTemplateServiceItem | null,
+): EditableTemplateConfig {
+  const requiresFile = item?.latestRevision?.requiresFile ?? false;
+  const commonFields: EditableField[] = [
+    presetField({
+      code: "request_summary",
+      fieldType: "LONG_TEXT",
+      labelAr: "ملخص المطلوب",
+      labelEn: "Request summary",
+      helpTextAr: "اكتب المطلوب والنتيجة المتوقعة بلغة واضحة.",
+      helpTextEn: "Describe the needed work and expected result clearly.",
+      required: true,
+      sectionCode: "request_context",
+      sortOrder: 1,
+      systemKey: "request_summary",
+    }),
+    presetField({
+      code: "business_context",
+      fieldType: "LONG_TEXT",
+      labelAr: "سياق العمل",
+      labelEn: "Business context",
+      helpTextAr: "اذكر القسم أو العملية أو الحالة التجارية المرتبطة بالطلب.",
+      helpTextEn: "Mention the business situation, department, or process behind this request.",
+      sectionCode: "request_context",
+      sortOrder: 2,
+      systemKey: "business_context",
+    }),
+    presetField({
+      code: "urgency",
+      fieldType: "DROPDOWN",
+      labelAr: "الأولوية",
+      labelEn: "Urgency",
+      required: true,
+      sectionCode: "execution_details",
+      sortOrder: 20,
+      systemKey: "urgency",
+      options: [
+        presetOption("normal", "عادي", "Normal", 1),
+        presetOption("high", "مرتفع", "High", 2),
+        presetOption("urgent", "عاجل", "Urgent", 3),
+      ],
+    }),
+    presetField({
+      code: "preferred_deadline",
+      fieldType: "DATE",
+      labelAr: "الموعد المفضل للتسليم",
+      labelEn: "Preferred deadline",
+      sectionCode: "execution_details",
+      sortOrder: 21,
+      systemKey: "preferred_deadline",
+    }),
+  ];
+  const specificFields: Record<TemplatePresetId, EditableField[]> = {
+    general: [
+      presetField({
+        code: "stakeholders",
+        labelAr: "الأطراف المعنية",
+        labelEn: "Stakeholders",
+        sortOrder: 3,
+      }),
+      presetField({
+        code: "success_criteria",
+        fieldType: "LONG_TEXT",
+        labelAr: "معيار نجاح الطلب",
+        labelEn: "Success criteria",
+        sortOrder: 4,
+      }),
+    ],
+    hr_document: [
+      presetField({
+        code: "employee_name",
+        labelAr: "اسم الموظف",
+        labelEn: "Employee name",
+        required: true,
+        sortOrder: 3,
+        systemKey: "employee_name",
+      }),
+      presetField({
+        code: "employee_identifier",
+        labelAr: "رقم الموظف أو الهوية",
+        labelEn: "Employee ID",
+        sortOrder: 4,
+        systemKey: "employee_identifier",
+      }),
+      presetField({
+        code: "document_purpose",
+        fieldType: "DROPDOWN",
+        labelAr: "الغرض من المستند",
+        labelEn: "Document purpose",
+        required: true,
+        sortOrder: 5,
+        options: [
+          presetOption("bank", "بنك", "Bank", 1),
+          presetOption("embassy", "سفارة", "Embassy", 2),
+          presetOption("government", "جهة حكومية", "Government", 3),
+          presetOption("other", "أخرى", "Other", 4),
+        ],
+      }),
+    ],
+    policy: [
+      presetField({
+        code: "policy_scope",
+        fieldType: "LONG_TEXT",
+        labelAr: "نطاق السياسة أو الإجراء",
+        labelEn: "Policy or procedure scope",
+        required: true,
+        sortOrder: 3,
+      }),
+      presetField({
+        code: "current_process",
+        fieldType: "LONG_TEXT",
+        labelAr: "الوضع الحالي أو الإجراء الحالي",
+        labelEn: "Current process",
+        sortOrder: 4,
+      }),
+      presetField({
+        code: "approval_owner",
+        labelAr: "صاحب الاعتماد",
+        labelEn: "Approval owner",
+        sortOrder: 5,
+      }),
+    ],
+    finance: [
+      presetField({
+        code: "period",
+        labelAr: "الفترة المالية",
+        labelEn: "Financial period",
+        required: true,
+        sortOrder: 3,
+      }),
+      presetField({
+        code: "amount",
+        fieldType: "AMOUNT",
+        labelAr: "المبلغ إن وجد",
+        labelEn: "Amount if applicable",
+        sortOrder: 4,
+      }),
+      presetField({
+        code: "tax_related",
+        fieldType: "CHECKBOX",
+        labelAr: "مرتبط بالضريبة",
+        labelEn: "Tax related",
+        sortOrder: 5,
+      }),
+    ],
+    reporting: [
+      presetField({
+        code: "report_period",
+        labelAr: "فترة التقرير",
+        labelEn: "Report period",
+        required: true,
+        sortOrder: 3,
+      }),
+      presetField({
+        code: "audience",
+        fieldType: "DROPDOWN",
+        labelAr: "الجمهور المستهدف",
+        labelEn: "Target audience",
+        required: true,
+        sortOrder: 4,
+        options: [
+          presetOption("management", "الإدارة", "Management", 1),
+          presetOption("team", "فريق العمل", "Team", 2),
+          presetOption("client", "العميل", "Client", 3),
+        ],
+      }),
+      presetField({
+        code: "metrics_needed",
+        fieldType: "LONG_TEXT",
+        labelAr: "المؤشرات المطلوبة",
+        labelEn: "Required metrics",
+        required: true,
+        sortOrder: 5,
+      }),
+    ],
+    digital: [
+      presetField({
+        code: "platform_or_system",
+        labelAr: "النظام أو المنصة",
+        labelEn: "Platform or system",
+        required: true,
+        sortOrder: 3,
+      }),
+      presetField({
+        code: "access_context",
+        fieldType: "LONG_TEXT",
+        labelAr: "صلاحيات الدخول أو القيود",
+        labelEn: "Access context or constraints",
+        sortOrder: 4,
+      }),
+      presetField({
+        code: "target_outcome",
+        fieldType: "LONG_TEXT",
+        labelAr: "النتيجة التقنية المطلوبة",
+        labelEn: "Target technical outcome",
+        required: true,
+        sortOrder: 5,
+      }),
+    ],
+    legal: [
+      presetField({
+        code: "counterparty",
+        labelAr: "الطرف الآخر",
+        labelEn: "Counterparty",
+        required: true,
+        sortOrder: 3,
+      }),
+      presetField({
+        code: "document_type",
+        fieldType: "DROPDOWN",
+        labelAr: "نوع المستند",
+        labelEn: "Document type",
+        required: true,
+        sortOrder: 4,
+        options: [
+          presetOption("contract", "عقد", "Contract", 1),
+          presetOption("agreement", "اتفاقية", "Agreement", 2),
+          presetOption("letter", "خطاب", "Letter", 3),
+          presetOption("other", "أخرى", "Other", 4),
+        ],
+      }),
+      presetField({
+        code: "risk_notes",
+        fieldType: "LONG_TEXT",
+        labelAr: "نقاط الخطر أو الملاحظات",
+        labelEn: "Risk notes",
+        sortOrder: 5,
+      }),
+    ],
+  };
+  return {
+    status: "DRAFT",
+    instructionsAr:
+      "أكمل الحقول المطلوبة وارفع المستندات الداعمة عند الحاجة حتى يتمكن فريق جزوم من تنفيذ الطلب بدقة.",
+    instructionsEn:
+      "Complete the required fields and upload supporting documents when needed so Jzoom can complete the request accurately.",
+    sections: [
+      {
+        active: true,
+        code: "request_context",
+        descriptionAr: "المعلومات الأساسية التي تشرح المطلوب وسياق العمل.",
+        descriptionEn: "Core information that explains the need and business context.",
+        sortOrder: 1,
+        titleAr: "سياق الطلب",
+        titleEn: "Request context",
+      },
+      {
+        active: true,
+        code: "execution_details",
+        descriptionAr: "تفاصيل التنفيذ والموعد والأولوية والمرفقات.",
+        descriptionEn: "Execution details, deadline, urgency, and attachments.",
+        sortOrder: 2,
+        titleAr: "تفاصيل التنفيذ",
+        titleEn: "Execution details",
+      },
+    ],
+    fields: [...commonFields, ...specificFields[presetId]],
+    downloadableFiles: [],
+    documentChecklist: [
+      presetDocument({
+        required: requiresFile,
+        uploadRequired: requiresFile,
+      }),
+    ],
+    reason: `Applied ${presetId} preset from Admin form builder`,
+  };
+}
+
 function versionToEditableConfig(version: RequestTemplateVersion | null): EditableTemplateConfig {
   if (!version) {
     return {
@@ -1432,6 +1824,14 @@ export function RequestTemplateManager({
     }
   }
 
+  function applyEditorPreset(presetId: TemplatePresetId) {
+    setEditor(buildPresetConfig(presetId, selected));
+    setSuccess(`Preset applied in the editor. Review it, then save as Draft or Active.`);
+    setError(undefined);
+  }
+
+  const recommendedPreset = classifyPreset(selected);
+
   return (
     <>
       <SectionHeader
@@ -1442,14 +1842,34 @@ export function RequestTemplateManager({
       <CatalogFeedback error={error} success={success} />
 
       <section className="metric-grid" aria-label="Request template summary">
-        <MetricCard label="Service items" value={snapshot.serviceItems.length} detail="Template-capable items" />
-        <MetricCard label="Active templates" value={templateCounts.active} detail="Client-facing forms" accent />
-        <MetricCard label="Suggested templates" value={templateCounts.suggested} detail="Ready to apply" />
-        <MetricCard label="Missing active" value={templateCounts.missing} detail="Needs configuration" />
+        <MetricCard
+          label="Service items"
+          value={snapshot.serviceItems.length}
+          detail="Template-capable items"
+        />
+        <MetricCard
+          label="Active templates"
+          value={templateCounts.active}
+          detail="Client-facing forms"
+          accent
+        />
+        <MetricCard
+          label="Suggested templates"
+          value={templateCounts.suggested}
+          detail="Ready to apply"
+        />
+        <MetricCard
+          label="Missing active"
+          value={templateCounts.missing}
+          detail="Needs configuration"
+        />
       </section>
 
       <section className="quote-summary-grid">
-        <SectionCard title="Service item template status" description="Select a service item to inspect, apply, archive, or revise its request form.">
+        <SectionCard
+          title="Service item template status"
+          description="Select a service item to inspect, apply, archive, or revise its request form."
+        >
           <div className="activity-list">
             {snapshot.serviceItems.map((item) => (
               <button
@@ -1521,6 +1941,36 @@ export function RequestTemplateManager({
           description="Add sections, fields, options, and document requirements. Save as Draft for review or Active to publish it immediately for client request creation."
         >
           <form className="template-save-form" onSubmit={submitRevision}>
+            <section className="template-preset-studio">
+              <div className="entity-card-heading">
+                <div>
+                  <p className="eyebrow">Smart defaults</p>
+                  <h3>Start from a practical service-item form</h3>
+                </div>
+                <span className="template-recommended-pill">
+                  Recommended:{" "}
+                  {templatePresetDefinitions.find((preset) => preset.id === recommendedPreset)
+                    ?.title ?? "نموذج عام مرن"}
+                </span>
+              </div>
+              <div className="template-preset-grid">
+                {templatePresetDefinitions.map((preset) => (
+                  <button
+                    className={
+                      preset.id === recommendedPreset
+                        ? "template-preset-card recommended"
+                        : "template-preset-card"
+                    }
+                    key={preset.id}
+                    type="button"
+                    onClick={() => applyEditorPreset(preset.id)}
+                  >
+                    <strong>{preset.title}</strong>
+                    <small>{preset.description}</small>
+                  </button>
+                ))}
+              </div>
+            </section>
             <TemplateBuilder
               config={editor}
               fieldLibrary={snapshot.fieldLibrary}

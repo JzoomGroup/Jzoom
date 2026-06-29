@@ -32,7 +32,7 @@ export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
       "Scoped client pricing drafts and backend-trusted calculation previews",
     )
     .addTag("quotes", "Immutable quote snapshots and scoped quote lifecycle")
-    .addTag("invoices", "Immutable invoices created from accepted quote snapshots")
+    .addTag("invoices", "Immutable invoices created from externally confirmed quote snapshots")
     .addTag("client-portal", "Client-only quote and invoice views backed by immutable snapshots")
     .addTag(
       "requests",

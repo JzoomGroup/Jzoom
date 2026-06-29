@@ -30,7 +30,9 @@ export class ClientPortalController {
   }
 
   @Get("quotes")
-  @ApiOperation({ summary: "List issued and accepted quotes scoped to the client account" })
+  @ApiOperation({
+    summary: "List issued and externally confirmed quotes scoped to the client account",
+  })
   quotes(@Req() request: RequestWithId) {
     return this.portal.listQuotes(request.auth!);
   }

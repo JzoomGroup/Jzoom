@@ -29,6 +29,27 @@ function snapshot(): PlatformConfigurationSnapshot {
         revisionCount: 1,
         updatedAt: "2026-06-23T00:00:00.000Z",
       },
+      {
+        id: "setting-2",
+        key: "pricing.tax.default_pct",
+        category: "pricing",
+        valueType: "NUMBER",
+        isSensitive: false,
+        status: "ACTIVE",
+        sortOrder: 1,
+        current: {
+          id: "setting-revision-2",
+          version: 1,
+          status: "ACTIVE",
+          value: 15,
+          masked: false,
+          reason: "Default VAT",
+          effectiveFrom: "2026-06-23T00:00:00.000Z",
+          effectiveTo: null,
+        },
+        revisionCount: 1,
+        updatedAt: "2026-06-23T00:00:00.000Z",
+      },
     ],
     notificationTemplates: [
       {
@@ -124,12 +145,19 @@ describe("Admin platform configuration UI", () => {
     expect(screen.getByRole("heading", { name: "Platform configuration" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Create setting" })).toBeInTheDocument();
     expect(screen.getByText("platform.name")).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("heading", { name: "Operating configuration readiness" }).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: "Pricing defaults" })).toBeInTheDocument();
+    expect(screen.getAllByText("pricing.tax.default_pct").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Configured").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Needs setting").length).toBeGreaterThan(0);
     expect(screen.getByRole("heading", { name: "Notification templates" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "PDF template settings" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Localization labels" })).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Workflow/checklist templates" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/immutable quote\/invoice snapshots/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/immutable quote\/invoice snapshots/i).length).toBeGreaterThan(0);
   });
 });

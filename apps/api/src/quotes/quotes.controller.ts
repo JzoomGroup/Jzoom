@@ -95,7 +95,10 @@ export class QuotesController {
 
   @Post(":id/accept")
   @HttpCode(200)
-  @ApiOperation({ summary: "Accept an issued quote without mutating its immutable snapshot" })
+  @ApiOperation({
+    summary:
+      "Confirm external approval and payment for an issued quote without mutating its immutable snapshot",
+  })
   accept(
     @Param("id") id: string,
     @Body() input: QuoteLifecycleActionDto | undefined,

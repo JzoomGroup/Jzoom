@@ -55,7 +55,7 @@ function numericValue(record: Record<string, unknown>, key: string): number {
   if (!Number.isFinite(value)) {
     throw new ConflictException({
       code: "INVALID_QUOTE_TOTALS_SNAPSHOT",
-      message: `The accepted quote snapshot is missing numeric ${key}`,
+      message: `The externally confirmed quote snapshot is missing numeric ${key}`,
     });
   }
   return value;
@@ -150,13 +150,13 @@ export class InvoicesService {
     if (!quote.clientId) {
       throw new ConflictException({
         code: "QUOTE_CLIENT_REQUIRED_FOR_INVOICE",
-        message: "Accepted quotes must have a client before an invoice can be created",
+        message: "Externally confirmed quotes must have a client before an invoice can be created",
       });
     }
     if (quote.items.length === 0) {
       throw new ConflictException({
         code: "QUOTE_ITEMS_REQUIRED_FOR_INVOICE",
-        message: "Accepted quotes must include at least one snapshotted line item",
+        message: "Externally confirmed quotes must include at least one snapshotted line item",
       });
     }
 
@@ -174,7 +174,7 @@ export class InvoicesService {
     const totals = objectValue(
       quote.totalsSnapshot,
       "INVALID_QUOTE_TOTALS_SNAPSHOT",
-      "The accepted quote totals snapshot is invalid",
+      "The externally confirmed quote totals snapshot is invalid",
     );
     const quoteSnapshot = this.quoteSnapshot(quote);
     const invoiceNumber = this.invoiceNumber();
@@ -364,7 +364,7 @@ export class InvoicesService {
     if (quote.status !== "ACCEPTED") {
       throw new ConflictException({
         code: "ACCEPTED_QUOTE_REQUIRED_FOR_INVOICE",
-        message: "Invoices can only be created from accepted quotes",
+        message: "Invoices can only be created from externally confirmed quotes",
       });
     }
     return quote;

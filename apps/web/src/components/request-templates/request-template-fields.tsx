@@ -10,6 +10,35 @@ import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
 
 export type TemplateAnswerState = Record<string, TemplateAnswerValue | undefined>;
 
+const copy = {
+  ar: {
+    attachmentPlaceholder: "مرجع بيانات المرفق أو الملف",
+    choose: "اختر...",
+    documentChecklist: "قائمة المستندات المطلوبة",
+    fieldRequired: "مطلوب",
+    optionalUpload: "رفع اختياري",
+    referenceFile: "ملف مرجعي",
+    returnUploadRequired: "يتطلب رفع النسخة المعادة",
+    templateFiles: "ملفات النموذج القابلة للتنزيل",
+    templateForm: "نموذج الطلب",
+    uploadRequired: "الرفع مطلوب",
+    yes: "نعم",
+  },
+  en: {
+    attachmentPlaceholder: "Attachment/file metadata reference",
+    choose: "Select...",
+    documentChecklist: "Required document checklist",
+    fieldRequired: "Required",
+    optionalUpload: "Optional upload",
+    referenceFile: "Reference file",
+    returnUploadRequired: "Return upload required",
+    templateFiles: "Downloadable template files",
+    templateForm: "Template form",
+    uploadRequired: "Upload required",
+    yes: "Yes",
+  },
+} as const;
+
 function fieldValue(values: TemplateAnswerState, field: RequestTemplateField) {
   return values[field.code] ?? "";
 }
@@ -36,6 +65,7 @@ function TemplateFieldControl({
   onChange: (code: string, value: TemplateAnswerValue) => void;
   values: TemplateAnswerState;
 }) {
+  const t = copy[locale];
   const value = fieldValue(values, field);
   const common = {
     required: field.required,
@@ -50,7 +80,7 @@ function TemplateFieldControl({
   if (field.fieldType === "DROPDOWN") {
     return (
       <select {...common}>
-        <option value="">{locale === "ar" ? "اختر..." : "Select..."}</option>
+        <option value="">{t.choose}</option>
         {field.options.map((option) => (
           <option key={option.value} value={option.value}>
             {locale === "ar" ? option.labelAr || option.labelEn : option.labelEn || option.labelAr}
@@ -99,7 +129,7 @@ function TemplateFieldControl({
           checked={value === true}
           onChange={(event) => onChange(field.code, event.target.checked)}
         />
-        {locale === "ar" ? "نعم" : "Yes"}
+        {t.yes}
       </label>
     );
   }
@@ -119,13 +149,7 @@ function TemplateFieldControl({
     <input
       {...common}
       type={inputType}
-      placeholder={
-        field.fieldType === "FILE"
-          ? locale === "ar"
-            ? "مرجع بيانات المرفق أو الملف"
-            : "Attachment/file metadata reference"
-          : undefined
-      }
+      placeholder={field.fieldType === "FILE" ? t.attachmentPlaceholder : undefined}
     />
   );
 }
@@ -145,11 +169,17 @@ export function RequestTemplateFields({
     return null;
   }
   const locale = normalizeLocale(localeInput);
+  const t = copy[locale];
   const sections = template.sections.length > 0 ? template.sections : [];
   const unsectionedFields = template.fields.filter((field) => !field.sectionCode);
   return (
-    <section className="catalog-panel form-span">
-      <h3>{locale === "ar" ? "نموذج الطلب" : "Template form"}</h3>
+    <section className="catalog-panel form-span request-template-form-card">
+      <div className="request-template-form-heading">
+        <div>
+          <p className="eyebrow">{t.templateForm}</p>
+          <h3>{t.templateForm}</h3>
+        </div>
+      </div>
       {(template.instructionsEn || template.instructionsAr) && (
         <p>
           {locale === "ar"
@@ -161,9 +191,15 @@ export function RequestTemplateFields({
         const fields = template.fields.filter((field) => field.sectionCode === section.code);
         if (fields.length === 0) return null;
         return (
-          <fieldset className="template-fieldset" key={section.code}>
-            <legend>{locale === "ar" ? section.titleAr || section.titleEn : section.titleEn || section.titleAr}</legend>
-            {(locale === "ar" ? section.descriptionAr || section.descriptionEn : section.descriptionEn || section.descriptionAr) && (
+          <fieldset className="template-fieldset request-template-section-card" key={section.code}>
+            <legend>
+              {locale === "ar"
+                ? section.titleAr || section.titleEn
+                : section.titleEn || section.titleAr}
+            </legend>
+            {(locale === "ar"
+              ? section.descriptionAr || section.descriptionEn
+              : section.descriptionEn || section.descriptionAr) && (
               <p>
                 {locale === "ar"
                   ? section.descriptionAr || section.descriptionEn
@@ -172,11 +208,22 @@ export function RequestTemplateFields({
             )}
             <div className="catalog-form wide-form">
               {fields.map((field) => (
-                <label key={field.code}>
-                  {locale === "ar" ? field.labelAr || field.labelEn : field.labelEn || field.labelAr}
-                  {field.required ? " *" : ""}
-                  <TemplateFieldControl field={field} locale={locale} values={values} onChange={onChange} />
-                  {(locale === "ar" ? field.helpTextAr || field.helpTextEn : field.helpTextEn || field.helpTextAr) && (
+                <label className="template-answer-field" key={field.code}>
+                  <span>
+                    {locale === "ar"
+                      ? field.labelAr || field.labelEn
+                      : field.labelEn || field.labelAr}
+                    {field.required ? <em>{t.fieldRequired}</em> : null}
+                  </span>
+                  <TemplateFieldControl
+                    field={field}
+                    locale={locale}
+                    values={values}
+                    onChange={onChange}
+                  />
+                  {(locale === "ar"
+                    ? field.helpTextAr || field.helpTextEn
+                    : field.helpTextEn || field.helpTextAr) && (
                     <small>
                       {locale === "ar"
                         ? field.helpTextAr || field.helpTextEn
@@ -192,11 +239,20 @@ export function RequestTemplateFields({
       {unsectionedFields.length > 0 && (
         <div className="catalog-form wide-form">
           {unsectionedFields.map((field) => (
-            <label key={field.code}>
-              {locale === "ar" ? field.labelAr || field.labelEn : field.labelEn || field.labelAr}
-              {field.required ? " *" : ""}
-              <TemplateFieldControl field={field} locale={locale} values={values} onChange={onChange} />
-              {(locale === "ar" ? field.helpTextAr || field.helpTextEn : field.helpTextEn || field.helpTextAr) && (
+            <label className="template-answer-field" key={field.code}>
+              <span>
+                {locale === "ar" ? field.labelAr || field.labelEn : field.labelEn || field.labelAr}
+                {field.required ? <em>{t.fieldRequired}</em> : null}
+              </span>
+              <TemplateFieldControl
+                field={field}
+                locale={locale}
+                values={values}
+                onChange={onChange}
+              />
+              {(locale === "ar"
+                ? field.helpTextAr || field.helpTextEn
+                : field.helpTextEn || field.helpTextAr) && (
                 <small>
                   {locale === "ar"
                     ? field.helpTextAr || field.helpTextEn
@@ -208,21 +264,17 @@ export function RequestTemplateFields({
         </div>
       )}
       {template.downloadableFiles.length > 0 && (
-        <div className="activity-list">
-          <strong>{locale === "ar" ? "ملفات النموذج القابلة للتنزيل" : "Downloadable template files"}</strong>
+        <div className="activity-list request-template-resource-list">
+          <strong>{t.templateFiles}</strong>
           {template.downloadableFiles.map((file) => (
             <article key={file.code}>
-              <strong>{locale === "ar" ? file.titleAr || file.titleEn : file.titleEn || file.titleAr}</strong>
-              <small>
-                {file.returnUploadRequired
-                  ? locale === "ar"
-                    ? "يتطلب رفع النسخة المعادة"
-                    : "Return upload required"
-                  : locale === "ar"
-                    ? "ملف مرجعي"
-                    : "Reference file"}
-              </small>
-              {(locale === "ar" ? file.descriptionAr || file.descriptionEn : file.descriptionEn || file.descriptionAr) && (
+              <strong>
+                {locale === "ar" ? file.titleAr || file.titleEn : file.titleEn || file.titleAr}
+              </strong>
+              <small>{file.returnUploadRequired ? t.returnUploadRequired : t.referenceFile}</small>
+              {(locale === "ar"
+                ? file.descriptionAr || file.descriptionEn
+                : file.descriptionEn || file.descriptionAr) && (
                 <p>
                   {locale === "ar"
                     ? file.descriptionAr || file.descriptionEn
@@ -234,21 +286,19 @@ export function RequestTemplateFields({
         </div>
       )}
       {template.documentChecklist.length > 0 && (
-        <div className="activity-list">
-          <strong>{locale === "ar" ? "قائمة المستندات المطلوبة" : "Required document checklist"}</strong>
+        <div className="activity-list request-template-resource-list">
+          <strong>{t.documentChecklist}</strong>
           {template.documentChecklist.map((document) => (
             <article key={document.code}>
-              <strong>{locale === "ar" ? document.labelAr || document.labelEn : document.labelEn || document.labelAr}</strong>
-              <small>
-                {document.uploadRequired
-                  ? locale === "ar"
-                    ? "الرفع مطلوب"
-                    : "Upload required"
-                  : locale === "ar"
-                    ? "رفع اختياري"
-                    : "Optional upload"}
-              </small>
-              {(locale === "ar" ? document.descriptionAr || document.descriptionEn : document.descriptionEn || document.descriptionAr) && (
+              <strong>
+                {locale === "ar"
+                  ? document.labelAr || document.labelEn
+                  : document.labelEn || document.labelAr}
+              </strong>
+              <small>{document.uploadRequired ? t.uploadRequired : t.optionalUpload}</small>
+              {(locale === "ar"
+                ? document.descriptionAr || document.descriptionEn
+                : document.descriptionEn || document.descriptionAr) && (
                 <p>
                   {locale === "ar"
                     ? document.descriptionAr || document.descriptionEn

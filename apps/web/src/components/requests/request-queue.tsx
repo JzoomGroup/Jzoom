@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { type FormEvent, useState } from "react";
 import { refreshRequestQueue, requestErrorMessage } from "../../lib/request-client";
-import type { RequestQueueResponse } from "../../lib/request-types";
+import type { RequestQueueResponse, RequestStatus, RequestSummary } from "../../lib/request-types";
+import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
 import {
   BentoGrid,
   EmptyState,
@@ -35,11 +36,134 @@ const statuses = [
 
 const priorities = ["", "LOW", "NORMAL", "HIGH", "URGENT"] as const;
 
-function displayDate(value: string | null): string {
-  return value ? new Date(value).toLocaleDateString("en-SA") : "Not set";
+const copy = {
+  ar: {
+    accountManager: "مدير الحساب",
+    activeQueue: "الطابور الحالي",
+    allRequests: "كل الطلبات",
+    anyPriority: "كل الأولويات",
+    anyStatus: "كل الحالات",
+    applyFilters: "تطبيق الفلاتر",
+    assigneeId: "معرف المسؤول",
+    clientFollowUp: "متابعة العميل",
+    clientId: "معرف العميل",
+    due: "الموعد",
+    dueBefore: "مستحق قبل",
+    emptyQueue: "لا توجد طلبات مطابقة لهذا الطابور.",
+    executionQueue: "طابور التنفيذ",
+    internalExecution: "التنفيذ الداخلي",
+    needsAttention: "تحتاج متابعة",
+    notSet: "غير محدد",
+    open: "مفتوحة",
+    overdue: "متأخرة",
+    priority: "الأولوية",
+    queueFilters: "فلاتر الطابور",
+    queueResults: "نتائج الطابور",
+    segmentWork: "فرز وتصفية العمل",
+    serviceId: "معرف الخدمة",
+    specialist: "المختص",
+    status: "الحالة",
+    supervisor: "المشرف",
+    reviewQueue: "طابور المراجعة",
+    visibleActiveWork: "عمل نشط ظاهر",
+    visibleRequests: "طلبات ظاهرة",
+    workQueues: "طوابير عمل الطلبات",
+    workQueuesDescription:
+      "تابع عمل المختص والمشرف ومدير الحساب من طوابير طلبات مرتبطة بصلاحيات backend.",
+  },
+  en: {
+    accountManager: "Account manager",
+    activeQueue: "Active queue",
+    allRequests: "All requests",
+    anyPriority: "Any priority",
+    anyStatus: "Any status",
+    applyFilters: "Apply filters",
+    assigneeId: "Assignee ID",
+    clientFollowUp: "Client follow-up",
+    clientId: "Client ID",
+    due: "Due",
+    dueBefore: "Due before",
+    emptyQueue: "No requests match this queue.",
+    executionQueue: "Execution queue",
+    internalExecution: "Internal execution",
+    needsAttention: "Needs attention",
+    notSet: "Not set",
+    open: "Open",
+    overdue: "Overdue",
+    priority: "Priority",
+    queueFilters: "Queue filters",
+    queueResults: "Queue results",
+    segmentWork: "Segment and refine work",
+    serviceId: "Service ID",
+    specialist: "Specialist",
+    status: "Status",
+    supervisor: "Supervisor",
+    reviewQueue: "Review queue",
+    visibleActiveWork: "Visible active work",
+    visibleRequests: "visible requests",
+    workQueues: "Request work queues",
+    workQueuesDescription:
+      "Track specialist, supervisor, and account-manager work from backend-scoped request queues.",
+  },
+} as const;
+
+const queueLabels: Record<RequestQueueResponse["queue"], Record<SupportedLocale, string>> = {
+  "account-manager": { ar: "مدير الحساب", en: "Account manager" },
+  all: { ar: "كل الطوابير", en: "All queues" },
+  specialist: { ar: "المختص", en: "Specialist" },
+  supervisor: { ar: "المشرف", en: "Supervisor" },
+};
+
+const priorityLabels = {
+  HIGH: { ar: "عالية", en: "High" },
+  LOW: { ar: "منخفضة", en: "Low" },
+  NORMAL: { ar: "عادية", en: "Normal" },
+  URGENT: { ar: "عاجلة", en: "Urgent" },
+} as const;
+
+const statusLabels = {
+  ASSIGNED: { ar: "مسند", en: "Assigned" },
+  CLOSED: { ar: "مغلق", en: "Closed" },
+  COMPLETED: { ar: "مكتمل", en: "Completed" },
+  IN_PROGRESS: { ar: "قيد التنفيذ", en: "In progress" },
+  NEW: { ar: "جديد", en: "New" },
+  REJECTED: { ar: "مرفوض", en: "Rejected" },
+  RETURNED: { ar: "معاد للتعديل", en: "Returned" },
+  TRIAGE: { ar: "قيد الفرز", en: "In review" },
+  WAITING_CLIENT: { ar: "بانتظار العميل", en: "Waiting for client" },
+  WAITING_SUPERVISOR: { ar: "بانتظار المشرف", en: "Waiting for supervisor" },
+} satisfies Record<RequestStatus, Record<SupportedLocale, string>>;
+
+function displayDate(value: string | null, locale: SupportedLocale): string {
+  if (!value) return copy[locale].notSet;
+  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
+    dateStyle: "medium",
+  }).format(new Date(value));
 }
 
-export function RequestQueue({ initialQueue }: { initialQueue: RequestQueueResponse }) {
+function localizedServiceName(request: RequestSummary, locale: SupportedLocale): string {
+  return locale === "ar"
+    ? request.service.monthlyService.nameAr || request.service.monthlyService.nameEn
+    : request.service.monthlyService.nameEn || request.service.monthlyService.nameAr;
+}
+
+function priorityLabel(priority: string, locale: SupportedLocale): string {
+  return priorityLabels[priority as keyof typeof priorityLabels]?.[locale] ?? priority;
+}
+
+function statusLabel(status: RequestStatus, locale: SupportedLocale): string {
+  return statusLabels[status]?.[locale] ?? status;
+}
+
+export function RequestQueue({
+  initialQueue,
+  locale: localeInput = "en",
+}: {
+  initialQueue: RequestQueueResponse;
+  locale?: string;
+}) {
+  const locale = normalizeLocale(localeInput);
+  const t = copy[locale];
   const [queue, setQueue] = useState(initialQueue);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +175,7 @@ export function RequestQueue({ initialQueue }: { initialQueue: RequestQueueRespo
     serviceId: "",
     status: "",
   });
+  const numberFormatter = new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -86,84 +211,107 @@ export function RequestQueue({ initialQueue }: { initialQueue: RequestQueueRespo
   return (
     <>
       <PageHeader
-        eyebrow="Internal execution"
-        title="Request work queues"
-        description="Track specialist, supervisor, and account-manager work from backend-scoped request queues."
-        actions={[{ href: "/requests", label: "All requests", variant: "secondary" }]}
+        eyebrow={t.internalExecution}
+        title={t.workQueues}
+        description={t.workQueuesDescription}
+        actions={[{ href: "/requests", label: t.allRequests, variant: "secondary" }]}
       />
 
-      <BentoGrid>
-        <MetricCard label="Open" value={queue.counters.open} detail="Visible active work" accent />
-        <MetricCard label="Specialist" value={queue.counters.specialist} detail="Execution queue" />
-        <MetricCard label="Supervisor" value={queue.counters.supervisor} detail="Review queue" />
-        <MetricCard label="Account manager" value={queue.counters.accountManager} detail="Client follow-up" />
-        <MetricCard label="Overdue" value={queue.counters.overdue} detail="Needs attention" />
-      </BentoGrid>
+      <div className="request-queue-command">
+        <BentoGrid>
+          <MetricCard
+            label={t.open}
+            value={queue.counters.open}
+            detail={t.visibleActiveWork}
+            accent
+          />
+          <MetricCard
+            label={t.specialist}
+            value={queue.counters.specialist}
+            detail={t.executionQueue}
+          />
+          <MetricCard
+            label={t.supervisor}
+            value={queue.counters.supervisor}
+            detail={t.reviewQueue}
+          />
+          <MetricCard
+            label={t.accountManager}
+            value={queue.counters.accountManager}
+            detail={t.clientFollowUp}
+          />
+          <MetricCard label={t.overdue} value={queue.counters.overdue} detail={t.needsAttention} />
+        </BentoGrid>
+      </div>
 
-      <SectionCard eyebrow="Queue filters" title="Segment and refine work">
-        <div className="row-actions">
+      <SectionCard eyebrow={t.queueFilters} title={t.segmentWork}>
+        <div className="request-queue-tabs" aria-label={t.queueFilters}>
           {queues.map((item) => (
             <button
-              className={item === queue.queue ? "os-button os-button-primary" : "os-button os-button-secondary"}
+              className={
+                item === queue.queue
+                  ? "os-button os-button-primary"
+                  : "os-button os-button-secondary"
+              }
               disabled={loading}
               key={item}
               type="button"
               onClick={() => void switchQueue(item)}
             >
-              {item}
+              {queueLabels[item][locale]}
             </button>
           ))}
         </div>
-        <form className="catalog-form wide-form" onSubmit={submit}>
+        <form className="catalog-form wide-form request-queue-filter-form" onSubmit={submit}>
           <label>
-            Status
+            {t.status}
             <select
               value={filters.status}
               onChange={(event) => setFilters({ ...filters, status: event.target.value })}
             >
               {statuses.map((status) => (
                 <option key={status || "any"} value={status}>
-                  {status || "Any status"}
+                  {status ? statusLabel(status, locale) : t.anyStatus}
                 </option>
               ))}
             </select>
           </label>
           <label>
-            Priority
+            {t.priority}
             <select
               value={filters.priority}
               onChange={(event) => setFilters({ ...filters, priority: event.target.value })}
             >
               {priorities.map((priority) => (
                 <option key={priority || "any"} value={priority}>
-                  {priority || "Any priority"}
+                  {priority ? priorityLabel(priority, locale) : t.anyPriority}
                 </option>
               ))}
             </select>
           </label>
           <label>
-            Client ID
+            {t.clientId}
             <input
               value={filters.clientId}
               onChange={(event) => setFilters({ ...filters, clientId: event.target.value })}
             />
           </label>
           <label>
-            Service ID
+            {t.serviceId}
             <input
               value={filters.serviceId}
               onChange={(event) => setFilters({ ...filters, serviceId: event.target.value })}
             />
           </label>
           <label>
-            Assignee ID
+            {t.assigneeId}
             <input
               value={filters.assigneeId}
               onChange={(event) => setFilters({ ...filters, assigneeId: event.target.value })}
             />
           </label>
           <label>
-            Due before
+            {t.dueBefore}
             <input
               type="datetime-local"
               value={filters.dueTo}
@@ -171,31 +319,55 @@ export function RequestQueue({ initialQueue }: { initialQueue: RequestQueueRespo
             />
           </label>
           <button className="os-button os-button-primary" disabled={loading} type="submit">
-            Apply filters
+            {t.applyFilters}
           </button>
         </form>
         {error && <p className="form-error">{error}</p>}
       </SectionCard>
 
-      <SectionCard eyebrow="Queue results" title={`${queue.queue} queue`}>
+      <SectionCard
+        eyebrow={t.queueResults}
+        title={
+          locale === "ar"
+            ? `طابور ${queueLabels[queue.queue][locale]}`
+            : `${queueLabels[queue.queue][locale]} queue`
+        }
+      >
+        <div className="request-queue-result-bar">
+          <div>
+            <span>{t.activeQueue}</span>
+            <strong>{queueLabels[queue.queue][locale]}</strong>
+          </div>
+          <small>
+            {numberFormatter.format(queue.requests.length)} {t.visibleRequests}
+          </small>
+        </div>
         {queue.requests.length === 0 ? (
-          <EmptyState>No requests match this queue.</EmptyState>
+          <EmptyState>{t.emptyQueue}</EmptyState>
         ) : (
           <div className="quote-list-grid">
             {queue.requests.map((request) => (
-              <article className="quote-list-card" key={request.id}>
+              <article className="quote-list-card request-operation-card" key={request.id}>
                 <Link className="quote-list-main" href={`/requests/${request.id}`}>
                   <div>
                     <small>{request.requestNumber}</small>
                     <h2>{request.title}</h2>
                     <p>
-                      {request.client.name} · {request.service.monthlyService.nameEn}
+                      {request.client.name} - {localizedServiceName(request, locale)}
                     </p>
                   </div>
                   <div className="quote-list-meta">
-                    <StatusChip status={request.status} />
-                    <PriorityChip priority={request.priority} />
-                    <small>Due {displayDate(request.dueAt)}</small>
+                    <StatusChip
+                      status={request.status}
+                      label={statusLabel(request.status, locale)}
+                    />
+                    <PriorityChip
+                      priority={request.priority}
+                      label={priorityLabel(request.priority, locale)}
+                    />
+                    <small>
+                      {t.due} {displayDate(request.dueAt, locale)}
+                    </small>
                   </div>
                 </Link>
               </article>

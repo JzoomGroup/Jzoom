@@ -4,6 +4,8 @@ import type { CatalogSnapshot } from "../../lib/catalog-types";
 import { CatalogOverview } from "./catalog-overview";
 import { CategoryManager } from "./category-manager";
 import { ItemManager } from "./item-manager";
+import { LevelManager } from "./level-manager";
+import { ServiceManager } from "./service-manager";
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -266,5 +268,57 @@ describe("Admin catalog UI", () => {
       ],
     });
     expect(setSnapshot).toHaveBeenCalledWith(catalogSnapshot());
+  });
+
+  it("renders the package studio and opens the service-level form", () => {
+    const setSnapshot = jest.fn();
+
+    render(<LevelManager snapshot={catalogSnapshot()} setSnapshot={setSnapshot} locale="en" />);
+
+    expect(screen.getByText("Package studio")).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Configured packages" })).toHaveLength(2);
+    expect(screen.getByRole("heading", { name: "Basic" })).toBeInTheDocument();
+    expect(screen.getAllByText("Linked services").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "Add service level" }));
+
+    expect(screen.getByRole("heading", { name: "New service level" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Code")).toBeInTheDocument();
+  });
+
+  it("renders the monthly service studio and opens the service form", () => {
+    const setSnapshot = jest.fn();
+
+    render(<ServiceManager snapshot={catalogSnapshot()} setSnapshot={setSnapshot} locale="en" />);
+
+    expect(screen.getByText("Monthly service studio")).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Configured services" })).toHaveLength(2);
+    expect(screen.getByRole("heading", { name: "HR Support" })).toBeInTheDocument();
+    expect(screen.getByText("Monthly HR support.")).toBeInTheDocument();
+    expect(screen.getByText("Enabled package links")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add monthly service" }));
+
+    expect(screen.getByRole("heading", { name: "New monthly service" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Code")).toBeInTheDocument();
+    expect(screen.getByText("Monthly hours by package")).toBeInTheDocument();
+  });
+
+  it("renders the service item studio and opens the item form", () => {
+    const setSnapshot = jest.fn();
+
+    render(<ItemManager snapshot={catalogSnapshot()} setSnapshot={setSnapshot} locale="en" />);
+
+    expect(screen.getByText("Service item studio")).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Package inclusion matrix" })).toHaveLength(2);
+    expect(screen.getByRole("heading", { name: "Employee onboarding" })).toBeInTheDocument();
+    expect(screen.getByText("Completed onboarding checklist.")).toBeInTheDocument();
+    expect(screen.getByText("Included package links")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add service item" }));
+
+    expect(screen.getByRole("heading", { name: "New service item" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Code")).toBeInTheDocument();
+    expect(screen.getAllByText("Package inclusion").length).toBeGreaterThan(0);
   });
 });

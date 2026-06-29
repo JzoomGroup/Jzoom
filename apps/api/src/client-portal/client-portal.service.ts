@@ -226,16 +226,6 @@ export class ClientPortalService {
           },
           orderBy: { version: "desc" },
           take: 1,
-          include: {
-            levelConfigs: {
-              where: {
-                isEnabled: true,
-                serviceLevel: { status: "ACTIVE" },
-              },
-              orderBy: { sortOrder: "asc" },
-              include: { serviceLevel: true },
-            },
-          },
         },
       },
     });
@@ -259,16 +249,6 @@ export class ClientPortalService {
               description: revision.description,
               serviceLine: revision.serviceLine,
               domain: revision.domain,
-              defaultSlaHours: revision.defaultSlaHours,
-              sellingHourlyRateSar: numberValue(revision.sellingHourlyRateSar),
-              levels: revision.levelConfigs.map((config) => ({
-                serviceLevelId: config.serviceLevelId,
-                serviceLevelCode: config.serviceLevel.code,
-                labelAr: config.serviceLevel.labelAr,
-                labelEn: config.serviceLevel.labelEn,
-                hours: numberValue(config.hours),
-                slaHours: config.slaHours,
-              })),
             },
           ]
         : [];
@@ -328,9 +308,6 @@ export class ClientPortalService {
               nameEn: revision.nameEn,
               description: revision.description,
               serviceLine: service.serviceLine,
-              basePriceSar: numberValue(revision.basePriceSar),
-              estimatedHours: numberValue(revision.estimatedHours),
-              durationDays: revision.durationDays,
             },
           ]
         : [];

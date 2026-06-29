@@ -205,6 +205,43 @@ export class AuthController {
     };
   }
 
+  @Get("admin/users")
+  @RequireRoles(ADMIN_ROLE_CODE)
+  @RequirePermissions(MANAGE_USERS_PERMISSION)
+  @ApiCookieAuth()
+  @ApiOperation({ summary: "List portal users for Admin user management" })
+  async listUsers() {
+    return this.admin.listUsers();
+  }
+
+  @Get("admin/roles")
+  @RequireRoles(ADMIN_ROLE_CODE)
+  @RequirePermissions(MODIFY_PERMISSIONS_PERMISSION)
+  @ApiCookieAuth()
+  @ApiOperation({ summary: "List roles and assigned permissions for Admin access management" })
+  async listRoles() {
+    return this.admin.listRolesAndPermissions();
+  }
+
+  @Get("admin/permissions")
+  @RequireRoles(ADMIN_ROLE_CODE)
+  @RequirePermissions(MODIFY_PERMISSIONS_PERMISSION)
+  @ApiCookieAuth()
+  @ApiOperation({ summary: "List permissions for Admin access management" })
+  async listPermissions() {
+    const { permissions } = await this.admin.listRolesAndPermissions();
+    return { permissions };
+  }
+
+  @Get("admin/audit-logs")
+  @RequireRoles(ADMIN_ROLE_CODE)
+  @RequirePermissions(MANAGE_USERS_PERMISSION)
+  @ApiCookieAuth()
+  @ApiOperation({ summary: "List recent security and access audit logs" })
+  async listAuditLogs() {
+    return this.admin.listAuditLogs();
+  }
+
   @Post("admin/users/:userId/invalidate-sessions")
   @HttpCode(200)
   @RequireRoles(ADMIN_ROLE_CODE)

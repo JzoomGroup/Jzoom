@@ -80,16 +80,6 @@ export interface ClientPortalAvailableMonthlyService {
   description: string;
   serviceLine: string;
   domain: string;
-  defaultSlaHours: number;
-  sellingHourlyRateSar: number;
-  levels: Array<{
-    serviceLevelId: string;
-    serviceLevelCode: string;
-    labelAr: string;
-    labelEn: string | null;
-    hours: number;
-    slaHours: number | null;
-  }>;
 }
 
 export interface ClientPortalAvailableOneTimeService {
@@ -101,9 +91,6 @@ export interface ClientPortalAvailableOneTimeService {
   nameEn: string;
   description: string;
   serviceLine: string;
-  basePriceSar: number;
-  estimatedHours: number;
-  durationDays: number;
 }
 
 export interface ClientPortalServices {

@@ -81,9 +81,6 @@ function account(): ClientPortalAccount {
           description: "A client-visible service.",
           serviceLine: "Operate",
           domain: "Operations",
-          defaultSlaHours: 24,
-          sellingHourlyRateSar: 100,
-          levels: [],
         },
       ],
       availableOneTime: [],
@@ -451,7 +448,9 @@ describe("Client portal UI", () => {
 
     expect(screen.getByRole("heading", { name: "Welcome, Client User" })).toBeInTheDocument();
     expect(screen.getByText("CLIENT-1")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Open requests / Active services" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Open requests / Active services" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Client actions" })).toBeInTheDocument();
     expect(screen.getByText("No client action is pending.")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Open requests" })).toBeInTheDocument();
@@ -519,6 +518,18 @@ describe("Client portal UI", () => {
     render(<ClientRequestDetail request={request} />);
 
     expect(screen.getByText("Request action center")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Deliverables" })).toHaveAttribute(
+      "href",
+      "#client-deliverables",
+    );
+    expect(screen.getByRole("link", { name: "Documents" })).toHaveAttribute(
+      "href",
+      "#client-documents",
+    );
+    expect(screen.getByRole("link", { name: "Request snapshot" })).toHaveAttribute(
+      "href",
+      "#client-summary",
+    );
     expect(screen.getByText("Deliverables to review")).toBeInTheDocument();
     expect(screen.getAllByText("Requested documents").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Next action").length).toBeGreaterThan(0);
@@ -532,6 +543,10 @@ describe("Client portal UI", () => {
     expect(screen.getAllByRole("button", { name: "Return output" })).toHaveLength(1);
     expect(screen.getByText("Upload required")).toBeInTheDocument();
     expect(screen.getByLabelText("Request")).toHaveValue("document-request-1");
+    expect(screen.getByText("Choose the requested document")).toBeInTheDocument();
+    expect(screen.getByText("Review file metadata")).toBeInTheDocument();
+    expect(screen.getByText("Submit upload metadata")).toBeInTheDocument();
+    expect(screen.getByText("Choose file from device")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Upload metadata" })).toBeInTheDocument();
     expect(
       screen.getByText("This deliverable is no longer waiting for a client decision."),
@@ -552,6 +567,7 @@ describe("Client portal UI", () => {
     );
     expect(screen.getByText("Upload required")).toBeInTheDocument();
     expect(screen.getByLabelText("Request")).toHaveValue("document-request-1");
+    expect(screen.getByText("Choose file from device")).toBeInTheDocument();
   });
 
   it("hides client request actions when no client decision or upload is pending", () => {
@@ -609,8 +625,11 @@ describe("Client portal UI", () => {
     expect(screen.queryByLabelText("Subscription service ID")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Service item revision ID")).not.toBeInTheDocument();
     expect(screen.getByText("Request setup")).toBeInTheDocument();
+    expect(screen.getByText("Selected work item")).toBeInTheDocument();
     expect(screen.getByText("Selected service summary")).toBeInTheDocument();
     expect(screen.getByText("Included service items")).toBeInTheDocument();
+    expect(screen.getByText("Next step")).toBeInTheDocument();
+    expect(screen.getByLabelText("Request stats")).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Service item"), {
       target: { value: "service-item-revision-1" },

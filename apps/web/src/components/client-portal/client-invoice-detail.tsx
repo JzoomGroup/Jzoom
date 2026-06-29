@@ -20,7 +20,8 @@ const copy = {
     clientCode: "رمز العميل",
     clientDetails: "بيانات العميل",
     delivery: "التسليم",
-    description: (quoteNumber: string) => `تعرض هذه الفاتورة من النسخة المحفوظة المنشأة من العرض المقبول ${quoteNumber}.`,
+    description: (quoteNumber: string) =>
+      `تعرض هذه الفاتورة من النسخة المحفوظة المنشأة بعد تأكيد الموافقة والدفع خارج النظام للعرض ${quoteNumber}.`,
     discount: "الخصم",
     finalDue: "المستحق النهائي قبل الضريبة",
     invoiceLines: "بنود الفاتورة",
@@ -48,7 +49,7 @@ const copy = {
     clientDetails: "Client details",
     delivery: "Delivery",
     description: (quoteNumber: string) =>
-      `This invoice is displayed from the stored snapshot created from accepted quote ${quoteNumber}.`,
+      `This invoice is displayed from the stored snapshot created after external approval and payment confirmation for quote ${quoteNumber}.`,
     discount: "Discount",
     finalDue: "Final due before tax",
     invoiceLines: "Invoice lines",
@@ -86,7 +87,9 @@ export function ClientInvoiceDetail({
         eyebrow={t.invoiceSnapshot}
         title={invoice.invoiceNumber}
         description={t.description(invoice.quoteNumber)}
-        meta={<StatusChip status={invoice.status} label={invoiceStatusLabel(invoice.status, locale)} />}
+        meta={
+          <StatusChip status={invoice.status} label={invoiceStatusLabel(invoice.status, locale)} />
+        }
       >
         <div className="quote-header-actions">
           <a
@@ -104,7 +107,10 @@ export function ClientInvoiceDetail({
       </PageHeader>
 
       <section className="quote-summary-grid">
-        <SectionCard eyebrow={t.clientDetails} title={invoice.client.legalName ?? invoice.client.name}>
+        <SectionCard
+          eyebrow={t.clientDetails}
+          title={invoice.client.legalName ?? invoice.client.name}
+        >
           <dl className="quote-definition-list">
             <div>
               <dt>{t.clientCode}</dt>
@@ -181,7 +187,10 @@ export function ClientInvoiceDetail({
         </SmartTable>
       </SectionCard>
 
-      <SectionCard eyebrow={locale === "ar" ? "الملخص المالي" : "Financial snapshot"} title={t.invoiceTotal}>
+      <SectionCard
+        eyebrow={locale === "ar" ? "الملخص المالي" : "Financial snapshot"}
+        title={t.invoiceTotal}
+      >
         <div className="pricing-total-grid">
           <div>
             <span>{t.discount}</span>

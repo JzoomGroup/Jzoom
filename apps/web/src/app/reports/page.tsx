@@ -28,7 +28,7 @@ export default async function ReportsPage() {
       permissions={user.permissions}
       roles={user.roles}
     >
-      <MonthlyReports initialReports={reports} />
+      <MonthlyReports initialReports={reports} locale={user.preferredLocale} />
     </QuoteShell>
   );
 }

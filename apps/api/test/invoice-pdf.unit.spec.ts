@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { PDFDocument } from "pdf-lib";
 import { InvoicePdfService } from "../src/invoices/invoice-pdf.service.js";
 
 describe("PR 11 invoice PDF generation", () => {
@@ -102,5 +103,9 @@ describe("PR 11 invoice PDF generation", () => {
     expect(pdf.bytes.subarray(0, 4).toString()).toBe("%PDF");
     expect(pdf.byteLength).toBeGreaterThan(10_000);
     expect(pdf.sha256).toMatch(/^[a-f0-9]{64}$/);
+
+    const document = await PDFDocument.load(pdf.bytes);
+    expect(document.getPageCount()).toBe(1);
+    expect(document.getPage(0).getSize()).toEqual({ width: 595.28, height: 841.89 });
   });
 });

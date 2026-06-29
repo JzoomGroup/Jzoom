@@ -26,7 +26,11 @@ export async function CatalogPage({
       displayName={user.displayName}
       locale={user.preferredLocale}
     >
-      <CatalogWorkspace initialSnapshot={snapshot} section={section} />
+      <CatalogWorkspace
+        initialSnapshot={snapshot}
+        locale={user.preferredLocale}
+        section={section}
+      />
     </AdminShell>
   );
 }

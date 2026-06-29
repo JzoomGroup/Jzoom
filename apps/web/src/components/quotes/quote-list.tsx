@@ -2,62 +2,127 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import type { QuoteSummary } from "../../lib/quote-types";
+import type { QuoteStatus, QuoteSummary } from "../../lib/quote-types";
+import {
+  businessText,
+  commercialCopy,
+  commercialLocale,
+  countText,
+  dateText,
+  money,
+  quoteStatusLabel,
+} from "../commercial-i18n";
 import { EmptyState, MetricCard, PageHeader, SectionCard, StatusChip } from "../premium-os";
 import { QuoteLifecycleActions } from "./quote-lifecycle-actions";
 
-function sar(value: number): string {
-  return new Intl.NumberFormat("en-SA", {
-    style: "currency",
-    currency: "SAR",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-export function QuoteList({ quotes }: { quotes: QuoteSummary[] }) {
+export function QuoteList({
+  locale: localeInput = "en",
+  quotes,
+}: {
+  locale?: string;
+  quotes: QuoteSummary[];
+}) {
+  const locale = commercialLocale(localeInput);
+  const t = commercialCopy[locale];
   const [items, setItems] = useState(quotes);
+  const [statusFilter, setStatusFilter] = useState<QuoteStatus | "ALL">("ALL");
+  const visibleItems =
+    statusFilter === "ALL" ? items : items.filter((quote) => quote.status === statusFilter);
   const totalValue = items.reduce((sum, quote) => sum + (quote.totals?.finalTotal ?? 0), 0);
+  const statuses: Array<QuoteStatus | "ALL"> = [
+    "ALL",
+    "DRAFT",
+    "ISSUED",
+    "ACCEPTED",
+    "REJECTED",
+    "EXPIRED",
+    "CANCELLED",
+  ];
+
+  function nextStep(status: QuoteStatus): string {
+    if (status === "DRAFT") return t.issueQuote;
+    if (status === "ISSUED") return t.acceptQuote;
+    if (status === "ACCEPTED") return t.readyForInvoice;
+    return t.terminalRecord;
+  }
 
   return (
     <>
       <PageHeader
-        eyebrow="Commercial records"
-        title="Quotes"
-        description="Quotes are created from saved pricing drafts. Client, service, pricing-rule, terms, and total snapshots remain immutable."
-        actions={[{ href: "/pricing", label: "Open Pricing Studio", variant: "primary" }]}
+        eyebrow={t.commercialRecords}
+        title={t.quotes}
+        description={t.quoteDescription}
+        actions={[{ href: "/pricing", label: t.openPricingStudio, variant: "primary" }]}
       />
 
       <section className="os-bento-grid compact">
-        <MetricCard accent label="Quotes" value={items.length} detail="Snapshot records" />
-        <MetricCard label="Total value" value={sar(totalValue)} detail="Across listed quotes" />
         <MetricCard
-          label="Issued"
-          value={items.filter((quote) => quote.status === "ISSUED").length}
-          detail="Ready for client flow"
+          accent
+          label={t.quotes}
+          value={countText(items.length, locale)}
+          detail={t.snapshotRecords}
+        />
+        <MetricCard
+          label={t.totalValue}
+          value={money(totalValue, locale)}
+          detail={t.commercialSnapshots}
+        />
+        <MetricCard
+          label={t.issued}
+          value={countText(items.filter((quote) => quote.status === "ISSUED").length, locale)}
+          detail={t.readyForClient}
         />
       </section>
 
-      <SectionCard eyebrow="Quote library" title="Commercial snapshots">
-        {items.length === 0 ? (
-          <EmptyState title="No quotes yet">No quotes have been created yet.</EmptyState>
+      <SectionCard eyebrow={t.quoteLibrary} title={t.commercialSnapshots}>
+        <div className="commercial-filter-bar" aria-label={t.allStatuses}>
+          {statuses.map((status) => (
+            <button
+              className={statusFilter === status ? "active" : undefined}
+              key={status}
+              type="button"
+              onClick={() => setStatusFilter(status)}
+            >
+              {status === "ALL" ? t.allStatuses : quoteStatusLabel(status, locale)}
+            </button>
+          ))}
+        </div>
+        {visibleItems.length === 0 ? (
+          <EmptyState title={t.noQuotesTitle}>{t.noQuotes}</EmptyState>
         ) : (
           <div className="quote-list-grid">
-            {items.map((quote) => (
+            {visibleItems.map((quote) => (
               <article className="quote-list-card" key={quote.id}>
                 <Link className="quote-list-main" href={`/pricing/quotes/${quote.id}`}>
                   <div>
                     <small>{quote.quoteNumber}</small>
-                    <h2>{quote.title}</h2>
+                    <h2>{businessText(quote.title, locale, t.quotes)}</h2>
                     <p>{quote.client.name}</p>
+                    <dl className="commercial-card-meta">
+                      <div>
+                        <dt>{t.validUntil}</dt>
+                        <dd>{dateText(quote.validUntil, locale)}</dd>
+                      </div>
+                      <div>
+                        <dt>{t.nextStep}</dt>
+                        <dd>{nextStep(quote.status)}</dd>
+                      </div>
+                    </dl>
                   </div>
                   <div className="quote-list-meta">
-                    <StatusChip status={quote.status} label={quote.status} />
-                    <strong>{quote.totals ? sar(quote.totals.finalTotal) : "-"}</strong>
-                    <small>{quote.itemCount} items</small>
+                    <StatusChip
+                      status={quote.status}
+                      label={quoteStatusLabel(quote.status, locale)}
+                    />
+                    <strong>{quote.totals ? money(quote.totals.finalTotal, locale) : "-"}</strong>
+                    <small>
+                      {countText(quote.itemCount, locale)} {t.items}
+                    </small>
                   </div>
                 </Link>
                 <QuoteLifecycleActions
                   compact
+                  locale={locale}
                   quoteId={quote.id}
                   status={quote.status}
                   onUpdated={(updated) =>

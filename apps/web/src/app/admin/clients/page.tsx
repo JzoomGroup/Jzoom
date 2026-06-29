@@ -20,7 +20,7 @@ export default async function AdminClientsPage() {
       displayName={user.displayName}
       locale={user.preferredLocale}
     >
-      <ClientManager initialSnapshot={snapshot} />
+      <ClientManager initialSnapshot={snapshot} locale={user.preferredLocale} />
     </AdminShell>
   );
 }

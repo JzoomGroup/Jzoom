@@ -3,10 +3,61 @@
 import { useState, type ReactNode } from "react";
 import { catalogErrorMessage, catalogRequest, refreshCatalog } from "../../lib/catalog-client";
 import type { CatalogSnapshot, CatalogStatus } from "../../lib/catalog-types";
+import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
 import { EmptyState as PremiumEmptyState, PageHeader, StatusChip } from "../premium-os";
 
-export function StatusBadge({ status }: { status: CatalogStatus }) {
-  return <StatusChip status={status} label={status === "INACTIVE" ? "Inactive" : status[0] + status.slice(1).toLowerCase()} />;
+const sharedCopy = {
+  ar: {
+    archive: "أرشفة",
+    archiveConfirm: "هل تريد أرشفة هذا السجل؟ ستبقى المراجع التاريخية محفوظة.",
+    archivePrompt: "ما سبب أرشفة هذا السجل؟",
+    cancel: "إلغاء",
+    disable: "تعطيل",
+    disablePrompt: "ما سبب تعطيل هذا السجل؟",
+    displayOrderSaved: "تم حفظ ترتيب العرض.",
+    enable: "تفعيل",
+    order: "الترتيب",
+    save: "حفظ",
+    saveOrder: "حفظ الترتيب",
+    saving: "جار الحفظ...",
+    statusChanged: (status: CatalogStatus) => `تم تحديث الحالة إلى ${statusLabel(status, "ar")}.`,
+  },
+  en: {
+    archive: "Archive",
+    archiveConfirm: "Archive this record? Historical references will remain unchanged.",
+    archivePrompt: "Why are you archiving this record?",
+    cancel: "Cancel",
+    disable: "Disable",
+    disablePrompt: "Why are you disabling this record?",
+    displayOrderSaved: "Display order saved.",
+    enable: "Enable",
+    order: "Order",
+    save: "Save",
+    saveOrder: "Save order",
+    saving: "Saving...",
+    statusChanged: (status: CatalogStatus) =>
+      `Status changed to ${status === "INACTIVE" ? "Inactive" : status.toLowerCase()}.`,
+  },
+} as const;
+
+const statusLabels = {
+  ACTIVE: { ar: "نشط", en: "Active" },
+  ARCHIVED: { ar: "مؤرشف", en: "Archived" },
+  DRAFT: { ar: "مسودة", en: "Draft" },
+  INACTIVE: { ar: "غير نشط", en: "Inactive" },
+} satisfies Record<CatalogStatus, Record<SupportedLocale, string>>;
+
+function sharedLocale(locale: string | undefined): SupportedLocale {
+  return normalizeLocale(locale);
+}
+
+function statusLabel(status: CatalogStatus, locale: SupportedLocale): string {
+  return statusLabels[status][locale];
+}
+
+export function StatusBadge({ locale, status }: { locale?: string; status: CatalogStatus }) {
+  const lang = sharedLocale(locale);
+  return <StatusChip status={status} label={statusLabel(status, lang)} />;
 }
 
 export function SectionHeader({
@@ -32,21 +83,25 @@ export function EmptyState({ children }: { children: ReactNode }) {
 }
 
 export function FormActions({
+  locale,
   submitting,
   onCancel,
   submitLabel = "Save",
 }: {
+  locale?: string;
   submitting: boolean;
   onCancel: () => void;
   submitLabel?: string;
 }) {
+  const lang = sharedLocale(locale);
+  const t = sharedCopy[lang];
   return (
     <div className="form-actions">
       <button type="button" className="os-button os-button-secondary" onClick={onCancel}>
-        Cancel
+        {t.cancel}
       </button>
       <button type="submit" className="os-button os-button-primary" disabled={submitting}>
-        {submitting ? "Saving..." : submitLabel}
+        {submitting ? t.saving : submitLabel}
       </button>
     </div>
   );
@@ -107,16 +162,20 @@ export function useCatalogMutation<T = CatalogSnapshot>(
 }
 
 export function LifecycleActions({
+  locale,
   path,
   status,
   disabled,
   mutate,
 }: {
+  locale?: string;
   path: string;
   status: CatalogStatus;
   disabled: boolean;
   mutate: (path: string, options: RequestInit, successMessage: string) => Promise<boolean>;
 }) {
+  const lang = sharedLocale(locale);
+  const t = sharedCopy[lang];
   if (status === "ARCHIVED") {
     return null;
   }
@@ -124,19 +183,12 @@ export function LifecycleActions({
   async function change(target: CatalogStatus) {
     const destructive = target === "INACTIVE" || target === "ARCHIVED";
     const reason = destructive
-      ? window.prompt(
-          target === "ARCHIVED"
-            ? "Why are you archiving this record?"
-            : "Why are you disabling this record?",
-        )
+      ? window.prompt(target === "ARCHIVED" ? t.archivePrompt : t.disablePrompt)
       : undefined;
     if (destructive && !reason?.trim()) {
       return;
     }
-    if (
-      target === "ARCHIVED" &&
-      !window.confirm("Archive this record? Historical references will remain unchanged.")
-    ) {
+    if (target === "ARCHIVED" && !window.confirm(t.archiveConfirm)) {
       return;
     }
 
@@ -149,7 +201,7 @@ export function LifecycleActions({
           ...(reason ? { reason } : {}),
         }),
       },
-      `Status changed to ${target === "INACTIVE" ? "Inactive" : target.toLowerCase()}.`,
+      t.statusChanged(target),
     );
   }
 
@@ -162,7 +214,7 @@ export function LifecycleActions({
           disabled={disabled}
           onClick={() => void change("ACTIVE")}
         >
-          Enable
+          {t.enable}
         </button>
       ) : (
         <button
@@ -171,7 +223,7 @@ export function LifecycleActions({
           disabled={disabled}
           onClick={() => void change("INACTIVE")}
         >
-          Disable
+          {t.disable}
         </button>
       )}
       <button
@@ -180,29 +232,33 @@ export function LifecycleActions({
         disabled={disabled}
         onClick={() => void change("ARCHIVED")}
       >
-        Archive
+        {t.archive}
       </button>
     </div>
   );
 }
 
 export function OrderControl({
+  locale,
   path,
   current,
   disabled,
   mutate,
 }: {
+  locale?: string;
   path: string;
   current: number;
   disabled: boolean;
   mutate: (path: string, options: RequestInit, successMessage: string) => Promise<boolean>;
 }) {
+  const lang = sharedLocale(locale);
+  const t = sharedCopy[lang];
   const [value, setValue] = useState(current);
 
   return (
     <div className="order-control">
       <label>
-        Order
+        {t.order}
         <input
           type="number"
           min="0"
@@ -223,11 +279,11 @@ export function OrderControl({
               method: "PATCH",
               body: JSON.stringify({ sortOrder: value }),
             },
-            "Display order saved.",
+            t.displayOrderSaved,
           )
         }
       >
-        Save order
+        {t.saveOrder}
       </button>
     </div>
   );

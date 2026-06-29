@@ -395,7 +395,7 @@ export class QuotesService {
     if (target === "ACCEPTED" && quote.validUntil && quote.validUntil <= now) {
       throw new ConflictException({
         code: "EXPIRED_QUOTE_CANNOT_BE_ACCEPTED",
-        message: "An expired quote cannot be accepted",
+        message: "An expired quote cannot be externally confirmed",
       });
     }
     if (target === "EXPIRED" && (!quote.validUntil || quote.validUntil > now)) {

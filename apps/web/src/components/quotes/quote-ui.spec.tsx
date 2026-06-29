@@ -278,13 +278,13 @@ describe("Quote snapshot UI", () => {
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
       status: "ISSUED",
     });
-    expect(await screen.findByText("Quote status changed to ISSUED.")).toBeInTheDocument();
+    expect(await screen.findByText("Quote status changed to Issued.")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Accept quote" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm approval & payment" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(fetchMock.mock.calls[1]?.[0]).toBe("http://localhost:4000/api/v1/quotes/quote-1/accept");
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({});
-    expect(await screen.findByText("ACCEPTED")).toBeInTheDocument();
+    expect(await screen.findByText("Externally confirmed")).toBeInTheDocument();
   });
 
   it("renders compact lifecycle actions on the quote list", async () => {
@@ -293,13 +293,17 @@ describe("Quote snapshot UI", () => {
 
     render(<QuoteList quotes={[quoteSummary("ISSUED")]} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Accept quote" }));
+    expect(screen.getByRole("button", { name: "All statuses" })).toBeInTheDocument();
+    expect(screen.getByText("Next step")).toBeInTheDocument();
+    expect(screen.getAllByText("Confirm approval & payment").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirm approval & payment" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(fetchMock.mock.calls[0]?.[0]).toBe("http://localhost:4000/api/v1/quotes/quote-1/accept");
-    expect(await screen.findByText("ACCEPTED")).toBeInTheDocument();
+    expect(await screen.findByText("Externally confirmed")).toBeInTheDocument();
   });
 
-  it("creates an invoice from an accepted quote snapshot", async () => {
+  it("creates an invoice from an externally confirmed quote snapshot", async () => {
     const fetchMock = jest.mocked(fetch);
     fetchMock.mockImplementationOnce(() =>
       jsonResponse({ id: "invoice-1", invoiceNumber: "INV-20260622-ABC12345" }),

@@ -337,7 +337,7 @@ describe("Request lifecycle UI", () => {
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
       status: "TRIAGE",
     });
-    expect(await screen.findByText("TRIAGE")).toBeInTheDocument();
+    expect(await screen.findAllByText("In review")).not.toHaveLength(0);
   });
 
   it("assigns users through friendly assignment candidate selectors", async () => {
@@ -448,6 +448,40 @@ describe("Request lifecycle UI", () => {
     expect(screen.getByText("SEO operations")).toBeInTheDocument();
   });
 
+  it("keeps request detail sections navigable and useful when collaboration records are empty", () => {
+    const request = {
+      ...serviceRequest(),
+      activity: [],
+      attachments: [],
+      comments: [],
+      counts: {
+        ...serviceRequest().counts,
+        comments: 0,
+        files: 0,
+        internalNotes: 0,
+        workflowEvents: 0,
+      },
+      internalNotes: [],
+    };
+
+    renderRequestDetail(request);
+
+    expect(screen.getByRole("link", { name: "Comments" })).toHaveAttribute(
+      "href",
+      "#request-comments",
+    );
+    expect(screen.getByRole("link", { name: "Attachments" })).toHaveAttribute(
+      "href",
+      "#request-attachments",
+    );
+    expect(
+      screen.getByText("No comments have been added to this request yet."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("No internal notes have been added yet.")).toBeInTheDocument();
+    expect(screen.getByText("No attachments are stored on this request yet.")).toBeInTheDocument();
+    expect(screen.getByText("No request activity has been recorded yet.")).toBeInTheDocument();
+  });
+
   it("exposes start work only when the request status can move to in progress", () => {
     const { unmount } = renderRequestDetail();
 
@@ -484,6 +518,14 @@ describe("Request lifecycle UI", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Specialist workbench" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Add checklist item/ })).toHaveAttribute(
+      "href",
+      "#request-checklist",
+    );
+    expect(screen.getByRole("link", { name: /Create internal output/ })).toHaveAttribute(
+      "href",
+      "#request-outputs",
+    );
     expect(screen.getByRole("button", { name: "Start work" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create internal output" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add time" })).toBeInTheDocument();
@@ -525,6 +567,14 @@ describe("Request lifecycle UI", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Supervisor review" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Supervisor review/ })).toHaveAttribute(
+      "href",
+      "#request-outputs",
+    );
+    expect(screen.getByRole("link", { name: /Submitted hours Approve/ })).toHaveAttribute(
+      "href",
+      "#request-hours",
+    );
     expect(screen.getByRole("button", { name: "Approve request" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Approve" }).length).toBeGreaterThanOrEqual(2);
     expect(
@@ -552,6 +602,10 @@ describe("Request lifecycle UI", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Account manager follow-up" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Request document/ })).toHaveAttribute(
+      "href",
+      "#request-documents",
+    );
     expect(screen.getByRole("button", { name: "Add comment" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Share with client" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Approve request" })).not.toBeInTheDocument();

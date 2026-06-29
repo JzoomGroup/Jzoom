@@ -22,7 +22,7 @@ const copy = {
     commercialTerms: "الشروط التجارية",
     delivery: "التسليم",
     description:
-      "يعرض هذا العرض من النسخة المحفوظة. أي تغييرات لاحقة في الكتالوج أو التسعير لا تغير هذا السجل.",
+      "يعرض هذا العرض من النسخة المحفوظة للقراءة فقط. الموافقة والدفع تتم خارج النظام قبل إنشاء حساب العميل.",
     discount: "الخصم",
     estimatedTax: "الضريبة التقديرية",
     finalTotal: "الإجمالي النهائي",
@@ -52,7 +52,7 @@ const copy = {
     commercialTerms: "Commercial terms",
     delivery: "Delivery",
     description:
-      "This quote is displayed from its stored snapshot. Later catalog or pricing changes do not alter this record.",
+      "This quote is displayed as a read-only stored snapshot. Approval and payment happen outside the portal before the client account is created.",
     discount: "Discount",
     estimatedTax: "Estimated tax",
     finalTotal: "Final total",

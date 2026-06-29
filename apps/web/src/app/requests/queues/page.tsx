@@ -31,7 +31,7 @@ export default async function RequestQueuesPage() {
       permissions={user.permissions}
       roles={user.roles}
     >
-      <RequestQueue initialQueue={queue} />
+      <RequestQueue initialQueue={queue} locale={user.preferredLocale} />
     </QuoteShell>
   );
 }

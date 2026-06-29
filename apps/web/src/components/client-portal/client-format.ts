@@ -5,13 +5,22 @@ export type ClientDisplayLocale = SupportedLocale;
 const requestStatusLabels = {
   ASSIGNED: { ar: "مسند", en: "Assigned" },
   CLOSED: { ar: "مغلق", en: "Closed" },
+  COMPLETE: { ar: "مكتمل", en: "Complete" },
+  COMPLETE_WITH_OPTIONAL_MISSING: {
+    ar: "مكتمل مع بيانات اختيارية ناقصة",
+    en: "Complete with optional missing",
+  },
   COMPLETED: { ar: "مكتمل", en: "Completed" },
+  INCOMPLETE: { ar: "غير مكتمل", en: "Incomplete" },
   IN_PROGRESS: { ar: "قيد التنفيذ", en: "In progress" },
   NEW: { ar: "جديد", en: "New" },
+  PREPARED: { ar: "جاهز", en: "Prepared" },
   REJECTED: { ar: "مرفوض", en: "Rejected" },
   RETURNED: { ar: "معاد للتعديل", en: "Returned" },
+  SUBMITTED: { ar: "مقدم", en: "Submitted" },
   TRIAGE: { ar: "قيد المراجعة", en: "In review" },
   WAITING_CLIENT: { ar: "بانتظار العميل", en: "Waiting for client" },
+  WAITING_MANAGEMENT: { ar: "بانتظار الإدارة", en: "Waiting for management" },
   WAITING_SUPERVISOR: { ar: "بانتظار المشرف", en: "Waiting for supervisor" },
 } as const;
 
@@ -41,7 +50,7 @@ const priorityLabels = {
 } as const;
 
 const quoteStatusLabels = {
-  ACCEPTED: { ar: "مقبول", en: "Accepted" },
+  ACCEPTED: { ar: "مؤكد خارج النظام", en: "Externally confirmed" },
   ISSUED: { ar: "صادر", en: "Issued" },
 } as const;
 
@@ -53,6 +62,7 @@ const hasArabic = /[\u0600-\u06ff]/;
 
 const knownArabicFreeText: Record<string, string> = {
   "a client-visible service.": "خدمة ظاهرة للعميل.",
+  "account manager": "مدير الحساب",
   "client-visible activity": "نشاط ظاهر للعميل",
   "client-visible deliverable.": "مخرج ظاهر للعميل.",
   "commercial flow invoice": "فاتورة تجارية",
@@ -60,10 +70,14 @@ const knownArabicFreeText: Record<string, string> = {
   "employee letter": "خطاب موظف",
   "existing description": "وصف محفوظ",
   "june service report": "تقرير خدمات شهر يونيو",
+  "monthly report": "تقرير شهري",
   "monthly hr operating support.": "دعم تشغيلي شهري للموارد البشرية.",
   "monthly request": "طلب خدمة شهري",
+  "monthly service": "خدمة شهرية",
   "output shared with client": "تمت مشاركة مخرج مع العميل",
   "please prepare an employee letter.": "يرجى تجهيز خطاب موظف.",
+  "specialist one": "المختص",
+  supervisor: "المشرف",
 };
 
 function normalizeFreeText(value: string): string {

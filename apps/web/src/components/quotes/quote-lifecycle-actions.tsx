@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { advanceQuoteLifecycle, quoteErrorMessage } from "../../lib/quote-client";
 import type { Quote, QuoteStatus } from "../../lib/quote-types";
+import { commercialCopy, commercialLocale } from "../commercial-i18n";
 
 type LifecycleTarget = Exclude<QuoteStatus, "DRAFT">;
 
@@ -13,48 +14,51 @@ interface LifecycleAction {
   tone?: "danger" | "primary";
 }
 
-const actions: Partial<Record<QuoteStatus, LifecycleAction[]>> = {
-  DRAFT: [
-    { label: "Issue quote", status: "ISSUED" },
-    {
-      label: "Cancel quote",
-      notePrompt: "Optional cancellation note:",
-      status: "CANCELLED",
-      tone: "danger",
-    },
-  ],
-  ISSUED: [
-    { label: "Accept quote", status: "ACCEPTED" },
-    {
-      label: "Reject quote",
-      notePrompt: "Optional rejection note:",
-      status: "REJECTED",
-      tone: "danger",
-    },
-    { label: "Expire quote", status: "EXPIRED", tone: "danger" },
-    {
-      label: "Cancel quote",
-      notePrompt: "Optional cancellation note:",
-      status: "CANCELLED",
-      tone: "danger",
-    },
-  ],
-};
-
 export function QuoteLifecycleActions({
   compact = false,
+  locale: localeInput = "en",
   onUpdated,
   quoteId,
   status,
 }: {
   compact?: boolean;
+  locale?: string;
   onUpdated?: (quote: Quote) => void;
   quoteId: string;
   status: QuoteStatus;
 }) {
+  const locale = commercialLocale(localeInput);
+  const t = commercialCopy[locale];
   const [submitting, setSubmitting] = useState<LifecycleTarget>();
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
+  const actions: Partial<Record<QuoteStatus, LifecycleAction[]>> = {
+    DRAFT: [
+      { label: t.issueQuote, status: "ISSUED" },
+      {
+        label: t.cancelQuote,
+        notePrompt: t.cancellationNote,
+        status: "CANCELLED",
+        tone: "danger",
+      },
+    ],
+    ISSUED: [
+      { label: t.acceptQuote, status: "ACCEPTED" },
+      {
+        label: t.rejectQuote,
+        notePrompt: t.rejectionNote,
+        status: "REJECTED",
+        tone: "danger",
+      },
+      { label: t.expireQuote, status: "EXPIRED", tone: "danger" },
+      {
+        label: t.cancelQuote,
+        notePrompt: t.cancellationNote,
+        status: "CANCELLED",
+        tone: "danger",
+      },
+    ],
+  };
   const availableActions = actions[status] ?? [];
 
   async function run(action: LifecycleAction) {
@@ -63,7 +67,7 @@ export function QuoteLifecycleActions({
       return;
     }
     const note = rawNote?.trim() || undefined;
-    if (!window.confirm(`${action.label} from current status ${status}?`)) {
+    if (!window.confirm(t.quoteIssueConfirm(action.label, status))) {
       return;
     }
     setSubmitting(action.status);
@@ -72,7 +76,7 @@ export function QuoteLifecycleActions({
     try {
       const updated = await advanceQuoteLifecycle(quoteId, action.status, note);
       onUpdated?.(updated);
-      setSuccess(`Quote status changed to ${action.status}.`);
+      setSuccess(t.quoteStatusChanged(action.status));
     } catch (lifecycleError) {
       setError(quoteErrorMessage(lifecycleError));
     } finally {
@@ -99,7 +103,7 @@ export function QuoteLifecycleActions({
             disabled={Boolean(submitting)}
             onClick={() => void run(action)}
           >
-            {submitting === action.status ? "Saving..." : action.label}
+            {submitting === action.status ? t.saving : action.label}
           </button>
         ))}
       </div>

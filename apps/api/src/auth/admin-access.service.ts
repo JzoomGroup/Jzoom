@@ -14,6 +14,175 @@ export class AdminAccessService {
     @Inject(AuthAuditService) private readonly audit: AuthAuditService,
   ) {}
 
+  async listUsers() {
+    const users = await this.database.prisma.user.findMany({
+      orderBy: [{ status: "asc" }, { displayName: "asc" }],
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        preferredLocale: true,
+        userType: true,
+        status: true,
+        lockedUntil: true,
+        lastLoginAt: true,
+        sessionVersion: true,
+        createdAt: true,
+        updatedAt: true,
+        roles: {
+          select: {
+            role: {
+              select: {
+                code: true,
+                name: true,
+                nameAr: true,
+                nameEn: true,
+                status: true,
+              },
+            },
+          },
+          orderBy: { role: { sortOrder: "asc" } },
+        },
+        scopes: {
+          select: {
+            scopeType: true,
+            client: { select: { id: true, code: true, name: true } },
+            domain: true,
+            teamCode: true,
+          },
+          orderBy: { scopeType: "asc" },
+        },
+        clientAssignments: {
+          select: {
+            roleCode: true,
+            startsAt: true,
+            endsAt: true,
+            client: { select: { id: true, code: true, name: true } },
+          },
+          orderBy: { startsAt: "desc" },
+        },
+        permissionOverrides: {
+          select: {
+            effect: true,
+            reason: true,
+            expiresAt: true,
+            permission: {
+              select: {
+                code: true,
+                name: true,
+                module: true,
+                action: true,
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    });
+
+    return {
+      users: users.map((user) => ({
+        ...user,
+        roles: user.roles.map(({ role }) => role),
+      })),
+    };
+  }
+
+  async listRolesAndPermissions() {
+    const [roles, permissions] = await Promise.all([
+      this.database.prisma.role.findMany({
+        orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          nameAr: true,
+          nameEn: true,
+          userType: true,
+          description: true,
+          dataScope: true,
+          capabilities: true,
+          restrictions: true,
+          isSystem: true,
+          status: true,
+          sortOrder: true,
+          rolePermissions: {
+            select: {
+              effect: true,
+              scopeRule: true,
+              permission: {
+                select: {
+                  code: true,
+                  name: true,
+                  module: true,
+                  action: true,
+                  description: true,
+                  status: true,
+                },
+              },
+            },
+            orderBy: { permission: { sortOrder: "asc" } },
+          },
+          _count: { select: { userRoles: true } },
+        },
+      }),
+      this.database.prisma.permission.findMany({
+        orderBy: [{ module: "asc" }, { sortOrder: "asc" }, { code: "asc" }],
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          module: true,
+          action: true,
+          description: true,
+          status: true,
+          sortOrder: true,
+        },
+      }),
+    ]);
+
+    return {
+      roles: roles.map((role) => ({
+        ...role,
+        permissions: role.rolePermissions.map((entry) => ({
+          ...entry.permission,
+          effect: entry.effect,
+          scopeRule: entry.scopeRule,
+        })),
+        usersCount: role._count.userRoles,
+        rolePermissions: undefined,
+        _count: undefined,
+      })),
+      permissions,
+    };
+  }
+
+  async listAuditLogs() {
+    const logs = await this.database.prisma.auditLog.findMany({
+      orderBy: { occurredAt: "desc" },
+      take: 100,
+      select: {
+        id: true,
+        eventCode: true,
+        entityType: true,
+        entityId: true,
+        reason: true,
+        requestId: true,
+        severity: true,
+        occurredAt: true,
+        actor: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+          },
+        },
+      },
+    });
+
+    return { logs };
+  }
+
   async invite(
     input: InviteUserDto,
     actorId: string,

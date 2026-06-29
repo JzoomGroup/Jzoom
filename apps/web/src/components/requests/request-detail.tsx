@@ -31,7 +31,8 @@ import type {
   RequestStatus,
   ServiceRequest,
 } from "../../lib/request-types";
-import { formatRiyadhDateTime, riyadhDateInputValue } from "../../lib/stable-date";
+import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { riyadhDateInputValue } from "../../lib/stable-date";
 import { PageHeader, PriorityChip, StatusChip } from "../premium-os";
 
 const statuses: RequestStatus[] = [
@@ -82,12 +83,409 @@ const closableOutputStatuses: RequestOutputStatus[] = [
 ];
 const submittableTimeEntryStatuses: RequestTimeEntryStatus[] = ["DRAFT", "REJECTED"];
 
-function dateTime(value: string | null): string {
-  return formatRiyadhDateTime(value);
+const copy = {
+  ar: {
+    accountManager: "مدير الحساب",
+    activity: "النشاط",
+    addChecklistItem: "إضافة بند",
+    addComment: "إضافة تعليق",
+    addInternalNote: "إضافة ملاحظة داخلية",
+    addMetadata: "إضافة البيانات",
+    addTime: "إضافة وقت",
+    actionShortcuts: "اختصارات التشغيل",
+    approved: "معتمد",
+    approve: "اعتماد",
+    approveRequest: "اعتماد الطلب",
+    approvedReady: "معتمد وجاهز للمشاركة",
+    assignee: "المسؤول",
+    assignments: "الإسناد",
+    attachmentMetadata: "بيانات المرفقات",
+    attachmentUnavailable: "تحديث بيانات المرفقات متاح لمساحات العمل الداخلية المسندة.",
+    backToRequests: "العودة للطلبات",
+    basicTimeEntries: "سجل الوقت",
+    billable: "قابل للفوترة",
+    blocked: "متوقف",
+    bytes: "بايت",
+    cancel: "إلغاء",
+    checklistUnavailable: "تحديث قائمة العمل متاح لمساحات العمل الداخلية المسندة.",
+    client: "العميل",
+    clientDocumentRequests: "مستندات العميل المطلوبة",
+    clientDocuments: "مستندات العميل",
+    clientDocumentUnavailable: "طلب مستندات العميل متاح لمساحات العمل الداخلية المسندة.",
+    clientVisible: "ظاهر للعميل",
+    close: "إغلاق",
+    closeDelivery: "إغلاق التسليم",
+    comment: "تعليق",
+    comments: "التعليقات",
+    completeness: "الاكتمال",
+    createInternalOutput: "إنشاء مخرج داخلي",
+    createdBy: "أنشئ بواسطة",
+    current: "الحالة الحالية",
+    decisionNote: "ملاحظة القرار",
+    description: "الوصف",
+    documentTitle: "عنوان المستند",
+    done: "منجز",
+    due: "الموعد",
+    dueAt: "الموعد",
+    escalate: "تصعيد",
+    generalServiceRequest: "طلب عام على الخدمة",
+    hours: "الساعات",
+    internal: "داخلي",
+    internalChecklist: "قائمة العمل الداخلية",
+    internalNotes: "الملاحظات الداخلية",
+    internalOnly: "داخلي فقط",
+    internalOutputUnavailable: "تجهيز المخرجات متاح للمختصين المسندين والأدوار العامة.",
+    internalOutputs: "المخرجات الداخلية",
+    internalUser: "مستخدم داخلي",
+    instructions: "التعليمات",
+    keepAccountManager: "إبقاء مدير الحساب الحالي",
+    keepSpecialist: "إبقاء المختص الحالي",
+    keepSupervisor: "إبقاء المشرف الحالي",
+    lifecycle: "مسار الحالة",
+    metadataVisibility: "الظهور",
+    mimeType: "نوع الملف",
+    noAction: "لا يوجد إجراء معطل الآن.",
+    noActionBody: "لا يوجد إجراء مطلوب لهذا الدور في مساحة العمل الحالية.",
+    noAnswers: "لا توجد إجابات منظمة مرسلة.",
+    noAssignee: "بدون مسؤول",
+    noActivity: "لا يوجد نشاط مسجل على الطلب حتى الآن.",
+    noAttachments: "لا توجد مرفقات محفوظة على الطلب حتى الآن.",
+    noClientDocuments: "لم يتم طلب مستندات من العميل حتى الآن.",
+    noComments: "لا توجد تعليقات على الطلب حتى الآن.",
+    noInternalChecklist: "لا توجد بنود عمل داخلية حتى الآن.",
+    noInternalNotes: "لا توجد ملاحظات داخلية حتى الآن.",
+    noInternalOutputs: "لا توجد مخرجات داخلية حتى الآن.",
+    noTimeEntries: "لا توجد قيود وقت حتى الآن.",
+    notApplicable: "لا ينطبق",
+    notSet: "غير محدد",
+    note: "ملاحظة",
+    nonBillable: "غير قابل للفوترة",
+    nextAction: "الإجراء التالي",
+    operatingPath: "مسار التشغيل",
+    operationsSignals: "مؤشرات تشغيل الطلب",
+    operationsWorkbench: "مساحة تشغيل الطلب",
+    outputCode: "رمز المخرج",
+    package: "الباقة",
+    pending: "قيد الانتظار",
+    priority: "الأولوية",
+    reason: "السبب",
+    reject: "رفض",
+    requestContext: "سياق الطلب",
+    requestDetail: "تفاصيل الطلب",
+    requestDocument: "طلب مستند",
+    requestSections: "أقسام تفاصيل الطلب",
+    returnChanges: "إرجاع للتعديل",
+    reviewNote: "ملاحظة المراجعة",
+    reviewReason: "سبب مراجعة المشرف",
+    reviewedBy: "تمت المراجعة بواسطة",
+    saveAssignment: "حفظ الإسناد",
+    service: "الخدمة",
+    serviceItem: "بند الخدمة",
+    shareWithClient: "مشاركة مع العميل",
+    sharedAt: "تمت المشاركة",
+    sizeBytes: "الحجم بالبايت",
+    specialist: "المختص",
+    start: "بدء",
+    startWork: "بدء العمل",
+    status: "الحالة",
+    statusUnavailable: "تغيير الحالة متاح للمشرف المسند أو الإدارة أو الأدمن.",
+    submit: "إرسال",
+    submittedHours: "ساعات مقدمة",
+    supervisor: "المشرف",
+    supervisorReview: "مراجعة المشرف",
+    taskTitle: "عنوان المهمة",
+    templateAnswers: "إجابات النموذج",
+    timeUnavailable: "تسجيل الوقت متاح للمستخدمين التنفيذيين المسندين والأدوار العامة.",
+    title: "العنوان",
+    totalChecklistItems: "إجمالي بنود القائمة",
+    updateStatus: "تحديث الحالة",
+    uploaded: "مرفوعة",
+    uploadedByClient: "مرفوعة من العميل",
+    uploadedFile: "ملف مرفوع",
+    uuidOrClear: "معرف المستخدم أو clear",
+    originalName: "اسم الملف",
+    visibleToClient: "ظاهر للعميل",
+    workDate: "تاريخ العمل",
+    workflow: "سير العمل",
+    workspace: {
+      admin: {
+        title: "غرفة تشغيل الأدمن",
+        description: "إشراف كامل على الحالة، الإسناد، المخرجات، المستندات، والساعات.",
+      },
+      management: {
+        title: "مراجعة الإدارة",
+        description: "رؤية تنفيذية مع صلاحية مراجعة التصعيد والاعتمادات.",
+      },
+      supervisor: {
+        title: "مركز مراجعة المشرف",
+        description: "مراجعة الجودة، اعتماد التسليم، متابعة عبء العمل، وقرارات الساعات.",
+      },
+      specialist: {
+        title: "مساحة عمل المختص",
+        description: "تنفيذ العمل المسند، قائمة العمل، طلب المستندات، المخرجات، وتسجيل الوقت.",
+      },
+      accountManager: {
+        title: "متابعة مدير الحساب",
+        description: "سياق العميل، ملاحظات العلاقة، متابعة المستندات، ورؤية حالة الطلب.",
+      },
+      default: { title: "مساحة الطلب", description: "رؤية محددة حسب نطاق الصلاحية." },
+    },
+    nav: {
+      activity: "النشاط",
+      attachments: "المرفقات",
+      checklist: "قائمة العمل",
+      comments: "التعليقات",
+      documents: "المستندات",
+      hours: "الساعات",
+      notes: "الملاحظات",
+      outputs: "المخرجات",
+      summary: "الملخص",
+      workflow: "سير العمل",
+    },
+  },
+  en: {
+    accountManager: "Account manager",
+    activity: "Activity",
+    addChecklistItem: "Add checklist item",
+    addComment: "Add comment",
+    addInternalNote: "Add internal note",
+    addMetadata: "Add metadata",
+    addTime: "Add time",
+    actionShortcuts: "Operations shortcuts",
+    approved: "approved",
+    approve: "Approve",
+    approveRequest: "Approve request",
+    approvedReady: "approved and ready to share",
+    assignee: "Assignee",
+    assignments: "Assignments",
+    attachmentMetadata: "Attachment metadata",
+    attachmentUnavailable:
+      "Attachment metadata updates are available to assigned internal workspaces.",
+    backToRequests: "Back to requests",
+    basicTimeEntries: "Basic time entries",
+    billable: "Billable",
+    blocked: "Blocked",
+    bytes: "bytes",
+    cancel: "Cancel",
+    checklistUnavailable: "Checklist updates are limited to assigned internal workspaces.",
+    client: "Client",
+    clientDocumentRequests: "Client document requests",
+    clientDocuments: "Client documents",
+    clientDocumentUnavailable:
+      "Client document requests are available to assigned internal workspaces.",
+    clientVisible: "Client-visible",
+    close: "Close",
+    closeDelivery: "Close delivery",
+    comment: "Comment",
+    comments: "Comments",
+    completeness: "Completeness",
+    createInternalOutput: "Create internal output",
+    createdBy: "created by",
+    current: "Current",
+    decisionNote: "Decision note",
+    description: "Description",
+    documentTitle: "Document title",
+    done: "Done",
+    due: "Due",
+    dueAt: "Due at",
+    escalate: "Escalate",
+    generalServiceRequest: "General service request",
+    hours: "Hours",
+    internal: "Internal",
+    internalChecklist: "Internal checklist",
+    internalNotes: "Internal notes",
+    internalOnly: "Internal-only",
+    internalOutputUnavailable:
+      "Deliverable preparation is available to assigned specialists and global roles.",
+    internalOutputs: "Internal outputs",
+    internalUser: "Internal user",
+    instructions: "Instructions",
+    keepAccountManager: "Keep current account manager",
+    keepSpecialist: "Keep current specialist",
+    keepSupervisor: "Keep current supervisor",
+    lifecycle: "Lifecycle",
+    metadataVisibility: "Visibility",
+    mimeType: "MIME type",
+    noAction: "No blocking operation right now.",
+    noActionBody: "The request has no role-specific pending action for your workspace.",
+    noAnswers: "No structured answers were submitted.",
+    noAssignee: "No assignee",
+    noActivity: "No request activity has been recorded yet.",
+    noAttachments: "No attachments are stored on this request yet.",
+    noClientDocuments: "No client documents requested yet.",
+    noComments: "No comments have been added to this request yet.",
+    noInternalChecklist: "No internal checklist items yet.",
+    noInternalNotes: "No internal notes have been added yet.",
+    noInternalOutputs: "No internal outputs prepared yet.",
+    noTimeEntries: "No time entries yet.",
+    notApplicable: "N/A",
+    notSet: "Not set",
+    note: "Note",
+    nonBillable: "Non-billable",
+    nextAction: "Next action",
+    operatingPath: "Operating path",
+    operationsSignals: "Request operating signals",
+    operationsWorkbench: "Operations workbench",
+    outputCode: "Output code",
+    package: "Package",
+    pending: "Pending",
+    priority: "Priority",
+    reason: "Reason",
+    reject: "Reject",
+    requestContext: "Request context",
+    requestDetail: "Request detail",
+    requestDocument: "Request document",
+    requestSections: "Request detail sections",
+    returnChanges: "Return changes",
+    reviewNote: "Review note",
+    reviewReason: "Supervisor review reason",
+    reviewedBy: "reviewed by",
+    saveAssignment: "Save assignment",
+    service: "Service",
+    serviceItem: "Service item",
+    shareWithClient: "Share with client",
+    sharedAt: "shared",
+    sizeBytes: "Size bytes",
+    specialist: "Specialist",
+    start: "Start",
+    startWork: "Start work",
+    status: "Status",
+    statusUnavailable:
+      "Status changes are handled by the assigned supervisor, management, or admin.",
+    submit: "Submit",
+    submittedHours: "Submitted hours",
+    supervisor: "Supervisor",
+    supervisorReview: "Supervisor review",
+    taskTitle: "Task title",
+    templateAnswers: "Template answers",
+    timeUnavailable: "Time registration is available to assigned execution users and global roles.",
+    title: "Title",
+    totalChecklistItems: "total checklist items",
+    updateStatus: "Update status",
+    uploaded: "uploaded",
+    uploadedByClient: "uploaded by client",
+    uploadedFile: "Uploaded",
+    uuidOrClear: "UUID or clear",
+    originalName: "Original name",
+    visibleToClient: "Visible to client",
+    workDate: "Work date",
+    workflow: "Workflow",
+    workspace: {
+      admin: {
+        title: "Admin operations control",
+        description: "Full request control, assignment, review, delivery, and hours oversight.",
+      },
+      management: {
+        title: "Management review",
+        description: "Executive visibility with escalation and approval access.",
+      },
+      supervisor: {
+        title: "Supervisor review",
+        description: "Quality review, delivery approval, workload, and hours decisions.",
+      },
+      specialist: {
+        title: "Specialist workbench",
+        description:
+          "Assigned execution, checklist work, document requests, deliverables, and time.",
+      },
+      accountManager: {
+        title: "Account manager follow-up",
+        description:
+          "Client context, relationship notes, document follow-up, and status visibility.",
+      },
+      default: { title: "Request workspace", description: "Scoped request visibility." },
+    },
+    nav: {
+      activity: "Activity",
+      attachments: "Attachments",
+      checklist: "Checklist",
+      comments: "Comments",
+      documents: "Documents",
+      hours: "Hours",
+      notes: "Notes",
+      outputs: "Outputs",
+      summary: "Summary",
+      workflow: "Workflow",
+    },
+  },
+} as const;
+
+const statusLabels = {
+  ASSIGNED: { ar: "مسند", en: "Assigned" },
+  CLOSED: { ar: "مغلق", en: "Closed" },
+  COMPLETED: { ar: "مكتمل", en: "Completed" },
+  IN_PROGRESS: { ar: "قيد التنفيذ", en: "In progress" },
+  NEW: { ar: "جديد", en: "New" },
+  REJECTED: { ar: "مرفوض", en: "Rejected" },
+  RETURNED: { ar: "معاد للتعديل", en: "Returned" },
+  TRIAGE: { ar: "قيد الفرز", en: "In review" },
+  WAITING_CLIENT: { ar: "بانتظار العميل", en: "Waiting for client" },
+  WAITING_SUPERVISOR: { ar: "بانتظار المشرف", en: "Waiting for supervisor" },
+} satisfies Record<RequestStatus, Record<SupportedLocale, string>>;
+
+const priorityLabels = {
+  LOW: { ar: "منخفضة", en: "Low" },
+  NORMAL: { ar: "عادية", en: "Normal" },
+  HIGH: { ar: "عالية", en: "High" },
+  URGENT: { ar: "عاجلة", en: "Urgent" },
+} as const;
+
+const codeLabels: Record<string, Record<SupportedLocale, string>> = {
+  ACCEPTED_BY_CLIENT: { ar: "مقبول من العميل", en: "Accepted by client" },
+  ACCOUNT_MANAGER: { ar: "مدير الحساب", en: "Account manager" },
+  ADMIN: { ar: "الأدمن", en: "Admin" },
+  APPROVED: { ar: "معتمد", en: "Approved" },
+  APPROVED_INTERNAL: { ar: "معتمد داخليًا", en: "Approved internally" },
+  BLOCKED: { ar: "متوقف", en: "Blocked" },
+  CANCELLED: { ar: "ملغي", en: "Cancelled" },
+  CLIENT: { ar: "العميل", en: "Client" },
+  CLIENT_VISIBLE: { ar: "ظاهر للعميل", en: "Client-visible" },
+  CLOSED: { ar: "مغلق", en: "Closed" },
+  DRAFT: { ar: "مسودة", en: "Draft" },
+  DONE: { ar: "منجز", en: "Done" },
+  EMAIL: { ar: "بريد إلكتروني", en: "Email" },
+  FILE: { ar: "ملف", en: "File" },
+  HIGH: { ar: "عالية", en: "High" },
+  IN_PROGRESS: { ar: "قيد التنفيذ", en: "In progress" },
+  INTERNAL: { ar: "داخلي", en: "Internal" },
+  INTERNAL_REVIEW: { ar: "مراجعة داخلية", en: "Internal review" },
+  LOW: { ar: "منخفضة", en: "Low" },
+  MANAGEMENT: { ar: "الإدارة", en: "Management" },
+  NORMAL: { ar: "عادية", en: "Normal" },
+  NOT_APPLICABLE: { ar: "لا ينطبق", en: "Not applicable" },
+  NUMBER: { ar: "رقم", en: "Number" },
+  PENDING: { ar: "قيد الانتظار", en: "Pending" },
+  REJECTED: { ar: "مرفوض", en: "Rejected" },
+  REQUESTED: { ar: "مطلوب", en: "Requested" },
+  RETURNED_BY_CLIENT: { ar: "معاد من العميل", en: "Returned by client" },
+  REVISION_REQUESTED: { ar: "مطلوب تعديل", en: "Revision requested" },
+  SELECT: { ar: "اختيار", en: "Select" },
+  SHARED_WITH_CLIENT: { ar: "مشارك مع العميل", en: "Shared with client" },
+  SPECIALIST: { ar: "المختص", en: "Specialist" },
+  START: { ar: "البداية", en: "Start" },
+  SUBMITTED: { ar: "مرسل للمراجعة", en: "Submitted" },
+  SUPERVISOR: { ar: "المشرف", en: "Supervisor" },
+  TEXT: { ar: "نص", en: "Text" },
+  TEXTAREA: { ar: "نص طويل", en: "Long text" },
+  TODO: { ar: "للعمل", en: "To do" },
+  TRIAGE: { ar: "قيد الفرز", en: "In review" },
+  UPLOADED: { ar: "مرفوع", en: "Uploaded" },
+  URGENT: { ar: "عاجلة", en: "Urgent" },
+};
+
+function dateTime(value: string | null, locale: SupportedLocale): string {
+  if (!value) return copy[locale].notSet;
+  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
 }
 
-function assignee(value: ServiceRequest["assignments"]["specialist"]): string {
-  return value ? value.displayName : "Unassigned";
+function assignee(
+  value: ServiceRequest["assignments"]["specialist"],
+  locale: SupportedLocale,
+): string {
+  return value ? value.displayName : copy[locale].noAssignee;
 }
 
 function assignmentValue(value: string): string | null | undefined {
@@ -110,62 +508,92 @@ function userMatches(user: CurrentUser, assigned: ServiceRequest["assignments"][
   return assigned?.id === user.id;
 }
 
-function hours(entries: ServiceRequest["timeEntries"]): string {
+function hours(entries: ServiceRequest["timeEntries"], locale: SupportedLocale): string {
   const total = entries.reduce((sum, entry) => sum + Number(entry.hours), 0);
-  return `${total.toFixed(total % 1 === 0 ? 0 : 2)}h`;
+  const value = total.toFixed(total % 1 === 0 ? 0 : 2);
+  return locale === "ar" ? `${value} س` : `${value}h`;
 }
 
-function roleWorkspace(user: CurrentUser): { title: string; description: string } {
+function serviceName(request: ServiceRequest, locale: SupportedLocale): string {
+  return locale === "ar"
+    ? request.service.monthlyService.nameAr || request.service.monthlyService.nameEn
+    : request.service.monthlyService.nameEn || request.service.monthlyService.nameAr;
+}
+
+function serviceLevelLabel(request: ServiceRequest, locale: SupportedLocale): string {
+  return locale === "ar"
+    ? request.service.serviceLevel.labelAr ||
+        request.service.serviceLevel.labelEn ||
+        request.service.serviceLevel.code
+    : request.service.serviceLevel.labelEn ||
+        request.service.serviceLevel.labelAr ||
+        request.service.serviceLevel.code;
+}
+
+function serviceItemLabel(request: ServiceRequest, locale: SupportedLocale): string {
+  if (!request.serviceItem) return copy[locale].generalServiceRequest;
+  return locale === "ar"
+    ? request.serviceItem.nameAr || request.serviceItem.nameEn
+    : request.serviceItem.nameEn || request.serviceItem.nameAr;
+}
+
+function statusLabel(status: RequestStatus, locale: SupportedLocale): string {
+  return statusLabels[status]?.[locale] ?? status;
+}
+
+function priorityLabel(priority: string, locale: SupportedLocale): string {
+  return priorityLabels[priority as keyof typeof priorityLabels]?.[locale] ?? priority;
+}
+
+function codeLabel(value: string | null | undefined, locale: SupportedLocale): string {
+  if (!value) return copy[locale].notSet;
+  const requestStatus = statusLabels[value as RequestStatus]?.[locale];
+  if (requestStatus) return requestStatus;
+  const label = codeLabels[value]?.[locale];
+  if (label) return label;
+  return locale === "en" ? value.replaceAll("_", " ").toLowerCase() : value;
+}
+
+function roleWorkspace(
+  user: CurrentUser,
+  locale: SupportedLocale,
+): { title: string; description: string } {
+  const t = copy[locale].workspace;
   if (hasRole(user, "ROLE-ADMIN")) {
-    return {
-      title: "Admin operations control",
-      description: "Full request control, assignment, review, delivery, and hours oversight.",
-    };
+    return t.admin;
   }
   if (hasRole(user, "ROLE-MGMT")) {
-    return {
-      title: "Management review",
-      description: "Executive visibility with escalation and approval access.",
-    };
+    return t.management;
   }
   if (hasRole(user, "ROLE-SUPERVISOR")) {
-    return {
-      title: "Supervisor review",
-      description: "Quality review, delivery approval, workload, and hours decisions.",
-    };
+    return t.supervisor;
   }
   if (hasRole(user, "ROLE-SPECIALIST")) {
-    return {
-      title: "Specialist workbench",
-      description: "Assigned execution, checklist work, document requests, deliverables, and time.",
-    };
+    return t.specialist;
   }
   if (hasRole(user, "ROLE-AM")) {
-    return {
-      title: "Account manager follow-up",
-      description: "Client context, relationship notes, document follow-up, and status visibility.",
-    };
+    return t.accountManager;
   }
-  return {
-    title: "Request workspace",
-    description: "Scoped request visibility.",
-  };
+  return t.default;
 }
 
-function RequestDetailNav() {
+function RequestDetailNav({ locale }: { locale: SupportedLocale }) {
+  const t = copy[locale];
   const sections = [
-    ["#request-context", "Summary"],
-    ["#request-lifecycle", "Workflow"],
-    ["#request-checklist", "Checklist"],
-    ["#request-outputs", "Outputs"],
-    ["#request-documents", "Documents"],
-    ["#request-hours", "Hours"],
-    ["#request-notes", "Notes"],
-    ["#request-activity", "Activity"],
+    ["#request-context", t.nav.summary],
+    ["#request-lifecycle", t.nav.workflow],
+    ["#request-checklist", t.nav.checklist],
+    ["#request-outputs", t.nav.outputs],
+    ["#request-documents", t.nav.documents],
+    ["#request-hours", t.nav.hours],
+    ["#request-comments", t.nav.comments],
+    ["#request-notes", t.nav.notes],
+    ["#request-attachments", t.nav.attachments],
+    ["#request-activity", t.nav.activity],
   ] as const;
 
   return (
-    <nav className="request-detail-nav" aria-label="Request detail sections">
+    <nav className="request-detail-nav" aria-label={t.requestSections}>
       {sections.map(([href, label]) => (
         <a key={href} href={href}>
           {label}
@@ -193,25 +621,26 @@ function RequestSignalCard({
   );
 }
 
-function workflowStageLabel(stage: RequestStatus) {
-  return stage
-    .toLowerCase()
-    .split("_")
-    .map((part) => part[0]?.toUpperCase() + part.slice(1))
-    .join(" ");
+function EmptyActivity({ message }: { message: string }) {
+  return (
+    <article className="activity-empty">
+      <strong>{message}</strong>
+    </article>
+  );
 }
 
-function WorkflowStepper({ status }: { status: RequestStatus }) {
+function WorkflowStepper({ locale, status }: { locale: SupportedLocale; status: RequestStatus }) {
+  const t = copy[locale];
   const currentIndex = workflowStages.indexOf(status);
 
   return (
-    <section className="request-workflow-stepper" aria-label="Request workflow progress">
+    <section className="request-workflow-stepper" aria-label={t.workflow}>
       <div className="request-workflow-heading">
         <div>
-          <p className="eyebrow">Workflow</p>
-          <h2>Operating path</h2>
+          <p className="eyebrow">{t.workflow}</p>
+          <h2>{t.operatingPath}</h2>
         </div>
-        <StatusChip status={status} label={`Current: ${workflowStageLabel(status)}`} />
+        <StatusChip status={status} label={`${t.current}: ${statusLabel(status, locale)}`} />
       </div>
       <ol>
         {workflowStages.map((stage, index) => {
@@ -224,7 +653,7 @@ function WorkflowStepper({ status }: { status: RequestStatus }) {
               aria-current={isCurrent ? "step" : undefined}
             >
               <span>{String(index + 1).padStart(2, "0")}</span>
-              <strong>{workflowStageLabel(stage)}</strong>
+              <strong>{statusLabel(stage, locale)}</strong>
             </li>
           );
         })}
@@ -242,6 +671,8 @@ export function RequestDetail({
   currentUser: CurrentUser;
   initialRequest: ServiceRequest;
 }) {
+  const locale = normalizeLocale(currentUser.preferredLocale);
+  const t = copy[locale];
   const [request, setRequest] = useState(initialRequest);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
@@ -314,7 +745,7 @@ export function RequestDetail({
   const canRequestDocuments = canAddOperationalContext;
   const canAttachMetadata = canAddOperationalContext;
   const canStartWork = canExecute && startableStatuses.includes(request.status);
-  const workspace = roleWorkspace(currentUser);
+  const workspace = roleWorkspace(currentUser, locale);
   const taskAssignmentCandidates = assignmentCandidates
     ? [
         ...new Map(
@@ -342,26 +773,60 @@ export function RequestDetail({
   );
   const nextActions = [
     ...(canAssign && !request.assignments.specialist
-      ? ["Assign a specialist before execution starts."]
+      ? [
+          locale === "ar"
+            ? "أسند الطلب إلى مختص قبل بدء التنفيذ."
+            : "Assign a specialist before execution starts.",
+        ]
       : []),
-    ...(canStartWork ? ["Start work and move the request into execution."] : []),
+    ...(canStartWork
+      ? [
+          locale === "ar"
+            ? "ابدأ العمل وانقل الطلب إلى مرحلة التنفيذ."
+            : "Start work and move the request into execution.",
+        ]
+      : []),
     ...(canExecute && returnedOutputs.length > 0
-      ? [`Revise ${returnedOutputs.length} returned deliverable(s).`]
+      ? [
+          locale === "ar"
+            ? `راجع ${returnedOutputs.length} من المخرجات المعادة.`
+            : `Revise ${returnedOutputs.length} returned deliverable(s).`,
+        ]
       : []),
     ...(canSupervise && reviewOutputs.length > 0
-      ? [`Review ${reviewOutputs.length} deliverable(s) waiting for supervisor approval.`]
+      ? [
+          locale === "ar"
+            ? `راجع ${reviewOutputs.length} من المخرجات بانتظار اعتماد المشرف.`
+            : `Review ${reviewOutputs.length} deliverable(s) waiting for supervisor approval.`,
+        ]
       : []),
     ...(canSupervise && readyOutputs.length > 0
-      ? [`Share ${readyOutputs.length} approved deliverable(s) with the client.`]
+      ? [
+          locale === "ar"
+            ? `شارك ${readyOutputs.length} من المخرجات المعتمدة مع العميل.`
+            : `Share ${readyOutputs.length} approved deliverable(s) with the client.`,
+        ]
       : []),
     ...(canSupervise && submittedTimeEntries.length > 0
-      ? [`Approve or reject ${submittedTimeEntries.length} submitted time entry(s).`]
+      ? [
+          locale === "ar"
+            ? `اعتمد أو ارفض ${submittedTimeEntries.length} من قيود الوقت المقدمة.`
+            : `Approve or reject ${submittedTimeEntries.length} submitted time entry(s).`,
+        ]
       : []),
     ...(canRequestDocuments && uploadedDocumentRequests.length > 0
-      ? [`Close ${uploadedDocumentRequests.length} uploaded client document request(s).`]
+      ? [
+          locale === "ar"
+            ? `أغلق ${uploadedDocumentRequests.length} من طلبات مستندات العميل المرفوعة.`
+            : `Close ${uploadedDocumentRequests.length} uploaded client document request(s).`,
+        ]
       : []),
     ...(request.status === "WAITING_CLIENT"
-      ? ["Request is waiting for a client response or document upload."]
+      ? [
+          locale === "ar"
+            ? "الطلب بانتظار رد العميل أو رفع مستند."
+            : "Request is waiting for a client response or document upload.",
+        ]
       : []),
   ];
 
@@ -572,144 +1037,160 @@ export function RequestDetail({
     );
   }
 
+  const operationShortcuts = [
+    ...(canAssign
+      ? [{ href: "#request-context", label: t.saveAssignment, detail: t.assignments }]
+      : []),
+    ...(canStartWork
+      ? [{ href: "#request-lifecycle", label: t.startWork, detail: t.lifecycle }]
+      : []),
+    ...(canExecute
+      ? [
+          { href: "#request-checklist", label: t.addChecklistItem, detail: t.internalChecklist },
+          { href: "#request-outputs", label: t.createInternalOutput, detail: t.internalOutputs },
+          { href: "#request-hours", label: t.addTime, detail: t.basicTimeEntries },
+        ]
+      : []),
+    ...(canSupervise
+      ? [
+          { href: "#request-outputs", label: t.supervisorReview, detail: t.internalOutputs },
+          { href: "#request-hours", label: t.approve, detail: t.submittedHours },
+        ]
+      : []),
+    ...(canRequestDocuments
+      ? [{ href: "#request-documents", label: t.requestDocument, detail: t.clientDocuments }]
+      : []),
+    { href: "#request-comments", label: t.addComment, detail: t.comments },
+  ].slice(0, 6);
+
   return (
     <>
       <PageHeader
-        eyebrow="Request detail"
+        eyebrow={t.requestDetail}
         title={request.title}
-        description={`${request.requestNumber} - ${request.client.name} - ${request.service.monthlyService.nameEn}`}
+        description={`${request.requestNumber} - ${request.client.name} - ${serviceName(request, locale)}`}
         meta={
           <>
-            <StatusChip status={request.status} />
-            <PriorityChip priority={request.priority} />
+            <StatusChip status={request.status} label={statusLabel(request.status, locale)} />
+            <PriorityChip
+              priority={request.priority}
+              label={priorityLabel(request.priority, locale)}
+            />
           </>
         }
       >
         <div className="quote-header-actions">
           <Link className="os-button os-button-secondary" href="/requests">
-            Back to requests
+            {t.backToRequests}
           </Link>
         </div>
       </PageHeader>
 
       {error && <p className="form-error">{error}</p>}
 
-      <RequestDetailNav />
+      <RequestDetailNav locale={locale} />
 
-      <section className="request-signal-strip" aria-label="Request operating signals">
-        <RequestSignalCard
-          label="Open tasks"
-          value={openTasks.length}
-          detail={`${request.tasks.length} total checklist items`}
-        />
-        <RequestSignalCard
-          label="Supervisor review"
-          value={reviewOutputs.length}
-          detail={`${readyOutputs.length} ready to share`}
-        />
-        <RequestSignalCard
-          label="Client documents"
-          value={clientDocumentRequests.length}
-          detail={`${uploadedDocumentRequests.length} uploaded`}
-        />
-        <RequestSignalCard
-          label="Submitted hours"
-          value={hours(submittedTimeEntries)}
-          detail={`${hours(approvedTimeEntries)} approved`}
-        />
-      </section>
-
-      <WorkflowStepper status={request.status} />
-
-      <section className="catalog-panel">
-        <p className="eyebrow">Operations workbench</p>
-        <h2>{workspace.title}</h2>
-        <p>{workspace.description}</p>
-        <div className="metric-grid" aria-label="Request operations summary">
-          <article>
-            <span>Open tasks</span>
-            <strong>{openTasks.length}</strong>
-            <small>{request.tasks.length} total checklist items</small>
-          </article>
-          <article>
-            <span>Supervisor review</span>
-            <strong>{reviewOutputs.length}</strong>
-            <small>{readyOutputs.length} approved and ready to share</small>
-          </article>
-          <article>
-            <span>Client documents</span>
-            <strong>{clientDocumentRequests.length}</strong>
-            <small>{uploadedDocumentRequests.length} uploaded by client</small>
-          </article>
-          <article>
-            <span>Submitted hours</span>
-            <strong>{hours(submittedTimeEntries)}</strong>
-            <small>{hours(approvedTimeEntries)} approved</small>
-          </article>
-        </div>
-        <div className="activity-list">
-          {nextActions.length === 0 ? (
-            <article>
-              <strong>No blocking operation right now.</strong>
-              <p>The request has no role-specific pending action for your workspace.</p>
-            </article>
-          ) : (
-            nextActions.map((action) => (
-              <article key={action}>
-                <strong>Next action</strong>
-                <p>{action}</p>
+      <section className="request-ops-command">
+        <div className="request-ops-main">
+          <p className="eyebrow">{t.operationsWorkbench}</p>
+          <h2>{workspace.title}</h2>
+          <p>{workspace.description}</p>
+          <div className="request-next-actions">
+            {nextActions.length === 0 ? (
+              <article>
+                <strong>{t.noAction}</strong>
+                <p>{t.noActionBody}</p>
               </article>
-            ))
-          )}
+            ) : (
+              nextActions.map((action) => (
+                <article key={action}>
+                  <strong>{t.nextAction}</strong>
+                  <p>{action}</p>
+                </article>
+              ))
+            )}
+          </div>
+          <div className="request-primary-actions" aria-label={t.actionShortcuts}>
+            {operationShortcuts.map((action) => (
+              <a key={`${action.href}-${action.label}`} href={action.href}>
+                <span>{action.detail}</span>
+                <strong>{action.label}</strong>
+              </a>
+            ))}
+          </div>
+        </div>
+        <div className="request-ops-metrics" aria-label={t.operationsSignals}>
+          <RequestSignalCard
+            label={t.internalChecklist}
+            value={openTasks.length}
+            detail={`${request.tasks.length} ${t.totalChecklistItems}`}
+          />
+          <RequestSignalCard
+            label={t.supervisorReview}
+            value={reviewOutputs.length}
+            detail={`${readyOutputs.length} ${t.approvedReady}`}
+          />
+          <RequestSignalCard
+            label={t.clientDocuments}
+            value={clientDocumentRequests.length}
+            detail={`${uploadedDocumentRequests.length} ${t.uploadedByClient}`}
+          />
+          <RequestSignalCard
+            label={t.submittedHours}
+            value={hours(submittedTimeEntries, locale)}
+            detail={`${hours(approvedTimeEntries, locale)} ${t.approved}`}
+          />
         </div>
       </section>
+
+      <WorkflowStepper locale={locale} status={request.status} />
 
       <section className="quote-summary-grid" id="request-context">
         <article className="catalog-panel">
-          <h2>Request context</h2>
+          <h2>{t.requestContext}</h2>
           <dl className="quote-definition-list">
             <div>
-              <dt>Client</dt>
+              <dt>{t.client}</dt>
               <dd>{request.client.name}</dd>
             </div>
             <div>
-              <dt>Service</dt>
-              <dd>{request.service.monthlyService.nameEn}</dd>
+              <dt>{t.service}</dt>
+              <dd>{serviceName(request, locale)}</dd>
             </div>
             <div>
-              <dt>Package</dt>
-              <dd>{request.service.serviceLevel.labelEn ?? request.service.serviceLevel.code}</dd>
+              <dt>{t.package}</dt>
+              <dd>{serviceLevelLabel(request, locale)}</dd>
             </div>
             <div>
-              <dt>Hours</dt>
+              <dt>{t.hours}</dt>
               <dd>{request.service.hoursAllocated}</dd>
             </div>
             <div>
-              <dt>Service item</dt>
-              <dd>{request.serviceItem?.nameEn ?? "General service request"}</dd>
+              <dt>{t.serviceItem}</dt>
+              <dd>{serviceItemLabel(request, locale)}</dd>
             </div>
             <div>
-              <dt>Due</dt>
-              <dd>{dateTime(request.dueAt)}</dd>
+              <dt>{t.due}</dt>
+              <dd>{dateTime(request.dueAt, locale)}</dd>
             </div>
           </dl>
           <p>{request.description}</p>
         </article>
 
         <article className="catalog-panel">
-          <h2>Assignments</h2>
+          <h2>{t.assignments}</h2>
           <dl className="quote-definition-list">
             <div>
-              <dt>Specialist</dt>
-              <dd>{assignee(request.assignments.specialist)}</dd>
+              <dt>{t.specialist}</dt>
+              <dd>{assignee(request.assignments.specialist, locale)}</dd>
             </div>
             <div>
-              <dt>Supervisor</dt>
-              <dd>{assignee(request.assignments.supervisor)}</dd>
+              <dt>{t.supervisor}</dt>
+              <dd>{assignee(request.assignments.supervisor, locale)}</dd>
             </div>
             <div>
-              <dt>Account manager</dt>
-              <dd>{assignee(request.assignments.accountManager)}</dd>
+              <dt>{t.accountManager}</dt>
+              <dd>{assignee(request.assignments.accountManager, locale)}</dd>
             </div>
           </dl>
           {canAssign ? (
@@ -717,7 +1198,7 @@ export function RequestDetail({
               {assignmentCandidates ? (
                 <>
                   <label>
-                    Specialist
+                    {t.specialist}
                     <select
                       value={assignmentForm.assignedSpecialistId}
                       onChange={(event) =>
@@ -727,8 +1208,8 @@ export function RequestDetail({
                         })
                       }
                     >
-                      <option value="">Keep current specialist</option>
-                      <option value="clear">Clear specialist</option>
+                      <option value="">{t.keepSpecialist}</option>
+                      <option value="clear">{t.noAssignee}</option>
                       {assignmentCandidates.specialists.map((candidate) => (
                         <option key={candidate.id} value={candidate.id}>
                           {assignmentCandidateLabel(candidate)}
@@ -737,7 +1218,7 @@ export function RequestDetail({
                     </select>
                   </label>
                   <label>
-                    Supervisor
+                    {t.supervisor}
                     <select
                       value={assignmentForm.assignedSupervisorId}
                       onChange={(event) =>
@@ -747,8 +1228,8 @@ export function RequestDetail({
                         })
                       }
                     >
-                      <option value="">Keep current supervisor</option>
-                      <option value="clear">Clear supervisor</option>
+                      <option value="">{t.keepSupervisor}</option>
+                      <option value="clear">{t.noAssignee}</option>
                       {assignmentCandidates.supervisors.map((candidate) => (
                         <option key={candidate.id} value={candidate.id}>
                           {assignmentCandidateLabel(candidate)}
@@ -757,7 +1238,7 @@ export function RequestDetail({
                     </select>
                   </label>
                   <label>
-                    Account manager
+                    {t.accountManager}
                     <select
                       value={assignmentForm.accountManagerId}
                       onChange={(event) =>
@@ -767,8 +1248,8 @@ export function RequestDetail({
                         })
                       }
                     >
-                      <option value="">Keep current account manager</option>
-                      <option value="clear">Clear account manager</option>
+                      <option value="">{t.keepAccountManager}</option>
+                      <option value="clear">{t.noAssignee}</option>
                       {assignmentCandidates.accountManagers.map((candidate) => (
                         <option key={candidate.id} value={candidate.id}>
                           {assignmentCandidateLabel(candidate)}
@@ -780,9 +1261,9 @@ export function RequestDetail({
               ) : (
                 <>
                   <label>
-                    Specialist ID
+                    {t.specialist}
                     <input
-                      placeholder="UUID or clear"
+                      placeholder={t.uuidOrClear}
                       value={assignmentForm.assignedSpecialistId}
                       onChange={(event) =>
                         setAssignmentForm({
@@ -793,9 +1274,9 @@ export function RequestDetail({
                     />
                   </label>
                   <label>
-                    Supervisor ID
+                    {t.supervisor}
                     <input
-                      placeholder="UUID or clear"
+                      placeholder={t.uuidOrClear}
                       value={assignmentForm.assignedSupervisorId}
                       onChange={(event) =>
                         setAssignmentForm({
@@ -806,9 +1287,9 @@ export function RequestDetail({
                     />
                   </label>
                   <label>
-                    Account manager ID
+                    {t.accountManager}
                     <input
-                      placeholder="UUID or clear"
+                      placeholder={t.uuidOrClear}
                       value={assignmentForm.accountManagerId}
                       onChange={(event) =>
                         setAssignmentForm({
@@ -821,7 +1302,7 @@ export function RequestDetail({
                 </>
               )}
               <label>
-                Reason
+                {t.reason}
                 <input
                   value={assignmentForm.reason}
                   onChange={(event) =>
@@ -829,22 +1310,26 @@ export function RequestDetail({
                   }
                 />
               </label>
-              <button className="os-button os-button-primary" type="submit" disabled={saving === "assignment"}>
-                Save assignment
+              <button
+                className="os-button os-button-primary"
+                type="submit"
+                disabled={saving === "assignment"}
+              >
+                {t.saveAssignment}
               </button>
             </form>
           ) : (
-            <p>Assignment changes are limited to admin, management, or supervisor workspaces.</p>
+            <p>{t.statusUnavailable}</p>
           )}
         </article>
       </section>
 
       <section className="catalog-panel" id="request-lifecycle">
-        <h2>Lifecycle</h2>
+        <h2>{t.lifecycle}</h2>
         {canManageLifecycle ? (
           <form className="catalog-form" onSubmit={submitStatus}>
             <label>
-              Status
+              {t.status}
               <select
                 value={statusForm.status}
                 onChange={(event) =>
@@ -853,24 +1338,28 @@ export function RequestDetail({
               >
                 {statuses.map((status) => (
                   <option key={status} value={status}>
-                    {status}
+                    {statusLabel(status, locale)}
                   </option>
                 ))}
               </select>
             </label>
             <label>
-              Reason
+              {t.reason}
               <input
                 value={statusForm.reason}
                 onChange={(event) => setStatusForm({ ...statusForm, reason: event.target.value })}
               />
             </label>
-            <button className="os-button os-button-primary" type="submit" disabled={saving === "status"}>
-              Update status
+            <button
+              className="os-button os-button-primary"
+              type="submit"
+              disabled={saving === "status"}
+            >
+              {t.updateStatus}
             </button>
           </form>
         ) : (
-          <p>Status changes are handled by the assigned supervisor, management, or admin.</p>
+          <p>{t.statusUnavailable}</p>
         )}
         <div className="row-actions">
           {canStartWork && (
@@ -880,14 +1369,14 @@ export function RequestDetail({
               type="button"
               onClick={startWork}
             >
-              Start work
+              {t.startWork}
             </button>
           )}
           {canSupervise && (
             <>
               <input
-                aria-label="Supervisor review reason"
-                placeholder="Supervisor review reason"
+                aria-label={t.reviewReason}
+                placeholder={t.reviewReason}
                 value={reviewReason}
                 onChange={(event) => setReviewReason(event.target.value)}
               />
@@ -896,28 +1385,28 @@ export function RequestDetail({
                 type="button"
                 onClick={() => supervisorAction("APPROVE")}
               >
-                Approve request
+                {t.approveRequest}
               </button>
               <button
                 className="os-button os-button-secondary"
                 type="button"
                 onClick={() => supervisorAction("RETURN")}
               >
-                Return changes
+                {t.returnChanges}
               </button>
               <button
                 className="os-button os-button-danger"
                 type="button"
                 onClick={() => supervisorAction("REJECT")}
               >
-                Reject
+                {t.reject}
               </button>
               <button
                 className="os-button os-button-secondary"
                 type="button"
                 onClick={() => supervisorAction("ESCALATE")}
               >
-                Escalate
+                {t.escalate}
               </button>
             </>
           )}
@@ -926,24 +1415,28 @@ export function RequestDetail({
 
       {request.templateResponse && (
         <section className="catalog-panel" id="request-template">
-          <h2>Template answers</h2>
+          <h2>{t.templateAnswers}</h2>
           <p>
-            Completeness:{" "}
+            {t.completeness}:{" "}
             <StatusChip
               status={request.templateResponse.completenessStatus}
-              label={request.templateResponse.completenessStatus}
+              label={codeLabel(request.templateResponse.completenessStatus, locale)}
             />
           </p>
           <div className="activity-list">
             {request.templateResponse.answers.length === 0 ? (
-              <p>No structured answers were submitted.</p>
+              <p>{t.noAnswers}</p>
             ) : (
               request.templateResponse.answers.map((answer) => (
                 <article key={answer.id}>
-                  <strong>{answer.labelEn}</strong>
+                  <strong>
+                    {locale === "ar"
+                      ? answer.labelAr || answer.labelEn
+                      : answer.labelEn || answer.labelAr}
+                  </strong>
                   <small>
-                    {answer.fieldCode} · {answer.fieldType} ·{" "}
-                    {answer.clientVisible ? "client-visible" : "internal-only"}
+                    {answer.fieldCode} - {codeLabel(answer.fieldType, locale)} -{" "}
+                    {answer.clientVisible ? t.clientVisible : t.internalOnly}
                   </small>
                   <p>
                     {typeof answer.value === "string" ? answer.value : JSON.stringify(answer.value)}
@@ -957,11 +1450,11 @@ export function RequestDetail({
 
       <section className="quote-summary-grid">
         <article className="catalog-panel" id="request-checklist">
-          <h2>Internal checklist</h2>
+          <h2>{t.internalChecklist}</h2>
           {canAddOperationalContext ? (
             <form className="catalog-form" onSubmit={submitTask}>
               <label>
-                Task title
+                {t.taskTitle}
                 <input
                   required
                   value={taskForm.title}
@@ -970,14 +1463,14 @@ export function RequestDetail({
               </label>
               {assignmentCandidates ? (
                 <label>
-                  Assignee
+                  {t.assignee}
                   <select
                     value={taskForm.assigneeId}
                     onChange={(event) =>
                       setTaskForm({ ...taskForm, assigneeId: event.target.value })
                     }
                   >
-                    <option value="">No assignee</option>
+                    <option value="">{t.noAssignee}</option>
                     {taskAssignmentCandidates.map((candidate) => (
                       <option key={candidate.id} value={candidate.id}>
                         {assignmentCandidateLabel(candidate)}
@@ -988,7 +1481,7 @@ export function RequestDetail({
               ) : (
                 canAssign && (
                   <label>
-                    Assignee ID
+                    {t.assignee}
                     <input
                       value={taskForm.assigneeId}
                       onChange={(event) =>
@@ -999,7 +1492,7 @@ export function RequestDetail({
                 )
               )}
               <label>
-                Priority
+                {t.priority}
                 <select
                   value={taskForm.priority}
                   onChange={(event) =>
@@ -1011,13 +1504,13 @@ export function RequestDetail({
                 >
                   {["LOW", "NORMAL", "HIGH", "URGENT"].map((priority) => (
                     <option key={priority} value={priority}>
-                      {priority}
+                      {priorityLabel(priority, locale)}
                     </option>
                   ))}
                 </select>
               </label>
               <label>
-                Due at
+                {t.dueAt}
                 <input
                   type="datetime-local"
                   value={taskForm.dueAt}
@@ -1025,7 +1518,7 @@ export function RequestDetail({
                 />
               </label>
               <label className="form-span">
-                Description
+                {t.description}
                 <textarea
                   value={taskForm.description}
                   onChange={(event) =>
@@ -1033,22 +1526,27 @@ export function RequestDetail({
                   }
                 />
               </label>
-              <button className="os-button os-button-primary" type="submit" disabled={saving === "task"}>
-                Add checklist item
+              <button
+                className="os-button os-button-primary"
+                type="submit"
+                disabled={saving === "task"}
+              >
+                {t.addChecklistItem}
               </button>
             </form>
           ) : (
-            <p>Checklist updates are limited to assigned internal workspaces.</p>
+            <p>{t.checklistUnavailable}</p>
           )}
           <div className="activity-list">
             {request.tasks.length === 0 ? (
-              <p>No internal checklist items yet.</p>
+              <p>{t.noInternalChecklist}</p>
             ) : (
               request.tasks.map((task) => (
                 <article key={task.id}>
                   <strong>{task.title}</strong>
                   <small>
-                    {task.status} · {task.priority} · {task.assignee?.displayName ?? "Unassigned"}
+                    {codeLabel(task.status, locale)} - {priorityLabel(task.priority, locale)} -{" "}
+                    {task.assignee?.displayName ?? t.noAssignee}
                   </small>
                   {task.description && <p>{task.description}</p>}
                   {canAddOperationalContext && (
@@ -1058,35 +1556,35 @@ export function RequestDetail({
                         type="button"
                         onClick={() => setTaskStatus(task.id, "PENDING")}
                       >
-                        Pending
+                        {t.pending}
                       </button>
                       <button
                         className="os-button os-button-secondary"
                         type="button"
                         onClick={() => setTaskStatus(task.id, "IN_PROGRESS")}
                       >
-                        Start
+                        {t.start}
                       </button>
                       <button
                         className="os-button os-button-secondary"
                         type="button"
                         onClick={() => setTaskStatus(task.id, "DONE")}
                       >
-                        Done
+                        {t.done}
                       </button>
                       <button
                         className="os-button os-button-secondary"
                         type="button"
                         onClick={() => setTaskStatus(task.id, "NOT_APPLICABLE")}
                       >
-                        N/A
+                        {t.notApplicable}
                       </button>
                       <button
                         className="os-button os-button-secondary"
                         type="button"
                         onClick={() => setTaskStatus(task.id, "BLOCKED")}
                       >
-                        Blocked
+                        {t.blocked}
                       </button>
                     </div>
                   )}
@@ -1097,11 +1595,11 @@ export function RequestDetail({
         </article>
 
         <article className="catalog-panel" id="request-outputs">
-          <h2>Internal outputs</h2>
+          <h2>{t.internalOutputs}</h2>
           {canExecute ? (
             <form className="catalog-form" onSubmit={submitOutput}>
               <label>
-                Output code
+                {t.outputCode}
                 <input
                   required
                   value={outputForm.code}
@@ -1109,7 +1607,7 @@ export function RequestDetail({
                 />
               </label>
               <label>
-                Title
+                {t.title}
                 <input
                   required
                   value={outputForm.title}
@@ -1117,7 +1615,7 @@ export function RequestDetail({
                 />
               </label>
               <label className="form-span">
-                Description
+                {t.description}
                 <textarea
                   value={outputForm.description}
                   onChange={(event) =>
@@ -1125,31 +1623,42 @@ export function RequestDetail({
                   }
                 />
               </label>
-              <button className="os-button os-button-primary" type="submit" disabled={saving === "output"}>
-                Create internal output
+              <button
+                className="os-button os-button-primary"
+                type="submit"
+                disabled={saving === "output"}
+              >
+                {t.createInternalOutput}
               </button>
             </form>
           ) : (
-            <p>Deliverable preparation is available to assigned specialists and global roles.</p>
+            <p>{t.internalOutputUnavailable}</p>
           )}
           <div className="activity-list">
             {request.outputs.length === 0 ? (
-              <p>No internal outputs prepared yet.</p>
+              <p>{t.noInternalOutputs}</p>
             ) : (
               request.outputs.map((output) => (
                 <article key={output.id}>
                   <strong>
-                    {output.code} · {output.title}
+                    {output.code} - {output.title}
                   </strong>
                   <small>
-                    {output.status} · created by {output.createdBy?.displayName ?? "Internal user"}
-                    {output.reviewedBy ? ` · reviewed by ${output.reviewedBy.displayName}` : ""}
-                    {output.sharedAt ? ` · shared ${dateTime(output.sharedAt)}` : ""}
+                    {codeLabel(output.status, locale)} - {t.createdBy}{" "}
+                    {output.createdBy?.displayName ?? t.internalUser}
+                    {output.reviewedBy ? ` - ${t.reviewedBy} ${output.reviewedBy.displayName}` : ""}
+                    {output.sharedAt ? ` - ${t.sharedAt} ${dateTime(output.sharedAt, locale)}` : ""}
                   </small>
                   {output.description && <p>{output.description}</p>}
-                  {output.reviewReason && <p>Review note: {output.reviewReason}</p>}
+                  {output.reviewReason && (
+                    <p>
+                      {t.reviewNote}: {output.reviewReason}
+                    </p>
+                  )}
                   {output.clientReturnReason && (
-                    <p>Client return note: {output.clientReturnReason}</p>
+                    <p>
+                      {t.decisionNote}: {output.clientReturnReason}
+                    </p>
                   )}
                   <div className="row-actions">
                     {canExecute && submittableOutputStatuses.includes(output.status) && (
@@ -1158,7 +1667,7 @@ export function RequestDetail({
                         type="button"
                         onClick={() => submitOutputForReview(output.id)}
                       >
-                        Submit
+                        {t.submit}
                       </button>
                     )}
                     {canSupervise && output.status === "INTERNAL_REVIEW" && (
@@ -1168,21 +1677,21 @@ export function RequestDetail({
                           type="button"
                           onClick={() => reviewOutput(output.id, "APPROVE")}
                         >
-                          Approve
+                          {t.approve}
                         </button>
                         <button
                           className="os-button os-button-secondary"
                           type="button"
                           onClick={() => reviewOutput(output.id, "RETURN")}
                         >
-                          Return
+                          {t.returnChanges}
                         </button>
                         <button
                           className="os-button os-button-danger"
                           type="button"
                           onClick={() => reviewOutput(output.id, "REJECT")}
                         >
-                          Reject
+                          {t.reject}
                         </button>
                       </>
                     )}
@@ -1192,7 +1701,7 @@ export function RequestDetail({
                         type="button"
                         onClick={() => shareOutput(output.id)}
                       >
-                        Share with client
+                        {t.shareWithClient}
                       </button>
                     )}
                     {canSupervise && closableOutputStatuses.includes(output.status) && (
@@ -1201,7 +1710,7 @@ export function RequestDetail({
                         type="button"
                         onClick={() => closeOutput(output.id)}
                       >
-                        Close delivery
+                        {t.closeDelivery}
                       </button>
                     )}
                   </div>
@@ -1214,11 +1723,11 @@ export function RequestDetail({
 
       <section className="quote-summary-grid">
         <article className="catalog-panel" id="request-documents">
-          <h2>Client document requests</h2>
+          <h2>{t.clientDocumentRequests}</h2>
           {canRequestDocuments ? (
             <form className="catalog-form" onSubmit={submitDocumentRequest}>
               <label>
-                Document title
+                {t.documentTitle}
                 <input
                   required
                   value={documentForm.title}
@@ -1228,7 +1737,7 @@ export function RequestDetail({
                 />
               </label>
               <label>
-                Due at
+                {t.dueAt}
                 <input
                   type="datetime-local"
                   value={documentForm.dueAt}
@@ -1238,7 +1747,7 @@ export function RequestDetail({
                 />
               </label>
               <label className="form-span">
-                Instructions
+                {t.instructions}
                 <textarea
                   value={documentForm.instructions}
                   onChange={(event) =>
@@ -1251,24 +1760,29 @@ export function RequestDetail({
                 type="submit"
                 disabled={saving === "document-request"}
               >
-                Request document
+                {t.requestDocument}
               </button>
             </form>
           ) : (
-            <p>Client document requests are available to assigned internal workspaces.</p>
+            <p>{t.clientDocumentUnavailable}</p>
           )}
           <div className="activity-list">
             {request.documentRequests.length === 0 ? (
-              <p>No client documents requested yet.</p>
+              <p>{t.noClientDocuments}</p>
             ) : (
               request.documentRequests.map((documentRequest) => (
                 <article key={documentRequest.id}>
                   <strong>{documentRequest.title}</strong>
                   <small>
-                    {documentRequest.status} · due {dateTime(documentRequest.dueAt)}
+                    {codeLabel(documentRequest.status, locale)} - {t.due}{" "}
+                    {dateTime(documentRequest.dueAt, locale)}
                   </small>
                   {documentRequest.instructions && <p>{documentRequest.instructions}</p>}
-                  {documentRequest.file && <p>Uploaded: {documentRequest.file.originalName}</p>}
+                  {documentRequest.file && (
+                    <p>
+                      {t.uploadedFile}: {documentRequest.file.originalName}
+                    </p>
+                  )}
                   {canRequestDocuments && (
                     <div className="row-actions">
                       {["REQUESTED", "UPLOADED"].includes(documentRequest.status) && (
@@ -1277,7 +1791,7 @@ export function RequestDetail({
                           type="button"
                           onClick={() => setDocumentRequestStatus(documentRequest.id, "CLOSED")}
                         >
-                          Close
+                          {t.close}
                         </button>
                       )}
                       {documentRequest.status === "REQUESTED" && (
@@ -1286,7 +1800,7 @@ export function RequestDetail({
                           type="button"
                           onClick={() => setDocumentRequestStatus(documentRequest.id, "CANCELLED")}
                         >
-                          Cancel
+                          {t.cancel}
                         </button>
                       )}
                     </div>
@@ -1298,11 +1812,11 @@ export function RequestDetail({
         </article>
 
         <article className="catalog-panel" id="request-hours">
-          <h2>Basic time entries</h2>
+          <h2>{t.basicTimeEntries}</h2>
           {canExecute ? (
             <form className="catalog-form" onSubmit={submitTimeEntry}>
               <label>
-                Work date
+                {t.workDate}
                 <input
                   required
                   type="date"
@@ -1311,7 +1825,7 @@ export function RequestDetail({
                 />
               </label>
               <label>
-                Hours
+                {t.hours}
                 <input
                   required
                   max="24"
@@ -1328,37 +1842,46 @@ export function RequestDetail({
                   type="checkbox"
                   onChange={(event) => setTimeForm({ ...timeForm, billable: event.target.checked })}
                 />
-                Billable
+                {t.billable}
               </label>
               <label className="form-span">
-                Note
+                {t.note}
                 <textarea
                   value={timeForm.notes}
                   onChange={(event) => setTimeForm({ ...timeForm, notes: event.target.value })}
                 />
               </label>
-              <button className="os-button os-button-primary" type="submit" disabled={saving === "time-entry"}>
-                Add time
+              <button
+                className="os-button os-button-primary"
+                type="submit"
+                disabled={saving === "time-entry"}
+              >
+                {t.addTime}
               </button>
             </form>
           ) : (
-            <p>Time registration is available to assigned execution users and global roles.</p>
+            <p>{t.timeUnavailable}</p>
           )}
           <div className="activity-list">
             {request.timeEntries.length === 0 ? (
-              <p>No time entries yet.</p>
+              <p>{t.noTimeEntries}</p>
             ) : (
               request.timeEntries.map((entry) => (
                 <article key={entry.id}>
                   <strong>
-                    {entry.hours}h · {entry.user.displayName}
+                    {locale === "ar" ? `${entry.hours} س` : `${entry.hours}h`} -{" "}
+                    {entry.user.displayName}
                   </strong>
                   <small>
-                    {entry.status} · {dateTime(entry.workDate)} ·{" "}
-                    {entry.billable ? "Billable" : "Non-billable"}
+                    {codeLabel(entry.status, locale)} - {dateTime(entry.workDate, locale)} -{" "}
+                    {entry.billable ? t.billable : t.nonBillable}
                   </small>
                   {entry.notes && <p>{entry.notes}</p>}
-                  {entry.decisionReason && <p>Decision note: {entry.decisionReason}</p>}
+                  {entry.decisionReason && (
+                    <p>
+                      {t.decisionNote}: {entry.decisionReason}
+                    </p>
+                  )}
                   <div className="row-actions">
                     {(hasGlobalOperations || entry.user.id === currentUser.id) &&
                       submittableTimeEntryStatuses.includes(entry.status) && (
@@ -1367,7 +1890,7 @@ export function RequestDetail({
                           type="button"
                           onClick={() => submitTimeEntryForReview(entry.id)}
                         >
-                          Submit
+                          {t.submit}
                         </button>
                       )}
                     {canSupervise && entry.status === "SUBMITTED" && (
@@ -1377,14 +1900,14 @@ export function RequestDetail({
                           type="button"
                           onClick={() => reviewTimeEntry(entry.id, "APPROVE")}
                         >
-                          Approve
+                          {t.approve}
                         </button>
                         <button
                           className="os-button os-button-danger"
                           type="button"
                           onClick={() => reviewTimeEntry(entry.id, "REJECT")}
                         >
-                          Reject
+                          {t.reject}
                         </button>
                       </>
                     )}
@@ -1398,10 +1921,10 @@ export function RequestDetail({
 
       <section className="quote-summary-grid">
         <article className="catalog-panel" id="request-comments">
-          <h2>Comments</h2>
+          <h2>{t.comments}</h2>
           <form className="catalog-form" onSubmit={submitComment}>
             <label className="form-span">
-              Comment
+              {t.comment}
               <textarea
                 required
                 value={commentForm.body}
@@ -1416,60 +1939,76 @@ export function RequestDetail({
                   setCommentForm({ ...commentForm, isClientVisible: event.target.checked })
                 }
               />
-              Visible to client
+              {t.visibleToClient}
             </label>
-            <button className="os-button os-button-primary" type="submit" disabled={saving === "comment"}>
-              Add comment
+            <button
+              className="os-button os-button-primary"
+              type="submit"
+              disabled={saving === "comment"}
+            >
+              {t.addComment}
             </button>
           </form>
           <div className="activity-list">
-            {request.comments.map((comment) => (
-              <article key={comment.id}>
-                <strong>{comment.author.displayName}</strong>
-                <small>
-                  {dateTime(comment.createdAt)} ·{" "}
-                  {comment.isClientVisible ? "Client-visible" : "Internal-only"}
-                </small>
-                <p>{comment.body}</p>
-              </article>
-            ))}
+            {request.comments.length === 0 ? (
+              <EmptyActivity message={t.noComments} />
+            ) : (
+              request.comments.map((comment) => (
+                <article key={comment.id}>
+                  <strong>{comment.author.displayName}</strong>
+                  <small>
+                    {dateTime(comment.createdAt, locale)} -{" "}
+                    {comment.isClientVisible ? t.clientVisible : t.internalOnly}
+                  </small>
+                  <p>{comment.body}</p>
+                </article>
+              ))
+            )}
           </div>
         </article>
 
         <article className="catalog-panel" id="request-notes">
-          <h2>Internal notes</h2>
+          <h2>{t.internalNotes}</h2>
           <form className="catalog-form" onSubmit={submitNote}>
             <label className="form-span">
-              Note
+              {t.note}
               <textarea
                 required
                 value={noteBody}
                 onChange={(event) => setNoteBody(event.target.value)}
               />
             </label>
-            <button className="os-button os-button-primary" type="submit" disabled={saving === "note"}>
-              Add internal note
+            <button
+              className="os-button os-button-primary"
+              type="submit"
+              disabled={saving === "note"}
+            >
+              {t.addInternalNote}
             </button>
           </form>
           <div className="activity-list">
-            {request.internalNotes.map((note) => (
-              <article key={note.id}>
-                <strong>{note.author.displayName}</strong>
-                <small>{dateTime(note.createdAt)}</small>
-                <p>{note.body}</p>
-              </article>
-            ))}
+            {request.internalNotes.length === 0 ? (
+              <EmptyActivity message={t.noInternalNotes} />
+            ) : (
+              request.internalNotes.map((note) => (
+                <article key={note.id}>
+                  <strong>{note.author.displayName}</strong>
+                  <small>{dateTime(note.createdAt, locale)}</small>
+                  <p>{note.body}</p>
+                </article>
+              ))
+            )}
           </div>
         </article>
       </section>
 
       <section className="quote-summary-grid">
         <article className="catalog-panel" id="request-attachments">
-          <h2>Attachment metadata</h2>
+          <h2>{t.attachmentMetadata}</h2>
           {canAttachMetadata ? (
             <form className="catalog-form" onSubmit={submitAttachment}>
               <label>
-                Original name
+                {t.originalName}
                 <input
                   required
                   value={fileForm.originalName}
@@ -1479,7 +2018,7 @@ export function RequestDetail({
                 />
               </label>
               <label>
-                MIME type
+                {t.mimeType}
                 <input
                   required
                   value={fileForm.mimeType}
@@ -1487,7 +2026,7 @@ export function RequestDetail({
                 />
               </label>
               <label>
-                Size bytes
+                {t.sizeBytes}
                 <input
                   required
                   min="1"
@@ -1507,7 +2046,7 @@ export function RequestDetail({
                 />
               </label>
               <label>
-                Visibility
+                {t.metadataVisibility}
                 <select
                   value={fileForm.visibility}
                   onChange={(event) =>
@@ -1517,43 +2056,57 @@ export function RequestDetail({
                     })
                   }
                 >
-                  <option value="INTERNAL">Internal</option>
-                  <option value="CLIENT_VISIBLE">Client visible</option>
+                  <option value="INTERNAL">{t.internal}</option>
+                  <option value="CLIENT_VISIBLE">{t.clientVisible}</option>
                 </select>
               </label>
-              <button className="os-button os-button-primary" type="submit" disabled={saving === "attachment"}>
-                Add metadata
+              <button
+                className="os-button os-button-primary"
+                type="submit"
+                disabled={saving === "attachment"}
+              >
+                {t.addMetadata}
               </button>
             </form>
           ) : (
-            <p>Attachment metadata updates are available to assigned internal workspaces.</p>
+            <p>{t.attachmentUnavailable}</p>
           )}
           <div className="activity-list">
-            {request.attachments.map((file) => (
-              <article key={file.id}>
-                <strong>{file.originalName}</strong>
-                <small>
-                  {file.mimeType} · {file.sizeBytes} bytes · {file.visibility}
-                </small>
-              </article>
-            ))}
+            {request.attachments.length === 0 ? (
+              <EmptyActivity message={t.noAttachments} />
+            ) : (
+              request.attachments.map((file) => (
+                <article key={file.id}>
+                  <strong>{file.originalName}</strong>
+                  <small>
+                    {file.mimeType} - {file.sizeBytes} {t.bytes} -{" "}
+                    {codeLabel(file.visibility, locale)}
+                  </small>
+                </article>
+              ))
+            )}
           </div>
         </article>
 
         <article className="catalog-panel" id="request-activity">
-          <h2>Activity</h2>
+          <h2>{t.activity}</h2>
           <div className="activity-list">
-            {request.activity.map((event) => (
-              <article key={event.id}>
-                <strong>
-                  {event.fromState?.code ?? "START"} → {event.toState.code}
-                </strong>
-                <small>
-                  {dateTime(event.occurredAt)} · {event.actorRole}
-                </small>
-                {event.reason && <p>{event.reason}</p>}
-              </article>
-            ))}
+            {request.activity.length === 0 ? (
+              <EmptyActivity message={t.noActivity} />
+            ) : (
+              request.activity.map((event) => (
+                <article key={event.id}>
+                  <strong>
+                    {codeLabel(event.fromState?.code ?? "START", locale)} &gt;{" "}
+                    {codeLabel(event.toState.code, locale)}
+                  </strong>
+                  <small>
+                    {dateTime(event.occurredAt, locale)} - {codeLabel(event.actorRole, locale)}
+                  </small>
+                  {event.reason && <p>{event.reason}</p>}
+                </article>
+              ))
+            )}
           </div>
         </article>
       </section>

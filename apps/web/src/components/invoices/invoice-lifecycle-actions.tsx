@@ -3,47 +3,55 @@
 import { useState } from "react";
 import { advanceInvoiceLifecycle, invoiceErrorMessage } from "../../lib/invoice-client";
 import type { Invoice, InvoiceStatus } from "../../lib/invoice-types";
-
-const actionsByStatus: Record<
-  InvoiceStatus,
-  Array<{ label: string; status: Exclude<InvoiceStatus, "DRAFT">; tone?: "danger" }>
-> = {
-  DRAFT: [
-    { label: "Issue invoice", status: "ISSUED" },
-    { label: "Cancel invoice", status: "CANCELLED", tone: "danger" },
-  ],
-  ISSUED: [{ label: "Void invoice", status: "VOIDED", tone: "danger" }],
-  CANCELLED: [],
-  VOIDED: [],
-};
+import { commercialCopy, commercialLocale } from "../commercial-i18n";
 
 export function InvoiceLifecycleActions({
   compact = false,
   invoiceId,
+  locale: localeInput = "en",
   onUpdated,
   status,
 }: {
   compact?: boolean;
   invoiceId: string;
+  locale?: string;
   onUpdated?: (invoice: Invoice) => void;
   status: InvoiceStatus;
 }) {
+  const locale = commercialLocale(localeInput);
+  const t = commercialCopy[locale];
   const [pending, setPending] = useState<InvoiceStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const actionsByStatus: Record<
+    InvoiceStatus,
+    Array<{ label: string; status: Exclude<InvoiceStatus, "DRAFT">; tone?: "danger" }>
+  > = {
+    DRAFT: [
+      { label: t.issueInvoice, status: "ISSUED" },
+      { label: t.cancelInvoice, status: "CANCELLED", tone: "danger" },
+    ],
+    ISSUED: [{ label: t.voidInvoice, status: "VOIDED", tone: "danger" }],
+    CANCELLED: [],
+    VOIDED: [],
+  };
   const actions = actionsByStatus[status];
 
   if (actions.length === 0) {
-    return compact ? null : <p className="pricing-muted">This invoice is in a terminal state.</p>;
+    return compact ? null : <p className="pricing-muted">{t.invoiceTerminalState}</p>;
   }
 
-  async function submit(target: Exclude<InvoiceStatus, "DRAFT">) {
+  async function submit(action: { label: string; status: Exclude<InvoiceStatus, "DRAFT"> }) {
+    if (!window.confirm(t.invoiceStatusConfirm(action.label, status))) {
+      return;
+    }
+    const target = action.status;
     setPending(target);
     setError(null);
     setSuccess(null);
     try {
       const updated = await advanceInvoiceLifecycle(invoiceId, target);
-      setSuccess(`Invoice moved to ${updated.status}.`);
+      setSuccess(t.invoiceStatusChanged(updated.status));
       onUpdated?.(updated);
     } catch (invoiceError) {
       setError(invoiceErrorMessage(invoiceError));
@@ -65,9 +73,9 @@ export function InvoiceLifecycleActions({
             disabled={pending !== null}
             key={action.status}
             type="button"
-            onClick={() => void submit(action.status)}
+            onClick={() => void submit(action)}
           >
-            {pending === action.status ? "Saving…" : action.label}
+            {pending === action.status ? t.saving : action.label}
           </button>
         ))}
       </div>

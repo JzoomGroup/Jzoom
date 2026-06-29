@@ -182,22 +182,7 @@ function formatDate(value: string | null, locale: SupportedLocale, copy: ClientC
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA").format(new Date(value));
 }
 
-function formatHours(value: number, locale: SupportedLocale): string {
-  return locale === "ar"
-    ? `${formatNumber(value, locale)} ساعة`
-    : `${formatNumber(value, locale)}h`;
-}
-
-function formatDays(value: number, locale: SupportedLocale): string {
-  return locale === "ar"
-    ? `${formatNumber(value, locale)} يوم`
-    : `${formatNumber(value, locale)}d`;
-}
-
-function localizedName(
-  value: { nameAr: string; nameEn: string },
-  locale: SupportedLocale,
-): string {
+function localizedName(value: { nameAr: string; nameEn: string }, locale: SupportedLocale): string {
   return locale === "ar" ? value.nameAr || value.nameEn : value.nameEn || value.nameAr;
 }
 
@@ -266,41 +251,19 @@ function SubscribedServiceCard({
 }
 
 function AvailableMonthlyCard({
-  copy,
   locale,
   service,
 }: {
-  copy: ClientCopy;
   locale: SupportedLocale;
   service: ClientPortalAvailableMonthlyService;
 }) {
   return (
-    <article className="entity-card">
+    <article className="entity-card available-service-card">
       <div className="entity-card-heading">
         <div>
-          <small>{localizedName(service.category, locale)}</small>
           <h3>{localizedName(service, locale)}</h3>
         </div>
-        <span>{service.code}</span>
       </div>
-      <dl className="entity-meta four-up">
-        <div>
-          <dt>{copy.type}</dt>
-          <dd>{copy.monthly}</dd>
-        </div>
-        <div>
-          <dt>{copy.rate}</dt>
-          <dd>{formatCurrency(service.sellingHourlyRateSar, locale)}</dd>
-        </div>
-        <div>
-          <dt>{copy.sla}</dt>
-          <dd>{formatHours(service.defaultSlaHours, locale)}</dd>
-        </div>
-        <div>
-          <dt>{copy.level}</dt>
-          <dd>{formatNumber(service.levels.length, locale)}</dd>
-        </div>
-      </dl>
       <p>
         {localizedServiceDescription({
           description: service.description,
@@ -315,41 +278,19 @@ function AvailableMonthlyCard({
 }
 
 function AvailableOneTimeCard({
-  copy,
   locale,
   service,
 }: {
-  copy: ClientCopy;
   locale: SupportedLocale;
   service: ClientPortalAvailableOneTimeService;
 }) {
   return (
-    <article className="entity-card">
+    <article className="entity-card available-service-card">
       <div className="entity-card-heading">
         <div>
-          <small>{localizedName(service.category, locale)}</small>
           <h3>{localizedName(service, locale)}</h3>
         </div>
-        <span>{service.code}</span>
       </div>
-      <dl className="entity-meta four-up">
-        <div>
-          <dt>{copy.type}</dt>
-          <dd>{copy.oneTime}</dd>
-        </div>
-        <div>
-          <dt>{copy.price}</dt>
-          <dd>{formatCurrency(service.basePriceSar, locale)}</dd>
-        </div>
-        <div>
-          <dt>{copy.hours}</dt>
-          <dd>{formatNumber(service.estimatedHours, locale)}</dd>
-        </div>
-        <div>
-          <dt>{copy.duration}</dt>
-          <dd>{formatDays(service.durationDays, locale)}</dd>
-        </div>
-      </dl>
       <p>
         {localizedServiceDescription({
           description: service.description,
@@ -466,10 +407,14 @@ export function ClientOverview({
                 <article key={request.id}>
                   <strong>{localizedFreeText(request.title, locale, "طلب خدمة")}</strong>
                   <small>
-                    {request.requestNumber} · {localizedName(request.service.monthlyService, locale)}
+                    {request.requestNumber} ·{" "}
+                    {localizedName(request.service.monthlyService, locale)}
                   </small>
                   <div className="row-actions">
-                    <Link className="os-button os-button-secondary" href={`/client/requests/${request.id}`}>
+                    <Link
+                      className="os-button os-button-secondary"
+                      href={`/client/requests/${request.id}`}
+                    >
                       {copy.openRequest}
                     </Link>
                   </div>
@@ -497,10 +442,14 @@ export function ClientOverview({
                 <article key={request.id}>
                   <strong>{localizedFreeText(request.title, locale, "طلب خدمة")}</strong>
                   <small>
-                    {statusLabel(request.status, locale)} · {formatDate(request.dueAt, locale, copy)}
+                    {statusLabel(request.status, locale)} ·{" "}
+                    {formatDate(request.dueAt, locale, copy)}
                   </small>
                   <div className="row-actions">
-                    <Link className="os-button os-button-secondary" href={`/client/requests/${request.id}`}>
+                    <Link
+                      className="os-button os-button-secondary"
+                      href={`/client/requests/${request.id}`}
+                    >
                       {copy.viewDetails}
                     </Link>
                   </div>
@@ -540,7 +489,9 @@ export function ClientOverview({
             </div>
             <div className="primary">
               <span>{copy.latestInvoice}</span>
-              <strong>{invoices[0] ? formatCurrency(invoices[0].finalDueNoTax, locale) : "-"}</strong>
+              <strong>
+                {invoices[0] ? formatCurrency(invoices[0].finalDueNoTax, locale) : "-"}
+              </strong>
             </div>
           </div>
           <div className="row-actions">
@@ -569,7 +520,12 @@ export function ClientOverview({
         ) : (
           <div className="entity-grid service-grid">
             {account.services.subscribedMonthly.map((service) => (
-              <SubscribedServiceCard key={service.id} copy={copy} locale={locale} service={service} />
+              <SubscribedServiceCard
+                key={service.id}
+                copy={copy}
+                locale={locale}
+                service={service}
+              />
             ))}
           </div>
         )}
@@ -590,10 +546,10 @@ export function ClientOverview({
         ) : (
           <div className="entity-grid service-grid">
             {account.services.availableMonthly.map((service) => (
-              <AvailableMonthlyCard key={service.id} copy={copy} locale={locale} service={service} />
+              <AvailableMonthlyCard key={service.id} locale={locale} service={service} />
             ))}
             {account.services.availableOneTime.map((service) => (
-              <AvailableOneTimeCard key={service.id} copy={copy} locale={locale} service={service} />
+              <AvailableOneTimeCard key={service.id} locale={locale} service={service} />
             ))}
           </div>
         )}

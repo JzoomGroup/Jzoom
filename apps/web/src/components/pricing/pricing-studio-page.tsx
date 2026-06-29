@@ -41,6 +41,7 @@ export async function PricingStudioPage({ draftId }: { draftId?: string }) {
         initialCatalog={catalog}
         initialDrafts={drafts}
         initialDraft={draft}
+        locale={user.preferredLocale}
       />
     </QuoteShell>
   );

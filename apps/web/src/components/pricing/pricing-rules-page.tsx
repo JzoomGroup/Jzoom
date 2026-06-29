@@ -22,7 +22,7 @@ export async function PricingRulesPage() {
       displayName={user.displayName}
       locale={user.preferredLocale}
     >
-      <PricingRuleManager initialSnapshot={snapshot} />
+      <PricingRuleManager initialSnapshot={snapshot} locale={user.preferredLocale} />
     </AdminShell>
   );
 }

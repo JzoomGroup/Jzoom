@@ -275,6 +275,15 @@ describe("Operations foundation UI", () => {
     expect(screen.getByRole("button", { name: "Publish to client" })).toBeInTheDocument();
   });
 
+  it("renders internal report preparation in Arabic without English actions", () => {
+    render(<MonthlyReports initialReports={[report("PREPARED")]} locale="ar" />);
+
+    expect(screen.getByRole("heading", { name: "تقارير العملاء الشهرية" })).toBeInTheDocument();
+    expect(screen.getByText("تقرير خدمات شهر يونيو")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "نشر للعميل" })).toBeInTheDocument();
+    expect(screen.queryByText("Publish to client")).not.toBeInTheDocument();
+  });
+
   it("renders client-safe published reports", () => {
     render(<ClientReportList reports={[report()]} />);
 
@@ -289,14 +298,23 @@ describe("Operations foundation UI", () => {
     render(<ClientReportDetail report={report()} />);
     expect(screen.getByRole("heading", { name: "What happened this month" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Request mix" })).toBeInTheDocument();
-    expect(screen.getByText("Output - ACCEPTED_BY_CLIENT")).toBeInTheDocument();
-    expect(screen.getByText("Document - UPLOADED")).toBeInTheDocument();
+    expect(screen.getByText("Output - Accepted by you")).toBeInTheDocument();
+    expect(screen.getByText("Document - Uploaded")).toBeInTheDocument();
     expect(screen.getByText("Output shared with client")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open request" })).toHaveAttribute(
       "href",
       "/client/requests/request-1",
     );
     expect(screen.queryByText("Account Manager")).not.toBeInTheDocument();
+  });
+
+  it("localizes client report delivery statuses in Arabic", () => {
+    render(<ClientReportDetail report={report()} locale="ar" />);
+
+    expect(screen.getByText("مخرج - مقبول من العميل")).toBeInTheDocument();
+    expect(screen.getByText("مستند - تم الرفع")).toBeInTheDocument();
+    expect(screen.queryByText("ACCEPTED_BY_CLIENT")).not.toBeInTheDocument();
+    expect(screen.queryByText("UPLOADED")).not.toBeInTheDocument();
   });
 
   it("renders account-manager portfolio health indicators", () => {
@@ -323,5 +341,24 @@ describe("Operations foundation UI", () => {
     expect(screen.getByText("June closing")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Finalize and lock" })).toBeInTheDocument();
     expect(screen.getByText("Monthly service")).toBeInTheDocument();
+  });
+
+  it("renders the internal hours ledger in Arabic with localized controls", () => {
+    render(
+      <HoursLedger
+        canManageClosings
+        initialClosings={[closing()]}
+        initialLedger={ledger()}
+        initialUsage={monthlyUsage()}
+        locale="ar"
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "سجل الساعات والإغلاق الشهري" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "اعتماد وإقفال" })).toBeInTheDocument();
+    expect(screen.getByText("خدمة")).toBeInTheDocument();
+    expect(screen.queryByText("Refresh ledger")).not.toBeInTheDocument();
   });
 });

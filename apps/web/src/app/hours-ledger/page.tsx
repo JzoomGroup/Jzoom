@@ -50,6 +50,7 @@ export default async function HoursLedgerPage() {
         initialClosings={closings}
         initialLedger={ledger}
         initialUsage={usage}
+        locale={user.preferredLocale}
       />
     </QuoteShell>
   );

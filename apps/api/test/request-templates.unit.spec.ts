@@ -1,5 +1,9 @@
 import "reflect-metadata";
 import { BadRequestException } from "@nestjs/common";
+import {
+  buildDefaultServiceItemRequestTemplate,
+  classifyServiceItemTemplate,
+} from "../src/request-templates/request-template-defaults.js";
 import { validateRequestTemplateDefinition } from "../src/request-templates/request-templates.service.js";
 import type { UpsertRequestTemplateVersionDto } from "../src/request-templates/request-templates.dto.js";
 
@@ -103,5 +107,30 @@ describe("request template validation", () => {
     });
 
     expect(() => validateRequestTemplateDefinition(template)).toThrow(BadRequestException);
+  });
+
+  it("builds a valid suggested default template for new service items", () => {
+    const template = buildDefaultServiceItemRequestTemplate({
+      code: "SI-HR-LETTER",
+      nameAr: "خطاب موظف",
+      nameEn: "Employee letter",
+      expectedOutput: "Employee letter",
+      monthlyServiceCode: "MS-HR",
+      requiresFile: true,
+    });
+
+    expect(classifyServiceItemTemplate({ code: "SI-HR-LETTER", nameAr: "", nameEn: "" })).toBe(
+      "hr_document",
+    );
+    expect(template.snapshot.presetId).toBe("hr_document");
+    expect(template.documentChecklist[0]?.uploadRequired).toBe(true);
+    expect(() =>
+      validateRequestTemplateDefinition({
+        sections: template.sections,
+        fields: template.fields,
+        downloadableFiles: template.downloadableFiles,
+        documentChecklist: template.documentChecklist,
+      }),
+    ).not.toThrow();
   });
 });

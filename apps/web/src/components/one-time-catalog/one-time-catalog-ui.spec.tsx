@@ -119,6 +119,9 @@ describe("One-time Admin catalog UI", () => {
       .mockImplementationOnce(() => jsonResponse(snapshot()));
 
     render(<OneTimeCategoryManager initialSnapshot={snapshot()} />);
+    expect(screen.getByText("One-time category studio")).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Configured categories" })).toHaveLength(2);
+
     fireEvent.click(screen.getByRole("button", { name: "Add category" }));
     fireEvent.change(screen.getByLabelText("Code"), {
       target: { value: "pr5-cat-digital" },
@@ -149,9 +152,14 @@ describe("One-time Admin catalog UI", () => {
       .mockImplementationOnce(() => jsonResponse(snapshot()));
 
     render(<OneTimeServiceManager initialSnapshot={snapshot()} />);
+    expect(screen.getByText("One-time service studio")).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Configured one-time services" })).toHaveLength(
+      2,
+    );
     expect(screen.getByRole("heading", { name: "Website build" })).toBeInTheDocument();
-    expect(screen.getByText("12000 SAR")).toBeInTheDocument();
-    expect(screen.getByText("Tasks:")).toBeInTheDocument();
+    expect(screen.getAllByText("12000 SAR").length).toBeGreaterThan(0);
+    expect(screen.getByText("Template links")).toBeInTheDocument();
+    expect(screen.getByText("Deliverables and tasks")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Edit details & template" }));
     expect(screen.getByDisplayValue("Stakeholder interview")).toBeInTheDocument();

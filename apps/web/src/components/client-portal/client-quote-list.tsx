@@ -12,31 +12,33 @@ import {
 
 const copy = {
   ar: {
-    acceptedIssued: "صادرة أو مقبولة",
+    acceptedIssued: "صادرة أو مؤكدة خارج النظام",
     basedOrder: "حسب ترتيب القائمة الحالي",
     commercialCenter: "المركز التجاري",
     commercialSnapshots: "السجلات التجارية",
-    description: "العروض الصادرة والمقبولة لحسابك، محفوظة كسجلات تجارية ثابتة.",
+    description:
+      "عروض الأسعار الصادرة والمؤكدة خارج النظام لحسابك، محفوظة كسجلات تجارية ثابتة للقراءة فقط.",
     item: "بند",
     latestValidity: "أحدث صلاحية",
     noQuotes: "لا توجد عروض حتى الآن",
-    noQuotesBody: "ستظهر العروض الصادرة والمقبولة هنا عند توفرها.",
+    noQuotesBody: "ستظهر عروض الأسعار الصادرة والمؤكدة خارج النظام هنا عند توفرها.",
     quotes: "عروضك",
     totalValue: "إجمالي القيمة",
     validUntil: "صالح حتى",
     visibleQuotes: "العروض الظاهرة",
   },
   en: {
-    acceptedIssued: "Issued or accepted",
+    acceptedIssued: "Issued or externally confirmed",
     basedOrder: "Based on current list order",
     commercialCenter: "Commercial center",
     commercialSnapshots: "Commercial snapshots",
     description:
-      "Issued and accepted quote snapshots for your client account, presented as immutable commercial records.",
+      "Issued and externally confirmed quote snapshots for your client account, presented as read-only immutable commercial records.",
     item: "items",
     latestValidity: "Latest validity",
     noQuotes: "No quotes yet",
-    noQuotesBody: "Issued and accepted quote snapshots will appear here when they are available.",
+    noQuotesBody:
+      "Issued and externally confirmed quote snapshots will appear here when they are available.",
     quotes: "Your quotes",
     totalValue: "Total value",
     validUntil: "Valid until",
@@ -78,7 +80,10 @@ export function ClientQuoteList({
         />
       </section>
 
-      <SectionCard eyebrow={locale === "ar" ? "سجل العروض" : "Quote library"} title={t.commercialSnapshots}>
+      <SectionCard
+        eyebrow={locale === "ar" ? "سجل العروض" : "Quote library"}
+        title={t.commercialSnapshots}
+      >
         {quotes.length === 0 ? (
           <EmptyState title={t.noQuotes}>{t.noQuotesBody}</EmptyState>
         ) : (
@@ -95,7 +100,10 @@ export function ClientQuoteList({
                     </p>
                   </div>
                   <div className="quote-list-meta">
-                    <StatusChip status={quote.status} label={quoteStatusLabel(quote.status, locale)} />
+                    <StatusChip
+                      status={quote.status}
+                      label={quoteStatusLabel(quote.status, locale)}
+                    />
                     <strong>{clientCurrency(quote.totals.finalTotal, locale)}</strong>
                     <small>{quote.client.name}</small>
                   </div>

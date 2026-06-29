@@ -23,7 +23,7 @@ export default async function AdminPlatformConfigurationPage() {
       displayName={user.displayName}
       locale={user.preferredLocale}
     >
-      <PlatformConfigurationManager initialSnapshot={snapshot} />
+      <PlatformConfigurationManager initialSnapshot={snapshot} locale={user.preferredLocale} />
     </AdminShell>
   );
 }

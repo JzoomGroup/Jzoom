@@ -96,6 +96,14 @@ function formatAmount(value: unknown, currency: string): string {
   })}`;
 }
 
+function shortText(value: string, maxLength: number): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+  return `${normalized.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
+}
+
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
   const normalized = text.replace(/\s+/g, " ").trim();
   if (!normalized) {
@@ -188,8 +196,6 @@ export class QuotePdfService {
     const terms = record(quote.terms);
     const totals = record(quote.totals);
     const items = arrayValue(quote.items).map(record);
-    const monthlyItems = items.filter((item) => stringValue(item, "lineType") === "MONTHLY");
-    const oneTimeItems = items.filter((item) => stringValue(item, "lineType") === "ONE_TIME");
     const snapshotHash = stringValue(quote, "snapshotHash");
 
     const pdf = await PDFDocument.create();
@@ -202,16 +208,8 @@ export class QuotePdfService {
     pdf.setCreationDate(new Date());
 
     const fonts = await this.loadFonts(pdf);
-    let page = this.addPage(pdf, fonts, true);
+    const page = this.addPage(pdf, fonts, true);
     let y = A4.height - 150;
-
-    const ensureSpace = (height: number): void => {
-      if (y - height >= margin) {
-        return;
-      }
-      page = this.addPage(pdf, fonts, false);
-      y = A4.height - 82;
-    };
 
     y = this.drawSummary(page, y, fonts, {
       client,
@@ -219,51 +217,22 @@ export class QuotePdfService {
       terms,
     });
 
-    ensureSpace(90);
-    y = this.drawSectionHeading(
-      page,
-      y,
-      fonts,
-      "الخدمات الشهرية المختارة",
-      "Selected monthly services",
-    );
-    if (monthlyItems.length === 0) {
+    y = this.drawSectionHeading(page, y, fonts, "الخدمات المختارة", "Selected services");
+    if (items.length === 0) {
       y = this.drawEmptyState(
         page,
         y,
         fonts,
-        "لا توجد خدمات شهرية ضمن هذا العرض.",
-        "No monthly services in this quote.",
+        "لا توجد خدمات ضمن هذا العرض.",
+        "No services in this quote.",
       );
     } else {
-      for (const item of monthlyItems) {
-        ensureSpace(92);
-        y = this.drawServiceCard(page, y, fonts, item, currency);
-      }
+      y = this.drawCompactLineTable(page, y, fonts, items, currency);
     }
 
-    ensureSpace(90);
-    y = this.drawSectionHeading(page, y, fonts, "الخدمات لمرة واحدة", "Selected one-time services");
-    if (oneTimeItems.length === 0) {
-      y = this.drawEmptyState(
-        page,
-        y,
-        fonts,
-        "لا توجد خدمات لمرة واحدة ضمن هذا العرض.",
-        "No one-time services in this quote.",
-      );
-    } else {
-      for (const item of oneTimeItems) {
-        ensureSpace(82);
-        y = this.drawServiceCard(page, y, fonts, item, currency);
-      }
-    }
+    y = this.drawCompactTotals(page, y, fonts, totals, currency);
 
-    ensureSpace(170);
-    y = this.drawTotals(page, y, fonts, totals, currency);
-
-    ensureSpace(150);
-    this.drawTerms(page, y, fonts, terms);
+    this.drawCompactTerms(page, y, fonts, terms);
 
     this.drawFooters(pdf, fonts, snapshotHash);
     const bytes = Buffer.from(await pdf.save());
@@ -391,7 +360,7 @@ export class QuotePdfService {
       "Quote details",
       compact([
         stringValue(input.quote, "quoteNumber"),
-        stringValue(input.quote, "status"),
+        this.quoteStatusLabel(stringValue(input.quote, "status")),
         formatDate(input.quote.createdAt),
       ]),
       middle,
@@ -410,6 +379,24 @@ export class QuotePdfService {
       fonts,
     );
     return cardY - 118;
+  }
+
+  private quoteStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      ACCEPTED: "مؤكد خارج النظام",
+      CANCELLED: "ملغي",
+      DRAFT: "مسودة",
+      EXPIRED: "منتهي الصلاحية",
+      ISSUED: "صادر",
+      REJECTED: "مرفوض",
+    };
+    return labels[status] ?? status;
+  }
+
+  private lineTypeLabel(value: string): string {
+    if (value === "MONTHLY") return "شهري";
+    if (value === "ONE_TIME") return "مرة واحدة";
+    return value || "خدمة";
   }
 
   private drawSectionHeading(
@@ -471,6 +458,253 @@ export class QuotePdfService {
       size: 7,
     });
     return y - 54;
+  }
+
+  private drawCompactLineTable(
+    page: PDFPage,
+    y: number,
+    fonts: FontSet,
+    items: Record<string, unknown>[],
+    currency: string,
+  ): number {
+    const visibleItems = items.slice(0, 7);
+    const rowHeight = 33;
+    const tableHeight =
+      28 + visibleItems.length * rowHeight + (items.length > visibleItems.length ? 24 : 0);
+
+    page.drawRectangle({
+      x: margin,
+      y: y - tableHeight + 8,
+      width: contentWidth,
+      height: tableHeight,
+      borderColor: palette.sand,
+      borderWidth: 1,
+      color: palette.white,
+    });
+    page.drawRectangle({
+      x: margin,
+      y: y - 20,
+      width: contentWidth,
+      height: 28,
+      color: palette.navy,
+    });
+
+    const serviceRight = A4.width - margin - 14;
+    const typeRight = margin + 260;
+    const qtyRight = margin + 178;
+    const totalRight = margin + 110;
+
+    drawText(page, "الخدمة", serviceRight, y - 9, fonts, {
+      color: palette.white,
+      font: fonts.semibold,
+      maxWidth: 260,
+      right: true,
+      size: 8,
+    });
+    drawText(page, "النوع", typeRight, y - 9, fonts, {
+      color: palette.white,
+      font: fonts.semibold,
+      maxWidth: 72,
+      right: true,
+      size: 8,
+    });
+    drawText(page, "الكمية", qtyRight, y - 9, fonts, {
+      color: palette.white,
+      font: fonts.semibold,
+      maxWidth: 60,
+      right: true,
+      size: 8,
+    });
+    drawText(page, "الإجمالي", totalRight, y - 9, fonts, {
+      color: palette.white,
+      font: fonts.semibold,
+      maxWidth: 96,
+      right: true,
+      size: 8,
+    });
+
+    let rowY = y - 46;
+    for (const [index, item] of visibleItems.entries()) {
+      const snapshot = record(item.serviceSnapshot);
+      const serviceItems = arrayValue(item.serviceItems).map(record);
+      const name = shortText(
+        stringValue(snapshot, "nameAr", stringValue(snapshot, "nameEn", "خدمة")),
+        48,
+      );
+      const code = stringValue(snapshot, "serviceCode");
+      const included = serviceItems
+        .slice(0, 2)
+        .map(
+          (serviceItem) => stringValue(serviceItem, "nameAr") || stringValue(serviceItem, "nameEn"),
+        )
+        .filter(Boolean)
+        .join("، ");
+      const meta = shortText(compact([code, included]), 62);
+
+      if (index % 2 === 1) {
+        page.drawRectangle({
+          x: margin + 1,
+          y: rowY - 8,
+          width: contentWidth - 2,
+          height: rowHeight,
+          color: rgb(248 / 255, 249 / 255, 251 / 255),
+        });
+      }
+
+      drawText(page, name, serviceRight, rowY + 10, fonts, {
+        color: palette.navy,
+        font: fonts.semibold,
+        maxWidth: 260,
+        right: true,
+        size: 9,
+      });
+      drawText(page, meta || "—", serviceRight, rowY - 4, fonts, {
+        color: palette.darkGray,
+        maxWidth: 260,
+        right: true,
+        size: 7,
+      });
+      drawText(
+        page,
+        this.lineTypeLabel(stringValue(item, "lineType")),
+        typeRight,
+        rowY + 5,
+        fonts,
+        {
+          color: palette.darkGray,
+          maxWidth: 72,
+          right: true,
+          size: 8,
+        },
+      );
+      drawText(page, `${numberValue(item, "quantity", 1)}`, qtyRight, rowY + 5, fonts, {
+        color: palette.darkGray,
+        maxWidth: 60,
+        right: true,
+        size: 8,
+      });
+      drawText(page, formatAmount(item.lineTotal, currency), totalRight, rowY + 5, fonts, {
+        color: palette.navy,
+        font: fonts.semibold,
+        maxWidth: 96,
+        right: true,
+        size: 8,
+      });
+      rowY -= rowHeight;
+    }
+
+    if (items.length > visibleItems.length) {
+      drawText(
+        page,
+        `يوجد ${items.length - visibleItems.length} بند إضافي محفوظ في نسخة العرض داخل النظام.`,
+        A4.width - margin - 14,
+        rowY + 10,
+        fonts,
+        {
+          color: palette.coral,
+          font: fonts.semibold,
+          maxWidth: contentWidth - 28,
+          right: true,
+          size: 8,
+        },
+      );
+    }
+
+    return y - tableHeight - 18;
+  }
+
+  private drawCompactTotals(
+    page: PDFPage,
+    y: number,
+    fonts: FontSet,
+    totals: Record<string, unknown>,
+    currency: string,
+  ): number {
+    y = this.drawSectionHeading(page, y, fonts, "الملخص المالي", "Financial summary");
+    const boxHeight = 96;
+    page.drawRectangle({
+      x: margin,
+      y: y - boxHeight + 8,
+      width: contentWidth,
+      height: boxHeight,
+      color: palette.navy,
+    });
+    const columns = [
+      ["شهري", totals.subtotalMonthly],
+      ["مرة واحدة", totals.subtotalOneTime],
+      ["تأسيس", totals.subtotalSetup],
+      ["خصم", totals.discountTotal],
+      ["إجمالي نهائي", totals.finalTotal],
+    ] as const;
+    const columnWidth = contentWidth / columns.length;
+    columns.forEach(([label, value], index) => {
+      const right = A4.width - margin - index * columnWidth - 16;
+      const isFinal = label === "إجمالي نهائي";
+      drawText(page, label, right, y - 22, fonts, {
+        color: isFinal ? palette.coral : palette.sand,
+        font: fonts.semibold,
+        maxWidth: columnWidth - 18,
+        right: true,
+        size: 8,
+      });
+      drawText(page, formatAmount(value, currency), right, y - 46, fonts, {
+        color: palette.white,
+        font: isFinal ? fonts.bold : fonts.semibold,
+        maxWidth: columnWidth - 18,
+        right: true,
+        size: isFinal ? 11 : 9,
+      });
+    });
+    drawText(
+      page,
+      "الأرقام محفوظة من لقطة التسعير ولا تتغير بتعديل الكتالوج لاحقًا.",
+      A4.width - margin - 16,
+      y - 76,
+      fonts,
+      {
+        color: palette.sand,
+        maxWidth: contentWidth - 32,
+        right: true,
+        size: 7,
+      },
+    );
+    return y - boxHeight - 16;
+  }
+
+  private drawCompactTerms(
+    page: PDFPage,
+    y: number,
+    fonts: FontSet,
+    terms: Record<string, unknown>,
+  ): void {
+    const cursor = this.drawSectionHeading(page, y, fonts, "الشروط المختصرة", "Terms");
+    const payment = shortText(stringValue(terms, "paymentTerms", "حسب الشروط المتفق عليها"), 100);
+    const delivery = shortText(
+      stringValue(terms, "deliveryTerms", "حسب خطة التنفيذ المعتمدة"),
+      100,
+    );
+    page.drawRectangle({
+      x: margin,
+      y: cursor - 48,
+      width: contentWidth,
+      height: 58,
+      borderColor: palette.sand,
+      borderWidth: 1,
+      color: palette.white,
+    });
+    drawText(page, `الدفع: ${payment}`, A4.width - margin - 14, cursor - 12, fonts, {
+      color: palette.navy,
+      font: fonts.semibold,
+      maxWidth: contentWidth - 28,
+      right: true,
+      size: 8,
+    });
+    drawText(page, `التسليم: ${delivery}`, A4.width - margin - 14, cursor - 30, fonts, {
+      color: palette.darkGray,
+      maxWidth: contentWidth - 28,
+      right: true,
+      size: 8,
+    });
   }
 
   private drawServiceCard(

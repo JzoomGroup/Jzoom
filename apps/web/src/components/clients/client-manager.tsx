@@ -2,25 +2,205 @@
 
 import { useState, type FormEvent } from "react";
 import { clientsErrorMessage, clientsRequest, refreshClients } from "../../lib/clients-client";
-import type { ClientsSnapshot, ClientStatus, ManagedClient } from "../../lib/clients-types";
-import { CatalogFeedback, EmptyState, SectionHeader, StatusBadge } from "../catalog/catalog-shared";
-import { MetricCard, SectionCard } from "../premium-os";
+import type { ClientStatus, ClientsSnapshot, ManagedClient } from "../../lib/clients-types";
+import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { CatalogFeedback } from "../catalog/catalog-shared";
+import {
+  BentoGrid,
+  EmptyState,
+  MetricCard,
+  PageHeader,
+  SectionCard,
+  StatusChip,
+} from "../premium-os";
 
 interface ClientPayload {
-  name: string;
-  legalName: string | undefined;
-  commercialRegistration: string | undefined;
-  sector: string;
-  city: string | undefined;
-  employeesCount: number | undefined;
-  branchesCount: number | undefined;
-  transactionVolume: string | undefined;
-  operationalComplexity: string | undefined;
-  dataReadiness: string | undefined;
-  urgency: string | undefined;
-  billingContact: string | undefined;
   authorizedApprover: string;
+  billingContact: string | undefined;
+  branchesCount: number | undefined;
+  city: string | undefined;
+  commercialRegistration: string | undefined;
+  dataReadiness: string | undefined;
+  employeesCount: number | undefined;
+  legalName: string | undefined;
+  name: string;
+  operationalComplexity: string | undefined;
+  sector: string;
+  transactionVolume: string | undefined;
+  urgency: string | undefined;
 }
+
+const copy = {
+  ar: {
+    active: "نشط",
+    adminClients: "إدارة العملاء",
+    archived: "مؤرشف",
+    archivedDetail: "مخفية من التشغيل النشط",
+    archive: "أرشفة",
+    archiveConfirm: (clientName: string) =>
+      `هل تريد أرشفة ${clientName}؟ ستبقى المراجع التاريخية محفوظة.`,
+    archivePrompt: (clientName: string) => `ما سبب أرشفة ${clientName}؟`,
+    authorizedApprover: "المعتمد",
+    billing: "الفوترة",
+    billingContact: "جهة الفوترة",
+    branches: "الفروع",
+    cancel: "إلغاء",
+    city: "المدينة",
+    clientAdminCenter: "مركز إدارة العملاء",
+    clientAdminCenterDescription:
+      "إدارة بيانات العملاء، جهات الاعتماد، مستخدمي البوابة، وربط الطلبات بشكل واضح بدون كشف بيانات حساسة.",
+    clientCode: "رمز العميل",
+    clientCreated: "تم إنشاء العميل.",
+    clientHealth: "حالة العميل",
+    clientList: "ملفات العملاء",
+    clientListDescription:
+      "بطاقات العملاء التشغيلية مع الروابط والعدادات ومستخدمي البوابة والإجراءات المسموحة.",
+    clientName: "اسم العميل",
+    clientSaved: "تم حفظ العميل.",
+    clientSummary: "ملخص إدارة العملاء",
+    clients: "العملاء",
+    commercialRegistration: "السجل التجاري",
+    contacts: "جهات التواصل",
+    createClient: "إنشاء عميل",
+    createPortalUser: "إنشاء مستخدم بوابة",
+    createPortalUserFor: (clientName: string) => `إنشاء مستخدم بوابة لـ ${clientName}`,
+    creating: "جار الإنشاء...",
+    dataReadiness: "جاهزية البيانات",
+    disable: "تعطيل",
+    disablePrompt: (clientName: string) => `ما سبب تعطيل ${clientName}؟`,
+    displayName: "الاسم الظاهر",
+    edit: "تعديل",
+    editClient: (clientName: string) => `تعديل ${clientName}`,
+    email: "البريد الإلكتروني",
+    employees: "الموظفون",
+    enable: "تفعيل",
+    guardrailA: "الأرشفة لا تحذف الطلبات أو الفواتير أو السجلات التاريخية.",
+    guardrailB: "تعطيل العميل يتطلب سببًا واضحًا قبل التنفيذ.",
+    guardrailC: "مستخدمو البوابة منفصلون عن صلاحيات الأدمن والبنية التحتية.",
+    guardrails: "ضوابط التشغيل",
+    historicalAndActiveRequests: "طلبات تاريخية ونشطة",
+    inactive: "غير نشط",
+    language: "اللغة",
+    legalName: "الاسم القانوني",
+    linkedClientAccounts: "حسابات عملاء مرتبطة",
+    newClient: "عميل جديد",
+    noClients: "لا يوجد عملاء حتى الآن.",
+    noPortalUsers: "لا يوجد مستخدمو بوابة",
+    operationalComplexity: "التعقيد التشغيلي",
+    pageDescription:
+      "إنشاء وتحديث بيانات العملاء المستخدمة في التسعير، الطلبات، عروض السعر، الفواتير، التقارير، ونطاق بوابة العميل.",
+    pageTitle: "العملاء",
+    password: "كلمة المرور",
+    portalAccess: "وصول البوابة",
+    portalUserChecklist: "ضوابط مستخدم البوابة",
+    portalUserGuardA: "هذا المستخدم يحصل على دور العميل فقط داخل نطاق هذا العميل.",
+    portalUserGuardB: "اللغة الافتراضية عربية ويمكن تغييرها لاحقًا من الملف الشخصي.",
+    portalUserGuardC: "كلمة المرور مؤقتة ويجب تدويرها بعد الاختبار أو التسليم.",
+    portalUser: "مستخدم بوابة",
+    portalUserCreated: "تم إنشاء مستخدم بوابة العميل.",
+    portalUsers: "مستخدمو البوابة",
+    quotes: "عروض السعر",
+    requestLinks: "روابط الطلبات",
+    requests: "الطلبات",
+    saveClient: "حفظ العميل",
+    saving: "جار الحفظ...",
+    sector: "القطاع",
+    statusChanged: (status: ClientStatus) =>
+      `تم تحديث حالة العميل إلى ${statusLabel(status, "ar")}.`,
+    transactionVolume: "حجم المعاملات",
+    urgency: "الأولوية الزمنية",
+    users: "المستخدمون",
+  },
+  en: {
+    active: "active",
+    adminClients: "Admin clients",
+    archived: "Archived",
+    archivedDetail: "Hidden from active operations",
+    archive: "Archive",
+    archiveConfirm: (clientName: string) =>
+      `Archive ${clientName}? Historical references will remain unchanged.`,
+    archivePrompt: (clientName: string) => `Why are you archiving ${clientName}?`,
+    authorizedApprover: "Authorized approver",
+    billing: "Billing",
+    billingContact: "Billing contact",
+    branches: "Branches",
+    cancel: "Cancel",
+    city: "City",
+    clientAdminCenter: "Client administration center",
+    clientAdminCenterDescription:
+      "Manage client data, approval contacts, portal users, and request links without exposing sensitive data.",
+    clientCode: "Client code",
+    clientCreated: "Client created.",
+    clientHealth: "Client health",
+    clientList: "Client portfolio",
+    clientListDescription:
+      "Operational client cards with links, counters, portal users, and allowed actions.",
+    clientName: "Client name",
+    clientSaved: "Client saved.",
+    clientSummary: "Client administration summary",
+    clients: "Clients",
+    commercialRegistration: "Commercial registration",
+    contacts: "Contacts",
+    createClient: "Create client",
+    createPortalUser: "Create portal user",
+    createPortalUserFor: (clientName: string) => `Create portal user for ${clientName}`,
+    creating: "Creating...",
+    dataReadiness: "Data readiness",
+    disable: "Disable",
+    disablePrompt: (clientName: string) => `Why are you disabling ${clientName}?`,
+    displayName: "Display name",
+    edit: "Edit",
+    editClient: (clientName: string) => `Edit ${clientName}`,
+    email: "Email",
+    employees: "Employees",
+    enable: "Enable",
+    guardrailA: "Archive never deletes requests, invoices, or historical records.",
+    guardrailB: "Disabling a client requires a clear reason before execution.",
+    guardrailC: "Portal users stay separate from admin and infrastructure access.",
+    guardrails: "Operating guardrails",
+    historicalAndActiveRequests: "Historical and active requests",
+    inactive: "Inactive",
+    language: "Language",
+    legalName: "Legal name",
+    linkedClientAccounts: "Linked client accounts",
+    newClient: "New client",
+    noClients: "No clients have been created yet.",
+    noPortalUsers: "No portal users",
+    operationalComplexity: "Operational complexity",
+    pageDescription:
+      "Create and maintain client master data used by pricing, requests, quotes, invoices, reports, and client portal scope.",
+    pageTitle: "Clients",
+    password: "Password",
+    portalAccess: "Portal access",
+    portalUserChecklist: "Portal user guardrails",
+    portalUserGuardA: "This user receives client access only within this client scope.",
+    portalUserGuardB: "Arabic is the default locale and can be changed later from profile.",
+    portalUserGuardC: "The password is temporary and should be rotated after QA or handoff.",
+    portalUser: "Portal user",
+    portalUserCreated: "Client portal user created.",
+    portalUsers: "Portal users",
+    quotes: "Quotes",
+    requestLinks: "Request links",
+    requests: "Requests",
+    saveClient: "Save client",
+    saving: "Saving...",
+    sector: "Sector",
+    statusChanged: (status: ClientStatus) =>
+      `Client ${status === "ACTIVE" ? "enabled" : status.toLowerCase()}.`,
+    transactionVolume: "Transaction volume",
+    urgency: "Urgency",
+    users: "Users",
+  },
+} as const;
+
+const statusLabels = {
+  ACTIVE: { ar: "نشط", en: "Active" },
+  ARCHIVED: { ar: "مؤرشف", en: "Archived" },
+  DRAFT: { ar: "مسودة", en: "Draft" },
+  INACTIVE: { ar: "غير نشط", en: "Inactive" },
+} satisfies Record<ClientStatus, Record<SupportedLocale, string>>;
+
+type ClientCopy = (typeof copy)[SupportedLocale];
 
 function text(form: FormData, key: string): string | undefined {
   const value = String(form.get(key) ?? "").trim();
@@ -34,32 +214,55 @@ function numberValue(form: FormData, key: string): number | undefined {
 
 function payload(form: FormData): ClientPayload {
   return {
-    name: text(form, "name") ?? "",
-    legalName: text(form, "legalName"),
-    commercialRegistration: text(form, "commercialRegistration"),
-    sector: text(form, "sector") ?? "",
-    city: text(form, "city"),
-    employeesCount: numberValue(form, "employeesCount"),
-    branchesCount: numberValue(form, "branchesCount"),
-    transactionVolume: text(form, "transactionVolume"),
-    operationalComplexity: text(form, "operationalComplexity"),
-    dataReadiness: text(form, "dataReadiness"),
-    urgency: text(form, "urgency"),
-    billingContact: text(form, "billingContact"),
     authorizedApprover: text(form, "authorizedApprover") ?? "",
+    billingContact: text(form, "billingContact"),
+    branchesCount: numberValue(form, "branchesCount"),
+    city: text(form, "city"),
+    commercialRegistration: text(form, "commercialRegistration"),
+    dataReadiness: text(form, "dataReadiness"),
+    employeesCount: numberValue(form, "employeesCount"),
+    legalName: text(form, "legalName"),
+    name: text(form, "name") ?? "",
+    operationalComplexity: text(form, "operationalComplexity"),
+    sector: text(form, "sector") ?? "",
+    transactionVolume: text(form, "transactionVolume"),
+    urgency: text(form, "urgency"),
   };
+}
+
+function statusLabel(status: ClientStatus, locale: SupportedLocale): string {
+  return statusLabels[status][locale];
+}
+
+function number(value: number, locale: SupportedLocale): string {
+  return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA").format(value);
+}
+
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function defaultPortalEmail(client: ManagedClient): string {
+  return `${client.code.toLowerCase()}@client.jzoom.local`;
 }
 
 function ClientForm({
   client,
-  submitting,
   onCancel,
   onSubmit,
+  submitting,
+  t,
 }: {
   client: ManagedClient | undefined;
-  submitting: boolean;
   onCancel: () => void;
   onSubmit: (form: FormData) => Promise<void>;
+  submitting: boolean;
+  t: ClientCopy;
 }) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -67,43 +270,43 @@ function ClientForm({
   }
 
   return (
-    <form className="catalog-form wide-form" onSubmit={submit}>
-      {!client && (
+    <form className="catalog-form wide-form client-admin-form" onSubmit={submit}>
+      {!client ? (
         <label>
-          Client code
+          {t.clientCode}
           <input name="code" required defaultValue="" placeholder="0001" />
         </label>
-      )}
+      ) : null}
       <label>
-        Client name
+        {t.clientName}
         <input name="name" required defaultValue={client?.name ?? ""} />
       </label>
       <label>
-        Legal name
+        {t.legalName}
         <input name="legalName" defaultValue={client?.legalName ?? ""} />
       </label>
       <label>
-        Commercial registration
+        {t.commercialRegistration}
         <input name="commercialRegistration" defaultValue={client?.commercialRegistration ?? ""} />
       </label>
       <label>
-        Sector
+        {t.sector}
         <input name="sector" required defaultValue={client?.sector ?? ""} />
       </label>
       <label>
-        City
+        {t.city}
         <input name="city" defaultValue={client?.city ?? ""} />
       </label>
       <label>
-        Authorized approver
+        {t.authorizedApprover}
         <input name="authorizedApprover" required defaultValue={client?.authorizedApprover ?? ""} />
       </label>
       <label>
-        Billing contact
+        {t.billingContact}
         <input name="billingContact" defaultValue={client?.billingContact ?? ""} />
       </label>
       <label>
-        Employees
+        {t.employees}
         <input
           name="employeesCount"
           type="number"
@@ -112,7 +315,7 @@ function ClientForm({
         />
       </label>
       <label>
-        Branches
+        {t.branches}
         <input
           name="branchesCount"
           type="number"
@@ -121,47 +324,45 @@ function ClientForm({
         />
       </label>
       <label>
-        Transaction volume
+        {t.transactionVolume}
         <input name="transactionVolume" defaultValue={client?.transactionVolume ?? ""} />
       </label>
       <label>
-        Operational complexity
+        {t.operationalComplexity}
         <input name="operationalComplexity" defaultValue={client?.operationalComplexity ?? ""} />
       </label>
       <label>
-        Data readiness
+        {t.dataReadiness}
         <input name="dataReadiness" defaultValue={client?.dataReadiness ?? ""} />
       </label>
       <label>
-        Urgency
+        {t.urgency}
         <input name="urgency" defaultValue={client?.urgency ?? ""} />
       </label>
       <div className="form-actions">
         <button type="button" className="os-button os-button-secondary" onClick={onCancel}>
-          Cancel
+          {t.cancel}
         </button>
         <button type="submit" className="os-button os-button-primary" disabled={submitting}>
-          {submitting ? "Saving..." : client ? "Save client" : "Create client"}
+          {submitting ? t.saving : client ? t.saveClient : t.createClient}
         </button>
       </div>
     </form>
   );
 }
 
-function defaultPortalEmail(client: ManagedClient): string {
-  return `${client.code.toLowerCase()}@client.jzoom.local`;
-}
-
 function PortalUserForm({
   client,
-  submitting,
   onCancel,
   onSubmit,
+  submitting,
+  t,
 }: {
   client: ManagedClient;
-  submitting: boolean;
   onCancel: () => void;
   onSubmit: (form: FormData) => Promise<void>;
+  submitting: boolean;
+  t: ClientCopy;
 }) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -169,13 +370,19 @@ function PortalUserForm({
   }
 
   return (
-    <form className="catalog-form wide-form" onSubmit={submit}>
+    <form className="catalog-form wide-form client-admin-form" onSubmit={submit}>
+      <section className="client-portal-user-guardrails form-span">
+        <strong>{t.portalUserChecklist}</strong>
+        <span>{t.portalUserGuardA}</span>
+        <span>{t.portalUserGuardB}</span>
+        <span>{t.portalUserGuardC}</span>
+      </section>
       <label>
-        Email
+        {t.email}
         <input name="email" type="email" required defaultValue={defaultPortalEmail(client)} />
       </label>
       <label>
-        Display name
+        {t.displayName}
         <input
           name="displayName"
           required
@@ -183,22 +390,22 @@ function PortalUserForm({
         />
       </label>
       <label>
-        Password
+        {t.password}
         <input name="password" type="password" minLength={8} required />
       </label>
       <label>
-        Language
+        {t.language}
         <select name="preferredLocale" defaultValue="ar">
-          <option value="ar">Arabic</option>
+          <option value="ar">العربية</option>
           <option value="en">English</option>
         </select>
       </label>
       <div className="form-actions">
         <button type="button" className="os-button os-button-secondary" onClick={onCancel}>
-          Cancel
+          {t.cancel}
         </button>
         <button type="submit" className="os-button os-button-primary" disabled={submitting}>
-          {submitting ? "Creating..." : "Create portal user"}
+          {submitting ? t.creating : t.createPortalUser}
         </button>
       </div>
     </form>
@@ -207,81 +414,103 @@ function PortalUserForm({
 
 function ClientCard({
   client,
-  submitting,
-  onEdit,
+  locale,
   onCreateUser,
+  onEdit,
   onStatus,
+  submitting,
+  t,
 }: {
   client: ManagedClient;
-  submitting: boolean;
-  onEdit: (client: ManagedClient) => void;
+  locale: SupportedLocale;
   onCreateUser: (client: ManagedClient) => void;
+  onEdit: (client: ManagedClient) => void;
   onStatus: (client: ManagedClient, status: ClientStatus) => Promise<void>;
+  submitting: boolean;
+  t: ClientCopy;
 }) {
+  const isArchived = client.status === "ARCHIVED";
+
   return (
-    <article className="entity-card">
-      <div className="entity-card-heading">
+    <article className="client-admin-card">
+      <div className="client-admin-card-top">
+        <span className="client-admin-avatar" aria-hidden="true">
+          {initials(client.name)}
+        </span>
         <div>
-          <StatusBadge status={client.status} />
+          <small>{client.code}</small>
           <h3>{client.name}</h3>
+          <p>{client.legalName ?? client.sector}</p>
         </div>
-        <span>{client.code}</span>
+        <StatusChip status={client.status} label={statusLabel(client.status, locale)} />
       </div>
-      <dl className="entity-meta">
+
+      <dl className="client-admin-definition-grid">
         <div>
-          <dt>Sector</dt>
+          <dt>{t.sector}</dt>
           <dd>{client.sector}</dd>
         </div>
         <div>
-          <dt>City</dt>
+          <dt>{t.city}</dt>
           <dd>{client.city ?? "-"}</dd>
         </div>
         <div>
-          <dt>Approver</dt>
+          <dt>{t.authorizedApprover}</dt>
           <dd>{client.authorizedApprover}</dd>
         </div>
         <div>
-          <dt>Billing</dt>
+          <dt>{t.billing}</dt>
           <dd>{client.billingContact ?? "-"}</dd>
         </div>
       </dl>
-      <div className="entity-meta four-up">
+
+      <div className="client-admin-mini-metrics">
         <div>
-          <dt>Quotes</dt>
-          <dd>{client.counts.quotes}</dd>
+          <span>{t.quotes}</span>
+          <strong>{number(client.counts.quotes, locale)}</strong>
         </div>
         <div>
-          <dt>Requests</dt>
-          <dd>{client.counts.requests}</dd>
+          <span>{t.requests}</span>
+          <strong>{number(client.counts.requests, locale)}</strong>
         </div>
         <div>
-          <dt>Users</dt>
-          <dd>{client.counts.assignments}</dd>
+          <span>{t.users}</span>
+          <strong>{number(client.counts.assignments, locale)}</strong>
         </div>
         <div>
-          <dt>Contacts</dt>
-          <dd>{client.counts.contacts}</dd>
-        </div>
-      </div>
-      <div className="entity-meta">
-        <div>
-          <dt>Portal users</dt>
-          <dd>
-            {client.users.length === 0
-              ? "No portal users"
-              : client.users.map((user) => `${user.displayName} (${user.email})`).join(", ")}
-          </dd>
+          <span>{t.contacts}</span>
+          <strong>{number(client.counts.contacts, locale)}</strong>
         </div>
       </div>
-      {client.status !== "ARCHIVED" && (
-        <div className="row-actions">
+
+      <section className="client-admin-portal-panel">
+        <div>
+          <span>{t.portalAccess}</span>
+          <strong>{number(client.users.length, locale)}</strong>
+        </div>
+        {client.users.length === 0 ? (
+          <p>{t.noPortalUsers}</p>
+        ) : (
+          <ul>
+            {client.users.map((user) => (
+              <li key={user.id}>
+                <span>{user.displayName}</span>
+                <small>{user.email}</small>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {!isArchived ? (
+        <div className="client-admin-actions">
           <button
             type="button"
             className="os-button os-button-secondary"
             disabled={submitting}
             onClick={() => onEdit(client)}
           >
-            Edit
+            {t.edit}
           </button>
           <button
             type="button"
@@ -289,7 +518,7 @@ function ClientCard({
             disabled={submitting}
             onClick={() => onCreateUser(client)}
           >
-            Portal user
+            {t.portalUser}
           </button>
           {client.status !== "ACTIVE" ? (
             <button
@@ -298,7 +527,7 @@ function ClientCard({
               disabled={submitting}
               onClick={() => void onStatus(client, "ACTIVE")}
             >
-              Enable
+              {t.enable}
             </button>
           ) : (
             <button
@@ -307,7 +536,7 @@ function ClientCard({
               disabled={submitting}
               onClick={() => void onStatus(client, "INACTIVE")}
             >
-              Disable
+              {t.disable}
             </button>
           )}
           <button
@@ -316,26 +545,35 @@ function ClientCard({
             disabled={submitting}
             onClick={() => void onStatus(client, "ARCHIVED")}
           >
-            Archive
+            {t.archive}
           </button>
         </div>
-      )}
+      ) : null}
     </article>
   );
 }
 
-export function ClientManager({ initialSnapshot }: { initialSnapshot: ClientsSnapshot }) {
+export function ClientManager({
+  initialSnapshot,
+  locale: localeInput = "en",
+}: {
+  initialSnapshot: ClientsSnapshot;
+  locale?: string;
+}) {
+  const locale = normalizeLocale(localeInput);
+  const t = copy[locale];
   const [snapshot, setSnapshot] = useState(initialSnapshot);
-  const [editing, setEditing] = useState<ManagedClient | null>(null);
-  const [userClient, setUserClient] = useState<ManagedClient | null>(null);
   const [creating, setCreating] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [editing, setEditing] = useState<ManagedClient | null>(null);
   const [error, setError] = useState<string>();
+  const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<string>();
+  const [userClient, setUserClient] = useState<ManagedClient | null>(null);
+
   const activeClients = snapshot.clients.filter((client) => client.status === "ACTIVE").length;
   const archivedClients = snapshot.clients.filter((client) => client.status === "ARCHIVED").length;
   const portalUsers = snapshot.clients.reduce((sum, client) => sum + client.users.length, 0);
-  const openRequests = snapshot.clients.reduce((sum, client) => sum + client.counts.requests, 0);
+  const requestLinks = snapshot.clients.reduce((sum, client) => sum + client.counts.requests, 0);
 
   async function refresh(message: string) {
     setSnapshot(await refreshClients());
@@ -343,19 +581,27 @@ export function ClientManager({ initialSnapshot }: { initialSnapshot: ClientsSna
     setError(undefined);
   }
 
+  function openCreate() {
+    setCreating(true);
+    setEditing(null);
+    setUserClient(null);
+    setError(undefined);
+    setSuccess(undefined);
+  }
+
   async function create(form: FormData) {
     setSubmitting(true);
     try {
       await clientsRequest("admin/clients", {
-        method: "POST",
         body: JSON.stringify({
-          code: text(form, "code")?.toUpperCase(),
           ...payload(form),
+          code: text(form, "code")?.toUpperCase(),
           status: "ACTIVE",
         }),
+        method: "POST",
       });
       setCreating(false);
-      await refresh("Client created.");
+      await refresh(t.clientCreated);
     } catch (caught) {
       setError(clientsErrorMessage(caught));
       setSuccess(undefined);
@@ -369,11 +615,11 @@ export function ClientManager({ initialSnapshot }: { initialSnapshot: ClientsSna
     setSubmitting(true);
     try {
       await clientsRequest(`admin/clients/${editing.id}`, {
-        method: "PUT",
         body: JSON.stringify(payload(form)),
+        method: "PUT",
       });
       setEditing(null);
-      await refresh("Client saved.");
+      await refresh(t.clientSaved);
     } catch (caught) {
       setError(clientsErrorMessage(caught));
       setSuccess(undefined);
@@ -387,16 +633,16 @@ export function ClientManager({ initialSnapshot }: { initialSnapshot: ClientsSna
     setSubmitting(true);
     try {
       await clientsRequest(`admin/clients/${userClient.id}/users`, {
-        method: "POST",
         body: JSON.stringify({
-          email: text(form, "email"),
           displayName: text(form, "displayName"),
+          email: text(form, "email"),
           password: text(form, "password"),
           preferredLocale: text(form, "preferredLocale") ?? "ar",
         }),
+        method: "POST",
       });
       setUserClient(null);
-      await refresh("Client portal user created.");
+      await refresh(t.portalUserCreated);
     } catch (caught) {
       setError(clientsErrorMessage(caught));
       setSuccess(undefined);
@@ -409,21 +655,19 @@ export function ClientManager({ initialSnapshot }: { initialSnapshot: ClientsSna
     const destructive = status === "INACTIVE" || status === "ARCHIVED";
     const reason = destructive
       ? window.prompt(
-          status === "ARCHIVED"
-            ? `Why are you archiving ${client.name}?`
-            : `Why are you disabling ${client.name}?`,
+          status === "ARCHIVED" ? t.archivePrompt(client.name) : t.disablePrompt(client.name),
         )
       : undefined;
     if (destructive && !reason?.trim()) return;
-    if (status === "ARCHIVED" && !window.confirm(`Archive ${client.name}?`)) return;
+    if (status === "ARCHIVED" && !window.confirm(t.archiveConfirm(client.name))) return;
 
     setSubmitting(true);
     try {
       await clientsRequest(`admin/clients/${client.id}/status`, {
-        method: "PATCH",
         body: JSON.stringify({ status, ...(reason ? { reason } : {}) }),
+        method: "PATCH",
       });
-      await refresh(`Client ${status === "ACTIVE" ? "enabled" : status.toLowerCase()}.`);
+      await refresh(t.statusChanged(status));
     } catch (caught) {
       setError(clientsErrorMessage(caught));
       setSuccess(undefined);
@@ -434,72 +678,104 @@ export function ClientManager({ initialSnapshot }: { initialSnapshot: ClientsSna
 
   return (
     <>
-      <SectionHeader
-        eyebrow="Admin clients"
-        title="Clients"
-        description="Create and maintain client master data used by pricing, requests, quotes, invoices, reports, and client portal scope."
-        action={
-          <button
-            type="button"
-            className="os-button os-button-primary"
-            onClick={() => {
-              setCreating(true);
-              setEditing(null);
-              setUserClient(null);
-              setError(undefined);
-              setSuccess(undefined);
-            }}
-          >
-            New client
-          </button>
-        }
+      <PageHeader
+        actions={[{ label: t.newClient, onClick: openCreate, variant: "primary" }]}
+        description={t.pageDescription}
+        eyebrow={t.adminClients}
+        title={t.pageTitle}
       />
       <CatalogFeedback error={error} success={success} />
 
-      <section className="metric-grid" aria-label="Client administration summary">
-        <MetricCard label="Clients" value={snapshot.clients.length} detail={`${activeClients} active`} accent />
-        <MetricCard label="Portal users" value={portalUsers} detail="Linked client accounts" />
-        <MetricCard label="Request links" value={openRequests} detail="Historical and active requests" />
-        <MetricCard label="Archived" value={archivedClients} detail="Hidden from active operations" />
+      <section className="client-admin-command" aria-label={t.clientAdminCenter}>
+        <div className="client-admin-command-main">
+          <p className="eyebrow">{t.clientAdminCenter}</p>
+          <h2>{t.clientList}</h2>
+          <p>{t.clientAdminCenterDescription}</p>
+        </div>
+        <div className="client-admin-guardrails">
+          <strong>{t.guardrails}</strong>
+          <span>{t.guardrailA}</span>
+          <span>{t.guardrailB}</span>
+          <span>{t.guardrailC}</span>
+        </div>
       </section>
 
-      {(creating || editing) && (
-        <section className="catalog-panel editor-panel">
-          <h2>{editing ? `Edit ${editing.name}` : "Create client"}</h2>
+      <BentoGrid compact>
+        <MetricCard
+          accent
+          label={t.clients}
+          value={number(snapshot.clients.length, locale)}
+          detail={`${number(activeClients, locale)} ${t.active}`}
+        />
+        <MetricCard
+          label={t.portalUsers}
+          value={number(portalUsers, locale)}
+          detail={t.linkedClientAccounts}
+        />
+        <MetricCard
+          label={t.requestLinks}
+          value={number(requestLinks, locale)}
+          detail={t.historicalAndActiveRequests}
+        />
+        <MetricCard
+          label={t.archived}
+          value={number(archivedClients, locale)}
+          detail={t.archivedDetail}
+        />
+      </BentoGrid>
+
+      {creating || editing ? (
+        <section className="client-admin-editor">
+          <div className="client-admin-editor-heading">
+            <span>{editing ? t.edit : t.createClient}</span>
+            <h2>{editing ? t.editClient(editing.name) : t.createClient}</h2>
+          </div>
           <ClientForm
             client={editing ?? undefined}
-            submitting={submitting}
             onCancel={() => {
               setCreating(false);
               setEditing(null);
             }}
             onSubmit={editing ? update : create}
+            submitting={submitting}
+            t={t}
           />
         </section>
-      )}
+      ) : null}
 
-      {userClient && (
-        <section className="catalog-panel editor-panel">
-          <h2>Create portal user for {userClient.name}</h2>
+      {userClient ? (
+        <section className="client-admin-editor">
+          <div className="client-admin-editor-heading">
+            <span>{t.portalAccess}</span>
+            <h2>{t.createPortalUserFor(userClient.name)}</h2>
+          </div>
           <PortalUserForm
             client={userClient}
-            submitting={submitting}
             onCancel={() => setUserClient(null)}
             onSubmit={createPortalUser}
+            submitting={submitting}
+            t={t}
           />
         </section>
-      )}
+      ) : null}
 
-      <SectionCard title="Client list" description="Operational client records, account contacts, request links, and portal access.">
+      <SectionCard title={t.clientList} description={t.clientListDescription}>
         {snapshot.clients.length === 0 ? (
-          <EmptyState>No clients have been created yet.</EmptyState>
+          <EmptyState title={t.noClients}>{t.clientListDescription}</EmptyState>
         ) : (
-          <div className="entity-grid">
+          <div className="client-admin-grid">
             {snapshot.clients.map((client) => (
               <ClientCard
                 key={client.id}
                 client={client}
-                submitting={submitting}
+                locale={locale}
+                onCreateUser={(next) => {
+                  setUserClient(next);
+                  setCreating(false);
+                  setEditing(null);
+                  setError(undefined);
+                  setSuccess(undefined);
+                }}
                 onEdit={(next) => {
                   setEditing(next);
                   setCreating(false);
@@ -507,14 +783,9 @@ export function ClientManager({ initialSnapshot }: { initialSnapshot: ClientsSna
                   setError(undefined);
                   setSuccess(undefined);
                 }}
-                onCreateUser={(next) => {
-                  setUserClient(next);
-                  setEditing(null);
-                  setCreating(false);
-                  setError(undefined);
-                  setSuccess(undefined);
-                }}
                 onStatus={changeStatus}
+                submitting={submitting}
+                t={t}
               />
             ))}
           </div>

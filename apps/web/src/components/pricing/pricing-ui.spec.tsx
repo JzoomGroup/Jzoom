@@ -253,7 +253,12 @@ describe("PR 6 pricing UI", () => {
         initialDrafts={[]}
       />,
     );
+    expect(screen.getByRole("heading", { name: "Selection summary" })).toBeInTheDocument();
+    expect(screen.getByText("Quote readiness")).toBeInTheDocument();
+    expect(screen.getByText("Save the draft first.")).toBeInTheDocument();
+    expect(screen.getByText("Hourly rate")).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("Select Monthly operations"));
+    expect(screen.getAllByText("Monthly operations").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "Recalculate preview" }));
 
     await screen.findByText("Backend pricing preview recalculated.");

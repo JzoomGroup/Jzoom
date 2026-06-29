@@ -119,4 +119,40 @@ describe("RequestTemplateManager", () => {
       }),
     );
   });
+
+  it("applies a practical preset before saving a template version", async () => {
+    jest.mocked(reviseRequestTemplate).mockResolvedValue(snapshot());
+
+    render(<RequestTemplateManager initialSnapshot={snapshot()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /مستندات الموارد البشرية/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Save new template version" }));
+
+    await waitFor(() => expect(reviseRequestTemplate).toHaveBeenCalledTimes(1));
+    expect(reviseRequestTemplate).toHaveBeenCalledWith(
+      "service-item-1",
+      expect.objectContaining({
+        fields: expect.arrayContaining([
+          expect.objectContaining({
+            code: "employee_name",
+            labelAr: "اسم الموظف",
+            required: true,
+          }),
+          expect.objectContaining({
+            code: "document_purpose",
+            fieldType: "DROPDOWN",
+            options: expect.arrayContaining([
+              expect.objectContaining({ value: "bank", labelAr: "بنك" }),
+            ]),
+          }),
+        ]),
+        documentChecklist: expect.arrayContaining([
+          expect.objectContaining({
+            code: "supporting_documents",
+            labelAr: "المستندات الداعمة",
+          }),
+        ]),
+      }),
+    );
+  });
 });

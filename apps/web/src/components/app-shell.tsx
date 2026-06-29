@@ -23,16 +23,36 @@ type ShellContext = {
 const adminNavigation: NavItem[] = [
   { href: "/admin", labelAr: "لوحة التحكم", labelEn: "Dashboard" },
   { href: "/admin/clients", labelAr: "العملاء", labelEn: "Clients" },
+  { href: "/admin/users", labelAr: "المستخدمون", labelEn: "Users" },
+  { href: "/admin/roles", labelAr: "الأدوار", labelEn: "Roles" },
+  { href: "/admin/permissions", labelAr: "الصلاحيات", labelEn: "Permissions" },
   { href: "/admin/catalog", labelAr: "كتالوج الخدمات", labelEn: "Catalog" },
   { href: "/admin/catalog/categories", labelAr: "تصنيفات شهرية", labelEn: "Monthly categories" },
-  { href: "/admin/catalog/monthly-services", labelAr: "الخدمات الشهرية", labelEn: "Monthly services" },
+  {
+    href: "/admin/catalog/monthly-services",
+    labelAr: "الخدمات الشهرية",
+    labelEn: "Monthly services",
+  },
   { href: "/admin/catalog/service-items", labelAr: "بنود الخدمات", labelEn: "Service items" },
   { href: "/admin/catalog/service-levels", labelAr: "الباقات", labelEn: "Packages" },
-  { href: "/admin/catalog/one-time-categories", labelAr: "تصنيفات لمرة واحدة", labelEn: "One-time categories" },
-  { href: "/admin/catalog/one-time-services", labelAr: "خدمات لمرة واحدة", labelEn: "One-time services" },
+  {
+    href: "/admin/catalog/one-time-categories",
+    labelAr: "تصنيفات لمرة واحدة",
+    labelEn: "One-time categories",
+  },
+  {
+    href: "/admin/catalog/one-time-services",
+    labelAr: "خدمات لمرة واحدة",
+    labelEn: "One-time services",
+  },
   { href: "/admin/request-templates", labelAr: "نماذج الطلبات", labelEn: "Request templates" },
   { href: "/admin/pricing-rules", labelAr: "قواعد التسعير", labelEn: "Pricing rules" },
-  { href: "/admin/platform-configuration", labelAr: "إعدادات المنصة", labelEn: "Platform configuration" },
+  { href: "/admin/audit-logs", labelAr: "سجل التدقيق", labelEn: "Audit logs" },
+  {
+    href: "/admin/platform-configuration",
+    labelAr: "إعدادات المنصة",
+    labelEn: "Platform configuration",
+  },
   { href: "/pricing", labelAr: "استوديو التسعير", labelEn: "Pricing Studio" },
 ];
 
@@ -57,13 +77,15 @@ const internalNavigation: NavItem[] = [
     href: "/account-manager",
     labelAr: "مدير الحساب",
     labelEn: "Account Manager",
-    visible: ({ isAdmin, roles }) => isAdmin || roles.includes("ROLE-MGMT") || roles.includes("ROLE-AM"),
+    visible: ({ isAdmin, roles }) =>
+      isAdmin || roles.includes("ROLE-MGMT") || roles.includes("ROLE-AM"),
   },
   {
     href: "/supervisor",
     labelAr: "المشرف",
     labelEn: "Supervisor",
-    visible: ({ isAdmin, roles }) => isAdmin || roles.includes("ROLE-MGMT") || roles.includes("ROLE-SUPERVISOR"),
+    visible: ({ isAdmin, roles }) =>
+      isAdmin || roles.includes("ROLE-MGMT") || roles.includes("ROLE-SUPERVISOR"),
   },
   {
     href: "/specialist",
@@ -99,7 +121,8 @@ const internalNavigation: NavItem[] = [
     href: "/reports",
     labelAr: "التقارير",
     labelEn: "Reports",
-    visible: ({ isAdmin, roles }) => isAdmin || roles.includes("ROLE-MGMT") || roles.includes("ROLE-AM"),
+    visible: ({ isAdmin, roles }) =>
+      isAdmin || roles.includes("ROLE-MGMT") || roles.includes("ROLE-AM"),
   },
   { href: "/notifications", labelAr: "الإشعارات", labelEn: "Notifications" },
   {
@@ -223,11 +246,7 @@ export function AppShell({
   const language = normalizedLocale === "ar" ? "ar" : "en";
   const copy = shellCopy[mode][language];
   const nav =
-    mode === "admin"
-      ? adminNavigation
-      : mode === "client"
-        ? clientNavigation
-        : internalNavigation;
+    mode === "admin" ? adminNavigation : mode === "client" ? clientNavigation : internalNavigation;
   const context: ShellContext = { isAdmin, permissions, roles };
   const items = visibleNavigation(nav, context);
 
@@ -239,7 +258,10 @@ export function AppShell({
     >
       <LocaleDocumentSync locale={normalizedLocale} />
       <aside className="premium-sidebar">
-        <Link className="premium-brand" href={mode === "client" ? "/client" : isAdmin ? "/admin" : "/profile"}>
+        <Link
+          className="premium-brand"
+          href={mode === "client" ? "/client" : isAdmin ? "/admin" : "/profile"}
+        >
           <span className="premium-brand-mark" aria-hidden="true">
             J
           </span>

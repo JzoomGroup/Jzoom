@@ -72,7 +72,7 @@ export function LoginForm({ locale = "en" }: { locale?: string }) {
   }
 
   return (
-    <form className="auth-form" onSubmit={submit}>
+    <form className="auth-form" method="post" onSubmit={submit}>
       <label>
         {labels.email}
         <input name="email" type="email" autoComplete="email" required />

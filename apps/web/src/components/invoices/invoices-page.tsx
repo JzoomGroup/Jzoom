@@ -37,9 +37,9 @@ export async function InvoicesPage({ invoiceId }: { invoiceId?: string }) {
       roles={user.roles}
     >
       {Array.isArray(content) ? (
-        <InvoiceList invoices={content} />
+        <InvoiceList invoices={content} locale={user.preferredLocale} />
       ) : (
-        <InvoiceDetail initialInvoice={content} />
+        <InvoiceDetail initialInvoice={content} locale={user.preferredLocale} />
       )}
     </QuoteShell>
   );

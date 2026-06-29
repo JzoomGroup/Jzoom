@@ -9,6 +9,7 @@ import {
   refreshPricingDrafts,
 } from "../../lib/pricing-client";
 import { createQuote, quoteErrorMessage } from "../../lib/quote-client";
+import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
 import type {
   MonthlyPricingSelection,
   OneTimePricingSelection,
@@ -19,12 +20,211 @@ import type {
   PricingStudioCatalog,
 } from "../../lib/pricing-types";
 import { LogoutButton } from "../logout-button";
-import { EmptyState, PageHeader, SmartTable } from "../premium-os";
+import { EmptyState, PageHeader, SmartTable, StatusChip } from "../premium-os";
 
 interface MonthlySelectionState {
   levelId: string;
   quantity: number;
 }
+
+const copy = {
+  ar: {
+    additionalTerms: "شروط إضافية",
+    appliedRules: "القواعد المطبقة",
+    approver: "المعتمد",
+    archive: "أرشفة",
+    archiveConfirm: "أرشفة مسودة التسعير؟ ستبقى محفوظة كسجل تاريخي.",
+    archivePrompt: "ما سبب أرشفة مسودة التسعير؟",
+    archivedWarning: "مسودة التسعير مؤرشفة ولا يمكن إعادة حسابها أو تعديلها.",
+    archiveSuccess: "تمت أرشفة مسودة التسعير.",
+    backendPreview: "4. معاينة التسعير",
+    calculating: "جاري الحساب...",
+    calculationVersion: (version: number) =>
+      `إصدار الحساب ${new Intl.NumberFormat("ar-SA").format(version)}`,
+    cancel: "إلغاء",
+    city: "المدينة",
+    client: "العميل",
+    clientNotes: "ملاحظات ظاهرة للعميل",
+    clientSetup: "1. بيانات العميل",
+    clientSetupDescription: "مديرو الحسابات يرون العملاء المسندين لهم فقط.",
+    commercialJourney: "رحلة التسعير التجارية",
+    commercialJourneyDescription:
+      "مسار واضح من اختيار العميل والخدمات إلى معاينة التسعير، حفظ المسودة، ثم إصدار عرض السعر.",
+    createImmutableQuote: "إنشاء عرض سعر ثابت",
+    createQuote: "إنشاء عرض سعر",
+    createQuoteSnapshot: "إنشاء لقطة عرض السعر",
+    creating: "جاري الإنشاء...",
+    days: "يوم",
+    deliveryTerms: "شروط التسليم",
+    discounts: "الخصومات",
+    draftTitle: "عنوان المسودة",
+    draftValue: "قيمة المسودة",
+    duration: "المدة",
+    finalTotal: "الإجمالي النهائي",
+    internalCost: "التكلفة الداخلية",
+    internalNotes: "ملاحظات داخلية",
+    items: "بنود",
+    journeyClientDetail: "اختر العميل واضبط عنوان المسودة.",
+    journeyPreviewDetail: "أعد الحساب من الخلفية قبل الاعتماد.",
+    journeyQuoteDetail: "احفظ المسودة ثم أنشئ لقطة عرض السعر.",
+    journeyServicesDetail: "اختر الخدمات الشهرية وخدمات المرة الواحدة.",
+    legalName: "الاسم القانوني",
+    margin: "الهامش",
+    monthlyRate: "سعر الساعة",
+    monthly: "شهري",
+    monthlyServices: "2. الخدمات الشهرية",
+    monthlyServicesDescription: "اختر باقة واحدة لكل خدمة شهرية.",
+    newDraft: "جديد",
+    newPricingDraft: "مسودة تسعير جديدة",
+    noDrafts: "لا توجد مسودات تسعير حتى الآن.",
+    noPreview: "لا توجد معاينة بعد",
+    noPreviewDescription: "اختر خدمة واحدة على الأقل، ثم أعد الحساب عبر محرك التسعير.",
+    oneTime: "مرة واحدة",
+    oneTimeServices: "3. خدمات المرة الواحدة",
+    oneTimeServicesDescription: "اختر خدمات البناء والخدمات الرقمية المفعلة من الكتالوج.",
+    package: "الباقة",
+    paymentDefault: "الدفع حسب الشروط المتفق عليها.",
+    paymentTerms: "شروط الدفع",
+    pricingAccount: "حساب التسعير",
+    pricingDate: "تاريخ التسعير",
+    pricingDraftSaved: "تم حفظ مسودة التسعير.",
+    pricingDraftUpdated: "تم تحديث مسودة التسعير.",
+    pricingDrafts: "مسودات التسعير",
+    pricingRules: "قواعد التسعير",
+    pricingStudio: "استوديو التسعير",
+    pricingStudioFoundation: "أساس استوديو التسعير",
+    pricingStudioDescription:
+      "اختر إصدارات الكتالوج المفعلة، أعد الحساب عبر محرك التسعير، واحفظ النتيجة بدون إنشاء عرض سعر.",
+    profile: "الملف الشخصي",
+    previewDescription: "الإجماليات لا تُعتمد إلا بعد إعادة الحساب عبر محرك التسعير.",
+    previewSuccess: "تمت إعادة حساب معاينة التسعير.",
+    quantity: "الكمية",
+    quoteNeedsDraft: "احفظ المسودة أولًا.",
+    quoteNeedsPreview: "أعد حساب المعاينة قبل إصدار العرض.",
+    quoteReady: "جاهز لإصدار عرض السعر",
+    quoteReadiness: "جاهزية العرض",
+    quotes: "عروض الأسعار",
+    recalculatePreview: "إعادة حساب المعاينة",
+    saveDraftChanges: "حفظ تعديلات المسودة",
+    savePricingDraft: "حفظ مسودة التسعير",
+    savedWork: "العمل المحفوظ",
+    saving: "جاري الحفظ...",
+    sector: "القطاع",
+    selected: (count: number) => `${new Intl.NumberFormat("ar-SA").format(count)} محددة`,
+    selectedMonthly: "خدمات شهرية مختارة",
+    selectedOneTime: "خدمات مرة واحدة مختارة",
+    selectedServices: "الخدمات المختارة",
+    selectService: (name: string) => `اختيار ${name}`,
+    service: "الخدمة",
+    serviceSelectionSummary: "ملخص الاختيار",
+    setupPct: "نسبة التأسيس",
+    setupFees: "رسوم التأسيس",
+    subtotalBase: "الأساس",
+    subtotalTotal: "الإجمالي",
+    tax: "الضريبة",
+    termsSnapshot: "سيتم حفظ الحساب الحالي والشروط كلقطة ثابتة.",
+    type: "النوع",
+    validityDays: "مدة الصلاحية بالأيام",
+  },
+  en: {
+    additionalTerms: "Additional terms",
+    appliedRules: "Applied rules",
+    approver: "Approver",
+    archive: "Archive",
+    archiveConfirm: "Archive this pricing draft? It will remain available as historical data.",
+    archivePrompt: "Why are you archiving this pricing draft?",
+    archivedWarning: "This pricing draft is archived and cannot be recalculated or changed.",
+    archiveSuccess: "Pricing draft archived.",
+    backendPreview: "4. Backend preview",
+    calculating: "Calculating...",
+    calculationVersion: (version: number) => `Calculation v${version}`,
+    cancel: "Cancel",
+    city: "City",
+    client: "Client",
+    clientNotes: "Client-facing notes",
+    clientSetup: "1. Client setup",
+    clientSetupDescription: "Account Managers see only clients assigned to their portfolio.",
+    commercialJourney: "Commercial pricing journey",
+    commercialJourneyDescription:
+      "A clear path from client and service selection to backend pricing, saved draft, and quote issuance.",
+    createImmutableQuote: "Create immutable quote",
+    createQuote: "Create quote",
+    createQuoteSnapshot: "Create quote snapshot",
+    creating: "Creating...",
+    days: "days",
+    deliveryTerms: "Delivery terms",
+    discounts: "Discounts",
+    draftTitle: "Draft title",
+    draftValue: "Draft value",
+    duration: "Duration",
+    finalTotal: "Final total",
+    internalCost: "Internal cost",
+    internalNotes: "Internal notes",
+    items: "items",
+    journeyClientDetail: "Choose the client and draft title.",
+    journeyPreviewDetail: "Recalculate through the backend before approval.",
+    journeyQuoteDetail: "Save the draft, then create the quote snapshot.",
+    journeyServicesDetail: "Select monthly and one-time services.",
+    legalName: "Legal name",
+    margin: "Margin",
+    monthlyRate: "Hourly rate",
+    monthly: "Monthly",
+    monthlyServices: "2. Monthly services",
+    monthlyServicesDescription: "Select one package level per monthly service.",
+    newDraft: "New",
+    newPricingDraft: "New pricing draft",
+    noDrafts: "No pricing drafts yet.",
+    noPreview: "No preview yet",
+    noPreviewDescription: "Select at least one service, then recalculate through the backend.",
+    oneTime: "One-time",
+    oneTimeServices: "3. One-time services",
+    oneTimeServicesDescription:
+      "Select active Build and Digital services from the configured catalog.",
+    package: "Package",
+    paymentDefault: "Payment due according to agreed terms.",
+    paymentTerms: "Payment terms",
+    pricingAccount: "Pricing account",
+    pricingDate: "Pricing date",
+    pricingDraftSaved: "Pricing draft saved.",
+    pricingDraftUpdated: "Pricing draft updated.",
+    pricingDrafts: "Pricing drafts",
+    pricingRules: "Pricing rules",
+    pricingStudio: "Pricing Studio",
+    pricingStudioFoundation: "Pricing Studio foundation",
+    pricingStudioDescription:
+      "Select active catalog revisions, recalculate through the backend, and save the result without creating a quote.",
+    profile: "Profile",
+    previewDescription: "Totals are trusted only after backend recalculation.",
+    previewSuccess: "Backend pricing preview recalculated.",
+    quantity: "Quantity",
+    quoteNeedsDraft: "Save the draft first.",
+    quoteNeedsPreview: "Recalculate the preview before issuing a quote.",
+    quoteReady: "Ready to create quote",
+    quoteReadiness: "Quote readiness",
+    quotes: "Quotes",
+    recalculatePreview: "Recalculate preview",
+    saveDraftChanges: "Save draft changes",
+    savePricingDraft: "Save pricing draft",
+    savedWork: "Saved work",
+    saving: "Saving...",
+    sector: "Sector",
+    selected: (count: number) => `${count} selected`,
+    selectedMonthly: "Selected monthly services",
+    selectedOneTime: "Selected one-time services",
+    selectedServices: "Selected services",
+    selectService: (name: string) => `Select ${name}`,
+    service: "Service",
+    serviceSelectionSummary: "Selection summary",
+    setupPct: "Setup percentage",
+    setupFees: "Setup fees",
+    subtotalBase: "Base",
+    subtotalTotal: "Total",
+    tax: "Tax",
+    termsSnapshot: "The current saved calculation and terms will be permanently snapshotted.",
+    type: "Type",
+    validityDays: "Validity days",
+  },
+} as const;
 
 function pricingDateInput(value?: string): string {
   return (value ? new Date(value) : new Date()).toISOString().slice(0, 10);
@@ -34,12 +234,93 @@ function pricingDateIso(value: string): string {
   return new Date(`${value}T12:00:00.000Z`).toISOString();
 }
 
-function sar(value: number): string {
-  return new Intl.NumberFormat("en-SA", {
+function sar(value: number, locale: SupportedLocale): string {
+  return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA", {
     style: "currency",
     currency: "SAR",
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+function number(value: number, locale: SupportedLocale): string {
+  return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA", {
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function serviceLineLabel(value: string, locale: SupportedLocale): string {
+  if (locale === "en") return value;
+  if (value === "Build") return "بناء";
+  if (value === "Digital") return "رقمي";
+  return /[\u0600-\u06ff]/.test(value) ? value : "مسار خدمة";
+}
+
+function categoryLabel(value: string, locale: SupportedLocale): string {
+  if (locale === "en" || /[\u0600-\u06ff]/.test(value)) return value;
+  const labels: Record<string, string> = {
+    Build: "بناء",
+    Consulting: "استشارات",
+    Digital: "رقمي",
+    Finance: "مالية",
+    HR: "موارد بشرية",
+    Legal: "قانونية",
+    Marketing: "تسويق",
+    Operations: "تشغيل",
+    Strategy: "استراتيجية",
+  };
+  return labels[value] ?? "تصنيف خدمة";
+}
+
+function levelLabel(value: string | null | undefined, locale: SupportedLocale): string {
+  if (!value || locale === "en" || /[\u0600-\u06ff]/.test(value)) return value ?? "";
+  const labels: Record<string, string> = {
+    Basic: "أساسي",
+    Enterprise: "مؤسسي",
+    Growth: "نمو",
+    Premium: "مميز",
+    Scale: "توسع",
+    Standard: "قياسي",
+    Starter: "بداية",
+  };
+  return labels[value] ?? "مستوى خدمة";
+}
+
+function monthlyName(
+  service: PricingStudioCatalog["monthlyServices"][number],
+  locale: SupportedLocale,
+): string {
+  return locale === "ar"
+    ? service.revision.nameAr || "خدمة شهرية غير مترجمة"
+    : service.revision.nameEn || service.revision.nameAr;
+}
+
+function oneTimeName(
+  service: PricingStudioCatalog["oneTimeServices"][number],
+  locale: SupportedLocale,
+): string {
+  return locale === "ar"
+    ? service.revision.nameAr || "خدمة مرة واحدة غير مترجمة"
+    : service.revision.nameEn || service.revision.nameAr;
+}
+
+function serviceDescription(name: string, description: string, locale: SupportedLocale): string {
+  if (locale === "en") return description;
+  return /[\u0600-\u06ff]/.test(description)
+    ? description
+    : `خدمة ${name} ضمن كتالوج التسعير، يتم احتسابها من الخلفية حسب الإعدادات الحالية.`;
+}
+
+function lineName(line: PricingCalculation["lines"][number], locale: SupportedLocale): string {
+  return locale === "ar" ? line.nameAr || "خدمة غير مترجمة" : line.nameEn || line.nameAr;
+}
+
+function draftStatusLabel(status: string, locale: SupportedLocale): string {
+  if (locale === "en") return status;
+  const labels: Record<string, string> = {
+    ARCHIVED: "مؤرشفة",
+    DRAFT: "مسودة",
+  };
+  return labels[status] ?? status;
 }
 
 function initialMonthlySelections(draft?: PricingDraft | null): Map<string, MonthlySelectionState> {
@@ -67,6 +348,7 @@ export function PricingStudio({
   initialCatalog,
   initialDrafts,
   initialDraft,
+  locale: localeInput = "en",
 }: {
   displayName: string;
   embedded?: boolean;
@@ -74,14 +356,19 @@ export function PricingStudio({
   initialCatalog: PricingStudioCatalog;
   initialDrafts: PricingDraftSummary[];
   initialDraft?: PricingDraft | null;
+  locale?: string;
 }) {
   const router = useRouter();
+  const locale = normalizeLocale(localeInput);
+  const t = copy[locale];
   const [drafts, setDrafts] = useState(initialDrafts);
   const [currentDraft, setCurrentDraft] = useState(initialDraft ?? null);
   const [clientId, setClientId] = useState(
     initialDraft?.clientId ?? initialCatalog.clients[0]?.id ?? "",
   );
-  const [title, setTitle] = useState(initialDraft?.title ?? "Pricing draft");
+  const [title, setTitle] = useState(
+    initialDraft?.title ?? (locale === "ar" ? "مسودة تسعير" : "Pricing draft"),
+  );
   const [notes, setNotes] = useState(initialDraft?.notes ?? "");
   const [pricingDate, setPricingDate] = useState(pricingDateInput(initialDraft?.pricingDate));
   const [monthlySelections, setMonthlySelections] = useState(
@@ -102,6 +389,18 @@ export function PricingStudio({
   const selectedCount = monthlySelections.size + oneTimeSelections.size;
   const isArchived = currentDraft?.status === "ARCHIVED";
   const canCalculate = Boolean(clientId && title.trim() && selectedCount > 0 && !isArchived);
+  const selectedMonthlyServices = initialCatalog.monthlyServices.filter((service) =>
+    monthlySelections.has(service.revision.id),
+  );
+  const selectedOneTimeServices = initialCatalog.oneTimeServices.filter((service) =>
+    oneTimeSelections.has(service.revision.id),
+  );
+  const quoteReady = Boolean(currentDraft && calculation && !isArchived);
+  const quoteReadiness = quoteReady
+    ? t.quoteReady
+    : currentDraft
+      ? t.quoteNeedsPreview
+      : t.quoteNeedsDraft;
 
   const input = useMemo<PricingInput>(
     () => ({
@@ -182,7 +481,7 @@ export function PricingStudio({
         body: JSON.stringify(input),
       });
       setCalculation(result.calculation);
-      setSuccess("Backend pricing preview recalculated.");
+      setSuccess(t.previewSuccess);
     } catch (previewError) {
       setError(pricingErrorMessage(previewError));
     } finally {
@@ -204,7 +503,7 @@ export function PricingStudio({
       setCurrentDraft(saved);
       setCalculation(saved.calculation);
       setDrafts(await refreshPricingDrafts());
-      setSuccess(currentDraft ? "Pricing draft updated." : "Pricing draft saved.");
+      setSuccess(currentDraft ? t.pricingDraftUpdated : t.pricingDraftSaved);
       router.replace(`/pricing/${saved.id}`);
     } catch (saveError) {
       setError(pricingErrorMessage(saveError));
@@ -214,13 +513,10 @@ export function PricingStudio({
   }
 
   async function archive() {
-    if (
-      !currentDraft ||
-      !window.confirm("Archive this pricing draft? It will remain available as historical data.")
-    ) {
+    if (!currentDraft || !window.confirm(t.archiveConfirm)) {
       return;
     }
-    const reason = window.prompt("Why are you archiving this pricing draft?");
+    const reason = window.prompt(t.archivePrompt);
     if (!reason?.trim()) {
       return;
     }
@@ -236,7 +532,7 @@ export function PricingStudio({
       );
       setCurrentDraft(archived);
       setDrafts(await refreshPricingDrafts());
-      setSuccess("Pricing draft archived.");
+      setSuccess(t.archiveSuccess);
     } catch (archiveError) {
       setError(pricingErrorMessage(archiveError));
     } finally {
@@ -254,13 +550,13 @@ export function PricingStudio({
             </span>
             <span>
               <strong>Jzoom</strong>
-              <small>Pricing Studio</small>
+              <small>{t.pricingStudio}</small>
             </span>
           </Link>
-          <nav aria-label="Pricing account">
-            {isAdmin && <Link href="/admin/pricing-rules">Pricing rules</Link>}
-            <Link href="/pricing/quotes">Quotes</Link>
-            <Link href="/profile">Profile</Link>
+          <nav aria-label={t.pricingAccount}>
+            {isAdmin && <Link href="/admin/pricing-rules">{t.pricingRules}</Link>}
+            <Link href="/pricing/quotes">{t.quotes}</Link>
+            <Link href="/profile">{t.profile}</Link>
             <span>{displayName}</span>
             <LogoutButton />
           </nav>
@@ -271,15 +567,15 @@ export function PricingStudio({
         <aside className="pricing-drafts">
           <div className="pricing-aside-heading">
             <div>
-              <p className="eyebrow">Saved work</p>
-              <h2>Pricing drafts</h2>
+              <p className="eyebrow">{t.savedWork}</p>
+              <h2>{t.pricingDrafts}</h2>
             </div>
             <Link className="os-button os-button-primary" href="/pricing">
-              New
+              {t.newDraft}
             </Link>
           </div>
           {drafts.length === 0 ? (
-            <p className="pricing-muted">No pricing drafts yet.</p>
+            <p className="pricing-muted">{t.noDrafts}</p>
           ) : (
             <div className="pricing-draft-list">
               {drafts.map((draft) => (
@@ -288,10 +584,19 @@ export function PricingStudio({
                   href={`/pricing/${draft.id}`}
                   className={currentDraft?.id === draft.id ? "active" : undefined}
                 >
-                  <strong>{draft.title}</strong>
+                  <div className="pricing-draft-list-top">
+                    <strong>{draft.title}</strong>
+                    <StatusChip
+                      status={draft.status}
+                      label={draftStatusLabel(draft.status, locale)}
+                    />
+                  </div>
                   <span>{draft.client.name}</span>
                   <small>
-                    {draft.draftNumber} - {draft.itemCount} items
+                    {draft.draftNumber} - {number(draft.itemCount, locale)} {t.items}
+                  </small>
+                  <small>
+                    {t.draftValue}: {draft.totals ? sar(draft.totals.finalTotal, locale) : "-"}
                   </small>
                 </Link>
               ))}
@@ -301,14 +606,14 @@ export function PricingStudio({
 
         <main className="pricing-main">
           <PageHeader
-            eyebrow="Pricing Studio foundation"
-            title={currentDraft ? currentDraft.title : "New pricing draft"}
-            description="Select active catalog revisions, recalculate through the backend, and save the result without creating a quote."
+            eyebrow={t.pricingStudioFoundation}
+            title={currentDraft ? currentDraft.title : t.newPricingDraft}
+            description={t.pricingStudioDescription}
           >
             {currentDraft && (
               <div className="pricing-draft-identity">
                 <strong>{currentDraft.draftNumber}</strong>
-                <span>Calculation v{currentDraft.calculationVersion}</span>
+                <span>{t.calculationVersion(currentDraft.calculationVersion)}</span>
               </div>
             )}
           </PageHeader>
@@ -321,24 +626,76 @@ export function PricingStudio({
               {error ?? success}
             </p>
           )}
-          {isArchived && (
-            <p className="catalog-feedback error">
-              This pricing draft is archived and cannot be recalculated or changed.
-            </p>
-          )}
+          {isArchived && <p className="catalog-feedback error">{t.archivedWarning}</p>}
+
+          <section className="pricing-journey" aria-label={t.commercialJourney}>
+            <div className="pricing-journey-main">
+              <div>
+                <p className="eyebrow">{t.commercialJourney}</p>
+                <h2>{t.serviceSelectionSummary}</h2>
+                <p>{t.commercialJourneyDescription}</p>
+              </div>
+              <ol className="pricing-journey-steps">
+                <li className={clientId ? "active" : undefined}>
+                  <span>01</span>
+                  <strong>{t.clientSetup}</strong>
+                  <small>{t.journeyClientDetail}</small>
+                </li>
+                <li className={selectedCount > 0 ? "active" : undefined}>
+                  <span>02</span>
+                  <strong>{t.selectedServices}</strong>
+                  <small>{t.journeyServicesDetail}</small>
+                </li>
+                <li className={calculation ? "active" : undefined}>
+                  <span>03</span>
+                  <strong>{t.backendPreview}</strong>
+                  <small>{t.journeyPreviewDetail}</small>
+                </li>
+                <li className={quoteReady ? "active" : undefined}>
+                  <span>04</span>
+                  <strong>{t.createQuote}</strong>
+                  <small>{t.journeyQuoteDetail}</small>
+                </li>
+              </ol>
+            </div>
+            <aside className="pricing-journey-summary">
+              <div>
+                <span>{t.quoteReadiness}</span>
+                <strong>{quoteReadiness}</strong>
+              </div>
+              <div>
+                <span>{t.selectedMonthly}</span>
+                <strong>{number(selectedMonthlyServices.length, locale)}</strong>
+                <small>
+                  {selectedMonthlyServices
+                    .map((service) => monthlyName(service, locale))
+                    .join(", ") || t.selected(0)}
+                </small>
+              </div>
+              <div>
+                <span>{t.selectedOneTime}</span>
+                <strong>{number(selectedOneTimeServices.length, locale)}</strong>
+                <small>
+                  {selectedOneTimeServices
+                    .map((service) => oneTimeName(service, locale))
+                    .join(", ") || t.selected(0)}
+                </small>
+              </div>
+            </aside>
+          </section>
 
           <section className="catalog-panel">
             <div className="panel-heading">
               <div>
-                <h2>1. Client setup</h2>
-                <p>Account Managers see only clients assigned to their portfolio.</p>
+                <h2>{t.clientSetup}</h2>
+                <p>{t.clientSetupDescription}</p>
               </div>
             </div>
             <div className="catalog-form wide-form">
               <label>
-                Client
+                {t.client}
                 <select
-                  aria-label="Client"
+                  aria-label={t.client}
                   value={clientId}
                   disabled={isArchived}
                   onChange={(event) => {
@@ -354,18 +711,18 @@ export function PricingStudio({
                 </select>
               </label>
               <label>
-                Draft title
+                {t.draftTitle}
                 <input
-                  aria-label="Draft title"
+                  aria-label={t.draftTitle}
                   value={title}
                   disabled={isArchived}
                   onChange={(event) => setTitle(event.target.value)}
                 />
               </label>
               <label>
-                Pricing date
+                {t.pricingDate}
                 <input
-                  aria-label="Pricing date"
+                  aria-label={t.pricingDate}
                   type="date"
                   value={pricingDate}
                   disabled={isArchived}
@@ -376,9 +733,9 @@ export function PricingStudio({
                 />
               </label>
               <label className="form-span">
-                Internal notes
+                {t.internalNotes}
                 <textarea
-                  aria-label="Internal notes"
+                  aria-label={t.internalNotes}
                   value={notes}
                   disabled={isArchived}
                   onChange={(event) => setNotes(event.target.value)}
@@ -388,19 +745,19 @@ export function PricingStudio({
             {selectedClient && (
               <dl className="entity-meta four-up">
                 <div>
-                  <dt>Sector</dt>
+                  <dt>{t.sector}</dt>
                   <dd>{selectedClient.sector}</dd>
                 </div>
                 <div>
-                  <dt>City</dt>
-                  <dd>{selectedClient.city ?? "—"}</dd>
+                  <dt>{t.city}</dt>
+                  <dd>{selectedClient.city ?? "-"}</dd>
                 </div>
                 <div>
-                  <dt>Legal name</dt>
+                  <dt>{t.legalName}</dt>
                   <dd>{selectedClient.legalName ?? selectedClient.name}</dd>
                 </div>
                 <div>
-                  <dt>Approver</dt>
+                  <dt>{t.approver}</dt>
                   <dd>{selectedClient.authorizedApprover}</dd>
                 </div>
               </dl>
@@ -410,14 +767,15 @@ export function PricingStudio({
           <section className="catalog-panel">
             <div className="panel-heading">
               <div>
-                <h2>2. Monthly services</h2>
-                <p>Select one package level per monthly service.</p>
+                <h2>{t.monthlyServices}</h2>
+                <p>{t.monthlyServicesDescription}</p>
               </div>
-              <span>{monthlySelections.size} selected</span>
+              <span>{t.selected(monthlySelections.size)}</span>
             </div>
             <div className="pricing-service-grid">
               {initialCatalog.monthlyServices.map((service) => {
                 const selected = monthlySelections.get(service.revision.id);
+                const name = monthlyName(service, locale);
                 return (
                   <article
                     className={selected ? "pricing-service-card selected" : "pricing-service-card"}
@@ -426,7 +784,7 @@ export function PricingStudio({
                     <label className="pricing-select-heading">
                       <input
                         type="checkbox"
-                        aria-label={`Select ${service.revision.nameEn}`}
+                        aria-label={t.selectService(name)}
                         checked={Boolean(selected)}
                         disabled={isArchived}
                         onChange={(event) =>
@@ -439,17 +797,31 @@ export function PricingStudio({
                       />
                       <span>
                         <small>{service.code}</small>
-                        <strong>{service.revision.nameEn}</strong>
-                        <em>{service.categoryName}</em>
+                        <strong>{name}</strong>
+                        <em>{categoryLabel(service.categoryName, locale)}</em>
                       </span>
                     </label>
-                    <p>{service.revision.description}</p>
+                    <p>{serviceDescription(name, service.revision.description, locale)}</p>
+                    <dl className="pricing-card-meta">
+                      <div>
+                        <dt>{t.monthlyRate}</dt>
+                        <dd>{sar(service.revision.sellingHourlyRateSar, locale)}</dd>
+                      </div>
+                      <div>
+                        <dt>{t.setupPct}</dt>
+                        <dd>{number(service.revision.setupFeePct, locale)}%</dd>
+                      </div>
+                      <div>
+                        <dt>{t.package}</dt>
+                        <dd>{number(service.revision.levels.length, locale)}</dd>
+                      </div>
+                    </dl>
                     {selected && (
                       <div className="pricing-selection-fields">
                         <label>
-                          Package
+                          {t.package}
                           <select
-                            aria-label={`${service.revision.nameEn} package`}
+                            aria-label={`${name} ${t.package}`}
                             value={selected.levelId}
                             onChange={(event) =>
                               updateMonthly(service.revision.id, {
@@ -459,15 +831,19 @@ export function PricingStudio({
                           >
                             {service.revision.levels.map((level) => (
                               <option key={level.id} value={level.id}>
-                                {level.labelEn ?? level.labelAr} - {level.hours}h
+                                {locale === "ar"
+                                  ? level.labelAr || levelLabel(level.labelEn, locale)
+                                  : (level.labelEn ?? level.labelAr)}{" "}
+                                - {number(level.hours, locale)}
+                                {locale === "ar" ? " س" : "h"}
                               </option>
                             ))}
                           </select>
                         </label>
                         <label>
-                          Quantity
+                          {t.quantity}
                           <input
-                            aria-label={`${service.revision.nameEn} quantity`}
+                            aria-label={`${name} ${t.quantity}`}
                             type="number"
                             min="0.01"
                             step="0.01"
@@ -490,15 +866,16 @@ export function PricingStudio({
           <section className="catalog-panel">
             <div className="panel-heading">
               <div>
-                <h2>3. One-time services</h2>
-                <p>Select active Build and Digital services from the configured catalog.</p>
+                <h2>{t.oneTimeServices}</h2>
+                <p>{t.oneTimeServicesDescription}</p>
               </div>
-              <span>{oneTimeSelections.size} selected</span>
+              <span>{t.selected(oneTimeSelections.size)}</span>
             </div>
             <div className="pricing-service-grid">
               {initialCatalog.oneTimeServices.map((service) => {
                 const quantity = oneTimeSelections.get(service.revision.id);
                 const selected = quantity !== undefined;
+                const name = oneTimeName(service, locale);
                 return (
                   <article
                     className={selected ? "pricing-service-card selected" : "pricing-service-card"}
@@ -507,7 +884,7 @@ export function PricingStudio({
                     <label className="pricing-select-heading">
                       <input
                         type="checkbox"
-                        aria-label={`Select ${service.revision.nameEn}`}
+                        aria-label={t.selectService(name)}
                         checked={selected}
                         disabled={isArchived}
                         onChange={(event) =>
@@ -516,26 +893,28 @@ export function PricingStudio({
                       />
                       <span>
                         <small>{service.code}</small>
-                        <strong>{service.revision.nameEn}</strong>
-                        <em>{service.serviceLine}</em>
+                        <strong>{name}</strong>
+                        <em>{serviceLineLabel(service.serviceLine, locale)}</em>
                       </span>
                     </label>
-                    <p>{service.revision.description}</p>
+                    <p>{serviceDescription(name, service.revision.description, locale)}</p>
                     <dl className="pricing-card-meta">
                       <div>
-                        <dt>Base price</dt>
-                        <dd>{sar(service.revision.basePriceSar)}</dd>
+                        <dt>{t.subtotalBase}</dt>
+                        <dd>{sar(service.revision.basePriceSar, locale)}</dd>
                       </div>
                       <div>
-                        <dt>Duration</dt>
-                        <dd>{service.revision.durationDays} days</dd>
+                        <dt>{t.duration}</dt>
+                        <dd>
+                          {number(service.revision.durationDays, locale)} {t.days}
+                        </dd>
                       </div>
                     </dl>
                     {selected && (
                       <label className="pricing-quantity">
-                        Quantity
+                        {t.quantity}
                         <input
-                          aria-label={`${service.revision.nameEn} quantity`}
+                          aria-label={`${name} ${t.quantity}`}
                           type="number"
                           min="0.01"
                           step="0.01"
@@ -558,8 +937,8 @@ export function PricingStudio({
           <section className="catalog-panel pricing-review">
             <div className="panel-heading">
               <div>
-                <h2>4. Backend preview</h2>
-                <p>Totals are trusted only after backend recalculation.</p>
+                <h2>{t.backendPreview}</h2>
+                <p>{t.previewDescription}</p>
               </div>
               <div className="row-actions">
                 <button
@@ -568,7 +947,7 @@ export function PricingStudio({
                   disabled={!canCalculate || submitting !== null}
                   onClick={() => void preview()}
                 >
-                  {submitting === "preview" ? "Calculating..." : "Recalculate preview"}
+                  {submitting === "preview" ? t.calculating : t.recalculatePreview}
                 </button>
                 <button
                   className="os-button os-button-primary"
@@ -577,10 +956,10 @@ export function PricingStudio({
                   onClick={() => void save()}
                 >
                   {submitting === "save"
-                    ? "Saving..."
+                    ? t.saving
                     : currentDraft
-                      ? "Save draft changes"
-                      : "Save pricing draft"}
+                      ? t.saveDraftChanges
+                      : t.savePricingDraft}
                 </button>
                 {currentDraft && !isArchived && (
                   <button
@@ -589,7 +968,7 @@ export function PricingStudio({
                     disabled={submitting !== null}
                     onClick={() => void archive()}
                   >
-                    Archive
+                    {t.archive}
                   </button>
                 )}
                 {currentDraft && calculation && !isArchived && (
@@ -599,7 +978,7 @@ export function PricingStudio({
                     disabled={submitting !== null}
                     onClick={() => setShowQuoteForm((visible) => !visible)}
                   >
-                    Create quote
+                    {t.createQuote}
                   </button>
                 )}
               </div>
@@ -610,68 +989,71 @@ export function PricingStudio({
                 disabled={submitting !== null}
                 onCancel={() => setShowQuoteForm(false)}
                 onError={setError}
+                locale={locale}
               />
             )}
             {calculation ? (
               <>
                 <div className="pricing-total-grid">
                   <div>
-                    <span>Monthly</span>
-                    <strong>{sar(calculation.totals.subtotalMonthly)}</strong>
+                    <span>{t.monthly}</span>
+                    <strong>{sar(calculation.totals.subtotalMonthly, locale)}</strong>
                   </div>
                   <div>
-                    <span>Setup fees</span>
-                    <strong>{sar(calculation.totals.subtotalSetup)}</strong>
+                    <span>{t.setupFees}</span>
+                    <strong>{sar(calculation.totals.subtotalSetup, locale)}</strong>
                   </div>
                   <div>
-                    <span>One-time</span>
-                    <strong>{sar(calculation.totals.subtotalOneTime)}</strong>
+                    <span>{t.oneTime}</span>
+                    <strong>{sar(calculation.totals.subtotalOneTime, locale)}</strong>
                   </div>
                   <div>
-                    <span>Discounts</span>
-                    <strong>- {sar(calculation.totals.discountTotal)}</strong>
+                    <span>{t.discounts}</span>
+                    <strong>- {sar(calculation.totals.discountTotal, locale)}</strong>
                   </div>
                   <div>
-                    <span>Tax</span>
-                    <strong>{sar(calculation.totals.taxTotal)}</strong>
+                    <span>{t.tax}</span>
+                    <strong>{sar(calculation.totals.taxTotal, locale)}</strong>
                   </div>
                   <div className="primary">
-                    <span>Final total</span>
-                    <strong>{sar(calculation.totals.finalTotal)}</strong>
+                    <span>{t.finalTotal}</span>
+                    <strong>{sar(calculation.totals.finalTotal, locale)}</strong>
                   </div>
                   <div>
-                    <span>Internal cost</span>
-                    <strong>{sar(calculation.totals.internalCost)}</strong>
+                    <span>{t.internalCost}</span>
+                    <strong>{sar(calculation.totals.internalCost, locale)}</strong>
                   </div>
                   <div>
-                    <span>Margin</span>
-                    <strong>{calculation.totals.marginPct}%</strong>
+                    <span>{t.margin}</span>
+                    <strong>{number(calculation.totals.marginPct, locale)}%</strong>
                   </div>
                 </div>
                 <SmartTable>
                   <table className="catalog-table pricing-lines">
                     <thead>
                       <tr>
-                        <th>Service</th>
-                        <th>Type</th>
-                        <th>Quantity</th>
-                        <th>Base</th>
-                        <th>Setup</th>
-                        <th>Total</th>
+                        <th>{t.service}</th>
+                        <th>{t.type}</th>
+                        <th>{t.quantity}</th>
+                        <th>{t.subtotalBase}</th>
+                        <th>{t.setupFees}</th>
+                        <th>{t.subtotalTotal}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {calculation.lines.map((line) => (
                         <tr key={`${line.lineType}-${line.serviceCode}-${line.sortOrder}`}>
                           <td>
-                            <strong>{line.nameEn}</strong>
-                            <small>{line.serviceLevelLabel ?? line.serviceCode}</small>
+                            <strong>{lineName(line, locale)}</strong>
+                            <small>
+                              {levelLabel(line.serviceLevelLabel, locale) || line.serviceCode}
+                            </small>
                           </td>
-                          <td>{line.lineType === "MONTHLY" ? "Monthly" : "One-time"}</td>
-                          <td>{line.quantity}</td>
-                          <td>{sar(line.baseAmount)}</td>
-                          <td>{sar(line.setupFee)}</td>
-                          <td>{sar(line.lineTotal)}</td>
+                          <td>{line.lineType === "MONTHLY" ? t.monthly : t.oneTime}</td>
+                          <td>{number(line.quantity, locale)}</td>
+                          <td>{sar(line.baseAmount, locale)}</td>
+                          <td>{sar(line.setupFee, locale)}</td>
+                          <td>{sar(line.lineTotal, locale)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -679,7 +1061,7 @@ export function PricingStudio({
                 </SmartTable>
                 {calculation.appliedRules.length > 0 && (
                   <p className="pricing-muted">
-                    Applied rules:{" "}
+                    {t.appliedRules}:{" "}
                     {calculation.appliedRules
                       .map((rule) => `${rule.code} v${rule.version}`)
                       .join(", ")}
@@ -687,9 +1069,7 @@ export function PricingStudio({
                 )}
               </>
             ) : (
-              <EmptyState title="No preview yet">
-                Select at least one service, then recalculate through the backend.
-              </EmptyState>
+              <EmptyState title={t.noPreview}>{t.noPreviewDescription}</EmptyState>
             )}
           </section>
         </main>
@@ -703,13 +1083,17 @@ function QuoteCreationForm({
   disabled,
   onCancel,
   onError,
+  locale: localeInput = "en",
 }: {
   pricingDraftId: string;
   disabled: boolean;
   onCancel: () => void;
   onError: (message: string | undefined) => void;
+  locale?: string;
 }) {
   const router = useRouter();
+  const locale = normalizeLocale(localeInput);
+  const t = copy[locale];
   const [creating, setCreating] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -745,35 +1129,39 @@ function QuoteCreationForm({
   return (
     <form className="quote-create-form" onSubmit={submit}>
       <div>
-        <h3>Create immutable quote</h3>
-        <p>The current saved calculation and terms will be permanently snapshotted.</p>
+        <h3>{t.createImmutableQuote}</h3>
+        <p>{t.termsSnapshot}</p>
       </div>
       <label>
-        Validity days
+        {t.validityDays}
         <input name="validityDays" type="number" min="1" max="365" defaultValue="30" required />
       </label>
       <label>
-        Payment terms
-        <input name="paymentTerms" defaultValue="Payment due according to agreed terms." required />
+        {t.paymentTerms}
+        <input name="paymentTerms" defaultValue={t.paymentDefault} required />
       </label>
       <label>
-        Delivery terms
+        {t.deliveryTerms}
         <input name="deliveryTerms" />
       </label>
       <label className="form-span">
-        Additional terms
+        {t.additionalTerms}
         <textarea name="additionalTerms" />
       </label>
       <label className="form-span">
-        Client-facing notes
+        {t.clientNotes}
         <textarea name="clientNotes" />
       </label>
       <div className="form-actions">
         <button className="os-button os-button-secondary" type="button" onClick={onCancel}>
-          Cancel
+          {t.cancel}
         </button>
-        <button className="os-button os-button-primary" type="submit" disabled={disabled || creating}>
-          {creating ? "Creating..." : "Create quote snapshot"}
+        <button
+          className="os-button os-button-primary"
+          type="submit"
+          disabled={disabled || creating}
+        >
+          {creating ? t.creating : t.createQuoteSnapshot}
         </button>
       </div>
     </form>

@@ -5,9 +5,11 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { Prisma } from "@jzoom/database";
 import { DatabaseService } from "../database/database.service.js";
 import { AuthAuditService } from "../auth/audit.service.js";
 import type { RequestMetadata } from "../auth/auth.types.js";
+import { buildDefaultServiceItemRequestTemplate } from "../request-templates/request-template-defaults.js";
 import { CATALOG_EVENT } from "./catalog.constants.js";
 import type {
   CatalogLifecycleStatus,
@@ -85,6 +87,10 @@ function destructiveDeleteBlocked(): ConflictException {
 
 function isUniqueConstraintError(error: unknown): boolean {
   return typeof error === "object" && error !== null && Reflect.get(error, "code") === "P2002";
+}
+
+function json(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
 @Injectable()
@@ -777,6 +783,16 @@ export class CatalogService {
             sortOrder: inclusion.sortOrder ?? index,
           })),
         });
+        await this.createSuggestedRequestTemplateForItem(transaction, stable.id, {
+          code,
+          expectedOutput: input.expectedOutput?.trim() || null,
+          monthlyServiceCode: parent.code,
+          nameAr: input.nameAr.trim(),
+          nameEn: input.nameEn.trim(),
+          requestType: input.requestType?.trim() || null,
+          requiresFile: input.requiresFile ?? false,
+          sortOrder: input.sortOrder ?? 0,
+        });
         return stable;
       });
       const after = await this.requireItemView(item.id);
@@ -1170,6 +1186,108 @@ export class CatalogService {
         })),
       });
     });
+  }
+
+  private async createSuggestedRequestTemplateForItem(
+    transaction: Prisma.TransactionClient,
+    serviceItemId: string,
+    input: {
+      code: string;
+      expectedOutput: string | null;
+      monthlyServiceCode: string;
+      nameAr: string;
+      nameEn: string;
+      requestType: string | null;
+      requiresFile: boolean;
+      sortOrder: number;
+    },
+  ): Promise<void> {
+    const defaultTemplate = buildDefaultServiceItemRequestTemplate(input);
+    const requestTemplate = await transaction.requestTemplate.create({
+      data: {
+        serviceItemId,
+        status: "ACTIVE",
+        sortOrder: input.sortOrder,
+      },
+    });
+    const version = await transaction.requestTemplateVersion.create({
+      data: {
+        requestTemplateId: requestTemplate.id,
+        version: 1,
+        status: "SUGGESTED",
+        instructionsAr: defaultTemplate.instructionsAr,
+        instructionsEn: defaultTemplate.instructionsEn,
+        snapshot: json(defaultTemplate.snapshot),
+      },
+    });
+
+    const sectionIds = new Map<string, string>();
+    for (const section of defaultTemplate.sections) {
+      const created = await transaction.requestTemplateSection.create({
+        data: {
+          requestTemplateVersionId: version.id,
+          code: section.code,
+          titleAr: section.titleAr,
+          titleEn: section.titleEn,
+          descriptionAr: section.descriptionAr ?? null,
+          descriptionEn: section.descriptionEn ?? null,
+          sortOrder: section.sortOrder,
+        },
+      });
+      sectionIds.set(section.code, created.id);
+    }
+
+    for (const field of defaultTemplate.fields) {
+      const created = await transaction.requestTemplateField.create({
+        data: {
+          requestTemplateVersionId: version.id,
+          sectionId: sectionIds.get(field.sectionCode) ?? null,
+          code: field.code,
+          systemKey: field.systemKey ?? null,
+          fieldType: field.fieldType,
+          labelAr: field.labelAr,
+          labelEn: field.labelEn,
+          helpTextAr: field.helpTextAr ?? null,
+          helpTextEn: field.helpTextEn ?? null,
+          required: field.required,
+          clientVisible: field.clientVisible,
+          validation: field.validation === undefined ? Prisma.JsonNull : json(field.validation),
+          source: "SMART_DEFAULT",
+          sortOrder: field.sortOrder,
+        },
+      });
+      for (const option of field.options ?? []) {
+        await transaction.requestTemplateOption.create({
+          data: {
+            requestTemplateFieldId: created.id,
+            value: option.value,
+            labelAr: option.labelAr,
+            labelEn: option.labelEn,
+            sortOrder: option.sortOrder,
+          },
+        });
+      }
+    }
+
+    for (const document of defaultTemplate.documentChecklist) {
+      await transaction.requestTemplateDocument.create({
+        data: {
+          requestTemplateVersionId: version.id,
+          code: document.code,
+          labelAr: document.labelAr,
+          labelEn: document.labelEn,
+          descriptionAr: document.descriptionAr ?? null,
+          descriptionEn: document.descriptionEn ?? null,
+          required: document.required,
+          uploadRequired: document.uploadRequired,
+          acceptedFileTypes:
+            document.acceptedFileTypes === undefined
+              ? Prisma.JsonNull
+              : json(document.acceptedFileTypes),
+          sortOrder: document.sortOrder,
+        },
+      });
+    }
   }
 
   private async validateLevelConfigs(

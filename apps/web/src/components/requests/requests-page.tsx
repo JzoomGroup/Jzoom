@@ -50,7 +50,7 @@ export async function RequestsPage({ requestId }: { requestId?: string }) {
       roles={user.roles}
     >
       {Array.isArray(content) ? (
-        <RequestList requests={content} />
+        <RequestList locale={user.preferredLocale} requests={content} />
       ) : (
         <RequestDetail
           assignmentCandidates={assignmentCandidates}

@@ -297,7 +297,11 @@ export function AdminDashboard({
         <SectionCard
           title={t.queues.title}
           description={t.queues.description}
-          action={<Link className="os-button os-button-secondary" href="/requests/queues">{t.queues.action}</Link>}
+          action={
+            <Link className="os-button os-button-secondary" href="/requests/queues">
+              {t.queues.action}
+            </Link>
+          }
         >
           <div className="pricing-total-grid">
             <div>
@@ -322,7 +326,11 @@ export function AdminDashboard({
         <SectionCard
           title={t.hours.title}
           description={t.hours.description}
-          action={<Link className="os-button os-button-secondary" href="/hours-ledger">{t.hours.action}</Link>}
+          action={
+            <Link className="os-button os-button-secondary" href="/hours-ledger">
+              {t.hours.action}
+            </Link>
+          }
         >
           <div className="pricing-total-grid">
             <div>
@@ -348,7 +356,11 @@ export function AdminDashboard({
       <SectionCard
         title={t.health.title}
         description={t.health.description}
-        action={<Link className="os-button os-button-secondary" href="/account-manager">{t.health.action}</Link>}
+        action={
+          <Link className="os-button os-button-secondary" href="/account-manager">
+            {t.health.action}
+          </Link>
+        }
       >
         {attentionClients.length === 0 ? (
           <EmptyState title={t.health.stableTitle}>{t.health.stableBody}</EmptyState>
@@ -393,7 +405,11 @@ export function AdminDashboard({
       <SectionCard
         title={t.requests.title}
         description={t.requests.description}
-        action={<Link className="os-button os-button-secondary" href="/requests">{t.requests.action}</Link>}
+        action={
+          <Link className="os-button os-button-secondary" href="/requests">
+            {t.requests.action}
+          </Link>
+        }
       >
         {latestRequests.length === 0 ? (
           <EmptyState>{t.requests.empty}</EmptyState>
@@ -424,7 +440,9 @@ export function AdminDashboard({
                     <td>
                       <StatusChip status={request.status} />
                     </td>
-                    <td><PriorityChip priority={request.priority} /></td>
+                    <td>
+                      <PriorityChip priority={request.priority} />
+                    </td>
                     <td>{date(request.updatedAt, language)}</td>
                   </tr>
                 ))}
@@ -436,10 +454,60 @@ export function AdminDashboard({
 
       <SectionCard title={t.shortcuts.title} description={t.shortcuts.description}>
         <div className="admin-area-grid">
-          <ActionCard href="/admin/clients" index="01" title={t.shortcuts.clientsTitle} description={t.shortcuts.clientsDescription} />
-          <ActionCard href="/admin/catalog" index="02" title={t.shortcuts.catalogTitle} description={t.shortcuts.catalogDescription} />
-          <ActionCard href="/admin/request-templates" index="03" title={t.shortcuts.templatesTitle} description={t.shortcuts.templatesDescription} />
-          <ActionCard href="/admin/platform-configuration" index="04" title={t.shortcuts.platformTitle} description={t.shortcuts.platformDescription} />
+          <ActionCard
+            href="/admin/clients"
+            index="01"
+            title={t.shortcuts.clientsTitle}
+            description={t.shortcuts.clientsDescription}
+          />
+          <ActionCard
+            href="/admin/users"
+            index="02"
+            title={language === "ar" ? "إدارة المستخدمين" : "User management"}
+            description={
+              language === "ar"
+                ? "الأدوار، النطاقات، حالة الحساب، وصلاحيات المستخدمين."
+                : "Roles, scopes, account status, and user permissions."
+            }
+          />
+          <ActionCard
+            href="/admin/roles"
+            index="03"
+            title={language === "ar" ? "الأدوار والصلاحيات" : "Roles & permissions"}
+            description={
+              language === "ar"
+                ? "مراجعة أدوار النظام والصلاحيات التشغيلية المرتبطة بها."
+                : "Review system roles and assigned operational permissions."
+            }
+          />
+          <ActionCard
+            href="/admin/catalog"
+            index="04"
+            title={t.shortcuts.catalogTitle}
+            description={t.shortcuts.catalogDescription}
+          />
+          <ActionCard
+            href="/admin/request-templates"
+            index="05"
+            title={t.shortcuts.templatesTitle}
+            description={t.shortcuts.templatesDescription}
+          />
+          <ActionCard
+            href="/admin/platform-configuration"
+            index="06"
+            title={t.shortcuts.platformTitle}
+            description={t.shortcuts.platformDescription}
+          />
+          <ActionCard
+            href="/admin/audit-logs"
+            index="07"
+            title={language === "ar" ? "سجل التدقيق" : "Audit logs"}
+            description={
+              language === "ar"
+                ? "أحداث الأمان وتغييرات الصلاحيات والعمليات الحساسة."
+                : "Security events, permission changes, and sensitive operations."
+            }
+          />
         </div>
       </SectionCard>
     </>

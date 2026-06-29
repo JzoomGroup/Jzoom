@@ -2269,7 +2269,7 @@ export class RequestsService {
     if (!quote) {
       throw new BadRequestException({
         code: "SOURCE_QUOTE_UNAVAILABLE",
-        message: "The source quote must belong to the client and be issued or accepted",
+        message: "The source quote must belong to the client and be issued or externally confirmed",
       });
     }
   }
