@@ -6,6 +6,7 @@ import {
   clientDateTime,
   clientLocale,
   clientNumber,
+  localizedFreeText,
   requestStatusLabel,
   type ClientDisplayLocale,
 } from "../client-portal/client-format";
@@ -197,7 +198,7 @@ export function ClientReportList({
                 <div className="entity-card-heading">
                   <div>
                     <StatusChip status={report.status} label={reportStatusLabel(report.status, locale)} />
-                    <h3>{report.title}</h3>
+                    <h3>{localizedFreeText(report.title, locale, t.monthlyReport)}</h3>
                   </div>
                   <span>{report.period}</span>
                 </div>
@@ -257,7 +258,7 @@ export function ClientReportDetail({
     <>
       <PageHeader
         eyebrow={`${t.monthlyReport} - ${report.period}`}
-        title={report.title}
+        title={localizedFreeText(report.title, locale, t.monthlyReport)}
         description={`${report.client.name} - ${t.published} ${reportDate(report.publishedAt, locale)}`}
         actions={[{ href: "/client/reports", label: t.back }]}
       />
@@ -331,9 +332,17 @@ export function ClientReportDetail({
               <article key={activity.id}>
                 <strong>
                   {activity.request?.requestNumber ?? t.request}
-                  {activity.request?.title ? ` - ${activity.request.title}` : ""}
+                  {activity.request?.title
+                    ? ` - ${localizedFreeText(activity.request.title, locale, t.request)}`
+                    : ""}
                 </strong>
-                <p>{activity.reason ?? (locale === "ar" ? "نشاط ظاهر للعميل" : "Client-visible activity")}</p>
+                <p>
+                  {localizedFreeText(
+                    activity.reason,
+                    locale,
+                    locale === "ar" ? "نشاط ظاهر للعميل" : "Client-visible activity",
+                  )}
+                </p>
                 <small>
                   {clientDateTime(activity.occurredAt, locale)}
                   {activity.request?.status ? ` - ${requestStatusLabel(activity.request.status, locale)}` : ""}

@@ -18,6 +18,7 @@ import {
   clientName,
   clientNumber,
   documentStatusLabel,
+  localizedFreeText,
   outputStatusLabel,
   requestStatusLabel,
   type ClientDisplayLocale,
@@ -25,8 +26,6 @@ import {
 
 type ClientDocumentStatus = ServiceRequest["documentRequests"][number]["status"];
 type ClientOutputStatus = ServiceRequest["outputs"][number]["status"];
-
-const hasArabic = /[\u0600-\u06ff]/;
 
 const copy = {
   ar: {
@@ -178,9 +177,7 @@ function fileSize(sizeBytes: number, locale: ClientDisplayLocale): string {
 }
 
 function safeSystemText(value: string | null | undefined, fallback: string, locale: ClientDisplayLocale) {
-  if (!value) return fallback;
-  if (locale === "en") return value;
-  return hasArabic.test(value) ? value : fallback;
+  return localizedFreeText(value, locale, fallback);
 }
 
 function outputActionCopy(status: ClientOutputStatus, locale: ClientDisplayLocale): string {
@@ -364,7 +361,7 @@ export function ClientRequestDetail({
     <>
       <PageHeader
         eyebrow={t.requestDetail}
-        title={request.title}
+        title={localizedFreeText(request.title, locale, t.request)}
         description={`${request.requestNumber} - ${clientName(request.service.monthlyService, locale)}`}
         meta={<StatusChip status={request.status} label={requestStatusLabel(request.status, locale)} />}
       >
@@ -451,7 +448,7 @@ export function ClientRequestDetail({
               <dd>{clientDateTime(request.dueAt, locale)}</dd>
             </div>
           </dl>
-          <p>{request.description}</p>
+          <p>{localizedFreeText(request.description, locale, t.requestDetail)}</p>
         </article>
 
         <article className="catalog-panel">
@@ -485,7 +482,7 @@ export function ClientRequestDetail({
                 <article key={output.id}>
                   <div className="entity-card-heading">
                     <div>
-                      <strong>{output.title}</strong>
+                      <strong>{localizedFreeText(output.title, locale, t.deliverables)}</strong>
                       <small>
                         {t.revision} {clientNumber(output.revision, locale)}
                       </small>
@@ -503,7 +500,9 @@ export function ClientRequestDetail({
                     </div>
                   </dl>
                   {output.description && <p>{safeSystemText(output.description, t.attachmentHint, locale)}</p>}
-                  {output.clientReturnReason && <p>{t.returnedNote}: {output.clientReturnReason}</p>}
+                  {output.clientReturnReason && (
+                    <p>{t.returnedNote}: {safeSystemText(output.clientReturnReason, t.returnNote, locale)}</p>
+                  )}
                   <p>{outputActionCopy(output.status, locale)}</p>
                   {output.status === "SHARED_WITH_CLIENT" ? (
                     <div className="row-actions">

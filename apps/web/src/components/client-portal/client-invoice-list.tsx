@@ -7,6 +7,7 @@ import {
   clientLocale,
   clientNumber,
   invoiceStatusLabel,
+  localizedFreeText,
 } from "./client-format";
 
 const copy = {
@@ -86,7 +87,7 @@ export function ClientInvoiceList({
                 <Link className="quote-list-main" href={`/client/invoices/${invoice.id}`}>
                   <div>
                     <small>{invoice.invoiceNumber}</small>
-                    <h2>{invoice.title}</h2>
+                    <h2>{localizedFreeText(invoice.title, locale, t.invoices)}</h2>
                     <p>
                       {t.quote} {invoice.quoteNumber} - {t.issued} {clientDate(invoice.issueDate, locale)}
                     </p>

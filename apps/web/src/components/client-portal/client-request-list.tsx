@@ -31,6 +31,7 @@ import {
   clientName,
   clientNumber,
   localizedExpectedOutput,
+  localizedFreeText,
   localizedServiceDescription,
   priorityLabel,
   requestStatusLabel,
@@ -593,7 +594,7 @@ export function ClientRequestList({
                 <Link className="quote-list-main" href={`/client/requests/${request.id}`}>
                   <div>
                     <small>{request.requestNumber}</small>
-                    <h2>{request.title}</h2>
+                    <h2>{localizedFreeText(request.title, locale, t.requestDetails)}</h2>
                     <p>{clientName(request.service.monthlyService, locale)}</p>
                   </div>
                   <div className="quote-list-meta">

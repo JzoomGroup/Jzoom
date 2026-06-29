@@ -1,7 +1,14 @@
 import Link from "next/link";
 import type { ClientQuoteSummary } from "../../lib/client-portal-types";
 import { EmptyState, MetricCard, PageHeader, SectionCard, StatusChip } from "../premium-os";
-import { clientCurrency, clientDate, clientLocale, clientNumber, quoteStatusLabel } from "./client-format";
+import {
+  clientCurrency,
+  clientDate,
+  clientLocale,
+  clientNumber,
+  localizedFreeText,
+  quoteStatusLabel,
+} from "./client-format";
 
 const copy = {
   ar: {
@@ -81,7 +88,7 @@ export function ClientQuoteList({
                 <Link className="quote-list-main" href={`/client/quotes/${quote.id}`}>
                   <div>
                     <small>{quote.quoteNumber}</small>
-                    <h2>{quote.title}</h2>
+                    <h2>{localizedFreeText(quote.title, locale, t.quotes)}</h2>
                     <p>
                       {t.validUntil} {clientDate(quote.validUntil, locale)} -{" "}
                       {clientNumber(quote.itemCount, locale)} {t.item}

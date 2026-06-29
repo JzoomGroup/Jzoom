@@ -7,7 +7,7 @@ import type {
   ClientPortalSubscribedMonthlyService,
   ClientQuoteSummary,
 } from "../../lib/client-portal-types";
-import { localizedServiceDescription } from "./client-format";
+import { localizedFreeText, localizedServiceDescription } from "./client-format";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
 import type { RequestSummary } from "../../lib/request-types";
 import {
@@ -464,7 +464,7 @@ export function ClientOverview({
             ) : (
               waitingClientRequests.slice(0, 4).map((request) => (
                 <article key={request.id}>
-                  <strong>{request.title}</strong>
+                  <strong>{localizedFreeText(request.title, locale, "طلب خدمة")}</strong>
                   <small>
                     {request.requestNumber} · {localizedName(request.service.monthlyService, locale)}
                   </small>
@@ -495,7 +495,7 @@ export function ClientOverview({
             ) : (
               latestOpenRequests.map((request) => (
                 <article key={request.id}>
-                  <strong>{request.title}</strong>
+                  <strong>{localizedFreeText(request.title, locale, "طلب خدمة")}</strong>
                   <small>
                     {statusLabel(request.status, locale)} · {formatDate(request.dueAt, locale, copy)}
                   </small>

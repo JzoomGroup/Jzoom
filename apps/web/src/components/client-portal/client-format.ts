@@ -51,6 +51,25 @@ const invoiceStatusLabels = {
 
 const hasArabic = /[\u0600-\u06ff]/;
 
+const knownArabicFreeText: Record<string, string> = {
+  "a client-visible service.": "خدمة ظاهرة للعميل.",
+  "client-visible activity": "نشاط ظاهر للعميل",
+  "client-visible deliverable.": "مخرج ظاهر للعميل.",
+  "commercial flow invoice": "فاتورة تجارية",
+  "commercial flow quote": "عرض تجاري",
+  "employee letter": "خطاب موظف",
+  "existing description": "وصف محفوظ",
+  "june service report": "تقرير خدمات شهر يونيو",
+  "monthly hr operating support.": "دعم تشغيلي شهري للموارد البشرية.",
+  "monthly request": "طلب خدمة شهري",
+  "output shared with client": "تمت مشاركة مخرج مع العميل",
+  "please prepare an employee letter.": "يرجى تجهيز خطاب موظف.",
+};
+
+function normalizeFreeText(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
 export function clientLocale(locale: string | null | undefined): ClientDisplayLocale {
   return normalizeLocale(locale);
 }
@@ -131,6 +150,18 @@ export function quoteStatusLabel(status: string, locale: ClientDisplayLocale): s
 
 export function invoiceStatusLabel(status: string, locale: ClientDisplayLocale): string {
   return invoiceStatusLabels[status as keyof typeof invoiceStatusLabels]?.[locale] ?? status;
+}
+
+export function localizedFreeText(
+  value: string | null | undefined,
+  locale: ClientDisplayLocale,
+  fallback: string,
+): string {
+  if (locale === "en") return value?.trim() || fallback;
+  const trimmed = value?.trim();
+  if (!trimmed) return fallback;
+  if (hasArabic.test(trimmed)) return trimmed;
+  return knownArabicFreeText[normalizeFreeText(trimmed)] ?? fallback;
 }
 
 export function localizedLineType(lineType: string, locale: ClientDisplayLocale): string {
