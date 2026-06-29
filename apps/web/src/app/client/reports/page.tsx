@@ -5,14 +5,15 @@ import { requireClientReports } from "../../../lib/operations-server";
 
 export default async function ClientReportsPage() {
   const [user, reports] = await Promise.all([getCurrentUser(), requireClientReports()]);
+  const locale = user?.preferredLocale ?? "en";
 
   return (
     <ClientShell
       activePath="/client/reports"
       displayName={user?.displayName ?? "Client"}
-      locale={user?.preferredLocale ?? "en"}
+      locale={locale}
     >
-      <ClientReportList reports={reports} />
+      <ClientReportList locale={locale} reports={reports} />
     </ClientShell>
   );
 }

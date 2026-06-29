@@ -10,14 +10,15 @@ export default async function ClientReportDetailPage({
 }) {
   const { reportId } = await params;
   const [user, report] = await Promise.all([getCurrentUser(), requireClientReport(reportId)]);
+  const locale = user?.preferredLocale ?? "en";
 
   return (
     <ClientShell
       activePath="/client/reports"
       displayName={user?.displayName ?? "Client"}
-      locale={user?.preferredLocale ?? "en"}
+      locale={locale}
     >
-      <ClientReportDetail report={report} />
+      <ClientReportDetail locale={locale} report={report} />
     </ClientShell>
   );
 }

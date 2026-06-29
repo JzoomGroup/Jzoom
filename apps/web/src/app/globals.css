@@ -3216,18 +3216,38 @@ body {
 }
 
 .premium-shell {
-  display: flex;
+  display: grid;
+  grid-template-columns: 286px minmax(0, 1fr);
   min-height: 100vh;
   background: #ffffff;
   color: var(--ink);
 }
 
-.premium-shell .premium-sidebar {
-  flex: 0 0 286px;
+.premium-shell[dir="ltr"] {
+  grid-template-columns: 286px minmax(0, 1fr);
+}
+
+.premium-shell[dir="ltr"] .premium-sidebar {
+  grid-column: 1;
+}
+
+.premium-shell[dir="ltr"] .premium-workspace {
+  grid-column: 2;
+}
+
+.premium-shell[dir="rtl"] {
+  grid-template-columns: minmax(0, 1fr) 286px;
+}
+
+.premium-shell[dir="rtl"] .premium-sidebar {
+  grid-column: 2;
+}
+
+.premium-shell[dir="rtl"] .premium-workspace {
+  grid-column: 1;
 }
 
 .premium-shell .premium-workspace {
-  flex: 1 1 auto;
   min-width: 0;
 }
 
