@@ -3221,6 +3221,7 @@ body {
   min-height: 100vh;
   background: #ffffff;
   color: var(--ink);
+  direction: ltr;
 }
 
 .premium-shell[dir="ltr"] {
@@ -3229,10 +3230,12 @@ body {
 
 .premium-shell[dir="ltr"] .premium-sidebar {
   grid-column: 1;
+  direction: ltr;
 }
 
 .premium-shell[dir="ltr"] .premium-workspace {
   grid-column: 2;
+  direction: ltr;
 }
 
 .premium-shell[dir="rtl"] {
@@ -3241,10 +3244,12 @@ body {
 
 .premium-shell[dir="rtl"] .premium-sidebar {
   grid-column: 2;
+  direction: rtl;
 }
 
 .premium-shell[dir="rtl"] .premium-workspace {
   grid-column: 1;
+  direction: rtl;
 }
 
 .premium-shell .premium-workspace {
