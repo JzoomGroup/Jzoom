@@ -126,6 +126,9 @@ export class ClientPortalService {
                               { OR: [{ effectiveTo: null }, { effectiveTo: { gt: now } }] },
                             ],
                           },
+                          include: {
+                            levelInclusions: true,
+                          },
                           orderBy: { version: "desc" },
                           take: 1,
                         },
@@ -176,7 +179,9 @@ export class ClientPortalService {
           },
           serviceItems: revision.monthlyService.items.flatMap((item) => {
             const itemRevision = item.revisions[0];
-            return itemRevision
+            return itemRevision?.levelInclusions.some(
+              (inclusion) => inclusion.included && inclusion.serviceLevelId === service.serviceLevelId,
+            )
               ? [
                   {
                     id: itemRevision.id,

@@ -8,7 +8,13 @@ import {
 import { QuoteShell } from "../quotes/quote-shell";
 import { PricingStudio } from "./pricing-studio";
 
-export async function PricingStudioPage({ draftId }: { draftId?: string }) {
+export async function PricingStudioPage({
+  draftId,
+  openClientCreator = false,
+}: {
+  draftId?: string;
+  openClientCreator?: boolean;
+}) {
   const [user, catalog, drafts, draft] = await Promise.all([
     getCurrentUser(),
     requirePricingCatalog(),
@@ -42,6 +48,7 @@ export async function PricingStudioPage({ draftId }: { draftId?: string }) {
         initialDrafts={drafts}
         initialDraft={draft}
         locale={user.preferredLocale}
+        openClientCreator={openClientCreator && !draft}
       />
     </QuoteShell>
   );

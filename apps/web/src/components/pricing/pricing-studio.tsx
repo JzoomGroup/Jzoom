@@ -14,6 +14,8 @@ import type {
   MonthlyPricingSelection,
   OneTimePricingSelection,
   PricingCalculation,
+  PricingClient,
+  PricingClientCreateInput,
   PricingDraft,
   PricingDraftSummary,
   PricingInput,
@@ -226,6 +228,43 @@ const copy = {
   },
 } as const;
 
+const pricingCopy = {
+  ar: {
+    ...copy.ar,
+    billingContact: "جهة الفوترة",
+    branches: "الفروع",
+    cancelClientCreate: "إلغاء إنشاء العميل",
+    clientCode: "رمز العميل",
+    clientCreated: "تم إنشاء العميل واختياره للمسودة.",
+    clientName: "اسم العميل",
+    commercialRegistration: "السجل التجاري",
+    createClient: "إنشاء عميل",
+    createClientInPricing: "إنشاء عميل جديد داخل التسعير",
+    createClientInPricingDescription:
+      "أضف العميل أولًا بدون إنشاء مستخدم بوابة. بعد الموافقة والدفع يمكن إنشاء مستخدم العميل من شاشة العملاء.",
+    employees: "الموظفون",
+    newClient: "عميل جديد",
+    savingClient: "جاري إنشاء العميل...",
+  },
+  en: {
+    ...copy.en,
+    billingContact: "Billing contact",
+    branches: "Branches",
+    cancelClientCreate: "Cancel client creation",
+    clientCode: "Client code",
+    clientCreated: "Client created and selected for this draft.",
+    clientName: "Client name",
+    commercialRegistration: "Commercial registration",
+    createClient: "Create client",
+    createClientInPricing: "Create a new client inside pricing",
+    createClientInPricingDescription:
+      "Add the client first without creating a portal user. After approval and payment, create the client user from Clients.",
+    employees: "Employees",
+    newClient: "New client",
+    savingClient: "Creating client...",
+  },
+} as const;
+
 function pricingDateInput(value?: string): string {
   return (value ? new Date(value) : new Date()).toISOString().slice(0, 10);
 }
@@ -246,6 +285,50 @@ function number(value: number, locale: SupportedLocale): string {
   return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA", {
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+function formText(form: FormData, key: string): string | undefined {
+  const value = String(form.get(key) ?? "").trim();
+  return value ? value : undefined;
+}
+
+function formNumber(form: FormData, key: string): number | undefined {
+  const value = formText(form, key);
+  return value ? Number(value) : undefined;
+}
+
+function suggestedClientCode(name: string): string {
+  const ascii = name
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/_+/g, "-")
+    .toUpperCase();
+  return ascii ? ascii.slice(0, 24) : `CLIENT-${new Date().getTime().toString().slice(-6)}`;
+}
+
+function createClientPayload(form: FormData): PricingClientCreateInput {
+  const name = formText(form, "name") ?? "";
+  const billingContact = formText(form, "billingContact");
+  const branchesCount = formNumber(form, "branchesCount");
+  const city = formText(form, "city");
+  const commercialRegistration = formText(form, "commercialRegistration");
+  const employeesCount = formNumber(form, "employeesCount");
+  const legalName = formText(form, "legalName");
+  return {
+    authorizedApprover: formText(form, "authorizedApprover") ?? "",
+    code: (formText(form, "code") || suggestedClientCode(name)).toUpperCase(),
+    name,
+    sector: formText(form, "sector") ?? "",
+    status: "ACTIVE",
+    ...(billingContact ? { billingContact } : {}),
+    ...(branchesCount !== undefined ? { branchesCount } : {}),
+    ...(city ? { city } : {}),
+    ...(commercialRegistration ? { commercialRegistration } : {}),
+    ...(employeesCount !== undefined ? { employeesCount } : {}),
+    ...(legalName ? { legalName } : {}),
+  };
 }
 
 function serviceLineLabel(value: string, locale: SupportedLocale): string {
@@ -349,6 +432,7 @@ export function PricingStudio({
   initialDrafts,
   initialDraft,
   locale: localeInput = "en",
+  openClientCreator = false,
 }: {
   displayName: string;
   embedded?: boolean;
@@ -357,10 +441,12 @@ export function PricingStudio({
   initialDrafts: PricingDraftSummary[];
   initialDraft?: PricingDraft | null;
   locale?: string;
+  openClientCreator?: boolean;
 }) {
   const router = useRouter();
   const locale = normalizeLocale(localeInput);
-  const t = copy[locale];
+  const t = pricingCopy[locale];
+  const [catalog, setCatalog] = useState(initialCatalog);
   const [drafts, setDrafts] = useState(initialDrafts);
   const [currentDraft, setCurrentDraft] = useState(initialDraft ?? null);
   const [clientId, setClientId] = useState(
@@ -381,18 +467,20 @@ export function PricingStudio({
     initialDraft?.calculation ?? null,
   );
   const [submitting, setSubmitting] = useState<"preview" | "save" | "archive" | null>(null);
+  const [clientSubmitting, setClientSubmitting] = useState(false);
+  const [showClientCreator, setShowClientCreator] = useState(openClientCreator && isAdmin);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
 
-  const selectedClient = initialCatalog.clients.find((client) => client.id === clientId);
+  const selectedClient = catalog.clients.find((client) => client.id === clientId);
   const selectedCount = monthlySelections.size + oneTimeSelections.size;
   const isArchived = currentDraft?.status === "ARCHIVED";
   const canCalculate = Boolean(clientId && title.trim() && selectedCount > 0 && !isArchived);
-  const selectedMonthlyServices = initialCatalog.monthlyServices.filter((service) =>
+  const selectedMonthlyServices = catalog.monthlyServices.filter((service) =>
     monthlySelections.has(service.revision.id),
   );
-  const selectedOneTimeServices = initialCatalog.oneTimeServices.filter((service) =>
+  const selectedOneTimeServices = catalog.oneTimeServices.filter((service) =>
     oneTimeSelections.has(service.revision.id),
   );
   const quoteReady = Boolean(currentDraft && calculation && !isArchived);
@@ -429,6 +517,32 @@ export function PricingStudio({
   function clearFeedback() {
     setError(undefined);
     setSuccess(undefined);
+  }
+
+  async function createClient(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    clearFeedback();
+    setClientSubmitting(true);
+    try {
+      const created = await pricingRequest<PricingClient>("admin/clients", {
+        method: "POST",
+        body: JSON.stringify(createClientPayload(new FormData(event.currentTarget))),
+      });
+      setCatalog((current) => ({
+        ...current,
+        clients: [...current.clients.filter((client) => client.id !== created.id), created].sort(
+          (first, second) => first.name.localeCompare(second.name),
+        ),
+      }));
+      setClientId(created.id);
+      setCalculation(null);
+      setShowClientCreator(false);
+      setSuccess(t.clientCreated);
+    } catch (clientError) {
+      setError(pricingErrorMessage(clientError));
+    } finally {
+      setClientSubmitting(false);
+    }
   }
 
   function toggleMonthly(revisionId: string, defaultLevelId: string, checked: boolean) {
@@ -690,7 +804,87 @@ export function PricingStudio({
                 <h2>{t.clientSetup}</h2>
                 <p>{t.clientSetupDescription}</p>
               </div>
+              {isAdmin && !isArchived ? (
+                <button
+                  className="os-button os-button-secondary"
+                  type="button"
+                  onClick={() => {
+                    clearFeedback();
+                    setShowClientCreator((visible) => !visible);
+                  }}
+                >
+                  {showClientCreator ? t.cancelClientCreate : t.newClient}
+                </button>
+              ) : null}
             </div>
+            {showClientCreator && isAdmin ? (
+              <form
+                className="catalog-form wide-form pricing-client-create-form"
+                onSubmit={createClient}
+              >
+                <div className="form-span">
+                  <strong>{t.createClientInPricing}</strong>
+                  <p className="pricing-muted">{t.createClientInPricingDescription}</p>
+                </div>
+                <label>
+                  {t.clientCode}
+                  <input name="code" required placeholder="CLIENT-001" />
+                </label>
+                <label>
+                  {t.clientName}
+                  <input name="name" required />
+                </label>
+                <label>
+                  {t.legalName}
+                  <input name="legalName" />
+                </label>
+                <label>
+                  {t.commercialRegistration}
+                  <input name="commercialRegistration" />
+                </label>
+                <label>
+                  {t.sector}
+                  <input name="sector" required />
+                </label>
+                <label>
+                  {t.city}
+                  <input name="city" />
+                </label>
+                <label>
+                  {t.approver}
+                  <input name="authorizedApprover" required />
+                </label>
+                <label>
+                  {t.billingContact}
+                  <input name="billingContact" />
+                </label>
+                <label>
+                  {t.employees}
+                  <input min="0" name="employeesCount" type="number" />
+                </label>
+                <label>
+                  {t.branches}
+                  <input min="0" name="branchesCount" type="number" />
+                </label>
+                <div className="form-actions form-span">
+                  <button
+                    className="os-button os-button-secondary"
+                    disabled={clientSubmitting}
+                    type="button"
+                    onClick={() => setShowClientCreator(false)}
+                  >
+                    {t.cancel}
+                  </button>
+                  <button
+                    className="os-button os-button-primary"
+                    disabled={clientSubmitting}
+                    type="submit"
+                  >
+                    {clientSubmitting ? t.savingClient : t.createClient}
+                  </button>
+                </div>
+              </form>
+            ) : null}
             <div className="catalog-form wide-form">
               <label>
                 {t.client}
@@ -703,7 +897,7 @@ export function PricingStudio({
                     setCalculation(null);
                   }}
                 >
-                  {initialCatalog.clients.map((client) => (
+                  {catalog.clients.map((client) => (
                     <option key={client.id} value={client.id}>
                       {client.name} ({client.code})
                     </option>
@@ -773,7 +967,7 @@ export function PricingStudio({
               <span>{t.selected(monthlySelections.size)}</span>
             </div>
             <div className="pricing-service-grid">
-              {initialCatalog.monthlyServices.map((service) => {
+              {catalog.monthlyServices.map((service) => {
                 const selected = monthlySelections.get(service.revision.id);
                 const name = monthlyName(service, locale);
                 return (
@@ -872,7 +1066,7 @@ export function PricingStudio({
               <span>{t.selected(oneTimeSelections.size)}</span>
             </div>
             <div className="pricing-service-grid">
-              {initialCatalog.oneTimeServices.map((service) => {
+              {catalog.oneTimeServices.map((service) => {
                 const quantity = oneTimeSelections.get(service.revision.id);
                 const selected = quantity !== undefined;
                 const name = oneTimeName(service, locale);

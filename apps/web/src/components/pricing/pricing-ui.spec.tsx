@@ -282,6 +282,52 @@ describe("PR 6 pricing UI", () => {
     expect(replaceMock).toHaveBeenCalledWith(`/pricing/${draft.id}`);
   });
 
+  it("creates a new client inside pricing and selects it for the draft", async () => {
+    const fetchMock = jest.mocked(fetch);
+    fetchMock.mockImplementationOnce(() =>
+      jsonResponse(
+        {
+          id: "77777777-7777-4777-8777-777777777777",
+          code: "NEW-CLIENT",
+          name: "New Client",
+          legalName: "New Client LLC",
+          sector: "HR",
+          city: "Riyadh",
+          authorizedApprover: "New Approver",
+        },
+        201,
+      ),
+    );
+
+    render(
+      <PricingStudio
+        displayName="Pricing Admin"
+        isAdmin
+        initialCatalog={studioCatalog()}
+        initialDrafts={[]}
+        openClientCreator
+      />,
+    );
+
+    expect(screen.getByText("Create a new client inside pricing")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Client code"), { target: { value: "new-client" } });
+    fireEvent.change(screen.getByLabelText("Client name"), { target: { value: "New Client" } });
+    fireEvent.change(screen.getByLabelText("Sector"), { target: { value: "HR" } });
+    fireEvent.change(screen.getByLabelText("Approver"), { target: { value: "New Approver" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create client" }));
+
+    await screen.findByText("Client created and selected for this draft.");
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("http://localhost:4000/api/v1/admin/clients");
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
+      code: "NEW-CLIENT",
+      name: "New Client",
+      sector: "HR",
+      authorizedApprover: "New Approver",
+      status: "ACTIVE",
+    });
+    expect(screen.getByLabelText("Client")).toHaveValue("77777777-7777-4777-8777-777777777777");
+  });
+
   it("creates a quote snapshot from a saved pricing draft", async () => {
     const fetchMock = jest.mocked(fetch);
     const draft = savedDraft();

@@ -54,6 +54,20 @@ export interface PricingClient {
   authorizedApprover: string;
 }
 
+export interface PricingClientCreateInput {
+  authorizedApprover: string;
+  billingContact?: string;
+  branchesCount?: number;
+  city?: string;
+  code: string;
+  commercialRegistration?: string;
+  employeesCount?: number;
+  legalName?: string;
+  name: string;
+  sector: string;
+  status: "ACTIVE";
+}
+
 export interface PricingMonthlyService {
   id: string;
   code: string;

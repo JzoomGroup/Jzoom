@@ -60,14 +60,14 @@ describe("ClientManager", () => {
     expect(screen.getByRole("button", { name: "Portal user" })).toBeInTheDocument();
   });
 
-  it("opens the create and portal-user forms from visible actions", () => {
+  it("routes new client creation through pricing and opens portal-user forms locally", () => {
     render(<ClientManager initialSnapshot={snapshot()} locale="en" />);
 
-    fireEvent.click(screen.getByRole("button", { name: "New client" }));
-    expect(screen.getByRole("heading", { level: 2, name: "Create client" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Client code")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "New client" })).toHaveAttribute(
+      "href",
+      "/pricing?newClient=1",
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     fireEvent.click(screen.getByRole("button", { name: "Portal user" }));
 
     expect(

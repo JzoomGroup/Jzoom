@@ -563,7 +563,6 @@ export function ClientManager({
   const locale = normalizeLocale(localeInput);
   const t = copy[locale];
   const [snapshot, setSnapshot] = useState(initialSnapshot);
-  const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<ManagedClient | null>(null);
   const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
@@ -579,35 +578,6 @@ export function ClientManager({
     setSnapshot(await refreshClients());
     setSuccess(message);
     setError(undefined);
-  }
-
-  function openCreate() {
-    setCreating(true);
-    setEditing(null);
-    setUserClient(null);
-    setError(undefined);
-    setSuccess(undefined);
-  }
-
-  async function create(form: FormData) {
-    setSubmitting(true);
-    try {
-      await clientsRequest("admin/clients", {
-        body: JSON.stringify({
-          ...payload(form),
-          code: text(form, "code")?.toUpperCase(),
-          status: "ACTIVE",
-        }),
-        method: "POST",
-      });
-      setCreating(false);
-      await refresh(t.clientCreated);
-    } catch (caught) {
-      setError(clientsErrorMessage(caught));
-      setSuccess(undefined);
-    } finally {
-      setSubmitting(false);
-    }
   }
 
   async function update(form: FormData) {
@@ -679,7 +649,7 @@ export function ClientManager({
   return (
     <>
       <PageHeader
-        actions={[{ label: t.newClient, onClick: openCreate, variant: "primary" }]}
+        actions={[{ href: "/pricing?newClient=1", label: t.newClient, variant: "primary" }]}
         description={t.pageDescription}
         eyebrow={t.adminClients}
         title={t.pageTitle}
@@ -724,19 +694,16 @@ export function ClientManager({
         />
       </BentoGrid>
 
-      {creating || editing ? (
+      {editing ? (
         <section className="client-admin-editor">
           <div className="client-admin-editor-heading">
-            <span>{editing ? t.edit : t.createClient}</span>
-            <h2>{editing ? t.editClient(editing.name) : t.createClient}</h2>
+            <span>{t.edit}</span>
+            <h2>{t.editClient(editing.name)}</h2>
           </div>
           <ClientForm
-            client={editing ?? undefined}
-            onCancel={() => {
-              setCreating(false);
-              setEditing(null);
-            }}
-            onSubmit={editing ? update : create}
+            client={editing}
+            onCancel={() => setEditing(null)}
+            onSubmit={update}
             submitting={submitting}
             t={t}
           />
@@ -771,14 +738,12 @@ export function ClientManager({
                 locale={locale}
                 onCreateUser={(next) => {
                   setUserClient(next);
-                  setCreating(false);
                   setEditing(null);
                   setError(undefined);
                   setSuccess(undefined);
                 }}
                 onEdit={(next) => {
                   setEditing(next);
-                  setCreating(false);
                   setUserClient(null);
                   setError(undefined);
                   setSuccess(undefined);

@@ -65,6 +65,9 @@ describeWithDatabase("PR 12 client portal quote and invoice views", () => {
   let accountManagerEmail: string;
   let accountManagerId: string;
   let oneTimeServiceRevisionId: string;
+  let subscribedMonthlyServiceCode: string;
+  let includedItemCode: string;
+  let excludedItemCode: string;
   const runId = randomUUID().slice(0, 8);
 
   async function login(email: string) {
@@ -358,6 +361,117 @@ describeWithDatabase("PR 12 client portal quote and invoice views", () => {
       ],
     });
 
+    subscribedMonthlyServiceCode = `PR12-MONTHLY-${runId}`;
+    includedItemCode = `PR12-INCLUDED-${runId}`;
+    excludedItemCode = `PR12-EXCLUDED-${runId}`;
+    const category = await database.monthlyServiceCategory.create({
+      data: {
+        code: `PR12-CAT-${runId}`,
+        nameAr: "تصنيف بوابة العميل",
+        nameEn: "Client portal category",
+      },
+    });
+    const monthlyService = await database.monthlyService.create({
+      data: {
+        categoryId: category.id,
+        code: subscribedMonthlyServiceCode,
+      },
+    });
+    const serviceLevel = await database.serviceLevel.create({
+      data: {
+        code: `PR12-LVL-${runId}`,
+        labelAr: "باقة اختبار",
+        labelEn: "Test package",
+      },
+    });
+    const monthlyServiceRevision = await database.monthlyServiceRevision.create({
+      data: {
+        monthlyServiceId: monthlyService.id,
+        version: 1,
+        status: "ACTIVE",
+        effectiveFrom: new Date(Date.now() - 86_400_000),
+        nameAr: "خدمة شهرية لاختبار البنود",
+        nameEn: "Monthly service item scope test",
+        domain: "Operations",
+        description: "Verifies package item inclusion in the client portal.",
+        sellingHourlyRateSar: 300,
+        internalHourlyCostSar: 120,
+        setupFeePct: 0,
+        defaultSlaHours: 48,
+      },
+    });
+    await database.monthlyServiceLevelConfig.create({
+      data: {
+        monthlyServiceRevisionId: monthlyServiceRevision.id,
+        serviceLevelId: serviceLevel.id,
+        hours: 10,
+        isEnabled: true,
+      },
+    });
+    const [includedItem, excludedItem] = await Promise.all([
+      database.serviceItem.create({
+        data: { code: includedItemCode, monthlyServiceId: monthlyService.id },
+      }),
+      database.serviceItem.create({
+        data: { code: excludedItemCode, monthlyServiceId: monthlyService.id },
+      }),
+    ]);
+    const [includedRevision, excludedRevision] = await Promise.all([
+      database.serviceItemRevision.create({
+        data: {
+          serviceItemId: includedItem.id,
+          version: 1,
+          status: "ACTIVE",
+          effectiveFrom: new Date(Date.now() - 86_400_000),
+          nameAr: "بند مشمول في الباقة",
+          nameEn: "Included package item",
+          expectedOutput: "Visible only when the selected package includes it.",
+        },
+      }),
+      database.serviceItemRevision.create({
+        data: {
+          serviceItemId: excludedItem.id,
+          version: 1,
+          status: "ACTIVE",
+          effectiveFrom: new Date(Date.now() - 86_400_000),
+          nameAr: "بند غير مشمول في الباقة",
+          nameEn: "Excluded package item",
+          expectedOutput: "Must not be exposed for this selected package.",
+        },
+      }),
+    ]);
+    await database.serviceItemLevelInclusion.createMany({
+      data: [
+        {
+          serviceItemRevisionId: includedRevision.id,
+          serviceLevelId: serviceLevel.id,
+          included: true,
+        },
+        {
+          serviceItemRevisionId: excludedRevision.id,
+          serviceLevelId: serviceLevel.id,
+          included: false,
+        },
+      ],
+    });
+    const subscription = await database.subscription.create({
+      data: {
+        clientId,
+        status: "ACTIVE",
+        startsAt: new Date(Date.now() - 86_400_000),
+      },
+    });
+    await database.subscriptionService.create({
+      data: {
+        subscriptionId: subscription.id,
+        monthlyServiceRevisionId: monthlyServiceRevision.id,
+        serviceLevelId: serviceLevel.id,
+        hoursAllocated: 10,
+        startsAt: new Date(Date.now() - 86_400_000),
+        scopeSnapshot: { source: "PR12 package inclusion test" },
+      },
+    });
+
     const module = await Test.createTestingModule({
       imports: [AppModule.forRoot(environment)],
     }).compile();
@@ -384,6 +498,20 @@ describeWithDatabase("PR 12 client portal quote and invoice views", () => {
     expect(context.body.clients).toEqual([
       expect.objectContaining({ id: clientId, code: `PR12-A-${runId}` }),
     ]);
+  });
+
+  it("returns only monthly service items included in the selected client package", async () => {
+    const clientUser = await login(clientEmail);
+    const context = await clientUser.get("/api/v1/client-portal/me").expect(200);
+    const subscribedService = context.body.services.subscribedMonthly.find(
+      (service: { service: { code: string } }) => service.service.code === subscribedMonthlyServiceCode,
+    );
+
+    expect(subscribedService).toBeDefined();
+    expect(subscribedService.serviceItems.map((item: { code: string }) => item.code)).toEqual([
+      includedItemCode,
+    ]);
+    expect(JSON.stringify(subscribedService)).not.toContain(excludedItemCode);
   });
 
   it("lists only client-safe quote and invoice records", async () => {
