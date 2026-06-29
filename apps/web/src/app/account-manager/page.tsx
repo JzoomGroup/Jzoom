@@ -28,7 +28,7 @@ export default async function AccountManagerPage() {
       permissions={user.permissions}
       roles={user.roles}
     >
-      <AccountManagerPortfolio portfolio={portfolio} />
+      <AccountManagerPortfolio locale={user.preferredLocale} portfolio={portfolio} />
     </QuoteShell>
   );
 }
