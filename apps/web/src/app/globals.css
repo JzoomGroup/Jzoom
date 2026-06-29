@@ -3219,29 +3219,22 @@ body {
   display: grid;
   min-height: 100vh;
   grid-template-columns: 286px minmax(0, 1fr);
+  grid-template-areas: "sidebar workspace";
   background: #ffffff;
   color: var(--ink);
 }
 
 [dir="rtl"].premium-shell {
   grid-template-columns: minmax(0, 1fr) 286px;
+  grid-template-areas: "workspace sidebar";
 }
 
-[dir="ltr"].premium-shell .premium-sidebar {
-  grid-column: 1;
+.premium-shell .premium-sidebar {
+  grid-area: sidebar;
 }
 
-[dir="ltr"].premium-shell .premium-workspace {
-  grid-column: 2;
-}
-
-[dir="rtl"].premium-shell .premium-sidebar {
-  grid-column: 2;
-}
-
-[dir="rtl"].premium-shell .premium-workspace {
-  grid-column: 1;
-  grid-row: 1;
+.premium-shell .premium-workspace {
+  grid-area: workspace;
 }
 
 .premium-sidebar {

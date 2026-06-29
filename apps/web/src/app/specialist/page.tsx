@@ -31,7 +31,7 @@ export default async function SpecialistDashboardPage() {
       permissions={user.permissions}
       roles={user.roles}
     >
-      <InternalRoleDashboard mode="specialist" queue={queue} usage={usage} />
+      <InternalRoleDashboard locale={user.preferredLocale} mode="specialist" queue={queue} usage={usage} />
     </QuoteShell>
   );
 }

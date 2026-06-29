@@ -11,7 +11,6 @@ type NavItem = {
   href: string;
   labelAr: string;
   labelEn: string;
-  section?: string;
   visible?: (context: ShellContext) => boolean;
 };
 
@@ -22,23 +21,23 @@ type ShellContext = {
 };
 
 const adminNavigation: NavItem[] = [
-  { href: "/admin", labelAr: "لوحة التحكم", labelEn: "Dashboard", section: "core" },
-  { href: "/admin/clients", labelAr: "العملاء", labelEn: "Clients", section: "core" },
-  { href: "/admin/catalog", labelAr: "كتالوج الخدمات", labelEn: "Catalog", section: "catalog" },
-  { href: "/admin/catalog/categories", labelAr: "تصنيفات شهرية", labelEn: "Monthly categories", section: "catalog" },
-  { href: "/admin/catalog/monthly-services", labelAr: "الخدمات الشهرية", labelEn: "Monthly services", section: "catalog" },
-  { href: "/admin/catalog/service-items", labelAr: "بنود الخدمات", labelEn: "Service items", section: "catalog" },
-  { href: "/admin/catalog/service-levels", labelAr: "الباقات", labelEn: "Packages", section: "catalog" },
-  { href: "/admin/catalog/one-time-categories", labelAr: "تصنيفات لمرة واحدة", labelEn: "One-time categories", section: "catalog" },
-  { href: "/admin/catalog/one-time-services", labelAr: "خدمات لمرة واحدة", labelEn: "One-time services", section: "catalog" },
-  { href: "/admin/request-templates", labelAr: "نماذج الطلبات", labelEn: "Request templates", section: "configuration" },
-  { href: "/admin/pricing-rules", labelAr: "قواعد التسعير", labelEn: "Pricing rules", section: "configuration" },
-  { href: "/admin/platform-configuration", labelAr: "إعدادات المنصة", labelEn: "Platform configuration", section: "configuration" },
-  { href: "/pricing", labelAr: "استوديو التسعير", labelEn: "Pricing Studio", section: "commercial" },
+  { href: "/admin", labelAr: "لوحة التحكم", labelEn: "Dashboard" },
+  { href: "/admin/clients", labelAr: "العملاء", labelEn: "Clients" },
+  { href: "/admin/catalog", labelAr: "كتالوج الخدمات", labelEn: "Catalog" },
+  { href: "/admin/catalog/categories", labelAr: "تصنيفات شهرية", labelEn: "Monthly categories" },
+  { href: "/admin/catalog/monthly-services", labelAr: "الخدمات الشهرية", labelEn: "Monthly services" },
+  { href: "/admin/catalog/service-items", labelAr: "بنود الخدمات", labelEn: "Service items" },
+  { href: "/admin/catalog/service-levels", labelAr: "الباقات", labelEn: "Packages" },
+  { href: "/admin/catalog/one-time-categories", labelAr: "تصنيفات لمرة واحدة", labelEn: "One-time categories" },
+  { href: "/admin/catalog/one-time-services", labelAr: "خدمات لمرة واحدة", labelEn: "One-time services" },
+  { href: "/admin/request-templates", labelAr: "نماذج الطلبات", labelEn: "Request templates" },
+  { href: "/admin/pricing-rules", labelAr: "قواعد التسعير", labelEn: "Pricing rules" },
+  { href: "/admin/platform-configuration", labelAr: "إعدادات المنصة", labelEn: "Platform configuration" },
+  { href: "/pricing", labelAr: "استوديو التسعير", labelEn: "Pricing Studio" },
 ];
 
 const clientNavigation: NavItem[] = [
-  { href: "/client", labelAr: "الرئيسية", labelEn: "Overview" },
+  { href: "/client", labelAr: "مركز الخدمة", labelEn: "Overview" },
   { href: "/client/requests", labelAr: "الطلبات", labelEn: "Requests" },
   { href: "/client/quotes", labelAr: "العروض", labelEn: "Quotes" },
   { href: "/client/invoices", labelAr: "الفواتير", labelEn: "Invoices" },
@@ -47,12 +46,7 @@ const clientNavigation: NavItem[] = [
 ];
 
 const internalNavigation: NavItem[] = [
-  {
-    href: "/admin",
-    labelAr: "الأدمن",
-    labelEn: "Admin",
-    visible: ({ isAdmin }) => isAdmin,
-  },
+  { href: "/admin", labelAr: "الأدمن", labelEn: "Admin", visible: ({ isAdmin }) => isAdmin },
   {
     href: "/management",
     labelAr: "الإدارة",
@@ -73,7 +67,7 @@ const internalNavigation: NavItem[] = [
   },
   {
     href: "/specialist",
-    labelAr: "الأخصائي",
+    labelAr: "المختص",
     labelEn: "Specialist",
     visible: ({ isAdmin, roles }) => isAdmin || roles.includes("ROLE-SPECIALIST"),
   },
@@ -123,16 +117,20 @@ const shellCopy = {
       brandSubtitle: "لوحة التحكم",
       navigationLabel: "إدارة المنصة",
       workspace: "وحدة الإدارة",
+      workspaceTitle: "نظام تشغيلي موحد",
+      workspaceLead: "تجربة موحدة لكل الأدوار.",
       signedInAs: "مسجل باسم",
       profile: "الملف الشخصي",
       settings: "الإعدادات",
       signOut: "تسجيل الخروج",
-      signingOut: "جاري الخروج...",
+      signingOut: "جاري تسجيل الخروج...",
     },
     en: {
       brandSubtitle: "Admin Console",
       navigationLabel: "Platform administration",
       workspace: "Administration",
+      workspaceTitle: "Premium Modular OS",
+      workspaceLead: "Unified experience for every role.",
       signedInAs: "Signed in as",
       profile: "Profile",
       settings: "Settings",
@@ -145,16 +143,20 @@ const shellCopy = {
       brandSubtitle: "بوابة العميل",
       navigationLabel: "تنقل بوابة العميل",
       workspace: "مركز الخدمة",
+      workspaceTitle: "منصة خدمة موحدة",
+      workspaceLead: "كل الطلبات والمخرجات في مكان واحد.",
       signedInAs: "حساب العميل",
       profile: "الملف الشخصي",
       settings: "الإعدادات",
       signOut: "تسجيل الخروج",
-      signingOut: "جاري الخروج...",
+      signingOut: "جاري تسجيل الخروج...",
     },
     en: {
       brandSubtitle: "Client Portal",
       navigationLabel: "Client portal navigation",
       workspace: "Service Center",
+      workspaceTitle: "Premium Modular OS",
+      workspaceLead: "Unified experience for every role.",
       signedInAs: "Client account",
       profile: "Profile",
       settings: "Settings",
@@ -167,16 +169,20 @@ const shellCopy = {
       brandSubtitle: "منصة التشغيل",
       navigationLabel: "تنقل منصة التشغيل",
       workspace: "مركز العمليات",
+      workspaceTitle: "نظام تشغيلي موحد",
+      workspaceLead: "مسار واضح من الطلب إلى الاعتماد.",
       signedInAs: "مسجل باسم",
       profile: "الملف الشخصي",
       settings: "الإعدادات",
       signOut: "تسجيل الخروج",
-      signingOut: "جاري الخروج...",
+      signingOut: "جاري تسجيل الخروج...",
     },
     en: {
       brandSubtitle: "Operating Platform",
       navigationLabel: "Operating platform navigation",
       workspace: "Operations",
+      workspaceTitle: "Premium Modular OS",
+      workspaceLead: "Unified experience for every role.",
       signedInAs: "Signed in as",
       profile: "Profile",
       settings: "Settings",
@@ -222,11 +228,7 @@ export function AppShell({
       : mode === "client"
         ? clientNavigation
         : internalNavigation;
-  const context: ShellContext = {
-    isAdmin,
-    permissions,
-    roles,
-  };
+  const context: ShellContext = { isAdmin, permissions, roles };
   const items = visibleNavigation(nav, context);
 
   return (
@@ -265,8 +267,8 @@ export function AppShell({
 
         <div className="premium-sidebar-card" aria-label={copy.workspace}>
           <span>{copy.workspace}</span>
-          <strong>{language === "ar" ? "نظام تشغيلي موحد" : "Premium Modular OS"}</strong>
-          <p>{language === "ar" ? "تجربة موحدة لكل الأدوار." : "Unified experience for every role."}</p>
+          <strong>{copy.workspaceTitle}</strong>
+          <p>{copy.workspaceLead}</p>
         </div>
       </aside>
 

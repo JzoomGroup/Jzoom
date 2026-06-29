@@ -451,7 +451,7 @@ describe("Client portal UI", () => {
 
     expect(screen.getByRole("heading", { name: "Welcome, Client User" })).toBeInTheDocument();
     expect(screen.getByText("CLIENT-1")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Requests and subscription" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Open requests / Active services" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Client actions" })).toBeInTheDocument();
     expect(screen.getByText("No client action is pending.")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Open requests" })).toBeInTheDocument();

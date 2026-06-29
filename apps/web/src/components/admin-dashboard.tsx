@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ClientsSnapshot } from "../lib/clients-types";
+import { normalizeLocale, type SupportedLocale } from "../lib/i18n";
 import type {
   AccountManagerPortfolio,
   MonthlyReport,
@@ -20,12 +21,193 @@ import {
 
 const completedStatuses = new Set(["COMPLETED", "CLOSED", "REJECTED"]);
 
-function hours(value: number | undefined): string {
-  return `${Number(value ?? 0).toFixed(2)}h`;
+const copy = {
+  ar: {
+    eyebrow: "لوحة الإدارة",
+    title: "مركز تشغيل جزوم",
+    description:
+      "نظرة تنفيذية موحدة على العملاء، الطلبات، الساعات، التقارير، وصحة الحسابات باستخدام بيانات النظام الحالية.",
+    manageClients: "إدارة العملاء",
+    metrics: {
+      totalClients: "إجمالي العملاء",
+      activeClients: "عميل نشط",
+      openRequests: "طلبات مفتوحة",
+      completed: "مكتمل",
+      delayedRequests: "طلبات متأخرة",
+      fromQueues: "من قوائم العمل",
+      usedHours: "الساعات المستخدمة",
+      period: "الفترة",
+      clientAction: "بانتظار العميل",
+      waitingClient: "تحتاج إجراء من العميل",
+      portalUsers: "مستخدمو البوابة",
+      linkedClients: "مرتبطون بالعملاء",
+      clientHealth: "صحة العملاء",
+      watch: "تحت المتابعة",
+      monthlyReports: "التقارير الشهرية",
+      published: "منشور",
+    },
+    queues: {
+      title: "قوائم التشغيل",
+      description: "أحجام العمل الحالية للمختصين والمشرفين ومديري الحسابات.",
+      action: "فتح قوائم العمل",
+      specialist: "المختص",
+      supervisor: "المشرف",
+      accountManager: "مدير الحساب",
+      overdue: "متأخر",
+    },
+    hours: {
+      title: "استخدام الساعات",
+      description: "الساعات المعتمدة والمعلقة خلال فترة السجل الحالية.",
+      action: "عرض سجل الساعات",
+      approved: "معتمدة",
+      submitted: "مقدمة",
+      billable: "قابلة للفوترة",
+      clients: "عملاء",
+    },
+    health: {
+      title: "متابعة صحة العملاء",
+      description: "عملاء يحتاجون متابعة من مدير الحساب أو الإدارة.",
+      action: "المحفظة",
+      stableTitle: "المحفظة مستقرة",
+      stableBody: "لا يوجد عملاء عاليي المخاطر أو تحت المتابعة حاليًا.",
+      open: "مفتوحة",
+      overdue: "متأخرة",
+      waitingClient: "بانتظار العميل",
+      hours: "ساعات",
+    },
+    requests: {
+      title: "آخر الطلبات المحدثة",
+      description: "دخول سريع إلى العمل الجاري دون فتح شاشات العميل.",
+      action: "كل الطلبات",
+      empty: "لم يتم إنشاء طلبات خدمة بعد.",
+      request: "الطلب",
+      client: "العميل",
+      service: "الخدمة",
+      status: "الحالة",
+      priority: "الأولوية",
+      updated: "آخر تحديث",
+    },
+    shortcuts: {
+      title: "اختصارات الإدارة",
+      description: "مساحات الإعداد الأساسية المدعومة حاليًا من النظام.",
+      clientsTitle: "إدارة العملاء",
+      clientsDescription: "ملفات العملاء، الحالات، جهات التواصل، ومستخدمي البوابة.",
+      catalogTitle: "كتالوج الخدمات",
+      catalogDescription: "الخدمات الشهرية، الباقات، البنود، الاشتراطات، والإصدارات.",
+      templatesTitle: "نماذج الطلبات",
+      templatesDescription: "نماذج ديناميكية مرتبطة ببنود الخدمات لإنشاء الطلبات.",
+      platformTitle: "إعدادات المنصة",
+      platformDescription: "الإعدادات، مسارات العمل، الإشعارات، وقوالب المستندات.",
+    },
+  },
+  en: {
+    eyebrow: "Admin Console",
+    title: "Operating dashboard",
+    description:
+      "A premium control room for clients, request queues, hours usage, reports, and client health using the current backend data contracts.",
+    manageClients: "Manage clients",
+    metrics: {
+      totalClients: "Total clients",
+      activeClients: "active",
+      openRequests: "Open requests",
+      completed: "completed",
+      delayedRequests: "Delayed requests",
+      fromQueues: "From request queues",
+      usedHours: "Used hours",
+      period: "Period",
+      clientAction: "Client action",
+      waitingClient: "Waiting on client",
+      portalUsers: "Portal users",
+      linkedClients: "Linked to managed clients",
+      clientHealth: "Client health",
+      watch: "watch",
+      monthlyReports: "Monthly reports",
+      published: "published",
+    },
+    queues: {
+      title: "Operations queues",
+      description: "Backend-scoped request counts for internal execution.",
+      action: "Open queues",
+      specialist: "Specialist",
+      supervisor: "Supervisor",
+      accountManager: "Account manager",
+      overdue: "Overdue",
+    },
+    hours: {
+      title: "Hours usage",
+      description: "Approved and pending time for the current ledger period.",
+      action: "View ledger",
+      approved: "Approved",
+      submitted: "Submitted",
+      billable: "Billable",
+      clients: "Clients",
+    },
+    health: {
+      title: "Client health watchlist",
+      description: "Clients that need account-manager or management attention.",
+      action: "Portfolio",
+      stableTitle: "Portfolio is stable",
+      stableBody: "No high-risk or watch clients in the current portfolio.",
+      open: "Open",
+      overdue: "Overdue",
+      waitingClient: "Waiting client",
+      hours: "Hours",
+    },
+    requests: {
+      title: "Recently updated requests",
+      description: "Fast access to live work without exposing client-only screens.",
+      action: "All requests",
+      empty: "No service requests have been created yet.",
+      request: "Request",
+      client: "Client",
+      service: "Service",
+      status: "Status",
+      priority: "Priority",
+      updated: "Updated",
+    },
+    shortcuts: {
+      title: "Administration shortcuts",
+      description: "Core setup areas that currently have backend-backed management screens.",
+      clientsTitle: "Client management",
+      clientsDescription: "Client profiles, status, contacts, and linked portal users.",
+      catalogTitle: "Monthly catalog",
+      catalogDescription: "Monthly services, levels, items, package inclusion, and revisions.",
+      templatesTitle: "Request templates",
+      templatesDescription: "Dynamic service-item forms used by client request intake.",
+      platformTitle: "Platform configuration",
+      platformDescription: "Settings, workflow states, notifications, and document templates.",
+    },
+  },
+} as const;
+
+function number(value: number, locale: SupportedLocale): string {
+  return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA").format(value);
+}
+
+function hours(value: number | undefined, locale: SupportedLocale): string {
+  const amount = Number(value ?? 0);
+  return locale === "ar"
+    ? `${new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(amount)} ساعة`
+    : `${amount.toFixed(2)}h`;
+}
+
+function date(value: string, locale: SupportedLocale): string {
+  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function serviceName(request: RequestSummary, locale: SupportedLocale): string {
+  return locale === "ar"
+    ? request.service.monthlyService.nameAr || request.service.monthlyService.nameEn
+    : request.service.monthlyService.nameEn;
 }
 
 export function AdminDashboard({
   clientsSnapshot,
+  locale = "en",
   portfolio,
   reports,
   requestQueue,
@@ -33,12 +215,15 @@ export function AdminDashboard({
   usage,
 }: {
   clientsSnapshot: ClientsSnapshot;
+  locale?: string;
   portfolio: AccountManagerPortfolio;
   reports: MonthlyReport[];
   requestQueue: RequestQueueResponse;
   requests: RequestSummary[];
   usage: MonthlyUsageResponse;
 }) {
+  const language = normalizeLocale(locale);
+  const t = copy[language];
   const activeClients = clientsSnapshot.clients.filter((client) => client.status === "ACTIVE");
   const portalUsers = clientsSnapshot.clients.reduce((sum, client) => sum + client.users.length, 0);
   const waitingClientRequests = requests.filter(
@@ -58,82 +243,115 @@ export function AdminDashboard({
   return (
     <>
       <PageHeader
-        eyebrow="Admin Console"
-        title="Operating dashboard"
-        description="A premium control room for clients, request queues, hours usage, reports, and client health using the current backend data contracts."
-        actions={[{ href: "/admin/clients", label: "Manage clients", variant: "secondary" }]}
+        eyebrow={t.eyebrow}
+        title={t.title}
+        description={t.description}
+        actions={[{ href: "/admin/clients", label: t.manageClients, variant: "secondary" }]}
       />
 
       <BentoGrid>
-        <MetricCard label="Total clients" value={clientsSnapshot.clients.length} detail={`${activeClients.length} active`} />
-        <MetricCard label="Open requests" value={requestQueue.counters.open} detail={`${completedRequests} completed`} accent />
-        <MetricCard label="Delayed requests" value={requestQueue.counters.overdue} detail="From request queues" />
-        <MetricCard label="Used hours" value={hours(usage.totals.approvedHours)} detail={`Period ${usage.period.key}`} />
-        <MetricCard label="Client action" value={waitingClientRequests} detail="Waiting on client" />
-        <MetricCard label="Portal users" value={portalUsers} detail="Linked to managed clients" />
-        <MetricCard label="Client health" value={highRiskClients.length} detail={`${watchClients.length} watch`} />
-        <MetricCard label="Monthly reports" value={reports.length} detail={`${publishedReports} published`} />
+        <MetricCard
+          label={t.metrics.totalClients}
+          value={number(clientsSnapshot.clients.length, language)}
+          detail={`${number(activeClients.length, language)} ${t.metrics.activeClients}`}
+        />
+        <MetricCard
+          label={t.metrics.openRequests}
+          value={number(requestQueue.counters.open, language)}
+          detail={`${number(completedRequests, language)} ${t.metrics.completed}`}
+          accent
+        />
+        <MetricCard
+          label={t.metrics.delayedRequests}
+          value={number(requestQueue.counters.overdue, language)}
+          detail={t.metrics.fromQueues}
+        />
+        <MetricCard
+          label={t.metrics.usedHours}
+          value={hours(usage.totals.approvedHours, language)}
+          detail={`${t.metrics.period} ${usage.period.key}`}
+        />
+        <MetricCard
+          label={t.metrics.clientAction}
+          value={number(waitingClientRequests, language)}
+          detail={t.metrics.waitingClient}
+        />
+        <MetricCard
+          label={t.metrics.portalUsers}
+          value={number(portalUsers, language)}
+          detail={t.metrics.linkedClients}
+        />
+        <MetricCard
+          label={t.metrics.clientHealth}
+          value={number(highRiskClients.length, language)}
+          detail={`${number(watchClients.length, language)} ${t.metrics.watch}`}
+        />
+        <MetricCard
+          label={t.metrics.monthlyReports}
+          value={number(reports.length, language)}
+          detail={`${number(publishedReports, language)} ${t.metrics.published}`}
+        />
       </BentoGrid>
 
       <section className="quote-summary-grid">
         <SectionCard
-          title="Operations queues"
-          description="Backend-scoped request counts for internal execution."
-          action={<Link className="os-button os-button-secondary" href="/requests/queues">Open queues</Link>}
+          title={t.queues.title}
+          description={t.queues.description}
+          action={<Link className="os-button os-button-secondary" href="/requests/queues">{t.queues.action}</Link>}
         >
           <div className="pricing-total-grid">
             <div>
-              <span>Specialist</span>
-              <strong>{requestQueue.counters.specialist}</strong>
+              <span>{t.queues.specialist}</span>
+              <strong>{number(requestQueue.counters.specialist, language)}</strong>
             </div>
             <div>
-              <span>Supervisor</span>
-              <strong>{requestQueue.counters.supervisor}</strong>
+              <span>{t.queues.supervisor}</span>
+              <strong>{number(requestQueue.counters.supervisor, language)}</strong>
             </div>
             <div>
-              <span>Account manager</span>
-              <strong>{requestQueue.counters.accountManager}</strong>
+              <span>{t.queues.accountManager}</span>
+              <strong>{number(requestQueue.counters.accountManager, language)}</strong>
             </div>
             <div className="primary">
-              <span>Overdue</span>
-              <strong>{requestQueue.counters.overdue}</strong>
+              <span>{t.queues.overdue}</span>
+              <strong>{number(requestQueue.counters.overdue, language)}</strong>
             </div>
           </div>
         </SectionCard>
 
         <SectionCard
-          title="Hours usage"
-          description="Approved and pending time for the current ledger period."
-          action={<Link className="os-button os-button-secondary" href="/hours-ledger">View ledger</Link>}
+          title={t.hours.title}
+          description={t.hours.description}
+          action={<Link className="os-button os-button-secondary" href="/hours-ledger">{t.hours.action}</Link>}
         >
           <div className="pricing-total-grid">
             <div>
-              <span>Approved</span>
-              <strong>{hours(usage.totals.approvedHours)}</strong>
+              <span>{t.hours.approved}</span>
+              <strong>{hours(usage.totals.approvedHours, language)}</strong>
             </div>
             <div>
-              <span>Submitted</span>
-              <strong>{hours(usage.totals.submittedHours)}</strong>
+              <span>{t.hours.submitted}</span>
+              <strong>{hours(usage.totals.submittedHours, language)}</strong>
             </div>
             <div>
-              <span>Billable</span>
-              <strong>{hours(usage.totals.billableHours)}</strong>
+              <span>{t.hours.billable}</span>
+              <strong>{hours(usage.totals.billableHours, language)}</strong>
             </div>
             <div className="primary">
-              <span>Clients</span>
-              <strong>{usage.clients.length}</strong>
+              <span>{t.hours.clients}</span>
+              <strong>{number(usage.clients.length, language)}</strong>
             </div>
           </div>
         </SectionCard>
       </section>
 
       <SectionCard
-        title="Client health watchlist"
-        description="Clients that need account-manager or management attention."
-        action={<Link className="os-button os-button-secondary" href="/account-manager">Portfolio</Link>}
+        title={t.health.title}
+        description={t.health.description}
+        action={<Link className="os-button os-button-secondary" href="/account-manager">{t.health.action}</Link>}
       >
         {attentionClients.length === 0 ? (
-          <EmptyState title="Portfolio is stable">No high-risk or watch clients in the current portfolio.</EmptyState>
+          <EmptyState title={t.health.stableTitle}>{t.health.stableBody}</EmptyState>
         ) : (
           <div className="entity-grid">
             {attentionClients.map((entry) => (
@@ -150,20 +368,20 @@ export function AdminDashboard({
                 <p>{entry.health.reason}</p>
                 <dl className="entity-meta four-up">
                   <div>
-                    <dt>Open</dt>
-                    <dd>{entry.indicators.openRequests}</dd>
+                    <dt>{t.health.open}</dt>
+                    <dd>{number(entry.indicators.openRequests, language)}</dd>
                   </div>
                   <div>
-                    <dt>Overdue</dt>
-                    <dd>{entry.indicators.overdueRequests}</dd>
+                    <dt>{t.health.overdue}</dt>
+                    <dd>{number(entry.indicators.overdueRequests, language)}</dd>
                   </div>
                   <div>
-                    <dt>Waiting client</dt>
-                    <dd>{entry.indicators.waitingClientRequests}</dd>
+                    <dt>{t.health.waitingClient}</dt>
+                    <dd>{number(entry.indicators.waitingClientRequests, language)}</dd>
                   </div>
                   <div>
-                    <dt>Hours</dt>
-                    <dd>{hours(entry.indicators.approvedHoursThisMonth)}</dd>
+                    <dt>{t.health.hours}</dt>
+                    <dd>{hours(entry.indicators.approvedHoursThisMonth, language)}</dd>
                   </div>
                 </dl>
               </article>
@@ -173,23 +391,23 @@ export function AdminDashboard({
       </SectionCard>
 
       <SectionCard
-        title="Recently updated requests"
-        description="Fast access to live work without exposing client-only screens."
-        action={<Link className="os-button os-button-secondary" href="/requests">All requests</Link>}
+        title={t.requests.title}
+        description={t.requests.description}
+        action={<Link className="os-button os-button-secondary" href="/requests">{t.requests.action}</Link>}
       >
         {latestRequests.length === 0 ? (
-          <EmptyState>No service requests have been created yet.</EmptyState>
+          <EmptyState>{t.requests.empty}</EmptyState>
         ) : (
           <SmartTable>
             <table className="catalog-table">
               <thead>
                 <tr>
-                  <th>Request</th>
-                  <th>Client</th>
-                  <th>Service</th>
-                  <th>Status</th>
-                  <th>Priority</th>
-                  <th>Updated</th>
+                  <th>{t.requests.request}</th>
+                  <th>{t.requests.client}</th>
+                  <th>{t.requests.service}</th>
+                  <th>{t.requests.status}</th>
+                  <th>{t.requests.priority}</th>
+                  <th>{t.requests.updated}</th>
                 </tr>
               </thead>
               <tbody>
@@ -202,12 +420,12 @@ export function AdminDashboard({
                       </Link>
                     </td>
                     <td>{request.client.name}</td>
-                    <td>{request.service.monthlyService.nameEn}</td>
+                    <td>{serviceName(request, language)}</td>
                     <td>
                       <StatusChip status={request.status} />
                     </td>
                     <td><PriorityChip priority={request.priority} /></td>
-                    <td>{new Date(request.updatedAt).toLocaleDateString("en-SA")}</td>
+                    <td>{date(request.updatedAt, language)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -216,15 +434,12 @@ export function AdminDashboard({
         )}
       </SectionCard>
 
-      <SectionCard
-        title="Administration shortcuts"
-        description="Core setup areas that currently have backend-backed management screens."
-      >
+      <SectionCard title={t.shortcuts.title} description={t.shortcuts.description}>
         <div className="admin-area-grid">
-          <ActionCard href="/admin/clients" index="01" title="Client management" description="Client profiles, status, contacts, and linked portal users." />
-          <ActionCard href="/admin/catalog" index="02" title="Monthly catalog" description="Monthly services, levels, items, package inclusion, and revisions." />
-          <ActionCard href="/admin/request-templates" index="03" title="Request templates" description="Dynamic service-item forms used by client request intake." />
-          <ActionCard href="/admin/platform-configuration" index="04" title="Platform configuration" description="Settings, workflow states, notifications, and document templates." />
+          <ActionCard href="/admin/clients" index="01" title={t.shortcuts.clientsTitle} description={t.shortcuts.clientsDescription} />
+          <ActionCard href="/admin/catalog" index="02" title={t.shortcuts.catalogTitle} description={t.shortcuts.catalogDescription} />
+          <ActionCard href="/admin/request-templates" index="03" title={t.shortcuts.templatesTitle} description={t.shortcuts.templatesDescription} />
+          <ActionCard href="/admin/platform-configuration" index="04" title={t.shortcuts.platformTitle} description={t.shortcuts.platformDescription} />
         </div>
       </SectionCard>
     </>

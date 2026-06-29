@@ -240,7 +240,7 @@ describe("Quote snapshot UI", () => {
     expect(container.firstElementChild).toHaveAttribute("lang", "ar");
     expect(screen.getByRole("navigation", { name: "تنقل منصة التشغيل" })).toBeInTheDocument();
     expect(screen.getByText("منصة التشغيل")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "الأخصائي" })).toHaveAttribute("href", "/specialist");
+    expect(screen.getByRole("link", { name: "المختص" })).toHaveAttribute("href", "/specialist");
     expect(screen.getByRole("link", { name: "الطلبات" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("button", { name: "تسجيل الخروج" })).toBeInTheDocument();
   });

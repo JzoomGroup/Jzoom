@@ -38,6 +38,7 @@ export default async function ManagementDashboardPage() {
       roles={user.roles}
     >
       <InternalRoleDashboard
+        locale={user.preferredLocale}
         mode="management"
         portfolio={portfolio}
         queue={queue}

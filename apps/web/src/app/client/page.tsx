@@ -21,7 +21,13 @@ export default async function ClientPortalPage() {
       displayName={account.user.displayName}
       locale={account.user.preferredLocale}
     >
-      <ClientOverview account={account} quotes={quotes} invoices={invoices} requests={requests} />
+      <ClientOverview
+        account={account}
+        quotes={quotes}
+        invoices={invoices}
+        requests={requests}
+        locale={account.user.preferredLocale}
+      />
     </ClientShell>
   );
 }

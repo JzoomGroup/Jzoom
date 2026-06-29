@@ -33,5 +33,5 @@ export function localeSwitchLabel(locale: string | null | undefined): string {
 }
 
 export function localeSwitchAriaLabel(locale: string | null | undefined): string {
-  return isArabicLocale(locale) ? "Switch language to English" : "تغيير اللغة إلى العربية";
+  return isArabicLocale(locale) ? "تغيير اللغة إلى الإنجليزية" : "Switch language to Arabic";
 }

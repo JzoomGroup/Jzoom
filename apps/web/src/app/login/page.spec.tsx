@@ -25,7 +25,7 @@ describe("LoginPage", () => {
 
     expect(screen.getByRole("heading", { name: "Welcome back." })).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveAttribute("dir", "ltr");
-    expect(screen.getByRole("button", { name: "تغيير اللغة إلى العربية" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Switch language to Arabic" })).toBeInTheDocument();
     expect(screen.getByLabelText("Email")).toHaveValue("");
     expect(screen.getByLabelText("Password")).toHaveValue("");
     expect(screen.queryByText(/demo password/i)).not.toBeInTheDocument();
