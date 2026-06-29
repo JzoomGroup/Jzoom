@@ -1,10 +1,10 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import { LanguageSwitcher } from "../../components/language-switcher";
-import { LocaleDocumentSync } from "../../components/locale-document-sync";
+import { redirect } from "next/navigation";
+import { AppShell } from "../../components/app-shell";
 import { LogoutButton } from "../../components/logout-button";
+import { PageHeader, SectionCard } from "../../components/premium-os";
 import { getCurrentUser, hasBackendAdminAccess } from "../../lib/auth";
-import { directionForLocale, htmlLangForLocale, normalizeLocale } from "../../lib/i18n";
+import { normalizeLocale } from "../../lib/i18n";
 import { protectedRouteRedirect } from "../../lib/route-access";
 
 export default async function SettingsPage() {
@@ -26,7 +26,7 @@ export default async function SettingsPage() {
           lead: "الصلاحية محمية من الـ API. تتم إدارة إعدادات المنصة من لوحة التحكم.",
           open: "فتح إعدادات المنصة",
           signOut: "تسجيل الخروج",
-          signingOut: "جاري الخروج...",
+          signingOut: "جاري تسجيل الخروج...",
         }
       : {
           eyebrow: "Admin only",
@@ -38,20 +38,25 @@ export default async function SettingsPage() {
         };
 
   return (
-    <main className="auth-shell" dir={directionForLocale(locale)} lang={htmlLangForLocale(locale)}>
-      <LocaleDocumentSync locale={locale} />
-      <section className="auth-card" aria-labelledby="settings-title">
-        <div className="auth-language-actions">
-          <LanguageSwitcher locale={locale} />
+    <AppShell
+      activePath="/settings"
+      displayName={user!.displayName}
+      isAdmin
+      locale={locale}
+      mode="admin"
+      permissions={user!.permissions}
+      roles={user!.roles}
+    >
+      <PageHeader eyebrow={copy.eyebrow} title={copy.title} description={copy.lead} />
+
+      <SectionCard title={copy.title} description={copy.lead}>
+        <div className="row-actions">
+          <Link className="os-button os-button-primary" href="/admin/platform-configuration">
+            {copy.open}
+          </Link>
+          <LogoutButton label={copy.signOut} submittingLabel={copy.signingOut} />
         </div>
-        <p className="eyebrow">{copy.eyebrow}</p>
-        <h1 id="settings-title">{copy.title}</h1>
-        <p className="lead">{copy.lead}</p>
-        <Link className="button-link" href="/admin/platform-configuration">
-          {copy.open}
-        </Link>
-        <LogoutButton label={copy.signOut} submittingLabel={copy.signingOut} />
-      </section>
-    </main>
+      </SectionCard>
+    </AppShell>
   );
 }

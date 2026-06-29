@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import { LanguageSwitcher } from "../../components/language-switcher";
-import { LocaleDocumentSync } from "../../components/locale-document-sync";
+import { AppShell } from "../../components/app-shell";
 import { LogoutButton } from "../../components/logout-button";
+import { PageHeader, SectionCard } from "../../components/premium-os";
 import { getCurrentUser } from "../../lib/auth";
-import { directionForLocale, htmlLangForLocale, normalizeLocale } from "../../lib/i18n";
+import { normalizeLocale } from "../../lib/i18n";
 import { protectedRouteRedirect } from "../../lib/route-access";
 
 export default async function ProfilePage() {
@@ -18,15 +18,19 @@ export default async function ProfilePage() {
     locale === "ar"
       ? {
           eyebrow: "الملف الشخصي",
+          title: "ملف الحساب",
+          lead: "معلومات الدخول والصلاحيات الحالية داخل منصة جزوم.",
           email: "البريد الإلكتروني",
           accountType: "نوع الحساب",
           roles: "الأدوار",
           language: "اللغة",
           signOut: "تسجيل الخروج",
-          signingOut: "جاري الخروج...",
+          signingOut: "جاري تسجيل الخروج...",
         }
       : {
           eyebrow: "Authenticated profile",
+          title: "Account profile",
+          lead: "Current sign-in, role, and permission context for the Jzoom platform.",
           email: "Email",
           accountType: "Account type",
           roles: "Roles",
@@ -34,17 +38,22 @@ export default async function ProfilePage() {
           signOut: "Sign out",
           signingOut: "Signing out...",
         };
+  const mode = user!.userType === "EXTERNAL" ? "client" : "internal";
 
   return (
-    <main className="auth-shell" dir={directionForLocale(locale)} lang={htmlLangForLocale(locale)}>
-      <LocaleDocumentSync locale={locale} />
-      <section className="auth-card" aria-labelledby="profile-title">
-        <div className="auth-language-actions">
-          <LanguageSwitcher locale={locale} />
-        </div>
-        <p className="eyebrow">{copy.eyebrow}</p>
-        <h1 id="profile-title">{user!.displayName}</h1>
-        <dl className="profile-list">
+    <AppShell
+      activePath="/profile"
+      displayName={user!.displayName}
+      isAdmin={user!.roles.includes("ROLE-ADMIN")}
+      locale={locale}
+      mode={mode}
+      permissions={user!.permissions}
+      roles={user!.roles}
+    >
+      <PageHeader eyebrow={copy.eyebrow} title={copy.title} description={copy.lead} />
+
+      <SectionCard title={user!.displayName} description={user!.email}>
+        <dl className="profile-list os-definition-list">
           <div>
             <dt>{copy.email}</dt>
             <dd>{user!.email}</dd>
@@ -63,7 +72,7 @@ export default async function ProfilePage() {
           </div>
         </dl>
         <LogoutButton label={copy.signOut} submittingLabel={copy.signingOut} />
-      </section>
-    </main>
+      </SectionCard>
+    </AppShell>
   );
 }
