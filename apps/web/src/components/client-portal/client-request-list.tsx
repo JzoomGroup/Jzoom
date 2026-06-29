@@ -24,34 +24,156 @@ import {
   SectionCard,
   StatusChip,
 } from "../premium-os";
+import {
+  clientDate,
+  clientLabel,
+  clientLocale,
+  clientName,
+  clientNumber,
+  localizedExpectedOutput,
+  localizedServiceDescription,
+  priorityLabel,
+  requestStatusLabel,
+  type ClientDisplayLocale,
+} from "./client-format";
 
 const priorities = ["LOW", "NORMAL", "HIGH", "URGENT"] as const;
 
-function displayDate(value: string | null): string {
-  return value ? new Date(value).toLocaleDateString("en-SA") : "Not set";
-}
+const copy = {
+  ar: {
+    activeSubscribedEmpty: "لا توجد خدمات اشتراك نشطة متاحة لإنشاء الطلبات حتى الآن.",
+    auto: "تلقائي",
+    availableForIntake: "متاحة لإنشاء الطلبات",
+    client: "العميل",
+    clientActionNeeded: "مطلوب إجراء من العميل",
+    clientServiceCenter: "مركز خدمة العميل",
+    createRequest: "إنشاء طلب",
+    creating: "جاري الإنشاء...",
+    description: "الوصف",
+    descriptionHelp:
+      "اكتب عنوانًا واضحًا، وسياق العمل، والموعد المطلوب، وأي ملاحظات مهمة. يمكن إضافة الملفات لاحقًا عند طلبها من فريق جزوم.",
+    due: "الموعد",
+    dueAt: "الموعد المطلوب",
+    exactItem: "بند الخدمة",
+    expectedOutput: "المخرج المتوقع",
+    files: "ملفات",
+    generalItem: "طلب عام على الخدمة - بدون بند محدد",
+    generalItemNotice:
+      "سيتم توجيه الطلب العام إلى فريق جزوم للفرز عندما لا ينطبق العمل على بند محدد.",
+    generalTemplateNotice: "تم اختيار طلب عام على الخدمة. سيتم استخدام نموذج الطلب العام.",
+    includedItems: "بنود الخدمة المشمولة",
+    itemAttachmentHint: "قد تكون تفاصيل المرفقات مطلوبة.",
+    latestOrder: "حسب ترتيب القائمة الحالي",
+    loadingTemplate: "جاري تحميل نموذج الطلب...",
+    monthlyHours: "الساعات الشهرية",
+    noRequests: "لا توجد طلبات ظاهرة",
+    noRequestsBody: "لا توجد طلبات ظاهرة لهذا الحساب حاليًا.",
+    noSubscribedServices: "لا توجد خدمات مشتركة",
+    openOnService: "المفتوحة على الخدمة",
+    openRequests: "طلبات مفتوحة",
+    optionalFields: "حقول اختيارية",
+    optionalReference: "مرجع تجاري اختياري",
+    requestDetails: "تفاصيل الطلب",
+    requestIntake: "استقبال الطلبات",
+    requestLibrary: "سجل الطلبات",
+    requestSetup: "إعداد الطلب",
+    requests: "الطلبات",
+    requiredDocuments: "المستندات",
+    requiredFields: "حقول إلزامية",
+    selectedService: "الخدمة المختارة",
+    selectedServiceSummary: "ملخص الخدمة المختارة",
+    service: "الخدمة",
+    serviceDescription:
+      "اختر الخدمة الأقرب لاحتياجك. سيقوم فريق جزوم بتوجيه الطلب للفريق المناسب وإظهار أي أسئلة خاصة بالبند تلقائيًا.",
+    serviceIntro:
+      "أنشئ وتابع وراجع طلبات الخدمة المرتبطة باشتراكاتك النشطة من مكان واحد.",
+    serviceStep: "الخطوة 1 من 3 - اختر الخدمة المشتركة وبند العمل المطلوب.",
+    stillActive: "لا تزال نشطة",
+    submit: "إرسال الطلب إلى جزوم",
+    subscribedServices: "الخدمات المشتركة",
+    templateFields: "حقول النموذج",
+    templateLoaded: (version: number, item: string) => `تم تحميل نموذج v${version} للبند ${item}.`,
+    templateMissing: "لا يوجد نموذج نشط. سيتم استخدام نموذج الطلب العام.",
+    templateVersion: "إصدار النموذج",
+    title: "العنوان",
+    trackDescription:
+      "كل بطاقة تحفظ مسار تفاصيل الطلب وإجراءات سير العمل الأصلية بدون تغيير.",
+    visibleRequests: "الطلبات الظاهرة",
+    waitingForYou: "بانتظارك",
+  },
+  en: {
+    activeSubscribedEmpty: "No active subscribed services are available for request creation yet.",
+    auto: "Auto",
+    availableForIntake: "Available for intake",
+    client: "Client",
+    clientActionNeeded: "Client action needed",
+    clientServiceCenter: "Client service center",
+    createRequest: "Create request",
+    creating: "Creating...",
+    description: "Description",
+    descriptionHelp:
+      "Use a clear title and include the business context, deadline, and any important notes. You can add files later if Jzoom requests them.",
+    due: "Due",
+    dueAt: "Due at",
+    exactItem: "Service item",
+    expectedOutput: "Expected output",
+    files: "Files",
+    generalItem: "General service request - no specific item",
+    generalItemNotice:
+      "General requests are routed to Jzoom for triage when the work does not match a specific service item.",
+    generalTemplateNotice: "General service request selected. The generic request form will be used.",
+    includedItems: "Included service items",
+    itemAttachmentHint: "attachment details may be required.",
+    latestOrder: "Based on current list order",
+    loadingTemplate: "Loading request template...",
+    monthlyHours: "Monthly hours",
+    noRequests: "No visible requests",
+    noRequestsBody: "No requests are currently visible for this account.",
+    noSubscribedServices: "No subscribed services",
+    openOnService: "Open on service",
+    openRequests: "Open requests",
+    optionalFields: "Optional fields",
+    optionalReference: "Optional commercial reference",
+    requestDetails: "Request details",
+    requestIntake: "Request intake",
+    requestLibrary: "Request library",
+    requestSetup: "Request setup",
+    requests: "Requests",
+    requiredDocuments: "Documents",
+    requiredFields: "Required fields",
+    selectedService: "Selected service",
+    selectedServiceSummary: "Selected service summary",
+    service: "Service",
+    serviceDescription:
+      "Pick the service closest to your need. Jzoom will route the request to the right team and show any item-specific questions automatically.",
+    serviceIntro:
+      "Create, track, and review service requests tied to your active subscriptions.",
+    serviceStep: "Step 1 of 3 - choose the subscribed service and the exact work item.",
+    stillActive: "Still active",
+    submit: "Submit request to Jzoom",
+    subscribedServices: "Subscribed services",
+    templateFields: "Template fields",
+    templateLoaded: (version: number, item: string) => `Loaded template v${version} for ${item}.`,
+    templateMissing: "No active template exists. The generic request form will be used.",
+    templateVersion: "Template version",
+    title: "Title",
+    trackDescription:
+      "Every row keeps the original request detail route and workflow actions available.",
+    visibleRequests: "Visible requests",
+    waitingForYou: "Waiting for you",
+  },
+} as const;
 
 function optional(value: string): string | undefined {
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-function serviceLabel(service: ClientPortalSubscribedMonthlyService): string {
-  return `${service.service.nameEn} - ${service.serviceLevel.labelEn ?? service.serviceLevel.code}`;
-}
-
-function priorityLabel(priority: (typeof priorities)[number]): string {
-  switch (priority) {
-    case "LOW":
-      return "Low";
-    case "HIGH":
-      return "High";
-    case "URGENT":
-      return "Urgent";
-    case "NORMAL":
-    default:
-      return "Normal";
-  }
+function serviceLabel(
+  service: ClientPortalSubscribedMonthlyService,
+  locale: ClientDisplayLocale,
+): string {
+  return `${clientName(service.service, locale)} - ${clientLabel(service.serviceLevel, locale)}`;
 }
 
 function openRequestCount(requests: RequestSummary[], subscriptionServiceId: string): number {
@@ -64,12 +186,16 @@ function openRequestCount(requests: RequestSummary[], subscriptionServiceId: str
 
 export function ClientRequestList({
   account,
+  locale: localeInput,
   requests,
 }: {
   account: ClientPortalAccount;
+  locale?: string;
   requests: RequestSummary[];
 }) {
   const router = useRouter();
+  const locale = clientLocale(localeInput ?? account.user.preferredLocale);
+  const t = copy[locale];
   const services = account.services.subscribedMonthly;
   const defaultService = services[0];
   const [items, setItems] = useState(requests);
@@ -113,7 +239,7 @@ export function ClientRequestList({
   async function loadTemplate(serviceItemRevisionId = form.serviceItemRevisionId) {
     const selectedServiceItemRevisionId = optional(serviceItemRevisionId);
     if (!selectedServiceItemRevisionId) {
-      setTemplateNotice("General service request selected. The generic request form will be used.");
+      setTemplateNotice(t.generalTemplateNotice);
       setActiveTemplate(null);
       setTemplateAnswers({});
       return;
@@ -126,8 +252,8 @@ export function ClientRequestList({
       setTemplateAnswers({});
       setTemplateNotice(
         response.template
-          ? `Loaded template v${response.template.version} for ${response.serviceItemRevision.nameEn}.`
-          : "No active template exists. The generic request form will be used.",
+          ? t.templateLoaded(response.template.version, clientName(response.serviceItemRevision, locale))
+          : t.templateMissing,
       );
     } catch (caught) {
       setError(requestErrorMessage(caught));
@@ -195,83 +321,101 @@ export function ClientRequestList({
   return (
     <>
       <PageHeader
-        eyebrow="Client service center"
-        title="Requests"
-        description="Create, track, and review service requests tied to your active subscriptions."
+        eyebrow={t.clientServiceCenter}
+        title={t.requests}
+        description={t.serviceIntro}
       />
 
       <BentoGrid compact>
-        <MetricCard accent label="Open requests" value={openRequests} detail="Still active" />
-        <MetricCard label="Waiting for you" value={waitingClientRequests} detail="Client action needed" />
-        <MetricCard label="Subscribed services" value={services.length} detail="Available for intake" />
         <MetricCard
-          label="Selected service"
-          value={selectedService ? selectedService.hoursAllocated : 0}
-          detail="Monthly hours"
+          accent
+          label={t.openRequests}
+          value={clientNumber(openRequests, locale)}
+          detail={t.stillActive}
+        />
+        <MetricCard
+          label={t.waitingForYou}
+          value={clientNumber(waitingClientRequests, locale)}
+          detail={t.clientActionNeeded}
+        />
+        <MetricCard
+          label={t.subscribedServices}
+          value={clientNumber(services.length, locale)}
+          detail={t.availableForIntake}
+        />
+        <MetricCard
+          label={t.selectedService}
+          value={clientNumber(selectedService ? selectedService.hoursAllocated : 0, locale)}
+          detail={t.monthlyHours}
         />
       </BentoGrid>
 
       <SectionCard
-        eyebrow="Request intake"
-        title="Create request"
-        description="Select a subscribed service, choose the exact work item, and complete any dynamic template questions."
+        eyebrow={t.requestIntake}
+        title={t.createRequest}
+        description={t.serviceDescription}
       >
         {services.length === 0 ? (
-          <EmptyState title="No subscribed services">
-            No active subscribed services are available for request creation yet.
-          </EmptyState>
+          <EmptyState title={t.noSubscribedServices}>{t.activeSubscribedEmpty}</EmptyState>
         ) : (
           <form className="catalog-form wide-form" onSubmit={submit}>
             <div className="pricing-total-grid form-span">
               <div>
-                <span>Client</span>
-                <strong>{selectedClient?.code ?? "Client"}</strong>
+                <span>{t.client}</span>
+                <strong>{selectedClient?.code ?? t.client}</strong>
               </div>
               <div>
-                <span>Monthly hours</span>
-                <strong>{selectedService?.hoursAllocated ?? 0}</strong>
+                <span>{t.monthlyHours}</span>
+                <strong>{clientNumber(selectedService?.hoursAllocated ?? 0, locale)}</strong>
               </div>
               <div>
-                <span>Open on service</span>
-                <strong>{selectedServiceOpenRequests}</strong>
+                <span>{t.openOnService}</span>
+                <strong>{clientNumber(selectedServiceOpenRequests, locale)}</strong>
               </div>
               <div>
-                <span>Included service items</span>
-                <strong>{selectedServiceItems.length}</strong>
+                <span>{t.includedItems}</span>
+                <strong>{clientNumber(selectedServiceItems.length, locale)}</strong>
               </div>
               <div className="primary">
-                <span>Template fields</span>
-                <strong>{activeTemplate ? activeTemplate.fields.length : "Auto"}</strong>
+                <span>{t.templateFields}</span>
+                <strong>{activeTemplate ? clientNumber(activeTemplate.fields.length, locale) : t.auto}</strong>
               </div>
             </div>
 
             <div className="activity-list form-span">
               <article>
-                <strong>Request setup</strong>
-                <small>Step 1 of 3 - choose the subscribed service and the exact work item.</small>
-                <p>
-                  Pick the service closest to your need. Jzoom will route the request to the right
-                  team and show any item-specific questions automatically.
-                </p>
+                <strong>{t.requestSetup}</strong>
+                <small>{t.serviceStep}</small>
+                <p>{t.serviceDescription}</p>
               </article>
               {selectedService && (
                 <article>
-                  <strong>Selected service summary</strong>
+                  <strong>{t.selectedServiceSummary}</strong>
                   <small>
-                    {serviceLabel(selectedService)} - {selectedService.client.name}
+                    {serviceLabel(selectedService, locale)} - {selectedService.client.name}
                   </small>
-                  <p>{selectedService.service.description}</p>
+                  <p>
+                    {localizedServiceDescription({
+                      description: selectedService.service.description,
+                      domain: selectedService.service.domain,
+                      locale,
+                      name: clientName(selectedService.service, locale),
+                      serviceLine: selectedService.service.serviceLine,
+                    })}
+                  </p>
                   <div className="hours-strip">
-                    <span>{selectedService.service.category.nameEn}</span>
+                    <span>{clientName(selectedService.service.category, locale)}</span>
                     <span>{selectedService.service.domain}</span>
-                    <span>{selectedService.hoursAllocated} monthly hours</span>
+                    <span>
+                      {clientNumber(selectedService.hoursAllocated, locale)} {t.monthlyHours}
+                    </span>
                   </div>
                 </article>
               )}
             </div>
 
             <label>
-              Service
+              {t.service}
               <select
                 required
                 value={form.subscriptionServiceId}
@@ -279,50 +423,58 @@ export function ClientRequestList({
               >
                 {services.map((service) => (
                   <option key={service.id} value={service.id}>
-                    {serviceLabel(service)} - {service.client.code} - {service.hoursAllocated}h
+                    {serviceLabel(service, locale)} - {service.client.code} -{" "}
+                    {clientNumber(service.hoursAllocated, locale)}
                   </option>
                 ))}
               </select>
             </label>
             <label>
-              Service item
+              {t.exactItem}
               <select
                 value={form.serviceItemRevisionId}
                 onChange={(event) => selectServiceItem(event.target.value)}
               >
-                <option value="">General service request - no specific item</option>
-                {selectedServiceItems.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.nameEn}
-                    {item.expectedOutput ? ` - ${item.expectedOutput}` : ""}
-                  </option>
-                ))}
+                <option value="">{t.generalItem}</option>
+                {selectedServiceItems.map((item) => {
+                  const itemName = clientName(item, locale);
+                  const expectedOutput = localizedExpectedOutput({
+                    fallbackName: itemName,
+                    locale,
+                    value: item.expectedOutput,
+                  });
+                  return (
+                    <option key={item.id} value={item.id}>
+                      {itemName}
+                      {expectedOutput && expectedOutput !== itemName ? ` - ${expectedOutput}` : ""}
+                    </option>
+                  );
+                })}
               </select>
             </label>
             {selectedServiceItem ? (
               <p className="catalog-feedback success form-span">
-                Expected output: {selectedServiceItem.expectedOutput ?? selectedServiceItem.nameEn}
-                {selectedServiceItem.requiresFile ? " - attachment details may be required." : ""}
+                {t.expectedOutput}:{" "}
+                {localizedExpectedOutput({
+                  fallbackName: clientName(selectedServiceItem, locale),
+                  locale,
+                  value: selectedServiceItem.expectedOutput,
+                })}
+                {selectedServiceItem.requiresFile ? ` - ${t.itemAttachmentHint}` : ""}
               </p>
             ) : (
-              <p className="catalog-feedback success form-span">
-                General requests are routed to Jzoom for triage when the work does not match a
-                specific service item.
-              </p>
+              <p className="catalog-feedback success form-span">{t.generalItemNotice}</p>
             )}
 
             <div className="activity-list form-span">
               <article>
-                <strong>Request details</strong>
-                <small>Step 2 of 3 - describe what you need in plain language.</small>
-                <p>
-                  Use a clear title and include the business context, deadline, and any important
-                  notes. You can add files later if Jzoom requests them.
-                </p>
+                <strong>{t.requestDetails}</strong>
+                <small>{locale === "ar" ? "الخطوة 2 من 3 - اشرح المطلوب بوضوح." : "Step 2 of 3 - describe what you need in plain language."}</small>
+                <p>{t.descriptionHelp}</p>
               </article>
             </div>
             <label>
-              Title
+              {t.title}
               <input
                 required
                 value={form.title}
@@ -330,7 +482,7 @@ export function ClientRequestList({
               />
             </label>
             <label>
-              Priority
+              {locale === "ar" ? "الأولوية" : "Priority"}
               <select
                 value={form.priority}
                 onChange={(event) =>
@@ -339,13 +491,13 @@ export function ClientRequestList({
               >
                 {priorities.map((priority) => (
                   <option key={priority} value={priority}>
-                    {priorityLabel(priority)}
+                    {priorityLabel(priority, locale)}
                   </option>
                 ))}
               </select>
             </label>
             <label>
-              Due at
+              {t.dueAt}
               <input
                 type="datetime-local"
                 value={form.dueAt}
@@ -353,17 +505,17 @@ export function ClientRequestList({
               />
             </label>
             <details className="form-span">
-              <summary>Optional commercial reference</summary>
+              <summary>{t.optionalReference}</summary>
               <div className="catalog-form wide-form">
                 <label>
-                  Quote reference ID
+                  {locale === "ar" ? "معرف العرض" : "Quote reference ID"}
                   <input
                     value={form.sourceQuoteId}
                     onChange={(event) => setForm({ ...form, sourceQuoteId: event.target.value })}
                   />
                 </label>
                 <label>
-                  Invoice reference ID
+                  {locale === "ar" ? "معرف الفاتورة" : "Invoice reference ID"}
                   <input
                     value={form.sourceInvoiceId}
                     onChange={(event) => setForm({ ...form, sourceInvoiceId: event.target.value })}
@@ -372,7 +524,7 @@ export function ClientRequestList({
               </div>
             </details>
             <label className="form-span">
-              Description
+              {t.description}
               <textarea
                 required
                 value={form.description}
@@ -380,7 +532,7 @@ export function ClientRequestList({
               />
             </label>
             {loadingTemplate && (
-              <p className="catalog-feedback success form-span">Loading request template...</p>
+              <p className="catalog-feedback success form-span">{t.loadingTemplate}</p>
             )}
             {templateNotice && (
               <p className="catalog-feedback success form-span">{templateNotice}</p>
@@ -388,28 +540,29 @@ export function ClientRequestList({
             {activeTemplate && (
               <div className="pricing-total-grid form-span">
                 <div>
-                  <span>Template version</span>
+                  <span>{t.templateVersion}</span>
                   <strong>v{activeTemplate.version}</strong>
                 </div>
                 <div>
-                  <span>Required fields</span>
-                  <strong>{templateRequiredFields}</strong>
+                  <span>{t.requiredFields}</span>
+                  <strong>{clientNumber(templateRequiredFields, locale)}</strong>
                 </div>
                 <div>
-                  <span>Optional fields</span>
-                  <strong>{templateOptionalFields}</strong>
+                  <span>{t.optionalFields}</span>
+                  <strong>{clientNumber(templateOptionalFields, locale)}</strong>
                 </div>
                 <div>
-                  <span>Documents</span>
-                  <strong>{activeTemplate.documentChecklist.length}</strong>
+                  <span>{t.requiredDocuments}</span>
+                  <strong>{clientNumber(activeTemplate.documentChecklist.length, locale)}</strong>
                 </div>
                 <div className="primary">
-                  <span>Files</span>
-                  <strong>{activeTemplate.downloadableFiles.length}</strong>
+                  <span>{t.files}</span>
+                  <strong>{clientNumber(activeTemplate.downloadableFiles.length, locale)}</strong>
                 </div>
               </div>
             )}
             <RequestTemplateFields
+              locale={locale}
               template={activeTemplate}
               values={templateAnswers}
               onChange={setTemplateAnswer}
@@ -420,21 +573,19 @@ export function ClientRequestList({
               type="submit"
               disabled={saving || loadingTemplate || !form.subscriptionServiceId}
             >
-              {saving ? "Creating..." : "Submit request to Jzoom"}
+              {saving ? t.creating : t.submit}
             </button>
           </form>
         )}
       </SectionCard>
 
       <SectionCard
-        eyebrow="Request library"
-        title="Visible requests"
-        description="Every row keeps the original request detail route and workflow actions available."
+        eyebrow={t.requestLibrary}
+        title={t.visibleRequests}
+        description={t.trackDescription}
       >
         {items.length === 0 ? (
-          <EmptyState title="No visible requests">
-            No requests are currently visible for this account.
-          </EmptyState>
+          <EmptyState title={t.noRequests}>{t.noRequestsBody}</EmptyState>
         ) : (
           <div className="quote-list-grid">
             {items.map((request) => (
@@ -443,12 +594,20 @@ export function ClientRequestList({
                   <div>
                     <small>{request.requestNumber}</small>
                     <h2>{request.title}</h2>
-                    <p>{request.service.monthlyService.nameEn}</p>
+                    <p>{clientName(request.service.monthlyService, locale)}</p>
                   </div>
                   <div className="quote-list-meta">
-                    <StatusChip status={request.status} label={request.status} />
-                    <PriorityChip priority={request.priority} />
-                    <small>Due {displayDate(request.dueAt)}</small>
+                    <StatusChip
+                      status={request.status}
+                      label={requestStatusLabel(request.status, locale)}
+                    />
+                    <PriorityChip
+                      priority={request.priority}
+                      label={priorityLabel(request.priority, locale)}
+                    />
+                    <small>
+                      {t.due} {clientDate(request.dueAt, locale)}
+                    </small>
                   </div>
                 </Link>
               </article>

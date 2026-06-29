@@ -1,32 +1,84 @@
 import Link from "next/link";
 import type { ClientInvoiceSummary } from "../../lib/client-portal-types";
 import { EmptyState, MetricCard, PageHeader, SectionCard, StatusChip } from "../premium-os";
-import { dateLabel, sar } from "./client-format";
+import {
+  clientCurrency,
+  clientDate,
+  clientLocale,
+  clientNumber,
+  invoiceStatusLabel,
+} from "./client-format";
 
-export function ClientInvoiceList({ invoices }: { invoices: ClientInvoiceSummary[] }) {
+const copy = {
+  ar: {
+    basedOrder: "حسب ترتيب القائمة الحالي",
+    beforeTax: "قبل الضريبة",
+    commercialCenter: "المركز التجاري",
+    commercialSnapshots: "السجلات التجارية",
+    description: "الفواتير الصادرة لحسابك، محفوظة كسجلات ثابتة منفصلة عن تغييرات الكتالوج.",
+    invoiceLibrary: "سجل الفواتير",
+    invoices: "فواتيرك",
+    issued: "صادرة",
+    issuedInvoices: "الفواتير الصادرة",
+    item: "بند",
+    latestIssue: "أحدث إصدار",
+    noInvoices: "لا توجد فواتير حتى الآن",
+    noInvoicesBody: "لا توجد فواتير صادرة متاحة حتى الآن.",
+    quote: "العرض",
+    totalDue: "إجمالي المستحق",
+  },
+  en: {
+    basedOrder: "Based on current list order",
+    beforeTax: "Before tax",
+    commercialCenter: "Commercial center",
+    commercialSnapshots: "Commercial snapshots",
+    description: "Issued invoice snapshots for your client account, kept separate from live catalog changes.",
+    invoiceLibrary: "Invoice library",
+    invoices: "Your invoices",
+    issued: "Issued",
+    issuedInvoices: "Issued invoices",
+    item: "items",
+    latestIssue: "Latest issue",
+    noInvoices: "No invoices yet",
+    noInvoicesBody: "No issued invoices are available yet.",
+    quote: "Quote",
+    totalDue: "Total due",
+  },
+} as const;
+
+export function ClientInvoiceList({
+  invoices,
+  locale: localeInput = "en",
+}: {
+  invoices: ClientInvoiceSummary[];
+  locale?: string;
+}) {
+  const locale = clientLocale(localeInput);
+  const t = copy[locale];
   const totalDue = invoices.reduce((sum, invoice) => sum + invoice.finalDueNoTax, 0);
 
   return (
     <>
-      <PageHeader
-        eyebrow="Commercial center"
-        title="Your invoices"
-        description="Issued invoice snapshots for your client account, kept separate from live catalog changes."
-      />
+      <PageHeader eyebrow={t.commercialCenter} title={t.invoices} description={t.description} />
 
       <section className="os-bento-grid compact">
-        <MetricCard accent label="Issued invoices" value={invoices.length} detail="Visible records" />
-        <MetricCard label="Total due" value={sar(totalDue)} detail="Before tax" />
         <MetricCard
-          label="Latest issue"
-          value={invoices[0] ? dateLabel(invoices[0].issueDate) : "-"}
-          detail="Based on current list order"
+          accent
+          label={t.issuedInvoices}
+          value={clientNumber(invoices.length, locale)}
+          detail={locale === "ar" ? "سجلات ظاهرة" : "Visible records"}
+        />
+        <MetricCard label={t.totalDue} value={clientCurrency(totalDue, locale)} detail={t.beforeTax} />
+        <MetricCard
+          label={t.latestIssue}
+          value={invoices[0] ? clientDate(invoices[0].issueDate, locale) : "-"}
+          detail={t.basedOrder}
         />
       </section>
 
-      <SectionCard eyebrow="Invoice library" title="Commercial snapshots">
+      <SectionCard eyebrow={t.invoiceLibrary} title={t.commercialSnapshots}>
         {invoices.length === 0 ? (
-          <EmptyState title="No invoices yet">No issued invoices are available yet.</EmptyState>
+          <EmptyState title={t.noInvoices}>{t.noInvoicesBody}</EmptyState>
         ) : (
           <div className="quote-list-grid">
             {invoices.map((invoice) => (
@@ -36,13 +88,15 @@ export function ClientInvoiceList({ invoices }: { invoices: ClientInvoiceSummary
                     <small>{invoice.invoiceNumber}</small>
                     <h2>{invoice.title}</h2>
                     <p>
-                      Quote {invoice.quoteNumber} - Issued {dateLabel(invoice.issueDate)}
+                      {t.quote} {invoice.quoteNumber} - {t.issued} {clientDate(invoice.issueDate, locale)}
                     </p>
                   </div>
                   <div className="quote-list-meta">
-                    <StatusChip status={invoice.status} label={invoice.status} />
-                    <strong>{sar(invoice.finalDueNoTax)}</strong>
-                    <small>{invoice.itemCount} items</small>
+                    <StatusChip status={invoice.status} label={invoiceStatusLabel(invoice.status, locale)} />
+                    <strong>{clientCurrency(invoice.finalDueNoTax, locale)}</strong>
+                    <small>
+                      {clientNumber(invoice.itemCount, locale)} {t.item}
+                    </small>
                   </div>
                 </Link>
               </article>

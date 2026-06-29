@@ -7,6 +7,7 @@ import type {
   ClientPortalSubscribedMonthlyService,
   ClientQuoteSummary,
 } from "../../lib/client-portal-types";
+import { localizedServiceDescription } from "./client-format";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
 import type { RequestSummary } from "../../lib/request-types";
 import {
@@ -240,7 +241,7 @@ function SubscribedServiceCard({
         </div>
         <div>
           <dt>{copy.line}</dt>
-          <dd>{service.service.serviceLine}</dd>
+          <dd>{locale === "ar" ? "مسار الخدمة" : service.service.serviceLine}</dd>
         </div>
         <div>
           <dt>{copy.clientCode}</dt>
@@ -300,7 +301,15 @@ function AvailableMonthlyCard({
           <dd>{formatNumber(service.levels.length, locale)}</dd>
         </div>
       </dl>
-      <p>{service.description}</p>
+      <p>
+        {localizedServiceDescription({
+          description: service.description,
+          domain: service.domain,
+          locale,
+          name: localizedName(service, locale),
+          serviceLine: service.serviceLine,
+        })}
+      </p>
     </article>
   );
 }
@@ -341,7 +350,14 @@ function AvailableOneTimeCard({
           <dd>{formatDays(service.durationDays, locale)}</dd>
         </div>
       </dl>
-      <p>{service.description}</p>
+      <p>
+        {localizedServiceDescription({
+          description: service.description,
+          locale,
+          name: localizedName(service, locale),
+          serviceLine: service.serviceLine,
+        })}
+      </p>
     </article>
   );
 }

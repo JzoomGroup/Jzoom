@@ -22,7 +22,7 @@ export default async function ClientQuoteDetailPage({
       displayName={account.user.displayName}
       locale={account.user.preferredLocale}
     >
-      <ClientQuoteDetail quote={quote} />
+      <ClientQuoteDetail locale={account.user.preferredLocale} quote={quote} />
     </ClientShell>
   );
 }

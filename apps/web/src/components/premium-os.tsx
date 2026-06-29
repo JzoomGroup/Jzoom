@@ -201,9 +201,9 @@ export function StatusChip({ label, status }: { label?: string; status: string }
   return <span className={`os-chip os-chip-${tone}`}>{label ?? status}</span>;
 }
 
-export function PriorityChip({ priority }: { priority: string }) {
+export function PriorityChip({ label, priority }: { label?: string; priority: string }) {
   const tone = priorityTone[priority] ?? "neutral";
-  return <span className={`os-chip os-chip-${tone}`}>{priority}</span>;
+  return <span className={`os-chip os-chip-${tone}`}>{label ?? priority}</span>;
 }
 
 export function EmptyState({

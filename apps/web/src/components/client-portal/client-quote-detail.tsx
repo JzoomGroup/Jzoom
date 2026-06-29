@@ -2,16 +2,96 @@ import Link from "next/link";
 import { clientQuotePdfUrl } from "../../lib/client-portal-client";
 import type { ClientQuote } from "../../lib/client-portal-types";
 import { PageHeader, SectionCard, SmartTable, StatusChip } from "../premium-os";
-import { dateLabel, sar } from "./client-format";
+import {
+  clientCurrency,
+  clientDate,
+  clientLocale,
+  clientName,
+  clientNumber,
+  localizedLineType,
+  quoteStatusLabel,
+} from "./client-format";
 
-export function ClientQuoteDetail({ quote }: { quote: ClientQuote }) {
+const copy = {
+  ar: {
+    allQuotes: "كل العروض",
+    approver: "المعتمد",
+    base: "الأساس",
+    clientDetails: "بيانات العميل",
+    code: "الرمز",
+    commercialTerms: "الشروط التجارية",
+    delivery: "التسليم",
+    description:
+      "يعرض هذا العرض من النسخة المحفوظة. أي تغييرات لاحقة في الكتالوج أو التسعير لا تغير هذا السجل.",
+    discount: "الخصم",
+    estimatedTax: "الضريبة التقديرية",
+    finalTotal: "الإجمالي النهائي",
+    financialSnapshot: "الملخص المالي",
+    noValue: "غير محدد",
+    oneTime: "مرة واحدة",
+    payment: "الدفع",
+    quantity: "الكمية",
+    quoteLines: "بنود العرض",
+    quoteSnapshot: "نسخة العرض",
+    selectedServices: "الخدمات المختارة",
+    service: "الخدمة",
+    setup: "التأسيس",
+    setupFees: "رسوم التأسيس",
+    total: "الإجمالي",
+    totals: "الإجماليات",
+    typePackage: "النوع / الباقة",
+    validUntil: "صالح حتى",
+    viewPdf: "عرض PDF",
+  },
+  en: {
+    allQuotes: "All quotes",
+    approver: "Approver",
+    base: "Base",
+    clientDetails: "Client details",
+    code: "Code",
+    commercialTerms: "Commercial terms",
+    delivery: "Delivery",
+    description:
+      "This quote is displayed from its stored snapshot. Later catalog or pricing changes do not alter this record.",
+    discount: "Discount",
+    estimatedTax: "Estimated tax",
+    finalTotal: "Final total",
+    financialSnapshot: "Financial snapshot",
+    noValue: "Not specified",
+    oneTime: "One-time",
+    payment: "Payment",
+    quantity: "Quantity",
+    quoteLines: "Quote lines",
+    quoteSnapshot: "Quote snapshot",
+    selectedServices: "Selected services",
+    service: "Service",
+    setup: "Setup",
+    setupFees: "Setup fees",
+    total: "Total",
+    totals: "Totals",
+    typePackage: "Type / package",
+    validUntil: "Valid until",
+    viewPdf: "View PDF",
+  },
+} as const;
+
+export function ClientQuoteDetail({
+  locale: localeInput = "en",
+  quote,
+}: {
+  locale?: string;
+  quote: ClientQuote;
+}) {
+  const locale = clientLocale(localeInput);
+  const t = copy[locale];
+
   return (
     <>
       <PageHeader
-        eyebrow="Quote snapshot"
+        eyebrow={t.quoteSnapshot}
         title={quote.quoteNumber}
-        description="This quote is displayed from its stored snapshot. Later catalog or pricing changes do not alter this record."
-        meta={<StatusChip status={quote.status} label={quote.status} />}
+        description={t.description}
+        meta={<StatusChip status={quote.status} label={quoteStatusLabel(quote.status, locale)} />}
       >
         <div className="quote-header-actions">
           <a
@@ -20,88 +100,92 @@ export function ClientQuoteDetail({ quote }: { quote: ClientQuote }) {
             target="_blank"
             rel="noreferrer"
           >
-            View PDF
+            {t.viewPdf}
           </a>
           <Link className="os-button os-button-secondary" href="/client/quotes">
-            All quotes
+            {t.allQuotes}
           </Link>
         </div>
       </PageHeader>
 
       <section className="quote-summary-grid">
-        <SectionCard eyebrow="Client details" title={quote.client.legalName ?? quote.client.name}>
+        <SectionCard eyebrow={t.clientDetails} title={quote.client.legalName ?? quote.client.name}>
           <dl className="quote-definition-list">
             <div>
-              <dt>Code</dt>
+              <dt>{t.code}</dt>
               <dd>{quote.client.code}</dd>
             </div>
             <div>
-              <dt>Sector</dt>
-              <dd>{quote.client.sector ?? "Not specified"}</dd>
+              <dt>{locale === "ar" ? "القطاع" : "Sector"}</dt>
+              <dd>{quote.client.sector ?? t.noValue}</dd>
             </div>
             <div>
-              <dt>Approver</dt>
-              <dd>{quote.client.authorizedApprover ?? "Not specified"}</dd>
+              <dt>{t.approver}</dt>
+              <dd>{quote.client.authorizedApprover ?? t.noValue}</dd>
             </div>
           </dl>
         </SectionCard>
-        <SectionCard eyebrow="Terms" title="Commercial terms">
+        <SectionCard eyebrow={locale === "ar" ? "الشروط" : "Terms"} title={t.commercialTerms}>
           <dl className="quote-definition-list">
             <div>
-              <dt>Valid until</dt>
-              <dd>{dateLabel(quote.terms.validUntil ?? quote.validUntil)}</dd>
+              <dt>{t.validUntil}</dt>
+              <dd>{clientDate(quote.terms.validUntil ?? quote.validUntil, locale)}</dd>
             </div>
             <div>
-              <dt>Payment</dt>
+              <dt>{t.payment}</dt>
               <dd>{quote.terms.paymentTerms}</dd>
             </div>
             <div>
-              <dt>Delivery</dt>
-              <dd>{quote.terms.deliveryTerms ?? "Not specified"}</dd>
+              <dt>{t.delivery}</dt>
+              <dd>{quote.terms.deliveryTerms ?? t.noValue}</dd>
             </div>
           </dl>
         </SectionCard>
       </section>
 
       <SectionCard
-        eyebrow="Quote lines"
-        title="Selected services"
-        description={`${quote.items.length} snapshotted service lines.`}
+        eyebrow={t.quoteLines}
+        title={t.selectedServices}
+        description={
+          locale === "ar"
+            ? `${clientNumber(quote.items.length, locale)} بند خدمة محفوظ في النسخة.`
+            : `${quote.items.length} snapshotted service lines.`
+        }
       >
         <SmartTable>
           <table className="catalog-table pricing-lines">
             <thead>
               <tr>
-                <th>Service</th>
-                <th>Type / package</th>
-                <th>Quantity</th>
-                <th>Base</th>
-                <th>Setup</th>
-                <th>Total</th>
+                <th>{t.service}</th>
+                <th>{t.typePackage}</th>
+                <th>{t.quantity}</th>
+                <th>{t.base}</th>
+                <th>{t.setup}</th>
+                <th>{t.total}</th>
               </tr>
             </thead>
             <tbody>
               {quote.items.map((item) => (
                 <tr key={item.id}>
                   <td>
-                    <strong>{item.serviceSnapshot.nameEn}</strong>
+                    <strong>{clientName(item.serviceSnapshot, locale)}</strong>
                     <small>{item.serviceSnapshot.serviceCode}</small>
                     {item.serviceItems.length > 0 && (
                       <ul className="quote-service-items">
                         {item.serviceItems.map((serviceItem) => (
-                          <li key={serviceItem.itemCode}>{serviceItem.nameEn}</li>
+                          <li key={serviceItem.itemCode}>{clientName(serviceItem, locale)}</li>
                         ))}
                       </ul>
                     )}
                   </td>
                   <td>
-                    {item.lineType === "MONTHLY" ? "Monthly" : "One-time"}
+                    {localizedLineType(item.lineType, locale)}
                     <small>{item.serviceSnapshot.serviceLevelLabel ?? "-"}</small>
                   </td>
-                  <td>{item.quantity}</td>
-                  <td>{sar(item.serviceSnapshot.baseAmount)}</td>
-                  <td>{sar(item.setupFee)}</td>
-                  <td>{sar(item.lineTotal)}</td>
+                  <td>{clientNumber(item.quantity, locale)}</td>
+                  <td>{clientCurrency(item.serviceSnapshot.baseAmount, locale)}</td>
+                  <td>{clientCurrency(item.setupFee, locale)}</td>
+                  <td>{clientCurrency(item.lineTotal, locale)}</td>
                 </tr>
               ))}
             </tbody>
@@ -109,31 +193,31 @@ export function ClientQuoteDetail({ quote }: { quote: ClientQuote }) {
         </SmartTable>
       </SectionCard>
 
-      <SectionCard eyebrow="Financial snapshot" title="Totals">
+      <SectionCard eyebrow={t.financialSnapshot} title={t.totals}>
         <div className="pricing-total-grid">
           <div>
-            <span>Monthly</span>
-            <strong>{sar(quote.totals.subtotalMonthly)}</strong>
+            <span>{locale === "ar" ? "شهري" : "Monthly"}</span>
+            <strong>{clientCurrency(quote.totals.subtotalMonthly, locale)}</strong>
           </div>
           <div>
-            <span>Setup fees</span>
-            <strong>{sar(quote.totals.subtotalSetup)}</strong>
+            <span>{t.setupFees}</span>
+            <strong>{clientCurrency(quote.totals.subtotalSetup, locale)}</strong>
           </div>
           <div>
-            <span>One-time</span>
-            <strong>{sar(quote.totals.subtotalOneTime)}</strong>
+            <span>{t.oneTime}</span>
+            <strong>{clientCurrency(quote.totals.subtotalOneTime, locale)}</strong>
           </div>
           <div>
-            <span>Discount</span>
-            <strong>- {sar(quote.totals.discountTotal)}</strong>
+            <span>{t.discount}</span>
+            <strong>- {clientCurrency(quote.totals.discountTotal, locale)}</strong>
           </div>
           <div>
-            <span>Estimated tax</span>
-            <strong>{sar(quote.totals.taxTotal)}</strong>
+            <span>{t.estimatedTax}</span>
+            <strong>{clientCurrency(quote.totals.taxTotal, locale)}</strong>
           </div>
           <div className="primary">
-            <span>Final total</span>
-            <strong>{sar(quote.totals.finalTotal)}</strong>
+            <span>{t.finalTotal}</span>
+            <strong>{clientCurrency(quote.totals.finalTotal, locale)}</strong>
           </div>
         </div>
       </SectionCard>

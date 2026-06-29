@@ -20,7 +20,7 @@ export default async function ClientRequestDetailPage({
       displayName={account.user.displayName}
       locale={account.user.preferredLocale}
     >
-      <ClientRequestDetail request={request} />
+      <ClientRequestDetail locale={account.user.preferredLocale} request={request} />
     </ClientShell>
   );
 }

@@ -14,7 +14,7 @@ export default async function ClientQuotesPage() {
       displayName={account.user.displayName}
       locale={account.user.preferredLocale}
     >
-      <ClientQuoteList quotes={quotes} />
+      <ClientQuoteList locale={account.user.preferredLocale} quotes={quotes} />
     </ClientShell>
   );
 }

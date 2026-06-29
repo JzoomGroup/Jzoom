@@ -17,7 +17,7 @@ export default async function ClientInvoicesPage() {
       displayName={account.user.displayName}
       locale={account.user.preferredLocale}
     >
-      <ClientInvoiceList invoices={invoices} />
+      <ClientInvoiceList invoices={invoices} locale={account.user.preferredLocale} />
     </ClientShell>
   );
 }

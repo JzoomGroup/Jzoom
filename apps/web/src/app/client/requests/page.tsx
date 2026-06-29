@@ -15,7 +15,11 @@ export default async function ClientRequestsPage() {
       displayName={account.user.displayName}
       locale={account.user.preferredLocale}
     >
-      <ClientRequestList account={account} requests={requests} />
+      <ClientRequestList
+        account={account}
+        locale={account.user.preferredLocale}
+        requests={requests}
+      />
     </ClientShell>
   );
 }

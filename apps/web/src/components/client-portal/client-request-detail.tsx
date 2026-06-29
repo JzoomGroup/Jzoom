@@ -10,90 +10,207 @@ import {
   uploadClientRequestedDocument,
 } from "../../lib/request-client";
 import type { ServiceRequest } from "../../lib/request-types";
-import { formatRiyadhDateTime } from "../../lib/stable-date";
 import { PageHeader, StatusChip } from "../premium-os";
+import {
+  clientDateTime,
+  clientLabel,
+  clientLocale,
+  clientName,
+  clientNumber,
+  documentStatusLabel,
+  outputStatusLabel,
+  requestStatusLabel,
+  type ClientDisplayLocale,
+} from "./client-format";
 
 type ClientDocumentStatus = ServiceRequest["documentRequests"][number]["status"];
 type ClientOutputStatus = ServiceRequest["outputs"][number]["status"];
 
-function dateTime(value: string | null): string {
-  return formatRiyadhDateTime(value);
-}
+const hasArabic = /[\u0600-\u06ff]/;
 
-function fileSize(sizeBytes: number): string {
+const copy = {
+  ar: {
+    acceptOutput: "اعتماد المخرج",
+    acceptedDocument: "تم قبول طلب المستند وإغلاقه.",
+    actionCenter: "مركز إجراءات الطلب",
+    addComment: "إضافة تعليق",
+    addCommentLabel: "إضافة تعليق",
+    allRequests: "عرض كل الطلبات",
+    attachmentHint: "مرفق ظاهر للعميل",
+    attachments: "المرفقات الظاهرة",
+    back: "العودة إلى الطلبات",
+    closedOutput: "هذا المخرج مغلق ومحفوظ كمرجع.",
+    comments: "التعليقات",
+    completed: "طلب مكتمل",
+    completeness: "الاكتمال",
+    decision: "قرار العميل",
+    deliverables: "المخرجات",
+    deliverablesShared: "الأعمال المشاركة معك",
+    deliverablesToReview: "مخرجات بانتظار المراجعة",
+    documentCancelled: "طلب المستند لم يعد نشطًا.",
+    documentClosed: "تم قبول المستند",
+    documentInstructionsFallback: "ارفع بيانات المستند المطلوب حتى يتمكن فريق جزوم من المتابعة.",
+    documents: "المستندات",
+    due: "الموعد",
+    fileName: "اسم الملف",
+    fileSizeBytes: "الحجم بالبايت",
+    generalServiceItem: "طلب عام على الخدمة",
+    jzoomWaiting: "جزوم بانتظار ردك على هذا الطلب.",
+    metadataUpload: "رفع بيانات الملف",
+    mimeType: "نوع الملف MIME",
+    noAction: "لا يوجد إجراء مطلوب منك الآن.",
+    noActionBody: "سنشارك التحديثات هنا عندما نحتاج مراجعتك أو مستندات منك.",
+    noAttachments: "لا توجد بيانات مرفقات ظاهرة للعميل حتى الآن.",
+    noComments: "لا توجد تعليقات ظاهرة للعميل حتى الآن.",
+    noDecision: "هذا المخرج لم يعد بانتظار قرار من العميل.",
+    noDocumentUpload: "لا يوجد رفع مستندات مطلوب منك حاليًا.",
+    noDocuments: "لم يتم طلب مستندات حتى الآن.",
+    noOutputs: "لا توجد مخرجات مشاركة حتى الآن.",
+    noStructuredAnswers: "لم يتم إرسال إجابات منظمة ظاهرة للعميل.",
+    outputAccepted: "تم اعتماد هذا المخرج من طرفك، ولا يوجد إجراء إضافي مطلوب.",
+    outputDefault: "هذا المخرج لا ينتظر قرارًا من العميل.",
+    outputReview: "راجع هذا المخرج، ثم اعتمده أو أعده مع ملاحظاتك.",
+    outputReturned: "وصلت ملاحظاتك إلى جزوم وسيتم تجهيز النسخة التالية.",
+    package: "الباقة",
+    pendingReview: "بانتظار مراجعتك",
+    request: "الطلب",
+    requestDetail: "تفاصيل الطلب",
+    requestDocuments: "المستندات المطلوبة",
+    returnNote: "ملاحظة الإرجاع",
+    returnOutput: "إرجاع المخرج",
+    returnedNote: "ملاحظة الإرجاع",
+    reviewDeliverables: "مراجعة المخرجات",
+    revision: "إصدار",
+    selectDocument: "اختر الطلب",
+    service: "الخدمة",
+    serviceContext: "بيانات الخدمة",
+    serviceItem: "بند الخدمة",
+    shared: "تمت المشاركة",
+    submittedAnswers: "إجابات النموذج المرسلة",
+    uploadDocuments: "رفع المستندات",
+    uploadRequired: "ارفع المستند المطلوب حتى يتمكن فريق جزوم من إكمال العمل.",
+    uploaded: "تم الرفع",
+    uploadedPrefix: "تم الرفع",
+    uploadedReview: "تم استلام الملف وهو الآن تحت مراجعة جزوم.",
+    visibleAttachments: "المرفقات الظاهرة",
+    workInProgress: "العمل قيد التنفيذ",
+  },
+  en: {
+    acceptOutput: "Accept output",
+    acceptedDocument: "This document request has been accepted and closed.",
+    actionCenter: "Request action center",
+    addComment: "Add comment",
+    addCommentLabel: "Add comment",
+    allRequests: "View all requests",
+    attachmentHint: "Client-visible attachment metadata",
+    attachments: "Visible attachments",
+    back: "Back to requests",
+    closedOutput: "This deliverable is closed and kept here for reference.",
+    comments: "Comments",
+    completed: "Request completed",
+    completeness: "Completeness",
+    decision: "Decision",
+    deliverables: "Deliverables",
+    deliverablesShared: "Work shared with you",
+    deliverablesToReview: "Deliverables to review",
+    documentCancelled: "This document request is no longer active.",
+    documentClosed: "Accepted",
+    documentInstructionsFallback: "Upload the requested document metadata for Jzoom review.",
+    documents: "Documents",
+    due: "Due",
+    fileName: "File name",
+    fileSizeBytes: "Size bytes",
+    generalServiceItem: "General service request",
+    jzoomWaiting: "Jzoom is waiting for your response on this request.",
+    metadataUpload: "Upload metadata",
+    mimeType: "MIME type",
+    noAction: "No action is pending from you.",
+    noActionBody: "Jzoom will share updates here when your review or documents are needed.",
+    noAttachments: "No client-visible attachment metadata yet.",
+    noComments: "No client-visible comments yet.",
+    noDecision: "This deliverable is no longer waiting for a client decision.",
+    noDocumentUpload: "No document upload is currently required from you.",
+    noDocuments: "No documents requested yet.",
+    noOutputs: "No shared outputs yet.",
+    noStructuredAnswers: "No client-visible structured answers were submitted.",
+    outputAccepted: "You accepted this deliverable. No further action is needed.",
+    outputDefault: "This deliverable is not waiting for a client decision.",
+    outputReview: "Please review this deliverable and either accept it or return it with comments.",
+    outputReturned: "Jzoom has your return note and will prepare the next revision.",
+    package: "Package",
+    pendingReview: "Waiting for your review",
+    request: "Request",
+    requestDetail: "Request detail",
+    requestDocuments: "Requested documents",
+    returnNote: "Return note",
+    returnOutput: "Return output",
+    returnedNote: "Return note",
+    reviewDeliverables: "Review deliverables",
+    revision: "Revision",
+    selectDocument: "Select request",
+    service: "Service",
+    serviceContext: "Service context",
+    serviceItem: "Service item",
+    shared: "Shared",
+    submittedAnswers: "Submitted template answers",
+    uploadDocuments: "Upload documents",
+    uploadRequired: "Upload the requested document so Jzoom can continue the work.",
+    uploaded: "Uploaded",
+    uploadedPrefix: "Uploaded",
+    uploadedReview: "Your upload is with Jzoom for review.",
+    visibleAttachments: "Visible attachments",
+    workInProgress: "Work in progress",
+  },
+} as const;
+
+function fileSize(sizeBytes: number, locale: ClientDisplayLocale): string {
   if (sizeBytes >= 1_000_000) {
-    return `${(sizeBytes / 1_000_000).toFixed(1)} MB`;
+    return `${clientNumber(sizeBytes / 1_000_000, locale)} MB`;
   }
 
   if (sizeBytes >= 1_000) {
-    return `${(sizeBytes / 1_000).toFixed(1)} KB`;
+    return `${clientNumber(sizeBytes / 1_000, locale)} KB`;
   }
 
-  return `${sizeBytes} bytes`;
+  return locale === "ar"
+    ? `${clientNumber(sizeBytes, locale)} بايت`
+    : `${clientNumber(sizeBytes, locale)} bytes`;
 }
 
-function outputStatusLabel(status: ClientOutputStatus): string {
+function safeSystemText(value: string | null | undefined, fallback: string, locale: ClientDisplayLocale) {
+  if (!value) return fallback;
+  if (locale === "en") return value;
+  return hasArabic.test(value) ? value : fallback;
+}
+
+function outputActionCopy(status: ClientOutputStatus, locale: ClientDisplayLocale): string {
+  const t = copy[locale];
   switch (status) {
     case "SHARED_WITH_CLIENT":
-      return "Waiting for your review";
+      return t.outputReview;
     case "ACCEPTED_BY_CLIENT":
-      return "Accepted by you";
+      return t.outputAccepted;
     case "RETURNED_BY_CLIENT":
-      return "Returned for revision";
+      return t.outputReturned;
     case "CLOSED":
-      return "Closed";
-    case "APPROVED_INTERNAL":
-      return "Approved internally";
-    case "INTERNAL_REVIEW":
-      return "Under Jzoom review";
-    case "REVISION_REQUESTED":
-      return "Revision requested";
-    case "DRAFT":
+      return t.closedOutput;
     default:
-      return "Draft";
+      return t.outputDefault;
   }
 }
 
-function outputActionCopy(status: ClientOutputStatus): string {
-  switch (status) {
-    case "SHARED_WITH_CLIENT":
-      return "Please review this deliverable and either accept it or return it with comments.";
-    case "ACCEPTED_BY_CLIENT":
-      return "You accepted this deliverable. No further action is needed.";
-    case "RETURNED_BY_CLIENT":
-      return "Jzoom has your return note and will prepare the next revision.";
-    case "CLOSED":
-      return "This deliverable is closed and kept here for reference.";
-    default:
-      return "This deliverable is not waiting for a client decision.";
-  }
-}
-
-function documentStatusLabel(status: ClientDocumentStatus): string {
+function documentActionCopy(status: ClientDocumentStatus, locale: ClientDisplayLocale): string {
+  const t = copy[locale];
   switch (status) {
     case "REQUESTED":
-      return "Upload required";
+      return t.uploadRequired;
     case "UPLOADED":
-      return "Uploaded";
+      return t.uploadedReview;
     case "CLOSED":
-      return "Accepted";
+      return t.acceptedDocument;
     case "CANCELLED":
     default:
-      return "Cancelled";
-  }
-}
-
-function documentActionCopy(status: ClientDocumentStatus): string {
-  switch (status) {
-    case "REQUESTED":
-      return "Upload the requested document so Jzoom can continue the work.";
-    case "UPLOADED":
-      return "Your upload is with Jzoom for review.";
-    case "CLOSED":
-      return "This document request has been accepted and closed.";
-    case "CANCELLED":
-    default:
-      return "This document request is no longer active.";
+      return t.documentCancelled;
   }
 }
 
@@ -114,7 +231,15 @@ const clientVisibleOutputStatuses: ClientOutputStatus[] = [
   "CLOSED",
 ];
 
-export function ClientRequestDetail({ request: initialRequest }: { request: ServiceRequest }) {
+export function ClientRequestDetail({
+  locale: localeInput = "en",
+  request: initialRequest,
+}: {
+  locale?: string;
+  request: ServiceRequest;
+}) {
+  const locale = clientLocale(localeInput);
+  const t = copy[locale];
   const [request, setRequest] = useState(initialRequest);
   const [body, setBody] = useState("");
   const [returnReason, setReturnReason] = useState("");
@@ -165,7 +290,7 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
   function submitUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedDocumentRequestId) {
-      setError("Select a requested document before uploading.");
+      setError(locale === "ar" ? "اختر المستند المطلوب قبل الرفع." : "Select a requested document before uploading.");
       return;
     }
 
@@ -201,14 +326,20 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
   );
   const nextActions = [
     ...(outputsAwaitingDecision.length > 0
-      ? [`Review ${outputsAwaitingDecision.length} shared deliverable(s).`]
+      ? [
+          locale === "ar"
+            ? `راجع ${clientNumber(outputsAwaitingDecision.length, locale)} من المخرجات المشاركة.`
+            : `Review ${outputsAwaitingDecision.length} shared deliverable(s).`,
+        ]
       : []),
     ...(requestedDocuments.length > 0
-      ? [`Upload ${requestedDocuments.length} requested document(s).`]
+      ? [
+          locale === "ar"
+            ? `ارفع ${clientNumber(requestedDocuments.length, locale)} من المستندات المطلوبة.`
+            : `Upload ${requestedDocuments.length} requested document(s).`,
+        ]
       : []),
-    ...(request.status === "WAITING_CLIENT"
-      ? ["Jzoom is waiting for your response on this request."]
-      : []),
+    ...(request.status === "WAITING_CLIENT" ? [t.jzoomWaiting] : []),
   ];
   const uploadSelectionIsValid = requestedDocuments.some(
     (documentRequest) => documentRequest.id === uploadForm.documentRequestId,
@@ -223,23 +354,23 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
   );
   const primaryAction =
     outputsAwaitingDecision.length > 0
-      ? { href: "#client-deliverables", label: "Review deliverables" }
+      ? { href: "#client-deliverables", label: t.reviewDeliverables }
       : requestedDocuments.length > 0
-        ? { href: "#client-documents", label: "Upload documents" }
+        ? { href: "#client-documents", label: t.uploadDocuments }
         : null;
   const isActiveRequest = activeClientRequestStatuses.includes(request.status);
 
   return (
     <>
       <PageHeader
-        eyebrow="Request detail"
+        eyebrow={t.requestDetail}
         title={request.title}
-        description={`${request.requestNumber} - ${request.service.monthlyService.nameEn}`}
-        meta={<StatusChip status={request.status} label={request.status} />}
+        description={`${request.requestNumber} - ${clientName(request.service.monthlyService, locale)}`}
+        meta={<StatusChip status={request.status} label={requestStatusLabel(request.status, locale)} />}
       >
         <div className="quote-header-actions">
           <Link className="os-button os-button-secondary" href="/client/requests">
-            Back to requests
+            {t.back}
           </Link>
         </div>
       </PageHeader>
@@ -247,40 +378,40 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
       {error && <p className="form-error">{error}</p>}
 
       <section className="catalog-panel">
-        <p className="eyebrow">Request action center</p>
-        <h2>{isActiveRequest ? "Work in progress" : "Request completed"}</h2>
+        <p className="eyebrow">{t.actionCenter}</p>
+        <h2>{isActiveRequest ? t.workInProgress : t.completed}</h2>
         <div className="pricing-total-grid">
           <div>
-            <span>Deliverables to review</span>
-            <strong>{outputsAwaitingDecision.length}</strong>
+            <span>{t.deliverablesToReview}</span>
+            <strong>{clientNumber(outputsAwaitingDecision.length, locale)}</strong>
           </div>
           <div>
-            <span>Requested documents</span>
-            <strong>{requestedDocuments.length}</strong>
+            <span>{t.requestDocuments}</span>
+            <strong>{clientNumber(requestedDocuments.length, locale)}</strong>
           </div>
           <div>
-            <span>Uploaded documents</span>
-            <strong>{uploadedDocuments.length}</strong>
+            <span>{t.uploaded}</span>
+            <strong>{clientNumber(uploadedDocuments.length, locale)}</strong>
           </div>
           <div>
-            <span>Visible attachments</span>
-            <strong>{request.attachments.length}</strong>
+            <span>{t.visibleAttachments}</span>
+            <strong>{clientNumber(request.attachments.length, locale)}</strong>
           </div>
           <div className="primary">
-            <span>Comments</span>
-            <strong>{request.comments.length}</strong>
+            <span>{t.comments}</span>
+            <strong>{clientNumber(request.comments.length, locale)}</strong>
           </div>
         </div>
         <div className="activity-list">
           {nextActions.length === 0 ? (
             <article>
-              <strong>No action is pending from you.</strong>
-              <p>Jzoom will share updates here when your review or documents are needed.</p>
+              <strong>{t.noAction}</strong>
+              <p>{t.noActionBody}</p>
             </article>
           ) : (
             nextActions.map((action) => (
               <article key={action}>
-                <strong>Next action</strong>
+                <strong>{locale === "ar" ? "الإجراء التالي" : "Next action"}</strong>
                 <p>{action}</p>
               </article>
             ))
@@ -293,7 +424,7 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
             </a>
           ) : (
             <Link className="os-button os-button-secondary" href="/client/requests">
-              View all requests
+              {t.allRequests}
             </Link>
           )}
         </div>
@@ -301,39 +432,39 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
 
       <section className="quote-summary-grid">
         <article className="catalog-panel">
-          <h2>Service context</h2>
+          <h2>{t.serviceContext}</h2>
           <dl className="quote-definition-list">
             <div>
-              <dt>Service</dt>
-              <dd>{request.service.monthlyService.nameEn}</dd>
+              <dt>{t.service}</dt>
+              <dd>{clientName(request.service.monthlyService, locale)}</dd>
             </div>
             <div>
-              <dt>Package</dt>
-              <dd>{request.service.serviceLevel.labelEn ?? request.service.serviceLevel.code}</dd>
+              <dt>{t.package}</dt>
+              <dd>{clientLabel(request.service.serviceLevel, locale)}</dd>
             </div>
             <div>
-              <dt>Service item</dt>
-              <dd>{request.serviceItem?.nameEn ?? "General service request"}</dd>
+              <dt>{t.serviceItem}</dt>
+              <dd>{request.serviceItem ? clientName(request.serviceItem, locale) : t.generalServiceItem}</dd>
             </div>
             <div>
-              <dt>Due</dt>
-              <dd>{dateTime(request.dueAt)}</dd>
+              <dt>{t.due}</dt>
+              <dd>{clientDateTime(request.dueAt, locale)}</dd>
             </div>
           </dl>
           <p>{request.description}</p>
         </article>
 
         <article className="catalog-panel">
-          <h2>Visible attachments</h2>
+          <h2>{t.visibleAttachments}</h2>
           <div className="activity-list">
             {request.attachments.length === 0 ? (
-              <p>No client-visible attachment metadata yet.</p>
+              <p>{t.noAttachments}</p>
             ) : (
               request.attachments.map((file) => (
                 <article key={file.id}>
                   <strong>{file.originalName}</strong>
                   <small>
-                    {file.mimeType} · {file.sizeBytes} bytes
+                    {file.mimeType} · {fileSize(file.sizeBytes, locale)}
                   </small>
                 </article>
               ))
@@ -344,34 +475,36 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
 
       <section className="quote-summary-grid">
         <article className="catalog-panel" id="client-deliverables">
-          <p className="eyebrow">Deliverables</p>
-          <h2>Work shared with you</h2>
+          <p className="eyebrow">{t.deliverables}</p>
+          <h2>{t.deliverablesShared}</h2>
           <div className="activity-list">
             {sharedOutputs.length === 0 ? (
-              <p>No shared outputs yet.</p>
+              <p>{t.noOutputs}</p>
             ) : (
               sharedOutputs.map((output) => (
                 <article key={output.id}>
                   <div className="entity-card-heading">
                     <div>
                       <strong>{output.title}</strong>
-                      <small>Revision {output.revision}</small>
+                      <small>
+                        {t.revision} {clientNumber(output.revision, locale)}
+                      </small>
                     </div>
-                    <StatusChip status={output.status} label={outputStatusLabel(output.status)} />
+                    <StatusChip status={output.status} label={outputStatusLabel(output.status, locale)} />
                   </div>
                   <dl className="quote-definition-list">
                     <div>
-                      <dt>Shared</dt>
-                      <dd>{dateTime(output.sharedAt)}</dd>
+                      <dt>{t.shared}</dt>
+                      <dd>{clientDateTime(output.sharedAt, locale)}</dd>
                     </div>
                     <div>
-                      <dt>Decision</dt>
-                      <dd>{dateTime(output.clientDecidedAt)}</dd>
+                      <dt>{t.decision}</dt>
+                      <dd>{clientDateTime(output.clientDecidedAt, locale)}</dd>
                     </div>
                   </dl>
-                  {output.description && <p>{output.description}</p>}
-                  {output.clientReturnReason && <p>Return note: {output.clientReturnReason}</p>}
-                  <p>{outputActionCopy(output.status)}</p>
+                  {output.description && <p>{safeSystemText(output.description, t.attachmentHint, locale)}</p>}
+                  {output.clientReturnReason && <p>{t.returnedNote}: {output.clientReturnReason}</p>}
+                  <p>{outputActionCopy(output.status, locale)}</p>
                   {output.status === "SHARED_WITH_CLIENT" ? (
                     <div className="row-actions">
                       <button
@@ -380,11 +513,11 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
                         type="button"
                         onClick={() => acceptOutput(output.id)}
                       >
-                        Accept output
+                        {t.acceptOutput}
                       </button>
                       <input
-                        aria-label="Return note"
-                        placeholder="Return note"
+                        aria-label={t.returnNote}
+                        placeholder={t.returnNote}
                         value={returnReason}
                         onChange={(event) => setReturnReason(event.target.value)}
                       />
@@ -394,11 +527,11 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
                         type="button"
                         onClick={() => returnOutput(output.id)}
                       >
-                        Return output
+                        {t.returnOutput}
                       </button>
                     </div>
                   ) : (
-                    <p>This deliverable is no longer waiting for a client decision.</p>
+                    <p>{t.noDecision}</p>
                   )}
                 </article>
               ))
@@ -407,14 +540,14 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
         </article>
 
         <article className="catalog-panel" id="client-documents">
-          <p className="eyebrow">Documents</p>
-          <h2>Requested documents</h2>
+          <p className="eyebrow">{t.documents}</p>
+          <h2>{t.requestDocuments}</h2>
           {requestedDocuments.length === 0 ? (
-            <p>No document upload is currently required from you.</p>
+            <p>{t.noDocumentUpload}</p>
           ) : (
             <form className="catalog-form" onSubmit={submitUpload}>
               <label>
-                Request
+                {t.request}
                 <select
                   required
                   value={selectedDocumentRequestId}
@@ -422,10 +555,10 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
                     setUploadForm({ ...uploadForm, documentRequestId: event.target.value })
                   }
                 >
-                  <option value="">Select request</option>
+                  <option value="">{t.selectDocument}</option>
                   {requestedDocuments.map((documentRequest) => (
                     <option key={documentRequest.id} value={documentRequest.id}>
-                      {documentRequest.title}
+                      {safeSystemText(documentRequest.title, t.requestDocuments, locale)}
                     </option>
                   ))}
                 </select>
@@ -433,13 +566,16 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
               {selectedDocumentRequest && (
                 <div className="form-span">
                   <p>
-                    {selectedDocumentRequest.instructions ??
-                      "Upload the requested document metadata for Jzoom review."}
+                    {safeSystemText(
+                      selectedDocumentRequest.instructions,
+                      t.documentInstructionsFallback,
+                      locale,
+                    )}
                   </p>
                 </div>
               )}
               <label>
-                File name
+                {t.fileName}
                 <input
                   required
                   value={uploadForm.originalName}
@@ -449,7 +585,7 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
                 />
               </label>
               <label>
-                MIME type
+                {t.mimeType}
                 <input
                   required
                   value={uploadForm.mimeType}
@@ -459,7 +595,7 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
                 />
               </label>
               <label>
-                Size bytes
+                {t.fileSizeBytes}
                 <input
                   required
                   min="1"
@@ -481,32 +617,36 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
                 />
               </label>
               <button className="os-button os-button-primary" type="submit" disabled={saving}>
-                Upload metadata
+                {t.metadataUpload}
               </button>
             </form>
           )}
           <div className="activity-list">
             {request.documentRequests.length === 0 ? (
-              <p>No documents requested yet.</p>
+              <p>{t.noDocuments}</p>
             ) : (
               request.documentRequests.map((documentRequest) => (
                 <article key={documentRequest.id}>
                   <div className="entity-card-heading">
                     <div>
-                      <strong>{documentRequest.title}</strong>
-                      <small>Due {dateTime(documentRequest.dueAt)}</small>
+                      <strong>{safeSystemText(documentRequest.title, t.requestDocuments, locale)}</strong>
+                      <small>
+                        {t.due} {clientDateTime(documentRequest.dueAt, locale)}
+                      </small>
                     </div>
                     <StatusChip
                       status={documentRequest.status}
-                      label={documentStatusLabel(documentRequest.status)}
+                      label={documentStatusLabel(documentRequest.status, locale)}
                     />
                   </div>
-                  <p>{documentActionCopy(documentRequest.status)}</p>
-                  {documentRequest.instructions && <p>{documentRequest.instructions}</p>}
+                  <p>{documentActionCopy(documentRequest.status, locale)}</p>
+                  {documentRequest.instructions && (
+                    <p>{safeSystemText(documentRequest.instructions, t.documentInstructionsFallback, locale)}</p>
+                  )}
                   {documentRequest.file && (
                     <p>
-                      Uploaded: {documentRequest.file.originalName} -{" "}
-                      {fileSize(documentRequest.file.sizeBytes)}
+                      {t.uploadedPrefix}: {documentRequest.file.originalName} -{" "}
+                      {fileSize(documentRequest.file.sizeBytes, locale)}
                     </p>
                   )}
                 </article>
@@ -518,21 +658,21 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
 
       {request.templateResponse && (
         <section className="catalog-panel">
-          <h2>Submitted template answers</h2>
+          <h2>{t.submittedAnswers}</h2>
           <p>
-            Completeness:{" "}
+            {t.completeness}:{" "}
             <StatusChip
               status={request.templateResponse.completenessStatus}
-              label={request.templateResponse.completenessStatus}
+              label={requestStatusLabel(request.templateResponse.completenessStatus, locale)}
             />
           </p>
           <div className="activity-list">
             {request.templateResponse.answers.length === 0 ? (
-              <p>No client-visible structured answers were submitted.</p>
+              <p>{t.noStructuredAnswers}</p>
             ) : (
               request.templateResponse.answers.map((answer) => (
                 <article key={answer.id}>
-                  <strong>{answer.labelEn}</strong>
+                  <strong>{locale === "ar" ? answer.labelAr || answer.labelEn : answer.labelEn || answer.labelAr}</strong>
                   <small>
                     {answer.fieldCode} · {answer.fieldType}
                   </small>
@@ -547,24 +687,24 @@ export function ClientRequestDetail({ request: initialRequest }: { request: Serv
       )}
 
       <section className="catalog-panel">
-        <h2>Comments</h2>
+        <h2>{t.comments}</h2>
         <form className="catalog-form" onSubmit={submit}>
           <label className="form-span">
-            Add comment
+            {t.addCommentLabel}
             <textarea required value={body} onChange={(event) => setBody(event.target.value)} />
           </label>
           <button className="os-button os-button-primary" type="submit" disabled={saving}>
-            Add comment
+            {t.addComment}
           </button>
         </form>
         <div className="activity-list">
           {request.comments.length === 0 ? (
-            <p>No client-visible comments yet.</p>
+            <p>{t.noComments}</p>
           ) : (
             request.comments.map((comment) => (
               <article key={comment.id}>
                 <strong>{comment.author.displayName}</strong>
-                <small>{dateTime(comment.createdAt)}</small>
+                <small>{clientDateTime(comment.createdAt, locale)}</small>
                 <p>{comment.body}</p>
               </article>
             ))

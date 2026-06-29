@@ -22,7 +22,7 @@ export default async function ClientInvoiceDetailPage({
       displayName={account.user.displayName}
       locale={account.user.preferredLocale}
     >
-      <ClientInvoiceDetail invoice={invoice} />
+      <ClientInvoiceDetail invoice={invoice} locale={account.user.preferredLocale} />
     </ClientShell>
   );
 }
