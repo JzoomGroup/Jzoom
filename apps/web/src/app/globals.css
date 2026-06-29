@@ -3230,11 +3230,13 @@ body {
 
 .premium-shell[dir="ltr"] .premium-sidebar {
   grid-column: 1;
+  grid-row: 1;
   direction: ltr;
 }
 
 .premium-shell[dir="ltr"] .premium-workspace {
   grid-column: 2;
+  grid-row: 1;
   direction: ltr;
 }
 
@@ -3244,11 +3246,13 @@ body {
 
 .premium-shell[dir="rtl"] .premium-sidebar {
   grid-column: 2;
+  grid-row: 1;
   direction: rtl;
 }
 
 .premium-shell[dir="rtl"] .premium-workspace {
   grid-column: 1;
+  grid-row: 1;
   direction: rtl;
 }
 
