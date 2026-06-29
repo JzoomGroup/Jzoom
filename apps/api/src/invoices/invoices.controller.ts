@@ -20,7 +20,7 @@ import {
   ApiTags,
 } from "@nestjs/swagger";
 import type { Response } from "express";
-import { ADMIN_ROLE_CODE } from "../auth/auth.constants.js";
+import { ADMIN_ROLE_CODE, MANAGEMENT_ROLE_CODE } from "../auth/auth.constants.js";
 import { RequirePermissions, RequireRoles } from "../auth/auth.decorators.js";
 import type { RequestMetadata } from "../auth/auth.types.js";
 import type { RequestWithId } from "../request-context/request-with-id.js";
@@ -40,7 +40,7 @@ function metadata(request: RequestWithId): RequestMetadata {
 @ApiTags("invoices")
 @ApiCookieAuth()
 @ApiExtraModels(CreateInvoiceDto, InvoiceLifecycleActionDto, InvoiceStatusDto)
-@RequireRoles(ADMIN_ROLE_CODE, ACCOUNT_MANAGER_ROLE_CODE)
+@RequireRoles(ADMIN_ROLE_CODE, MANAGEMENT_ROLE_CODE, ACCOUNT_MANAGER_ROLE_CODE)
 @RequirePermissions(MANAGE_INVOICES_PERMISSION)
 @Controller("invoices")
 export class InvoicesController {

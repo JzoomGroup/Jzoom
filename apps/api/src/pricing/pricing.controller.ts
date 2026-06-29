@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Inject, Param, Patch, Post, Put, Req } from "@nestjs/common";
 import { ApiCookieAuth, ApiExtraModels, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { ADMIN_ROLE_CODE } from "../auth/auth.constants.js";
+import { ADMIN_ROLE_CODE, MANAGEMENT_ROLE_CODE } from "../auth/auth.constants.js";
 import { RequirePermissions, RequireRoles } from "../auth/auth.decorators.js";
 import type { RequestMetadata } from "../auth/auth.types.js";
 import type { RequestWithId } from "../request-context/request-with-id.js";
@@ -109,7 +109,7 @@ export class AdminPricingRulesController {
 @ApiTags("pricing-studio")
 @ApiCookieAuth()
 @ApiExtraModels(...documentedModels)
-@RequireRoles(ADMIN_ROLE_CODE, ACCOUNT_MANAGER_ROLE_CODE)
+@RequireRoles(ADMIN_ROLE_CODE, MANAGEMENT_ROLE_CODE, ACCOUNT_MANAGER_ROLE_CODE)
 @RequirePermissions(USE_PRICING_STUDIO_PERMISSION)
 @Controller("pricing")
 export class PricingStudioController {

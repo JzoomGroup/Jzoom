@@ -388,7 +388,10 @@ export class RequestsService {
       input.subscriptionServiceId,
       input.clientId,
     );
-    await this.requireServiceItem(input.serviceItemRevisionId, subscriptionService);
+    const serviceItemRevision = await this.requireServiceItem(
+      input.serviceItemRevisionId,
+      subscriptionService,
+    );
     await this.requireSourceQuote(input.sourceQuoteId, input.clientId);
     await this.requireSourceInvoice(input.sourceInvoiceId, input.clientId);
     const templateSubmission = await this.requestTemplates.buildSubmissionForRequest(
@@ -404,17 +407,34 @@ export class RequestsService {
       principal,
     );
 
-    const assignedSpecialistId = await this.assignmentUserId(input.assignedSpecialistId, [
+    const manualAssignedSpecialistId = await this.assignmentUserId(input.assignedSpecialistId, [
       SPECIALIST_ROLE_CODE,
     ]);
-    const assignedSupervisorId = await this.assignmentUserId(input.assignedSupervisorId, [
+    const assignedSpecialistId =
+      manualAssignedSpecialistId ??
+      (await this.suggestedSpecialistIdForRequest({
+        clientId: client.id,
+        monthlyServiceId: subscriptionService.monthlyServiceRevision.monthlyServiceId,
+        ...(serviceItemRevision?.serviceItemId
+          ? { serviceItemId: serviceItemRevision.serviceItemId }
+          : {}),
+      }));
+    const manualAssignedSupervisorId = await this.assignmentUserId(input.assignedSupervisorId, [
       SUPERVISOR_ROLE_CODE,
     ]);
-    const accountManagerId = await this.assignmentUserId(
+    const assignedSupervisorId =
+      manualAssignedSupervisorId ??
+      (assignedSpecialistId
+        ? await this.suggestedSupervisorIdForSpecialist(assignedSpecialistId, client.id)
+        : undefined);
+    const suggestedAccountManagerId =
       input.accountManagerId ??
-        (principal.roles.includes(ACCOUNT_MANAGER_ROLE_CODE) ? principal.userId : undefined),
-      [ACCOUNT_MANAGER_ROLE_CODE],
-    );
+      (principal.roles.includes(ACCOUNT_MANAGER_ROLE_CODE)
+        ? principal.userId
+        : await this.suggestedAccountManagerIdForClient(client.id));
+    const accountManagerId = await this.assignmentUserId(suggestedAccountManagerId, [
+      ACCOUNT_MANAGER_ROLE_CODE,
+    ]);
     const workflow = await this.ensureRequestWorkflow();
     const requestNumber = await this.nextRequestNumber();
     const requestData: Prisma.RequestUncheckedCreateInput = {
@@ -2228,7 +2248,7 @@ export class RequestsService {
     subscriptionService: Awaited<ReturnType<RequestsService["requireActiveSubscriptionService"]>>,
   ) {
     if (!serviceItemRevisionId) {
-      return;
+      return null;
     }
     const serviceItemRevision = await this.database.prisma.serviceItemRevision.findFirst({
       where: {
@@ -2253,6 +2273,128 @@ export class RequestsService {
         message: "The selected service item must belong to the subscription service",
       });
     }
+    return serviceItemRevision;
+  }
+
+  private async suggestedSpecialistIdForRequest(input: {
+    clientId: string;
+    monthlyServiceId: string;
+    serviceItemId?: string;
+  }): Promise<string | undefined> {
+    const now = new Date();
+    const serviceTargets: Prisma.SpecialistServiceScopeWhereInput[] = [
+      { monthlyServiceId: input.monthlyServiceId },
+    ];
+    if (input.serviceItemId) {
+      serviceTargets.unshift({ serviceItemId: input.serviceItemId });
+    }
+
+    const scopes = await this.database.prisma.specialistServiceScope.findMany({
+      where: {
+        status: "ACTIVE",
+        startsAt: { lte: now },
+        OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+        AND: [{ OR: [{ clientId: input.clientId }, { clientId: null }] }, { OR: serviceTargets }],
+        user: {
+          status: "ACTIVE",
+          userType: "INTERNAL",
+          roles: {
+            some: {
+              role: { code: SPECIALIST_ROLE_CODE, status: "ACTIVE" },
+            },
+          },
+        },
+      },
+      select: {
+        userId: true,
+        clientId: true,
+        monthlyServiceId: true,
+        serviceItemId: true,
+        isPrimary: true,
+        createdAt: true,
+      },
+    });
+    if (scopes.length === 0) {
+      return undefined;
+    }
+
+    const score = (scope: (typeof scopes)[number]) =>
+      (scope.clientId === input.clientId ? 100 : 0) +
+      (input.serviceItemId && scope.serviceItemId === input.serviceItemId ? 60 : 0) +
+      (scope.monthlyServiceId === input.monthlyServiceId ? 30 : 0) +
+      (scope.isPrimary ? 5 : 0);
+
+    return scopes.sort((left, right) => {
+      const scoreDiff = score(right) - score(left);
+      if (scoreDiff !== 0) return scoreDiff;
+      return right.createdAt.getTime() - left.createdAt.getTime();
+    })[0]?.userId;
+  }
+
+  private async suggestedSupervisorIdForSpecialist(
+    specialistId: string,
+    clientId: string,
+  ): Promise<string | undefined> {
+    const now = new Date();
+    const assignments = await this.database.prisma.supervisorSpecialistAssignment.findMany({
+      where: {
+        specialistId,
+        status: "ACTIVE",
+        startsAt: { lte: now },
+        AND: [
+          { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+          { OR: [{ clientId }, { clientId: null }] },
+        ],
+        supervisor: {
+          status: "ACTIVE",
+          userType: "INTERNAL",
+          roles: {
+            some: {
+              role: { code: SUPERVISOR_ROLE_CODE, status: "ACTIVE" },
+            },
+          },
+        },
+      },
+      select: {
+        supervisorId: true,
+        clientId: true,
+        startsAt: true,
+      },
+    });
+    if (assignments.length === 0) {
+      return undefined;
+    }
+
+    return assignments.sort((left, right) => {
+      const clientDiff =
+        (right.clientId === clientId ? 1 : 0) - (left.clientId === clientId ? 1 : 0);
+      if (clientDiff !== 0) return clientDiff;
+      return right.startsAt.getTime() - left.startsAt.getTime();
+    })[0]?.supervisorId;
+  }
+
+  private async suggestedAccountManagerIdForClient(clientId: string): Promise<string | undefined> {
+    const now = new Date();
+    const assignment = await this.database.prisma.clientAssignment.findFirst({
+      where: {
+        clientId,
+        roleCode: ACCOUNT_MANAGER_ROLE_CODE,
+        startsAt: { lte: now },
+        OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+        user: {
+          status: "ACTIVE",
+          userType: "INTERNAL",
+          roles: {
+            some: {
+              role: { code: ACCOUNT_MANAGER_ROLE_CODE, status: "ACTIVE" },
+            },
+          },
+        },
+      },
+      orderBy: { startsAt: "desc" },
+      select: { userId: true },
+    });
+    return assignment?.userId;
   }
 
   private async requireSourceQuote(sourceQuoteId: string | undefined, clientId: string) {

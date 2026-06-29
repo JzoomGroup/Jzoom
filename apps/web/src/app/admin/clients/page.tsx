@@ -10,7 +10,10 @@ export default async function AdminClientsPage() {
   if (!user) {
     redirect("/login");
   }
-  if (!user.roles.includes("ROLE-ADMIN") || !user.permissions.includes("PERM-MANAGE-CLIENTS")) {
+  if (
+    !user.roles.some((role) => role === "ROLE-ADMIN" || role === "ROLE-MGMT") ||
+    !user.permissions.includes("PERM-MANAGE-CLIENTS")
+  ) {
     redirect("/403");
   }
 
@@ -19,6 +22,8 @@ export default async function AdminClientsPage() {
       activePath="/admin/clients"
       displayName={user.displayName}
       locale={user.preferredLocale}
+      permissions={user.permissions}
+      roles={user.roles}
     >
       <ClientManager initialSnapshot={snapshot} locale={user.preferredLocale} />
     </AdminShell>

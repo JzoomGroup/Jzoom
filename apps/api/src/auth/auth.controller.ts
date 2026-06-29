@@ -38,6 +38,7 @@ import {
   UpdateProfilePreferencesDto,
   UpdateUserStatusDto,
 } from "./auth.dto.js";
+import type { CreateOperatingUserDto, UpdateOperatingUserScopeDto } from "./auth.dto.js";
 import { AuthService } from "./auth.service.js";
 import { clearAuthCookies, setAuthCookies } from "./cookie.js";
 import type { AuthRuntimeEnvironment, RequestMetadata } from "./auth.types.js";
@@ -214,6 +215,21 @@ export class AuthController {
     return this.admin.listUsers();
   }
 
+  @Post("admin/users")
+  @HttpCode(201)
+  @RequireRoles(ADMIN_ROLE_CODE)
+  @RequirePermissions(MANAGE_USERS_PERMISSION)
+  @ApiCookieAuth()
+  @ApiOperation({ summary: "Create an internal operating user with client and service scope" })
+  async createOperatingUser(@Body() input: CreateOperatingUserDto, @Req() request: RequestWithId) {
+    return this.admin.createOperatingUser(
+      input,
+      request.auth!.userId,
+      this.environment.auth.exposeTestTokens,
+      metadata(request),
+    );
+  }
+
   @Get("admin/roles")
   @RequireRoles(ADMIN_ROLE_CODE)
   @RequirePermissions(MODIFY_PERMISSIONS_PERMISSION)
@@ -280,6 +296,20 @@ export class AuthController {
       request.auth!.userId,
       metadata(request),
     );
+    return { updated: true };
+  }
+
+  @Put("admin/users/:userId/operating-scope")
+  @RequireRoles(ADMIN_ROLE_CODE)
+  @RequirePermissions(MANAGE_USERS_PERMISSION)
+  @ApiCookieAuth()
+  @ApiOperation({ summary: "Replace client, service, and supervisor scope for an operating user" })
+  async replaceOperatingScope(
+    @Param("userId") userId: string,
+    @Body() input: UpdateOperatingUserScopeDto,
+    @Req() request: RequestWithId,
+  ) {
+    await this.admin.replaceOperatingScope(userId, input, request.auth!.userId, metadata(request));
     return { updated: true };
   }
 

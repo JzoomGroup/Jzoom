@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Inject, Param, Patch, Post, Put, Req } from "@nestjs/common";
 import { ApiCookieAuth, ApiExtraModels, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { ADMIN_ROLE_CODE } from "../auth/auth.constants.js";
+import { ADMIN_ROLE_CODE, MANAGEMENT_ROLE_CODE } from "../auth/auth.constants.js";
 import { RequirePermissions, RequireRoles } from "../auth/auth.decorators.js";
 import type { RequestMetadata } from "../auth/auth.types.js";
 import type { RequestWithId } from "../request-context/request-with-id.js";
@@ -32,7 +32,7 @@ function metadata(request: RequestWithId): RequestMetadata {
   ArchiveClientDto,
   CreateClientPortalUserDto,
 )
-@RequireRoles(ADMIN_ROLE_CODE)
+@RequireRoles(ADMIN_ROLE_CODE, MANAGEMENT_ROLE_CODE)
 @RequirePermissions(MANAGE_CLIENTS_PERMISSION)
 @Controller("admin/clients")
 export class ClientsController {

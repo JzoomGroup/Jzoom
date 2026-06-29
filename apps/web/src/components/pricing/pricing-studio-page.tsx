@@ -25,7 +25,9 @@ export async function PricingStudioPage({
     redirect("/login");
   }
   if (
-    !user.roles.some((role) => role === "ROLE-ADMIN" || role === "ROLE-AM") ||
+    !user.roles.some(
+      (role) => role === "ROLE-ADMIN" || role === "ROLE-MGMT" || role === "ROLE-AM",
+    ) ||
     !user.permissions.includes("PERM-USE-PRICING-STUDIO")
   ) {
     redirect("/403");

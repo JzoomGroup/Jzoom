@@ -12,6 +12,47 @@ export interface AdminAccessClientRef {
   name: string;
 }
 
+export interface AdminAccessOperatingUserRef {
+  id: string;
+  email: string;
+  displayName: string;
+}
+
+export interface AdminAccessServiceRef {
+  id: string;
+  code: string;
+  nameAr: string;
+  nameEn: string;
+  domain: string | null;
+  serviceLine: string | null;
+}
+
+export interface AdminAccessServiceItemRef {
+  id: string;
+  code: string;
+  monthlyServiceId: string;
+  monthlyServiceCode: string;
+  nameAr: string;
+  nameEn: string;
+  requestType: string | null;
+}
+
+export interface AdminAccessOneTimeServiceRef {
+  id: string;
+  code: string;
+  serviceLine: string;
+  nameAr: string;
+  nameEn: string;
+}
+
+export interface AdminAccessSetup {
+  clients: AdminAccessClientRef[];
+  roles: Array<AdminAccessRoleRef & { id: string }>;
+  monthlyServices: AdminAccessServiceRef[];
+  serviceItems: AdminAccessServiceItemRef[];
+  oneTimeServices: AdminAccessOneTimeServiceRef[];
+}
+
 export interface AdminAccessPermission {
   id?: string;
   code: string;
@@ -49,6 +90,34 @@ export interface AdminAccessUser {
     startsAt: string;
     endsAt: string | null;
     client: AdminAccessClientRef;
+  }>;
+  specialistServiceScopes: Array<{
+    id: string;
+    isPrimary: boolean;
+    status: string;
+    startsAt: string;
+    endsAt: string | null;
+    client: AdminAccessClientRef | null;
+    monthlyService: Pick<AdminAccessServiceRef, "id" | "code" | "nameAr" | "nameEn"> | null;
+    serviceItem: Pick<
+      AdminAccessServiceItemRef,
+      "id" | "code" | "monthlyServiceId" | "nameAr" | "nameEn"
+    > | null;
+    oneTimeService: AdminAccessOneTimeServiceRef | null;
+  }>;
+  assignedSupervisors: Array<{
+    id: string;
+    startsAt: string;
+    endsAt: string | null;
+    client: AdminAccessClientRef | null;
+    supervisor: AdminAccessOperatingUserRef;
+  }>;
+  supervisedSpecialists: Array<{
+    id: string;
+    startsAt: string;
+    endsAt: string | null;
+    client: AdminAccessClientRef | null;
+    specialist: AdminAccessOperatingUserRef;
   }>;
   permissionOverrides: Array<{
     effect: string;
@@ -94,6 +163,7 @@ export interface AdminAuditLog {
 
 export interface AdminUsersSnapshot {
   users: AdminAccessUser[];
+  setup: AdminAccessSetup;
 }
 
 export interface AdminRolesSnapshot {

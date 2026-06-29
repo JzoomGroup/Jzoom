@@ -5084,6 +5084,158 @@ body {
   color: #ffffff;
 }
 
+.access-feedback {
+  margin-block-end: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.access-feedback.success {
+  border-color: rgba(62, 142, 101, 0.24);
+  background: rgba(62, 142, 101, 0.08);
+  color: #216846;
+}
+
+.access-feedback.error {
+  border-color: rgba(156, 32, 23, 0.24);
+  background: #fff3ef;
+  color: #9c2017;
+}
+
+.operating-user-form {
+  display: grid;
+  gap: 16px;
+}
+
+.operating-user-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.operating-user-grid label,
+.operating-scope-grid fieldset {
+  min-width: 0;
+}
+
+.operating-user-grid label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.operating-user-grid input,
+.operating-user-grid select {
+  min-height: 42px;
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: var(--ink);
+  padding: 9px 11px;
+  font: inherit;
+  font-weight: 800;
+}
+
+.operating-scope-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.operating-scope-grid fieldset {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(248, 249, 251, 0.72);
+}
+
+.operating-scope-grid legend {
+  padding-inline: 6px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.operating-scope-grid p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.scope-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  max-height: 260px;
+  overflow: auto;
+  padding-inline-end: 4px;
+}
+
+.scope-picker-grid label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  min-height: 46px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 850;
+}
+
+.scope-picker-grid input {
+  margin-block-start: 3px;
+}
+
+.scope-picker-grid span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.scope-picker-grid small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.operating-user-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.operating-scope-summary {
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: rgba(248, 249, 251, 0.72);
+}
+
+.operating-scope-summary strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 950;
+}
+
 .access-details {
   padding: 12px;
   border: 1px solid var(--line);

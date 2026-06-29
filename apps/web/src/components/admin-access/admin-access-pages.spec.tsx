@@ -41,6 +41,7 @@ const role: AdminAccessRole = {
 };
 
 const user: AdminAccessUser = {
+  assignedSupervisors: [],
   clientAssignments: [
     {
       client: { code: "CLIENT-1", id: "client-1", name: "Acme" },
@@ -67,7 +68,9 @@ const user: AdminAccessUser = {
   roles: [role],
   scopes: [],
   sessionVersion: 1,
+  specialistServiceScopes: [],
   status: "ACTIVE",
+  supervisedSpecialists: [],
   updatedAt: "2026-01-01T00:00:00.000Z",
   userType: "INTERNAL",
 };

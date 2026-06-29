@@ -10,7 +10,9 @@ function canUseQuotes(
 ): user is NonNullable<typeof user> {
   return Boolean(
     user &&
-    user.roles.some((role) => role === "ROLE-ADMIN" || role === "ROLE-AM") &&
+    user.roles.some(
+      (role) => role === "ROLE-ADMIN" || role === "ROLE-MGMT" || role === "ROLE-AM",
+    ) &&
     user.permissions.includes("PERM-MANAGE-QUOTES"),
   );
 }

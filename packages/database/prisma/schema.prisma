@@ -374,21 +374,21 @@ model RolePermission {
 }
 
 model User {
-  id                       String                   @id @default(uuid()) @db.Uuid
-  email                    String                   @unique
+  id                       String                           @id @default(uuid()) @db.Uuid
+  email                    String                           @unique
   passwordHash             String?
   displayName              String
-  preferredLocale          String                   @default("ar")
+  preferredLocale          String                           @default("ar")
   userType                 UserType
-  status                   UserStatus               @default(INVITED)
-  failedLoginCount         Int                      @default(0)
+  status                   UserStatus                       @default(INVITED)
+  failedLoginCount         Int                              @default(0)
   lockedUntil              DateTime?
   passwordChangedAt        DateTime?
-  sessionVersion           Int                      @default(1)
+  sessionVersion           Int                              @default(1)
   lastLoginAt              DateTime?
   archivedAt               DateTime?
-  createdAt                DateTime                 @default(now())
-  updatedAt                DateTime                 @updatedAt
+  createdAt                DateTime                         @default(now())
+  updatedAt                DateTime                         @updatedAt
   roles                    UserRole[]
   permissionOverrides      UserPermissionOverride[]
   scopes                   UserScope[]
@@ -400,27 +400,30 @@ model User {
   notifications            Notification[]
   auditLogs                AuditLog[]
   authSessions             AuthSession[]
-  authTokens               AuthToken[]              @relation("AuthTokenUser")
-  createdAuthTokens        AuthToken[]              @relation("AuthTokenCreator")
-  createdPricingDrafts     PricingDraft[]           @relation("PricingDraftCreator")
-  updatedPricingDrafts     PricingDraft[]           @relation("PricingDraftUpdater")
-  createdQuotes            Quote[]                  @relation("QuoteCreator")
-  createdInvoices          Invoice[]                @relation("InvoiceCreator")
-  specialistRequests       Request[]                @relation("RequestAssignedSpecialist")
-  supervisorRequests       Request[]                @relation("RequestAssignedSupervisor")
-  accountManagedRequests   Request[]                @relation("RequestAccountManager")
-  assignedTasks            Task[]                   @relation("TaskAssignee")
-  createdRequestOutputs    RequestOutput[]          @relation("RequestOutputCreator")
-  reviewedRequestOutputs   RequestOutput[]          @relation("RequestOutputReviewer")
-  sharedRequestOutputs     RequestOutput[]          @relation("RequestOutputSharer")
-  decidedRequestOutputs    RequestOutput[]          @relation("RequestOutputClientDecision")
-  requestedDocuments       ClientDocumentRequest[]  @relation("ClientDocumentRequester")
-  fulfilledDocuments       ClientDocumentRequest[]  @relation("ClientDocumentFulfiller")
-  decidedTimeEntries       TimeEntry[]              @relation("TimeEntryDecider")
-  preparedMonthlyReports   ClientMonthlyReport[]    @relation("MonthlyReportPreparer")
-  preparedMonthlyClosings  ClientMonthlyClosing[]   @relation("MonthlyClosingPreparer")
-  finalizedMonthlyClosings ClientMonthlyClosing[]   @relation("MonthlyClosingFinalizer")
-  submittedRequestForms    RequestFormResponse[]    @relation("RequestFormSubmitter")
+  authTokens               AuthToken[]                      @relation("AuthTokenUser")
+  createdAuthTokens        AuthToken[]                      @relation("AuthTokenCreator")
+  createdPricingDrafts     PricingDraft[]                   @relation("PricingDraftCreator")
+  updatedPricingDrafts     PricingDraft[]                   @relation("PricingDraftUpdater")
+  createdQuotes            Quote[]                          @relation("QuoteCreator")
+  createdInvoices          Invoice[]                        @relation("InvoiceCreator")
+  specialistRequests       Request[]                        @relation("RequestAssignedSpecialist")
+  supervisorRequests       Request[]                        @relation("RequestAssignedSupervisor")
+  accountManagedRequests   Request[]                        @relation("RequestAccountManager")
+  assignedTasks            Task[]                           @relation("TaskAssignee")
+  createdRequestOutputs    RequestOutput[]                  @relation("RequestOutputCreator")
+  reviewedRequestOutputs   RequestOutput[]                  @relation("RequestOutputReviewer")
+  sharedRequestOutputs     RequestOutput[]                  @relation("RequestOutputSharer")
+  decidedRequestOutputs    RequestOutput[]                  @relation("RequestOutputClientDecision")
+  requestedDocuments       ClientDocumentRequest[]          @relation("ClientDocumentRequester")
+  fulfilledDocuments       ClientDocumentRequest[]          @relation("ClientDocumentFulfiller")
+  decidedTimeEntries       TimeEntry[]                      @relation("TimeEntryDecider")
+  preparedMonthlyReports   ClientMonthlyReport[]            @relation("MonthlyReportPreparer")
+  preparedMonthlyClosings  ClientMonthlyClosing[]           @relation("MonthlyClosingPreparer")
+  finalizedMonthlyClosings ClientMonthlyClosing[]           @relation("MonthlyClosingFinalizer")
+  submittedRequestForms    RequestFormResponse[]            @relation("RequestFormSubmitter")
+  specialistServiceScopes  SpecialistServiceScope[]         @relation("SpecialistServiceScopes")
+  supervisedSpecialists    SupervisorSpecialistAssignment[] @relation("SupervisorSpecialistSupervisor")
+  assignedSupervisors      SupervisorSpecialistAssignment[] @relation("SupervisorSpecialistSpecialist")
 
   @@index([status])
   @@index([lockedUntil])
@@ -511,37 +514,39 @@ model UserScope {
 }
 
 model Client {
-  id                     String                  @id @default(uuid()) @db.Uuid
-  code                   String                  @unique
-  name                   String
-  legalName              String?
-  commercialRegistration String?
-  sector                 String
-  city                   String?
-  employeesCount         Int                     @default(0)
-  branchesCount          Int                     @default(0)
-  transactionVolume      String?
-  operationalComplexity  String?
-  dataReadiness          String?
-  urgency                String?
-  billingContact         String?
-  authorizedApprover     String
-  status                 RecordStatus            @default(ACTIVE)
-  archivedAt             DateTime?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  contacts               ClientContact[]
-  assignments            ClientAssignment[]
-  scopes                 UserScope[]
-  subscriptions          Subscription[]
-  quotes                 Quote[]
-  invoices               Invoice[]
-  requests               Request[]
-  projects               Project[]
-  hourTransactions       HourLedgerTransaction[]
-  pricingDrafts          PricingDraft[]
-  monthlyReports         ClientMonthlyReport[]
-  monthlyClosings        ClientMonthlyClosing[]
+  id                      String                           @id @default(uuid()) @db.Uuid
+  code                    String                           @unique
+  name                    String
+  legalName               String?
+  commercialRegistration  String?
+  sector                  String
+  city                    String?
+  employeesCount          Int                              @default(0)
+  branchesCount           Int                              @default(0)
+  transactionVolume       String?
+  operationalComplexity   String?
+  dataReadiness           String?
+  urgency                 String?
+  billingContact          String?
+  authorizedApprover      String
+  status                  RecordStatus                     @default(ACTIVE)
+  archivedAt              DateTime?
+  createdAt               DateTime                         @default(now())
+  updatedAt               DateTime                         @updatedAt
+  contacts                ClientContact[]
+  assignments             ClientAssignment[]
+  specialistServiceScopes SpecialistServiceScope[]
+  supervisorAssignments   SupervisorSpecialistAssignment[]
+  scopes                  UserScope[]
+  subscriptions           Subscription[]
+  quotes                  Quote[]
+  invoices                Invoice[]
+  requests                Request[]
+  projects                Project[]
+  hourTransactions        HourLedgerTransaction[]
+  pricingDrafts           PricingDraft[]
+  monthlyReports          ClientMonthlyReport[]
+  monthlyClosings         ClientMonthlyClosing[]
 
   @@index([status])
   @@index([sector])
@@ -581,6 +586,53 @@ model ClientAssignment {
   @@unique([clientId, userId, roleCode, startsAt])
   @@index([userId, startsAt, endsAt])
   @@map("client_assignments")
+}
+
+model SpecialistServiceScope {
+  id               String          @id @default(uuid()) @db.Uuid
+  userId           String          @db.Uuid
+  clientId         String?         @db.Uuid
+  monthlyServiceId String?         @db.Uuid
+  serviceItemId    String?         @db.Uuid
+  oneTimeServiceId String?         @db.Uuid
+  isPrimary        Boolean         @default(true)
+  status           RecordStatus    @default(ACTIVE)
+  startsAt         DateTime        @default(now())
+  endsAt           DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  user             User            @relation("SpecialistServiceScopes", fields: [userId], references: [id], onDelete: Cascade)
+  client           Client?         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  monthlyService   MonthlyService? @relation(fields: [monthlyServiceId], references: [id], onDelete: Cascade)
+  serviceItem      ServiceItem?    @relation(fields: [serviceItemId], references: [id], onDelete: Cascade)
+  oneTimeService   OneTimeService? @relation(fields: [oneTimeServiceId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, startsAt, endsAt])
+  @@index([clientId, status])
+  @@index([monthlyServiceId, status])
+  @@index([serviceItemId, status])
+  @@index([oneTimeServiceId, status])
+  @@map("specialist_service_scopes")
+}
+
+model SupervisorSpecialistAssignment {
+  id           String       @id @default(uuid()) @db.Uuid
+  supervisorId String       @db.Uuid
+  specialistId String       @db.Uuid
+  clientId     String?      @db.Uuid
+  status       RecordStatus @default(ACTIVE)
+  startsAt     DateTime     @default(now())
+  endsAt       DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  supervisor   User         @relation("SupervisorSpecialistSupervisor", fields: [supervisorId], references: [id], onDelete: Cascade)
+  specialist   User         @relation("SupervisorSpecialistSpecialist", fields: [specialistId], references: [id], onDelete: Cascade)
+  client       Client?      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([supervisorId, status, startsAt, endsAt])
+  @@index([specialistId, status, startsAt, endsAt])
+  @@index([clientId, status])
+  @@map("supervisor_specialist_assignments")
 }
 
 model ServiceLevel {
@@ -626,18 +678,19 @@ model MonthlyServiceCategory {
 }
 
 model MonthlyService {
-  id         String                   @id @default(uuid()) @db.Uuid
-  categoryId String                   @db.Uuid
-  code       String                   @unique
-  externalId String?
-  status     RecordStatus             @default(ACTIVE)
-  sortOrder  Int                      @default(0)
-  archivedAt DateTime?
-  createdAt  DateTime                 @default(now())
-  updatedAt  DateTime                 @updatedAt
-  category   MonthlyServiceCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  revisions  MonthlyServiceRevision[]
-  items      ServiceItem[]
+  id                      String                   @id @default(uuid()) @db.Uuid
+  categoryId              String                   @db.Uuid
+  code                    String                   @unique
+  externalId              String?
+  status                  RecordStatus             @default(ACTIVE)
+  sortOrder               Int                      @default(0)
+  archivedAt              DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  category                MonthlyServiceCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  revisions               MonthlyServiceRevision[]
+  items                   ServiceItem[]
+  specialistServiceScopes SpecialistServiceScope[]
 
   @@index([status, sortOrder])
   @@index([categoryId, status, sortOrder])
@@ -701,17 +754,18 @@ model MonthlyServiceLevelConfig {
 }
 
 model ServiceItem {
-  id               String                @id @default(uuid()) @db.Uuid
-  code             String                @unique
-  monthlyServiceId String                @db.Uuid
-  status           RecordStatus          @default(ACTIVE)
-  sortOrder        Int                   @default(0)
-  archivedAt       DateTime?
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
-  monthlyService   MonthlyService        @relation(fields: [monthlyServiceId], references: [id], onDelete: Restrict)
-  revisions        ServiceItemRevision[]
-  requestTemplates RequestTemplate[]
+  id                      String                   @id @default(uuid()) @db.Uuid
+  code                    String                   @unique
+  monthlyServiceId        String                   @db.Uuid
+  status                  RecordStatus             @default(ACTIVE)
+  sortOrder               Int                      @default(0)
+  archivedAt              DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  monthlyService          MonthlyService           @relation(fields: [monthlyServiceId], references: [id], onDelete: Restrict)
+  revisions               ServiceItemRevision[]
+  requestTemplates        RequestTemplate[]
+  specialistServiceScopes SpecialistServiceScope[]
 
   @@index([monthlyServiceId, status, sortOrder])
   @@map("service_items")
@@ -761,17 +815,18 @@ model ServiceItemLevelInclusion {
 }
 
 model OneTimeService {
-  id          String                   @id @default(uuid()) @db.Uuid
-  categoryId  String                   @db.Uuid
-  code        String                   @unique
-  serviceLine String
-  status      RecordStatus             @default(ACTIVE)
-  sortOrder   Int                      @default(0)
-  archivedAt  DateTime?
-  createdAt   DateTime                 @default(now())
-  updatedAt   DateTime                 @updatedAt
-  category    OneTimeServiceCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  revisions   OneTimeServiceRevision[]
+  id                      String                   @id @default(uuid()) @db.Uuid
+  categoryId              String                   @db.Uuid
+  code                    String                   @unique
+  serviceLine             String
+  status                  RecordStatus             @default(ACTIVE)
+  sortOrder               Int                      @default(0)
+  archivedAt              DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  category                OneTimeServiceCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  revisions               OneTimeServiceRevision[]
+  specialistServiceScopes SpecialistServiceScope[]
 
   @@index([serviceLine, status, sortOrder])
   @@index([categoryId, status, sortOrder])

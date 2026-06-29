@@ -6,20 +6,32 @@ export function AdminShell({
   activePath,
   displayName,
   locale = "en",
+  permissions = [
+    "PERM-MANAGE-CLIENTS",
+    "PERM-MANAGE-INVOICES",
+    "PERM-MANAGE-QUOTES",
+    "PERM-MANAGE-USERS",
+    "PERM-USE-PRICING-STUDIO",
+  ],
+  roles = ["ROLE-ADMIN"],
 }: {
   children: ReactNode;
   activePath: string;
   displayName: string;
   locale?: string;
+  permissions?: string[];
+  roles?: string[];
 }) {
+  const isAdmin = roles.includes("ROLE-ADMIN");
   return (
     <AppShell
       activePath={activePath}
       displayName={displayName}
-      isAdmin
+      isAdmin={isAdmin}
       locale={locale}
       mode="admin"
-      roles={["ROLE-ADMIN"]}
+      permissions={permissions}
+      roles={roles}
     >
       {children}
     </AppShell>

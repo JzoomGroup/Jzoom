@@ -20,7 +20,11 @@ export default async function AdminUsersPage() {
       displayName={user.displayName}
       locale={user.preferredLocale}
     >
-      <AdminUsersPageContent locale={user.preferredLocale} users={snapshot.users} />
+      <AdminUsersPageContent
+        locale={user.preferredLocale}
+        setup={snapshot.setup}
+        users={snapshot.users}
+      />
     </AdminShell>
   );
 }

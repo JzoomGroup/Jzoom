@@ -1,4 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { useMemo, useState, type FormEvent } from "react";
+import {
+  adminAccessErrorMessage,
+  createOperatingUser,
+  type CreateOperatingUserPayload,
+} from "../../lib/admin-access-client";
 import {
   BentoGrid,
   EmptyState,
@@ -10,6 +18,7 @@ import {
 import type {
   AdminAccessPermission,
   AdminAccessRole,
+  AdminAccessSetup,
   AdminAccessUser,
   AdminAuditLog,
 } from "../../lib/admin-access-types";
@@ -430,19 +439,169 @@ function AccessNav({ locale }: { locale: SupportedLocale }) {
   );
 }
 
+const emptySetup: AdminAccessSetup = {
+  clients: [],
+  roles: [],
+  monthlyServices: [],
+  serviceItems: [],
+  oneTimeServices: [],
+};
+
+const operatingRoleLabels: Record<string, Record<SupportedLocale, string>> = {
+  "ROLE-ADMIN": { ar: "أدمن", en: "Admin" },
+  "ROLE-AM": { ar: "مدير حساب", en: "Account Manager" },
+  "ROLE-MGMT": { ar: "الإدارة", en: "Management" },
+  "ROLE-SPECIALIST": { ar: "مختص", en: "Specialist" },
+  "ROLE-SUPERVISOR": { ar: "مشرف", en: "Supervisor" },
+};
+
+function hasRole(user: AdminAccessUser, roleCode: string): boolean {
+  return user.roles.some((role) => role.code === roleCode);
+}
+
+function operatingRoleLabel(roleCode: string, locale: SupportedLocale): string {
+  return operatingRoleLabels[roleCode]?.[locale] ?? formatCode(roleCode, locale);
+}
+
+function serviceLabel(
+  value: { code: string; nameAr: string; nameEn: string },
+  locale: SupportedLocale,
+): string {
+  const name = locale === "ar" ? value.nameAr : value.nameEn;
+  return `${name || value.code} (${value.code})`;
+}
+
+function toggleValue(values: string[], value: string): string[] {
+  return values.includes(value) ? values.filter((entry) => entry !== value) : [...values, value];
+}
+
+function operatingScopeLabels(user: AdminAccessUser, locale: SupportedLocale): string[] {
+  const labels: string[] = [];
+  for (const assignment of user.clientAssignments) {
+    labels.push(`${assignment.client.name} (${assignment.roleCode})`);
+  }
+  for (const scope of user.specialistServiceScopes) {
+    const client = scope.client ? `${scope.client.name} / ` : "";
+    if (scope.serviceItem) {
+      labels.push(`${client}${serviceLabel(scope.serviceItem, locale)}`);
+    } else if (scope.monthlyService) {
+      labels.push(`${client}${serviceLabel(scope.monthlyService, locale)}`);
+    } else if (scope.oneTimeService) {
+      labels.push(`${client}${serviceLabel(scope.oneTimeService, locale)}`);
+    }
+  }
+  for (const assignment of user.assignedSupervisors) {
+    labels.push(
+      locale === "ar"
+        ? `مشرف: ${assignment.supervisor.displayName}`
+        : `Supervisor: ${assignment.supervisor.displayName}`,
+    );
+  }
+  for (const assignment of user.supervisedSpecialists) {
+    labels.push(
+      locale === "ar"
+        ? `مختص: ${assignment.specialist.displayName}`
+        : `Specialist: ${assignment.specialist.displayName}`,
+    );
+  }
+  return labels;
+}
+
 export function AdminUsersPageContent({
   locale,
+  setup = emptySetup,
   users,
 }: {
   locale: string;
+  setup?: AdminAccessSetup;
   users: AdminAccessUser[];
 }) {
   const lang = language(locale);
   const t = copy[lang];
-  const activeUsers = users.filter((user) => user.status === "ACTIVE" && !isLocked(user)).length;
-  const disabledUsers = users.filter((user) => user.status !== "ACTIVE").length;
-  const lockedUsers = users.filter(isLocked).length;
-  const usersWithOverrides = users.filter((user) => user.permissionOverrides.length > 0).length;
+  const [currentUsers, setCurrentUsers] = useState(users);
+  const [currentSetup, setCurrentSetup] = useState(setup);
+  const [showCreator, setShowCreator] = useState(false);
+  const [form, setForm] = useState<CreateOperatingUserPayload>({
+    clientIds: [],
+    displayName: "",
+    email: "",
+    monthlyServiceIds: [],
+    oneTimeServiceIds: [],
+    roleCode: "ROLE-SPECIALIST",
+    serviceItemIds: [],
+    specialistIds: [],
+  });
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(
+    null,
+  );
+  const activeUsers = currentUsers.filter(
+    (user) => user.status === "ACTIVE" && !isLocked(user),
+  ).length;
+  const disabledUsers = currentUsers.filter((user) => user.status !== "ACTIVE").length;
+  const lockedUsers = currentUsers.filter(isLocked).length;
+  const usersWithOverrides = currentUsers.filter(
+    (user) => user.permissionOverrides.length > 0,
+  ).length;
+  const specialists = useMemo(
+    () => currentUsers.filter((user) => hasRole(user, "ROLE-SPECIALIST")),
+    [currentUsers],
+  );
+  const supervisors = useMemo(
+    () => currentUsers.filter((user) => hasRole(user, "ROLE-SUPERVISOR")),
+    [currentUsers],
+  );
+  const selectedMonthlyServiceIds = new Set(form.monthlyServiceIds);
+  const visibleServiceItems = currentSetup.serviceItems.filter(
+    (item) =>
+      form.monthlyServiceIds.length === 0 || selectedMonthlyServiceIds.has(item.monthlyServiceId),
+  );
+
+  async function handleCreateUser(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setFeedback(null);
+    try {
+      const payload: CreateOperatingUserPayload = {
+        ...form,
+        displayName: form.displayName.trim(),
+        email: form.email.trim().toLowerCase(),
+        clientIds: form.clientIds,
+        monthlyServiceIds: form.roleCode === "ROLE-SPECIALIST" ? form.monthlyServiceIds : [],
+        oneTimeServiceIds: form.roleCode === "ROLE-SPECIALIST" ? form.oneTimeServiceIds : [],
+        serviceItemIds: form.roleCode === "ROLE-SPECIALIST" ? form.serviceItemIds : [],
+        specialistIds: form.roleCode === "ROLE-SUPERVISOR" ? form.specialistIds : [],
+        ...(form.roleCode === "ROLE-SPECIALIST" && form.supervisorId
+          ? { supervisorId: form.supervisorId }
+          : {}),
+      };
+      const response = await createOperatingUser(payload);
+      setCurrentUsers(response.snapshot.users);
+      setCurrentSetup(response.snapshot.setup);
+      setForm({
+        clientIds: [],
+        displayName: "",
+        email: "",
+        monthlyServiceIds: [],
+        oneTimeServiceIds: [],
+        roleCode: "ROLE-SPECIALIST",
+        serviceItemIds: [],
+        specialistIds: [],
+      });
+      setShowCreator(false);
+      setFeedback({
+        type: "success",
+        text:
+          lang === "ar"
+            ? "تم إنشاء المستخدم التشغيلي وربط نطاقه بنجاح."
+            : "Operating user created and scoped successfully.",
+      });
+    } catch (error) {
+      setFeedback({ type: "error", text: adminAccessErrorMessage(error) });
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <>
@@ -461,14 +620,275 @@ export function AdminUsersPageContent({
           <span>{t.noOverrides}</span>
           <span>{t.inherited}</span>
           <span>{t.lastLogin}</span>
+          <button
+            className="button-primary"
+            type="button"
+            onClick={() => {
+              setShowCreator((value) => !value);
+              setFeedback(null);
+            }}
+          >
+            {showCreator
+              ? lang === "ar"
+                ? "إغلاق نموذج الإنشاء"
+                : "Close creator"
+              : lang === "ar"
+                ? "إضافة مستخدم تشغيلي"
+                : "Add operating user"}
+          </button>
         </div>
       </section>
+
+      {feedback ? (
+        <div className={`access-feedback ${feedback.type}`} role="status">
+          {feedback.text}
+        </div>
+      ) : null}
+
+      {showCreator ? (
+        <SectionCard
+          title={lang === "ar" ? "إنشاء مستخدم تشغيلي" : "Create operating user"}
+          eyebrow={lang === "ar" ? "نطاق العمل" : "Operating scope"}
+        >
+          <form className="operating-user-form" onSubmit={handleCreateUser}>
+            <div className="operating-user-grid">
+              <label>
+                <span>{lang === "ar" ? "الاسم" : "Name"}</span>
+                <input
+                  required
+                  minLength={2}
+                  value={form.displayName}
+                  onChange={(event) => setForm({ ...form, displayName: event.target.value })}
+                />
+              </label>
+              <label>
+                <span>{lang === "ar" ? "البريد الإلكتروني" : "Email"}</span>
+                <input
+                  required
+                  type="email"
+                  value={form.email}
+                  onChange={(event) => setForm({ ...form, email: event.target.value })}
+                />
+              </label>
+              <label>
+                <span>{lang === "ar" ? "الدور" : "Role"}</span>
+                <select
+                  value={form.roleCode}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      roleCode: event.target.value,
+                      monthlyServiceIds: [],
+                      oneTimeServiceIds: [],
+                      serviceItemIds: [],
+                      specialistIds: [],
+                      supervisorId: undefined,
+                    })
+                  }
+                >
+                  {currentSetup.roles.map((role) => (
+                    <option key={role.code} value={role.code}>
+                      {operatingRoleLabel(role.code, lang)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {form.roleCode === "ROLE-SPECIALIST" ? (
+                <label>
+                  <span>{lang === "ar" ? "المشرف المسؤول" : "Supervisor"}</span>
+                  <select
+                    value={form.supervisorId ?? ""}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        supervisorId: event.target.value || undefined,
+                      })
+                    }
+                  >
+                    <option value="">{lang === "ar" ? "بدون مشرف محدد" : "No supervisor"}</option>
+                    {supervisors.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.displayName} - {user.email}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+            </div>
+
+            <div className="operating-scope-grid">
+              <fieldset>
+                <legend>{lang === "ar" ? "العملاء" : "Clients"}</legend>
+                <p>
+                  {lang === "ar"
+                    ? "اختيار العملاء يضيق النطاق. تركها فارغة يجعل النطاق عامًا حسب الدور."
+                    : "Selecting clients narrows the scope. Leaving it empty keeps the role-wide scope."}
+                </p>
+                <div className="scope-picker-grid">
+                  {currentSetup.clients.map((client) => (
+                    <label key={client.id}>
+                      <input
+                        type="checkbox"
+                        checked={form.clientIds.includes(client.id)}
+                        onChange={() =>
+                          setForm({ ...form, clientIds: toggleValue(form.clientIds, client.id) })
+                        }
+                      />
+                      <span>
+                        {client.name}
+                        <small>{client.code}</small>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              {form.roleCode === "ROLE-SPECIALIST" ? (
+                <>
+                  <fieldset>
+                    <legend>{lang === "ar" ? "الخدمات الشهرية" : "Monthly services"}</legend>
+                    <p>
+                      {lang === "ar"
+                        ? "يستخدمها النظام لاختيار المختص عند إنشاء طلب على الخدمة."
+                        : "Used to route new requests for this service to the specialist."}
+                    </p>
+                    <div className="scope-picker-grid">
+                      {currentSetup.monthlyServices.map((service) => (
+                        <label key={service.id}>
+                          <input
+                            type="checkbox"
+                            checked={form.monthlyServiceIds.includes(service.id)}
+                            onChange={() =>
+                              setForm({
+                                ...form,
+                                monthlyServiceIds: toggleValue(form.monthlyServiceIds, service.id),
+                              })
+                            }
+                          />
+                          <span>{serviceLabel(service, lang)}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+
+                  <fieldset>
+                    <legend>{lang === "ar" ? "بنود الخدمات" : "Service items"}</legend>
+                    <p>
+                      {lang === "ar"
+                        ? "البند أدق من الخدمة، وله أولوية أعلى في التوزيع التلقائي."
+                        : "Items are more specific than services and win auto-assignment priority."}
+                    </p>
+                    <div className="scope-picker-grid">
+                      {visibleServiceItems.map((item) => (
+                        <label key={item.id}>
+                          <input
+                            type="checkbox"
+                            checked={form.serviceItemIds.includes(item.id)}
+                            onChange={() =>
+                              setForm({
+                                ...form,
+                                serviceItemIds: toggleValue(form.serviceItemIds, item.id),
+                              })
+                            }
+                          />
+                          <span>
+                            {serviceLabel(item, lang)}
+                            <small>{item.monthlyServiceCode}</small>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+
+                  <fieldset>
+                    <legend>{lang === "ar" ? "خدمات المرة الواحدة" : "One-time services"}</legend>
+                    <p>
+                      {lang === "ar"
+                        ? "جاهزة لتوسيع توزيع مشاريع وخدمات المرة الواحدة بنفس نموذج النطاق."
+                        : "Prepared for one-time service and project routing using the same scope model."}
+                    </p>
+                    <div className="scope-picker-grid">
+                      {currentSetup.oneTimeServices.map((service) => (
+                        <label key={service.id}>
+                          <input
+                            type="checkbox"
+                            checked={form.oneTimeServiceIds.includes(service.id)}
+                            onChange={() =>
+                              setForm({
+                                ...form,
+                                oneTimeServiceIds: toggleValue(form.oneTimeServiceIds, service.id),
+                              })
+                            }
+                          />
+                          <span>{serviceLabel(service, lang)}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                </>
+              ) : null}
+
+              {form.roleCode === "ROLE-SUPERVISOR" ? (
+                <fieldset>
+                  <legend>
+                    {lang === "ar" ? "المختصون تحت الإشراف" : "Supervised specialists"}
+                  </legend>
+                  <p>
+                    {lang === "ar"
+                      ? "اختيار المختصين يربطهم بهذا المشرف، ويمكن تضييق الربط حسب العملاء أعلاه."
+                      : "Selected specialists report to this supervisor, optionally narrowed by selected clients."}
+                  </p>
+                  <div className="scope-picker-grid">
+                    {specialists.map((user) => (
+                      <label key={user.id}>
+                        <input
+                          type="checkbox"
+                          checked={form.specialistIds.includes(user.id)}
+                          onChange={() =>
+                            setForm({
+                              ...form,
+                              specialistIds: toggleValue(form.specialistIds, user.id),
+                            })
+                          }
+                        />
+                        <span>
+                          {user.displayName}
+                          <small>{user.email}</small>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              ) : null}
+            </div>
+
+            <div className="operating-user-actions">
+              <button
+                className="button-secondary"
+                type="button"
+                onClick={() => setShowCreator(false)}
+              >
+                {lang === "ar" ? "إلغاء" : "Cancel"}
+              </button>
+              <button className="button-primary" type="submit" disabled={saving}>
+                {saving
+                  ? lang === "ar"
+                    ? "جاري الحفظ..."
+                    : "Saving..."
+                  : lang === "ar"
+                    ? "إنشاء وربط النطاق"
+                    : "Create and scope"}
+              </button>
+            </div>
+          </form>
+        </SectionCard>
+      ) : null}
 
       <BentoGrid compact>
         <MetricCard
           accent
           label={t.total}
-          value={number(users.length, lang)}
+          value={number(currentUsers.length, lang)}
           detail={t.portalUsers}
         />
         <MetricCard label={t.active} value={number(activeUsers, lang)} detail={t.status} />
@@ -482,11 +902,11 @@ export function AdminUsersPageContent({
       </BentoGrid>
 
       <SectionCard title={t.portalUsers} eyebrow={t.access}>
-        {users.length === 0 ? (
+        {currentUsers.length === 0 ? (
           <EmptyState title={t.emptyUsers}>{t.usersDescription}</EmptyState>
         ) : (
           <div className="access-user-grid">
-            {users.map((user) => (
+            {currentUsers.map((user) => (
               <article className="access-user-card" key={user.id}>
                 <div className="access-user-top">
                   <span className="access-avatar" aria-hidden="true">
@@ -529,6 +949,22 @@ export function AdminUsersPageContent({
                     <span className="attention">{t.usersWithOverrides}</span>
                   ) : null}
                 </div>
+
+                {operatingScopeLabels(user, lang).length > 0 ? (
+                  <div className="operating-scope-summary">
+                    <strong>{lang === "ar" ? "نطاق العمل" : "Operating scope"}</strong>
+                    <div className="access-chip-list">
+                      {operatingScopeLabels(user, lang)
+                        .slice(0, 8)
+                        .map((label) => (
+                          <span key={label}>{label}</span>
+                        ))}
+                      {operatingScopeLabels(user, lang).length > 8 ? (
+                        <span>+{number(operatingScopeLabels(user, lang).length - 8, lang)}</span>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
 
                 <details className="access-details">
                   <summary>{t.overrides}</summary>

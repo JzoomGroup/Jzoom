@@ -350,6 +350,39 @@ export async function seedBlueprint(
         }
       }
 
+      const clientManagementPermission = await tx.permission.upsert({
+        where: { code: "PERM-MANAGE-CLIENTS" },
+        create: {
+          code: "PERM-MANAGE-CLIENTS",
+          name: "Manage Clients",
+          module: "Clients",
+          action: "manage_clients",
+          description: "Create and maintain client master data and client portal users.",
+          sortOrder: blueprint.permissions.length + 450,
+        },
+        update: { status: "ACTIVE" },
+      });
+      for (const roleCode of ["ROLE-ADMIN", "ROLE-MGMT"]) {
+        const roleId = roleIds.get(roleCode);
+        if (!roleId) {
+          continue;
+        }
+        await tx.rolePermission.upsert({
+          where: {
+            roleId_permissionId: {
+              roleId,
+              permissionId: clientManagementPermission.id,
+            },
+          },
+          create: {
+            roleId,
+            permissionId: clientManagementPermission.id,
+            effect: "ALLOW",
+          },
+          update: { effect: "ALLOW" },
+        });
+      }
+
       const oneTimePermission = await tx.permission.upsert({
         where: { code: "PERM-MANAGE-ONE-TIME-SERVICES" },
         create: {
@@ -393,7 +426,7 @@ export async function seedBlueprint(
           name: "Use Pricing Studio",
           action: "use_pricing_studio",
           description: "Create, calculate, save, and reload scoped pricing drafts.",
-          roleCodes: ["ROLE-ADMIN", "ROLE-AM"],
+          roleCodes: ["ROLE-ADMIN", "ROLE-MGMT", "ROLE-AM"],
         },
         {
           code: "PERM-MANAGE-QUOTES",
@@ -401,7 +434,7 @@ export async function seedBlueprint(
           action: "manage_quotes",
           description:
             "Create immutable quotes from scoped pricing drafts and manage quote lifecycle.",
-          roleCodes: ["ROLE-ADMIN", "ROLE-AM"],
+          roleCodes: ["ROLE-ADMIN", "ROLE-MGMT", "ROLE-AM"],
         },
         {
           code: "PERM-MANAGE-INVOICES",
@@ -409,7 +442,7 @@ export async function seedBlueprint(
           action: "manage_invoices",
           description:
             "Create immutable invoices from accepted quote snapshots and manage invoice lifecycle.",
-          roleCodes: ["ROLE-ADMIN", "ROLE-AM"],
+          roleCodes: ["ROLE-ADMIN", "ROLE-MGMT", "ROLE-AM"],
         },
         {
           code: "PERM-MANAGE-PLATFORM-CONFIGURATION",

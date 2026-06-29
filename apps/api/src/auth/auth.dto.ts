@@ -78,6 +78,69 @@ export class InviteUserDto {
   roleCodes!: string[];
 }
 
+export class OperatingUserScopeDto {
+  @ApiPropertyOptional({ type: [String], format: "uuid" })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @IsUUID(undefined, { each: true })
+  clientIds?: string[];
+
+  @ApiPropertyOptional({ type: [String], format: "uuid" })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @IsUUID(undefined, { each: true })
+  monthlyServiceIds?: string[];
+
+  @ApiPropertyOptional({ type: [String], format: "uuid" })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(200)
+  @IsUUID(undefined, { each: true })
+  serviceItemIds?: string[];
+
+  @ApiPropertyOptional({ type: [String], format: "uuid" })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @IsUUID(undefined, { each: true })
+  oneTimeServiceIds?: string[];
+
+  @ApiPropertyOptional({ type: String, format: "uuid" })
+  @IsOptional()
+  @IsUUID()
+  supervisorId?: string;
+
+  @ApiPropertyOptional({ type: [String], format: "uuid" })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @IsUUID(undefined, { each: true })
+  specialistIds?: string[];
+}
+
+export class CreateOperatingUserDto extends OperatingUserScopeDto {
+  @ApiProperty({ type: String, example: "person@example.com" })
+  @IsEmail()
+  email!: string;
+
+  @ApiProperty({ type: String })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  displayName!: string;
+
+  @ApiProperty({
+    type: String,
+    enum: ["ROLE-SPECIALIST", "ROLE-SUPERVISOR", "ROLE-AM", "ROLE-MGMT", "ROLE-ADMIN"],
+  })
+  @IsIn(["ROLE-SPECIALIST", "ROLE-SUPERVISOR", "ROLE-AM", "ROLE-MGMT", "ROLE-ADMIN"])
+  roleCode!: "ROLE-SPECIALIST" | "ROLE-SUPERVISOR" | "ROLE-AM" | "ROLE-MGMT" | "ROLE-ADMIN";
+}
+
+export class UpdateOperatingUserScopeDto extends OperatingUserScopeDto {}
+
 export class UpdateUserStatusDto {
   @ApiProperty({ type: String, enum: ["ACTIVE", "DISABLED", "ARCHIVED"] })
   @IsIn(["ACTIVE", "DISABLED", "ARCHIVED"])

@@ -219,8 +219,61 @@ function isActivePath(activePath: string | undefined, href: string) {
   return activePath === href;
 }
 
+const adminOnlyAdminPaths = new Set([
+  "/admin",
+  "/admin/users",
+  "/admin/roles",
+  "/admin/permissions",
+  "/admin/catalog",
+  "/admin/catalog/categories",
+  "/admin/catalog/monthly-services",
+  "/admin/catalog/service-items",
+  "/admin/catalog/service-levels",
+  "/admin/catalog/one-time-categories",
+  "/admin/catalog/one-time-services",
+  "/admin/request-templates",
+  "/admin/pricing-rules",
+  "/admin/audit-logs",
+  "/admin/platform-configuration",
+]);
+
 function visibleNavigation(items: NavItem[], context: ShellContext) {
-  return items.filter((item) => (item.visible ? item.visible(context) : true));
+  return items.filter((item) => {
+    if (adminOnlyAdminPaths.has(item.href) && !context.isAdmin) {
+      return false;
+    }
+    if (item.href === "/admin/clients") {
+      return (
+        (context.isAdmin || context.roles.includes("ROLE-MGMT")) &&
+        context.permissions.includes("PERM-MANAGE-CLIENTS")
+      );
+    }
+    if (item.href === "/pricing") {
+      return (
+        (context.isAdmin ||
+          context.roles.includes("ROLE-MGMT") ||
+          context.roles.includes("ROLE-AM")) &&
+        context.permissions.includes("PERM-USE-PRICING-STUDIO")
+      );
+    }
+    if (item.href === "/pricing/quotes") {
+      return (
+        (context.isAdmin ||
+          context.roles.includes("ROLE-MGMT") ||
+          context.roles.includes("ROLE-AM")) &&
+        context.permissions.includes("PERM-MANAGE-QUOTES")
+      );
+    }
+    if (item.href === "/pricing/invoices") {
+      return (
+        (context.isAdmin ||
+          context.roles.includes("ROLE-MGMT") ||
+          context.roles.includes("ROLE-AM")) &&
+        context.permissions.includes("PERM-MANAGE-INVOICES")
+      );
+    }
+    return item.visible ? item.visible(context) : true;
+  });
 }
 
 export function AppShell({

@@ -7,7 +7,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   if (!user) {
     redirect("/login");
   }
-  if (!user.roles.includes("ROLE-ADMIN")) {
+  if (!user.roles.includes("ROLE-ADMIN") && !user.roles.includes("ROLE-MGMT")) {
     redirect("/403");
   }
 
