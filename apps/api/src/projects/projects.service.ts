@@ -658,7 +658,7 @@ export class ProjectsService {
       tasks: clientSafe ? tasks.filter((task) => task.status !== "CANCELLED") : tasks,
       outputs,
       activity: clientSafe
-        ? []
+        ? this.clientProjectActivity(outputs)
         : project.workflowEvents.map((event) => ({
             id: event.id,
             actorRole: event.actorRole,
@@ -668,6 +668,56 @@ export class ProjectsService {
           })),
       serviceSnapshot: project.serviceSnapshot,
     };
+  }
+
+  private clientProjectActivity(
+    outputs: Array<{
+      id: string;
+      title: string;
+      status: string;
+      sharedAt: string | null;
+      updatedAt: string;
+    }>,
+  ) {
+    return outputs
+      .flatMap((output) => {
+        const events = [
+          output.sharedAt
+            ? {
+                id: `${output.id}:shared`,
+                actorRole: "ROLE-SPECIALIST",
+                reason: `تمت مشاركة المخرج "${output.title}" مع العميل`,
+                occurredAt: output.sharedAt,
+                metadata: { outputId: output.id, status: "SHARED_WITH_CLIENT" },
+              }
+            : null,
+        ];
+
+        if (output.status === "ACCEPTED_BY_CLIENT") {
+          events.push({
+            id: `${output.id}:accepted`,
+            actorRole: "ROLE-CLIENT",
+            reason: `اعتمد العميل المخرج "${output.title}"`,
+            occurredAt: output.updatedAt,
+            metadata: { outputId: output.id, status: output.status },
+          });
+        }
+
+        if (output.status === "RETURNED_BY_CLIENT") {
+          events.push({
+            id: `${output.id}:returned`,
+            actorRole: "ROLE-CLIENT",
+            reason: `أعاد العميل المخرج "${output.title}" للتعديل`,
+            occurredAt: output.updatedAt,
+            metadata: { outputId: output.id, status: output.status },
+          });
+        }
+
+        return events;
+      })
+      .filter((event): event is NonNullable<typeof event> => event !== null)
+      .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt))
+      .slice(0, 20);
   }
 
   private async ensureProjectWorkflow() {

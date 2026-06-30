@@ -435,7 +435,11 @@ describeWithDatabase("Project delivery access and client review flows", () => {
       draftOutputId,
     );
     expect(detail.body.progress.outputsTotal).toBe(1);
-    expect(detail.body.activity).toEqual([]);
+    expect(detail.body.activity).toHaveLength(1);
+    expect(detail.body.activity[0]).toMatchObject({
+      actorRole: "ROLE-SPECIALIST",
+      metadata: { outputId: sharedOutputId, status: "SHARED_WITH_CLIENT" },
+    });
   });
 
   it("lets clients accept shared outputs but not reach other clients' projects", async () => {

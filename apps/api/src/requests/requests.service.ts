@@ -3652,7 +3652,7 @@ export class RequestsService {
       uploadedFile && uploadedFile.archivedAt === null
         ? {
             id: uploadedFile.id,
-            uploadedBy: clientSafe ? null : uploadedFile.uploadedBy,
+            uploadedBy: uploadedFile.uploadedBy,
             originalName: uploadedFile.originalName,
             mimeType: uploadedFile.mimeType,
             sizeBytes: Number(uploadedFile.sizeBytes),
