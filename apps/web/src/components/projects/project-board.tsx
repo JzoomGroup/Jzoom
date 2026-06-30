@@ -51,6 +51,7 @@ const copy = {
     activity: "النشاط",
     addOutput: "إضافة مخرج",
     acceptOutput: "اعتماد المخرج",
+    activeProjects: "المشاريع النشطة",
     clientProjects: "مشاريع المرة الواحدة",
     clientProjectsDescription:
       "تابع مشاريع البناء والخدمات ذات المرة الواحدة من بداية التفعيل حتى تسليم المخرجات.",
@@ -77,6 +78,7 @@ const copy = {
     phasePlan: "خطة المراحل",
     projectDelivery: "تشغيل المشاريع",
     projectNumber: "رقم المشروع",
+    projectsCount: "عدد المشاريع",
     projectSpecialist: "مختص المشاريع",
     quote: "عرض السعر",
     saveOutput: "حفظ المخرج",
@@ -91,6 +93,7 @@ const copy = {
     activity: "Activity",
     addOutput: "Add output",
     acceptOutput: "Accept output",
+    activeProjects: "Active projects",
     clientProjects: "One-time projects",
     clientProjectsDescription:
       "Track one-time build and delivery projects from activation through outputs.",
@@ -117,6 +120,7 @@ const copy = {
     phasePlan: "Phase plan",
     projectDelivery: "Project delivery",
     projectNumber: "Project number",
+    projectsCount: "Projects",
     projectSpecialist: "Project specialist",
     quote: "Quote",
     saveOutput: "Save output",
@@ -184,8 +188,8 @@ export function ProjectList({
         description={clientMode ? t.clientProjectsDescription : t.internalProjectsDescription}
       />
       <section className="os-bento-grid compact">
-        <MetricCard label={t.projectNumber} value={projects.length} detail={t.projectDelivery} />
-        <MetricCard label={t.completedTasks} value={openProjects} detail={t.phasePlan} />
+        <MetricCard label={t.projectsCount} value={projects.length} detail={t.projectDelivery} />
+        <MetricCard label={t.activeProjects} value={openProjects} detail={t.phasePlan} />
         <MetricCard
           accent
           label={t.outputs}
