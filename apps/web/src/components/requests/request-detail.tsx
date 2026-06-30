@@ -5,6 +5,7 @@ import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
 import {
   addInternalNote,
   addRequestComment,
+  archiveRequestAttachment,
   assignRequest,
   changeRequestStatus,
   changeClientDocumentRequestStatus,
@@ -93,6 +94,8 @@ const copy = {
     addMetadata: "رفع المرفق",
     addTime: "إضافة وقت",
     actionShortcuts: "اختصارات التشغيل",
+    archiveAttachment: "أرشفة المرفق",
+    archiveAttachmentConfirm: "هل تريد أرشفة هذا المرفق؟ لن يظهر في الطلب أو روابط التحميل.",
     approved: "معتمد",
     approve: "اعتماد",
     approveRequest: "اعتماد الطلب",
@@ -118,6 +121,13 @@ const copy = {
     closeDelivery: "إغلاق التسليم",
     comment: "تعليق",
     comments: "التعليقات",
+    confirmOutputApprove: "تأكيد اعتماد هذا المخرج داخليًا؟",
+    confirmOutputClose: "تأكيد إغلاق هذا التسليم؟",
+    confirmOutputReject: "تأكيد رفض هذا المخرج؟",
+    confirmOutputReturn: "تأكيد إرجاع هذا المخرج للتعديل؟",
+    confirmOutputShare: "تأكيد مشاركة هذا المخرج مع العميل؟",
+    confirmOutputSubmit: "تأكيد إرسال هذا المخرج لمراجعة المشرف؟",
+    confirmSupervisorAction: "تأكيد تنفيذ قرار المشرف على الطلب؟",
     completeness: "الاكتمال",
     createInternalOutput: "إنشاء مخرج داخلي",
     createdBy: "أنشئ بواسطة",
@@ -257,6 +267,9 @@ const copy = {
     addMetadata: "Upload attachment",
     addTime: "Add time",
     actionShortcuts: "Operations shortcuts",
+    archiveAttachment: "Archive attachment",
+    archiveAttachmentConfirm:
+      "Archive this attachment? It will no longer appear on the request or download links.",
     approved: "approved",
     approve: "Approve",
     approveRequest: "Approve request",
@@ -283,6 +296,13 @@ const copy = {
     closeDelivery: "Close delivery",
     comment: "Comment",
     comments: "Comments",
+    confirmOutputApprove: "Approve this output internally?",
+    confirmOutputClose: "Close this delivery?",
+    confirmOutputReject: "Reject this output?",
+    confirmOutputReturn: "Return this output for changes?",
+    confirmOutputShare: "Share this output with the client?",
+    confirmOutputSubmit: "Submit this output for supervisor review?",
+    confirmSupervisorAction: "Apply this supervisor decision to the request?",
     completeness: "Completeness",
     createInternalOutput: "Create internal output",
     createdBy: "created by",
@@ -870,6 +890,9 @@ export function RequestDetail({
   }
 
   function supervisorAction(action: "APPROVE" | "RETURN" | "REJECT" | "ESCALATE") {
+    if (!window.confirm(t.confirmSupervisorAction)) {
+      return;
+    }
     void run("supervisor-review", () =>
       supervisorReviewRequest(request.id, action, reviewReason || undefined),
     );
@@ -960,6 +983,13 @@ export function RequestDetail({
     }
   }
 
+  function archiveAttachment(fileId: string) {
+    if (!window.confirm(t.archiveAttachmentConfirm)) {
+      return;
+    }
+    void run("archive-attachment", () => archiveRequestAttachment(request.id, fileId));
+  }
+
   function submitTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const payload: Parameters<typeof createRequestTask>[1] = {
@@ -1003,22 +1033,40 @@ export function RequestDetail({
   }
 
   function submitOutputForReview(outputId: string) {
+    if (!window.confirm(t.confirmOutputSubmit)) {
+      return;
+    }
     void run("output-submit", () => submitRequestOutput(request.id, outputId));
   }
 
   function reviewOutput(outputId: string, action: "APPROVE" | "RETURN" | "REJECT") {
+    const confirmMessage =
+      action === "APPROVE"
+        ? t.confirmOutputApprove
+        : action === "RETURN"
+          ? t.confirmOutputReturn
+          : t.confirmOutputReject;
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
     void run("output-review", () =>
       reviewRequestOutput(request.id, outputId, action, reviewReason || undefined),
     );
   }
 
   function shareOutput(outputId: string) {
+    if (!window.confirm(t.confirmOutputShare)) {
+      return;
+    }
     void run("output-share", () =>
       shareRequestOutput(request.id, outputId, reviewReason || undefined),
     );
   }
 
   function closeOutput(outputId: string) {
+    if (!window.confirm(t.confirmOutputClose)) {
+      return;
+    }
     void run("output-close", () =>
       closeRequestOutput(request.id, outputId, reviewReason || undefined),
     );
@@ -2139,11 +2187,23 @@ export function RequestDetail({
                     {file.mimeType} - {file.sizeBytes} {t.bytes} -{" "}
                     {codeLabel(file.visibility, locale)}
                   </small>
-                  {file.downloadUrl && (
-                    <a className="os-button os-button-secondary" href={file.downloadUrl}>
-                      {t.downloadFile}
-                    </a>
-                  )}
+                  <div className="row-actions">
+                    {file.downloadUrl && (
+                      <a className="os-button os-button-secondary" href={file.downloadUrl}>
+                        {t.downloadFile}
+                      </a>
+                    )}
+                    {canAttachMetadata ? (
+                      <button
+                        className="os-button os-button-secondary"
+                        disabled={saving === "archive-attachment"}
+                        type="button"
+                        onClick={() => archiveAttachment(file.id)}
+                      >
+                        {t.archiveAttachment}
+                      </button>
+                    ) : null}
+                  </div>
                 </article>
               ))
             )}

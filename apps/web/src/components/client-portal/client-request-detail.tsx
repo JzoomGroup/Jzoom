@@ -5,6 +5,7 @@ import { type ChangeEvent, type FormEvent, useState } from "react";
 import {
   acceptClientRequestOutput,
   addClientRequestComment,
+  archiveClientRequestAttachment,
   requestErrorMessage,
   returnClientRequestOutput,
   uploadClientRequestedDocument,
@@ -38,11 +39,15 @@ const copy = {
     answerType: "نوع الحقل",
     attachmentHint: "مرفق ظاهر للعميل",
     attachments: "المرفقات الظاهرة",
+    archiveAttachment: "إزالة الملف",
+    archiveAttachmentConfirm: "هل تريد إزالة هذا الملف؟ سيعود طلب المستند مفتوحًا للرفع من جديد.",
     back: "العودة إلى الطلبات",
     closedOutput: "هذا المخرج مغلق ومحفوظ كمرجع.",
     comments: "التعليقات",
     completed: "طلب مكتمل",
     completeness: "الاكتمال",
+    confirmAcceptOutput: "هل تريد اعتماد هذا المخرج؟",
+    confirmReturnOutput: "هل تريد إرجاع هذا المخرج مع ملاحظاتك؟",
     created: "تم إنشاء الطلب",
     decision: "قرار العميل",
     deliverables: "المخرجات",
@@ -61,8 +66,7 @@ const copy = {
     fileFingerprint: "بصمة الملف SHA-256",
     fileProcessing: "جاري تجهيز بيانات الملف...",
     fileReady: "تم تجهيز بيانات الملف",
-    fileUploadHint:
-      "اختر الملف المطلوب وسنرفعه إلى جزوم مع حفظ بياناته تلقائيًا.",
+    fileUploadHint: "اختر الملف المطلوب وسنرفعه إلى جزوم مع حفظ بياناته تلقائيًا.",
     fileSizeBytes: "الحجم بالبايت",
     generalServiceItem: "طلب عام على الخدمة",
     jzoomWaiting: "جزوم بانتظار ردك على هذا الطلب.",
@@ -126,11 +130,16 @@ const copy = {
     answerType: "Field type",
     attachmentHint: "Client-visible attachment metadata",
     attachments: "Visible attachments",
+    archiveAttachment: "Remove file",
+    archiveAttachmentConfirm:
+      "Remove this file? The document request will reopen so you can upload a replacement.",
     back: "Back to requests",
     closedOutput: "This deliverable is closed and kept here for reference.",
     comments: "Comments",
     completed: "Request completed",
     completeness: "Completeness",
+    confirmAcceptOutput: "Accept this deliverable?",
+    confirmReturnOutput: "Return this deliverable with your comments?",
     created: "Request created",
     decision: "Decision",
     deliverables: "Deliverables",
@@ -362,10 +371,16 @@ export function ClientRequestDetail({
   }
 
   function acceptOutput(outputId: string) {
+    if (!window.confirm(t.confirmAcceptOutput)) {
+      return;
+    }
     void run(() => acceptClientRequestOutput(request.id, outputId));
   }
 
   function returnOutput(outputId: string) {
+    if (!window.confirm(t.confirmReturnOutput)) {
+      return;
+    }
     void run(async () => {
       const updated = await returnClientRequestOutput(request.id, outputId, returnReason);
       setReturnReason("");
@@ -432,6 +447,13 @@ export function ClientRequestDetail({
     } finally {
       setFileProcessing(false);
     }
+  }
+
+  function archiveAttachment(fileId: string) {
+    if (!window.confirm(t.archiveAttachmentConfirm)) {
+      return;
+    }
+    void run(() => archiveClientRequestAttachment(request.id, fileId));
   }
 
   const sharedOutputs = request.outputs.filter((output) =>
@@ -832,14 +854,26 @@ export function ClientRequestDetail({
                         {t.uploadedPrefix}: {documentRequest.file.originalName} -{" "}
                         {fileSize(documentRequest.file.sizeBytes, locale)}
                       </p>
-                      {documentRequest.file.downloadUrl && (
-                        <a
+                      <div className="row-actions">
+                        {documentRequest.file.downloadUrl && (
+                          <a
+                            className="os-button os-button-secondary"
+                            href={documentRequest.file.downloadUrl}
+                          >
+                            {t.downloadFile}
+                          </a>
+                        )}
+                        <button
                           className="os-button os-button-secondary"
-                          href={documentRequest.file.downloadUrl}
+                          disabled={saving}
+                          type="button"
+                          onClick={() => {
+                            if (documentRequest.file) archiveAttachment(documentRequest.file.id);
+                          }}
                         >
-                          {t.downloadFile}
-                        </a>
-                      )}
+                          {t.archiveAttachment}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </article>

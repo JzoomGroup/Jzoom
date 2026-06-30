@@ -97,6 +97,9 @@ const copy = {
     pricingStudioFoundation: "أساس استوديو التسعير",
     pricingStudioDescription:
       "اختر إصدارات الكتالوج المفعلة، أعد الحساب عبر محرك التسعير، واحفظ النتيجة بدون إنشاء عرض سعر.",
+    pricingImpactTitle: "أثر التسعير",
+    pricingImpactDescription:
+      "الإجمالي النهائي = الخدمات الشهرية + رسوم التأسيس + خدمات المرة الواحدة - الخصومات + الضريبة. جدول البنود يوضح أثر كل خدمة وكمية على الأساس ورسوم التأسيس.",
     profile: "الملف الشخصي",
     previewDescription: "الإجماليات لا تُعتمد إلا بعد إعادة الحساب عبر محرك التسعير.",
     previewSuccess: "تمت إعادة حساب معاينة التسعير.",
@@ -195,6 +198,9 @@ const copy = {
     pricingStudioFoundation: "Pricing Studio foundation",
     pricingStudioDescription:
       "Select active catalog revisions, recalculate through the backend, and save the result without creating a quote.",
+    pricingImpactTitle: "Pricing impact",
+    pricingImpactDescription:
+      "Final total = monthly services + setup fees + one-time services - discounts + tax. The line table shows how each service and quantity affects base amount and setup fees.",
     profile: "Profile",
     previewDescription: "Totals are trusted only after backend recalculation.",
     previewSuccess: "Backend pricing preview recalculated.",
@@ -1222,6 +1228,10 @@ export function PricingStudio({
                     <strong>{number(calculation.totals.marginPct, locale)}%</strong>
                   </div>
                 </div>
+                <p className="pricing-muted">
+                  <strong>{t.pricingImpactTitle}: </strong>
+                  {t.pricingImpactDescription}
+                </p>
                 <SmartTable>
                   <table className="catalog-table pricing-lines">
                     <thead>

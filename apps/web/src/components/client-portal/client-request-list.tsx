@@ -131,7 +131,8 @@ const copy = {
     templateFields: "حقول النموذج",
     templateReady: "النموذج جاهز",
     templateLoaded: (version: number, item: string) => `تم تحميل نموذج v${version} للبند ${item}.`,
-    templateMissing: "لا يوجد نموذج نشط. سيتم استخدام نموذج الطلب العام.",
+    templateMissing:
+      "لا يوجد نموذج نشط لهذا البند. يمكنك إرسال الطلب بالبيانات الأساسية الآن، وسيظهر نموذج مخصص بعد تفعيله من فريق جزوم.",
     templateVersion: "إصدار النموذج",
     title: "العنوان",
     trackDescription: "كل بطاقة تحفظ مسار تفاصيل الطلب وإجراءات سير العمل الأصلية بدون تغيير.",
@@ -220,7 +221,8 @@ const copy = {
     templateFields: "Template fields",
     templateReady: "Template ready",
     templateLoaded: (version: number, item: string) => `Loaded template v${version} for ${item}.`,
-    templateMissing: "No active template exists. The generic request form will be used.",
+    templateMissing:
+      "No active template exists for this item. You can submit the request with the basic fields now; a custom form will appear after Jzoom activates it.",
     templateVersion: "Template version",
     title: "Title",
     trackDescription:

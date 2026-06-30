@@ -68,6 +68,7 @@ export const TIME_ENTRY_REVIEW_ACTIONS = ["APPROVE", "REJECT"] as const;
 
 export const REQUEST_EVENT = {
   attachmentAdded: "REQUEST_ATTACHMENT_METADATA_ADDED",
+  attachmentArchived: "REQUEST_ATTACHMENT_ARCHIVED",
   assignmentChanged: "REQUEST_ASSIGNMENT_CHANGED",
   clientCommentAdded: "REQUEST_CLIENT_COMMENT_ADDED",
   clientRequestViewed: "CLIENT_REQUEST_VIEWED",

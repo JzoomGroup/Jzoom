@@ -1581,6 +1581,109 @@ export class RequestsService {
     };
   }
 
+  async archiveFile(
+    id: string,
+    fileId: string,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+    clientSafe: boolean,
+  ) {
+    const request = clientSafe
+      ? await this.requireClientRequest(id, principal)
+      : await this.requireAccessibleRequest(id, principal);
+    const file = await this.database.prisma.fileMetadata.findFirst({
+      where: {
+        id: fileId,
+        requestId: id,
+        archivedAt: null,
+        ...(clientSafe
+          ? { uploadedById: principal.userId, visibility: "CLIENT_VISIBLE" as const }
+          : {}),
+      },
+      include: { documentRequest: true },
+    });
+    if (!file) {
+      throw new NotFoundException({
+        code: "FILE_NOT_FOUND",
+        message: "The file could not be found",
+      });
+    }
+
+    const { resetDocumentRequest, updatedFile } = await this.database.prisma.$transaction(
+      async (tx) => {
+        const updatedFile = await tx.fileMetadata.update({
+          where: { id: file.id },
+          data: { archivedAt: new Date() },
+        });
+        let resetDocumentRequest: typeof file.documentRequest = null;
+        if (
+          file.documentRequest?.fileMetadataId === file.id &&
+          file.documentRequest.status === "UPLOADED"
+        ) {
+          resetDocumentRequest = await tx.clientDocumentRequest.update({
+            where: { id: file.documentRequest.id },
+            data: {
+              fileMetadataId: null,
+              fulfilledAt: null,
+              fulfilledById: null,
+              status: "REQUESTED",
+            },
+          });
+        }
+        return { resetDocumentRequest, updatedFile };
+      },
+    );
+
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.attachmentArchived,
+        entityType: "FileMetadata",
+        entityId: file.id,
+        before: this.fileAuditSnapshot(file),
+        after: {
+          ...this.fileAuditSnapshot(updatedFile),
+          ...(resetDocumentRequest
+            ? {
+                resetDocumentRequest: this.documentRequestAuditSnapshot(resetDocumentRequest),
+              }
+            : {}),
+        },
+      },
+      metadata,
+    );
+    await this.recordRequestActivity(
+      request,
+      principal,
+      REQUEST_EVENT.attachmentArchived,
+      clientSafe ? "Client removed an uploaded file" : "Request file archived",
+      {
+        fileId: file.id,
+        originalName: file.originalName,
+        ...(resetDocumentRequest ? { documentRequestId: resetDocumentRequest.id } : {}),
+      },
+    );
+    if (clientSafe) {
+      await this.notifyInternalRequestStakeholders(
+        request,
+        principal,
+        REQUEST_EVENT.attachmentArchived,
+        `Client removed uploaded file "${file.originalName}".`,
+        {
+          fileId: file.id,
+          ...(resetDocumentRequest ? { documentRequestId: resetDocumentRequest.id } : {}),
+        },
+        [],
+        `حذف العميل الملف المرفوع "${file.originalName}".`,
+      );
+    }
+
+    const refreshed = clientSafe
+      ? await this.requireClientRequest(id, principal)
+      : await this.requireAccessibleRequest(id, principal);
+    return this.detailView(refreshed, clientSafe);
+  }
+
   async createTimeEntry(
     id: string,
     input: CreateTimeEntryDto,
@@ -2783,7 +2886,10 @@ export class RequestsService {
             updatedAt: note.updatedAt.toISOString(),
           })),
       attachments: request.files
-        .filter((file) => !clientSafe || file.visibility === "CLIENT_VISIBLE")
+        .filter(
+          (file) =>
+            file.archivedAt === null && (!clientSafe || file.visibility === "CLIENT_VISIBLE"),
+        )
         .map((file) => ({
           id: file.id,
           uploadedBy: file.uploadedBy,
@@ -3011,6 +3117,27 @@ export class RequestsService {
     documentRequest: RequestDetailRecord["documentRequests"][number],
     clientSafe = false,
   ) {
+    const uploadedFile = documentRequest.fileMetadata;
+    const visibleFile =
+      uploadedFile && uploadedFile.archivedAt === null
+        ? {
+            id: uploadedFile.id,
+            uploadedBy: clientSafe ? null : uploadedFile.uploadedBy,
+            originalName: uploadedFile.originalName,
+            mimeType: uploadedFile.mimeType,
+            sizeBytes: Number(uploadedFile.sizeBytes),
+            sha256: uploadedFile.sha256,
+            visibility: uploadedFile.visibility,
+            version: uploadedFile.version,
+            downloadUrl:
+              uploadedFile.storageProvider === "local"
+                ? this.fileDownloadUrl(documentRequest.requestId, uploadedFile.id, clientSafe)
+                : null,
+            createdAt: uploadedFile.createdAt.toISOString(),
+            updatedAt: uploadedFile.updatedAt.toISOString(),
+          }
+        : null;
+
     return {
       id: documentRequest.id,
       title: documentRequest.title,
@@ -3025,28 +3152,7 @@ export class RequestsService {
       updatedAt: documentRequest.updatedAt.toISOString(),
       requestedBy: clientSafe ? null : documentRequest.requestedBy,
       fulfilledBy: clientSafe ? null : documentRequest.fulfilledBy,
-      file: documentRequest.fileMetadata
-        ? {
-            id: documentRequest.fileMetadata.id,
-            uploadedBy: clientSafe ? null : documentRequest.fileMetadata.uploadedBy,
-            originalName: documentRequest.fileMetadata.originalName,
-            mimeType: documentRequest.fileMetadata.mimeType,
-            sizeBytes: Number(documentRequest.fileMetadata.sizeBytes),
-            sha256: documentRequest.fileMetadata.sha256,
-            visibility: documentRequest.fileMetadata.visibility,
-            version: documentRequest.fileMetadata.version,
-            downloadUrl:
-              documentRequest.fileMetadata.storageProvider === "local"
-                ? this.fileDownloadUrl(
-                    documentRequest.requestId,
-                    documentRequest.fileMetadata.id,
-                    clientSafe,
-                  )
-                : null,
-            createdAt: documentRequest.fileMetadata.createdAt.toISOString(),
-            updatedAt: documentRequest.fileMetadata.updatedAt.toISOString(),
-          }
-        : null,
+      file: visibleFile,
     };
   }
 
@@ -3084,6 +3190,34 @@ export class RequestsService {
       priority: request.priority,
       dueAt: request.dueAt?.toISOString() ?? null,
       closedAt: request.closedAt?.toISOString() ?? null,
+    };
+  }
+
+  private fileAuditSnapshot(file: {
+    archivedAt: Date | null;
+    id: string;
+    mimeType: string;
+    originalName: string;
+    requestId: string | null;
+    sha256: string;
+    sizeBytes: bigint | { toString(): string };
+    storageProvider: string;
+    uploadedById: string;
+    version: number;
+    visibility: string;
+  }) {
+    return {
+      id: file.id,
+      requestId: file.requestId,
+      uploadedById: file.uploadedById,
+      storageProvider: file.storageProvider,
+      originalName: file.originalName,
+      mimeType: file.mimeType,
+      sizeBytes: file.sizeBytes.toString(),
+      sha256: file.sha256,
+      visibility: file.visibility,
+      version: file.version,
+      archivedAt: file.archivedAt?.toISOString() ?? null,
     };
   }
 

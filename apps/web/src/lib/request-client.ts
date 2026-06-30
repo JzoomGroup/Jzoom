@@ -353,6 +353,12 @@ export function uploadRequestAttachment(
   });
 }
 
+export function archiveRequestAttachment(id: string, fileId: string): Promise<ServiceRequest> {
+  return catalogRequest<ServiceRequest>(`requests/${id}/files/${fileId}`, {
+    method: "DELETE",
+  });
+}
+
 export function addClientRequestComment(id: string, body: string): Promise<ServiceRequest> {
   return catalogRequest<ServiceRequest>(`client-portal/requests/${id}/comments`, {
     method: "POST",
@@ -408,4 +414,13 @@ export function uploadClientRequestedDocument(
       body: JSON.stringify(input),
     },
   );
+}
+
+export function archiveClientRequestAttachment(
+  id: string,
+  fileId: string,
+): Promise<ServiceRequest> {
+  return catalogRequest<ServiceRequest>(`client-portal/requests/${id}/files/${fileId}`, {
+    method: "DELETE",
+  });
 }

@@ -40,7 +40,8 @@ const copy = {
     loadRequestTemplate: "تحميل نموذج الطلب",
     loadingTemplate: "جار تحميل النموذج...",
     loadedTemplate: "تم تحميل النموذج",
-    noActiveTemplate: "لا يوجد نموذج نشط لهذا البند. سيتم استخدام نموذج الطلب العام.",
+    noActiveTemplate:
+      "لا يوجد نموذج نشط لهذا البند. يمكنك إنشاء الطلب الآن بالبيانات الأساسية، وسيظهر نموذج مخصص هنا بعد تفعيله من إدارة النماذج.",
     notSet: "غير محدد",
     openQueues: "فتح طوابير العمل",
     overdueRequests: "طلبات متأخرة",
@@ -95,7 +96,8 @@ const copy = {
     loadRequestTemplate: "Load request template",
     loadingTemplate: "Loading template...",
     loadedTemplate: "Loaded template",
-    noActiveTemplate: "No active template exists. The generic request form will be used.",
+    noActiveTemplate:
+      "No active template exists for this item. You can create the request with the basic fields now; a custom form will appear here after Admin activates one.",
     notSet: "Not set",
     openQueues: "Open work queues",
     overdueRequests: "Overdue",

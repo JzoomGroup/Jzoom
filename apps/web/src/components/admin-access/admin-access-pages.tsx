@@ -32,6 +32,8 @@ const copy = {
       "إدارة المستخدمين والأدوار والصلاحيات كنظام واضح ومنظم، مع إبقاء أسرار الدخول خارج الواجهة.",
     active: "نشط",
     actor: "المستخدم",
+    allEvents: "كل الأحداث",
+    allSeverities: "كل مستويات الخطورة",
     archived: "مؤرشف",
     assignments: "التعيينات",
     auditCenter: "مركز مراجعة الأمان",
@@ -41,7 +43,11 @@ const copy = {
     auditTrail: "مسار التدقيق",
     auditDescription:
       "أحداث الدخول والصلاحيات والعمليات الحساسة المسجلة في النظام للمراجعة والرقابة.",
+    auditCategoryFilter: "تصنيف الحدث",
+    auditEventFilter: "نوع الحدث",
+    auditFilters: "فلاتر سجل التدقيق",
     auditLogs: "سجل التدقيق",
+    auditSearch: "بحث بالمستخدم أو الحدث أو السجل",
     authentication: "الدخول والحسابات",
     capabilities: "القدرات",
     catalogChanges: "تغييرات الكتالوج",
@@ -61,6 +67,7 @@ const copy = {
     event: "الحدث",
     expires: "ينتهي",
     external: "خارجي",
+    filteredResults: "النتائج المعروضة",
     high: "مرتفع",
     inherited: "موروثة من الدور",
     internal: "داخلي",
@@ -77,6 +84,7 @@ const copy = {
     noActor: "نظام / غير محدد",
     noAssignments: "لا توجد تعيينات محددة",
     noCapabilities: "لا توجد قدرات موثقة",
+    noFilteredAudit: "لا توجد أحداث مطابقة للفلاتر الحالية.",
     noOverrides: "لا توجد صلاحيات مخصصة",
     noRestrictions: "لا توجد قيود موثقة",
     overrides: "استثناءات الصلاحيات",
@@ -117,6 +125,8 @@ const copy = {
       "Manage users, roles, and permissions as a clear operating system while keeping login secrets out of the interface.",
     active: "Active",
     actor: "Actor",
+    allEvents: "All events",
+    allSeverities: "All severities",
     archived: "Archived",
     assignments: "Assignments",
     auditCenter: "Security review center",
@@ -126,7 +136,11 @@ const copy = {
     auditTrail: "Audit trail",
     auditDescription:
       "Login, permission, and sensitive operation events recorded for review and control.",
+    auditCategoryFilter: "Event category",
+    auditEventFilter: "Event type",
+    auditFilters: "Audit filters",
     auditLogs: "Audit logs",
+    auditSearch: "Search actor, event, or record",
     authentication: "Authentication",
     capabilities: "Capabilities",
     catalogChanges: "Catalog changes",
@@ -146,6 +160,7 @@ const copy = {
     event: "Event",
     expires: "Expires",
     external: "External",
+    filteredResults: "Visible results",
     high: "High",
     inherited: "Inherited from role",
     internal: "Internal",
@@ -162,6 +177,7 @@ const copy = {
     noActor: "System / unknown",
     noAssignments: "No scoped assignments",
     noCapabilities: "No documented capabilities",
+    noFilteredAudit: "No audit events match the current filters.",
     noOverrides: "No custom permissions",
     noRestrictions: "No documented restrictions",
     overrides: "Permission overrides",
@@ -404,7 +420,10 @@ function eventLabel(eventCode: string, locale: SupportedLocale): string {
     PRICING_RULE_CREATED: { ar: "إنشاء قاعدة تسعير", en: "Pricing rule created" },
     PRICING_RULE_REORDERED: { ar: "إعادة ترتيب قواعد التسعير", en: "Pricing rules reordered" },
     PRICING_RULE_REVISED: { ar: "تعديل قاعدة تسعير", en: "Pricing rule revised" },
-    PRICING_RULE_STATUS_CHANGED: { ar: "تغيير حالة قاعدة تسعير", en: "Pricing rule status changed" },
+    PRICING_RULE_STATUS_CHANGED: {
+      ar: "تغيير حالة قاعدة تسعير",
+      en: "Pricing rule status changed",
+    },
     QUOTE_ACCEPTED: { ar: "قبول عرض سعر", en: "Quote accepted" },
     QUOTE_CANCELLED: { ar: "إلغاء عرض سعر", en: "Quote cancelled" },
     QUOTE_CREATED: { ar: "إنشاء عرض سعر", en: "Quote created" },
@@ -412,9 +431,18 @@ function eventLabel(eventCode: string, locale: SupportedLocale): string {
     QUOTE_PDF_GENERATED: { ar: "توليد PDF لعرض السعر", en: "Quote PDF generated" },
     QUOTE_REJECTED: { ar: "رفض عرض سعر", en: "Quote rejected" },
     QUOTE_STATUS_CHANGED: { ar: "تغيير حالة عرض سعر", en: "Quote status changed" },
-    REQUEST_FIELD_LIBRARY_CREATED: { ar: "إنشاء حقل في مكتبة النماذج", en: "Field library created" },
-    REQUEST_FIELD_LIBRARY_UPDATED: { ar: "تعديل حقل في مكتبة النماذج", en: "Field library updated" },
-    REQUEST_TEMPLATE_ACTIVE_VIEWED: { ar: "عرض قالب طلب نشط", en: "Active request template viewed" },
+    REQUEST_FIELD_LIBRARY_CREATED: {
+      ar: "إنشاء حقل في مكتبة النماذج",
+      en: "Field library created",
+    },
+    REQUEST_FIELD_LIBRARY_UPDATED: {
+      ar: "تعديل حقل في مكتبة النماذج",
+      en: "Field library updated",
+    },
+    REQUEST_TEMPLATE_ACTIVE_VIEWED: {
+      ar: "عرض قالب طلب نشط",
+      en: "Active request template viewed",
+    },
     REQUEST_TEMPLATE_FORM_RESPONSE_SUBMITTED: {
       ar: "إرسال إجابات نموذج طلب",
       en: "Request template form response submitted",
@@ -433,6 +461,7 @@ function eventLabel(eventCode: string, locale: SupportedLocale): string {
       en: "Request template version status changed",
     },
     REQUEST_ASSIGNMENT_CHANGED: { ar: "تغيير إسناد طلب", en: "Request assignment changed" },
+    REQUEST_ATTACHMENT_ARCHIVED: { ar: "أرشفة مرفق طلب", en: "Request attachment archived" },
     REQUEST_ATTACHMENT_METADATA_ADDED: { ar: "إضافة مرفق إلى طلب", en: "Request attachment added" },
     REQUEST_CLIENT_COMMENT_ADDED: { ar: "إضافة تعليق عميل", en: "Client comment added" },
     REQUEST_CLIENT_DOCUMENT_REQUEST_CANCELLED: {
@@ -1370,6 +1399,44 @@ export function AdminAuditLogsPageContent({
     (log) => log.severity === "CRITICAL" || log.severity === "HIGH",
   );
   const latestLog = logs[0] ?? null;
+  const [filters, setFilters] = useState({
+    category: "all",
+    eventCode: "all",
+    query: "",
+    severity: "all",
+  });
+  const eventOptions = useMemo(
+    () => Array.from(new Set(logs.map((log) => log.eventCode))).sort(),
+    [logs],
+  );
+  const categoryOptions = useMemo(
+    () => Array.from(new Set(logs.map((log) => auditCategory(log, lang)))).sort(),
+    [logs, lang],
+  );
+  const filteredLogs = useMemo(() => {
+    const query = filters.query.trim().toLowerCase();
+    return logs.filter((log) => {
+      if (filters.severity !== "all" && log.severity !== filters.severity) return false;
+      if (filters.eventCode !== "all" && log.eventCode !== filters.eventCode) return false;
+      if (filters.category !== "all" && auditCategory(log, lang) !== filters.category) {
+        return false;
+      }
+      if (!query) return true;
+      const actor = log.actor ? `${log.actor.displayName} ${log.actor.email}` : "";
+      return [
+        actor,
+        auditCategory(log, lang),
+        eventLabel(log.eventCode, lang),
+        log.entityId,
+        log.entityType,
+        log.eventCode,
+        log.reason,
+        log.requestId,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query));
+    });
+  }, [filters, lang, logs]);
 
   return (
     <>
@@ -1417,11 +1484,68 @@ export function AdminAuditLogsPageContent({
         />
       </BentoGrid>
       <SectionCard title={t.auditTrail} eyebrow={t.security} description={t.auditDescription}>
+        <div className="catalog-form compact">
+          <label>
+            {t.auditSearch}
+            <input
+              placeholder={t.auditSearch}
+              value={filters.query}
+              onChange={(event) => setFilters({ ...filters, query: event.target.value })}
+            />
+          </label>
+          <label>
+            {t.severity}
+            <select
+              value={filters.severity}
+              onChange={(event) => setFilters({ ...filters, severity: event.target.value })}
+            >
+              <option value="all">{t.allSeverities}</option>
+              {(["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const).map((severity) => (
+                <option key={severity} value={severity}>
+                  {severityLabel(severity, lang)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {t.auditCategoryFilter}
+            <select
+              value={filters.category}
+              onChange={(event) => setFilters({ ...filters, category: event.target.value })}
+            >
+              <option value="all">{t.auditCategoryFilter}</option>
+              {categoryOptions.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {t.auditEventFilter}
+            <select
+              value={filters.eventCode}
+              onChange={(event) => setFilters({ ...filters, eventCode: event.target.value })}
+            >
+              <option value="all">{t.allEvents}</option>
+              {eventOptions.map((eventCode) => (
+                <option key={eventCode} value={eventCode}>
+                  {eventLabel(eventCode, lang)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="eyebrow">
+            {t.filteredResults}: {number(filteredLogs.length, lang)} / {number(logs.length, lang)}
+          </p>
+        </div>
         {logs.length === 0 ? (
           <EmptyState title={t.emptyAudit}>{t.auditDescription}</EmptyState>
+        ) : filteredLogs.length === 0 ? (
+          <EmptyState title={t.noFilteredAudit}>{t.auditDescription}</EmptyState>
         ) : (
           <div className="access-audit-list">
-            {logs.map((log) => (
+            {filteredLogs.map((log) => (
               <article
                 className={`access-audit-card severity-${log.severity.toLowerCase()}`}
                 key={log.id}

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Inject,
@@ -72,7 +73,10 @@ function metadata(request: RequestWithId): RequestMetadata {
   };
 }
 
-function setFileDownloadHeaders(response: Response, file: { originalName: string; mimeType: string }) {
+function setFileDownloadHeaders(
+  response: Response,
+  file: { originalName: string; mimeType: string },
+) {
   const headerFileName = file.originalName.replace(/["\r\n]/g, "_");
   const asciiFallback = headerFileName.replace(/[^\x20-\x7E]/g, "_") || "download";
   response.setHeader("Content-Type", file.mimeType || "application/octet-stream");
@@ -274,6 +278,17 @@ export class RequestsController {
     const file = await this.requests.downloadFile(id, fileId, request.auth!, false);
     setFileDownloadHeaders(response, file);
     return new StreamableFile(file.stream);
+  }
+
+  @Delete(":id/files/:fileId")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Archive a request file without deleting the audit trail" })
+  archiveFile(
+    @Param("id") id: string,
+    @Param("fileId") fileId: string,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.archiveFile(id, fileId, request.auth!, metadata(request), false);
   }
 
   @Post(":id/tasks")
@@ -546,5 +561,16 @@ export class ClientRequestsController {
     const file = await this.requests.downloadFile(id, fileId, request.auth!, true);
     setFileDownloadHeaders(response, file);
     return new StreamableFile(file.stream);
+  }
+
+  @Delete(":id/files/:fileId")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Archive a client-owned visible request file" })
+  archiveFile(
+    @Param("id") id: string,
+    @Param("fileId") fileId: string,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.archiveFile(id, fileId, request.auth!, metadata(request), true);
   }
 }

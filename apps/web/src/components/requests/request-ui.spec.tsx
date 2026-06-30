@@ -305,6 +305,11 @@ describe("Request lifecycle UI", () => {
       writable: true,
       value: jest.fn(),
     });
+    Object.defineProperty(window, "confirm", {
+      configurable: true,
+      writable: true,
+      value: jest.fn(() => true),
+    });
   });
 
   it("renders request list cards from backend data", () => {
@@ -655,6 +660,23 @@ describe("Request lifecycle UI", () => {
     );
   });
 
+  it("archives request attachments through the backend API", async () => {
+    const fetchMock = jest.mocked(fetch);
+    fetchMock.mockImplementationOnce(() => jsonResponse({ ...serviceRequest(), attachments: [] }));
+
+    renderRequestDetail(serviceRequest(), currentUser(), assignmentCandidates());
+    fireEvent.click(screen.getByRole("button", { name: "Archive attachment" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(window.confirm).toHaveBeenCalledWith(
+      "Archive this attachment? It will no longer appear on the request or download links.",
+    );
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "http://localhost:4000/api/v1/requests/request-1/files/file-1",
+    );
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("DELETE");
+  });
+
   it("lets client users accept only shared outputs through the backend API", async () => {
     const fetchMock = jest.mocked(fetch);
     const request = serviceRequest();
@@ -680,6 +702,39 @@ describe("Request lifecycle UI", () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
       "http://localhost:4000/api/v1/client-portal/requests/request-1/outputs/output-1/accept",
     );
+  });
+
+  it("lets client users remove uploaded requested documents through the backend API", async () => {
+    const fetchMock = jest.mocked(fetch);
+    const request = serviceRequest();
+    request.documentRequests[0] = {
+      ...request.documentRequests[0]!,
+      status: "UPLOADED",
+      fulfilledAt: "2026-06-22T04:00:00.000Z",
+      file: {
+        ...request.attachments[0]!,
+        id: "client-file-1",
+        downloadUrl: "/api/v1/client-portal/requests/request-1/files/client-file-1/download",
+      },
+    };
+    fetchMock.mockImplementationOnce(() =>
+      jsonResponse({
+        ...request,
+        documentRequests: [{ ...request.documentRequests[0]!, status: "REQUESTED", file: null }],
+      }),
+    );
+
+    render(<ClientRequestDetail locale="en" request={request} />);
+    fireEvent.click(screen.getByRole("button", { name: "Remove file" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(window.confirm).toHaveBeenCalledWith(
+      "Remove this file? The document request will reopen so you can upload a replacement.",
+    );
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "http://localhost:4000/api/v1/client-portal/requests/request-1/files/client-file-1",
+    );
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("DELETE");
   });
 
   it("does not render internal notes in the client request view", () => {
