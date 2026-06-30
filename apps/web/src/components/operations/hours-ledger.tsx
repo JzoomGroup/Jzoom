@@ -25,6 +25,16 @@ import {
   StatusChip,
 } from "../premium-os";
 
+interface OperationsClientOption {
+  id: string;
+  code: string;
+  name: string;
+}
+
+function clientOptionLabel(client: OperationsClientOption): string {
+  return `${client.name} (${client.code})`;
+}
+
 const copy = {
   ar: {
     approved: "معتمدة",
@@ -34,7 +44,7 @@ const copy = {
     billableNo: "لا",
     billableYes: "نعم",
     client: "العميل",
-    clientId: "معرف العميل",
+    clientId: "العميل",
     clientIdPlaceholder: "اختياري",
     clients: "العملاء",
     clientsDetail: "عملاء ضمن النطاق",
@@ -55,7 +65,7 @@ const copy = {
     emptyUsageTitle: "لا يوجد استخدام",
     entries: "القيود",
     entriesDetail: "سجلات الساعات",
-    filterDescription: "استخدم الفترة ومعرف العميل عند الحاجة لمراجعة نطاق محدد.",
+    filterDescription: "استخدم الفترة والعميل عند الحاجة لمراجعة نطاق محدد.",
     filterUsage: "تصفية السجل",
     finalizeAndLock: "اعتماد وإقفال",
     generated: "آخر تحديث",
@@ -94,7 +104,7 @@ const copy = {
     billableNo: "No",
     billableYes: "Yes",
     client: "Client",
-    clientId: "Client ID",
+    clientId: "Client",
     clientIdPlaceholder: "Optional",
     clients: "Clients",
     clientsDetail: "Clients in scope",
@@ -115,7 +125,7 @@ const copy = {
     emptyUsageTitle: "No usage yet",
     entries: "Entries",
     entriesDetail: "Ledger records",
-    filterDescription: "Use period and client ID when you need to review a specific scope.",
+    filterDescription: "Use period and client when you need to review a specific scope.",
     filterUsage: "Filter usage",
     finalizeAndLock: "Finalize and lock",
     generated: "Generated",
@@ -211,12 +221,14 @@ function metric(label: ReactNode, value: ReactNode) {
 
 export function HoursLedger({
   canManageClosings,
+  clientOptions = [],
   initialClosings,
   initialLedger,
   initialUsage,
   locale: localeInput = "en",
 }: {
   canManageClosings: boolean;
+  clientOptions?: OperationsClientOption[];
   initialClosings: MonthlyClosing[];
   initialLedger: HoursLedgerResponse;
   initialUsage: MonthlyUsageResponse;
@@ -336,11 +348,17 @@ export function HoursLedger({
             </label>
             <label>
               {t.clientId}
-              <input
+              <select
                 value={filters.clientId}
                 onChange={(event) => setFilters({ ...filters, clientId: event.target.value })}
-                placeholder={t.clientIdPlaceholder}
-              />
+              >
+                <option value="">{t.clientIdPlaceholder}</option>
+                {clientOptions.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {clientOptionLabel(client)}
+                  </option>
+                ))}
+              </select>
             </label>
             <div className="form-actions">
               <button type="submit" disabled={saving}>
@@ -429,13 +447,20 @@ export function HoursLedger({
           <form className="catalog-form" onSubmit={prepare}>
             <label>
               {t.clientId}
-              <input
+              <select
                 required
                 value={closingForm.clientId}
                 onChange={(event) =>
                   setClosingForm({ ...closingForm, clientId: event.target.value })
                 }
-              />
+              >
+                <option value="">{t.clientIdPlaceholder}</option>
+                {clientOptions.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {clientOptionLabel(client)}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               {t.period}

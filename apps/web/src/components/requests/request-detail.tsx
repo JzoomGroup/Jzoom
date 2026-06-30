@@ -24,6 +24,7 @@ import {
   supervisorReviewRequest,
   updateRequestTask,
   uploadRequestAttachment,
+  uploadRequestOutputFile,
 } from "../../lib/request-client";
 import type { CurrentUser } from "../../lib/auth";
 import type {
@@ -583,6 +584,38 @@ function codeLabel(value: string | null | undefined, locale: SupportedLocale): s
   return locale === "en" ? value.replaceAll("_", " ").toLowerCase() : value;
 }
 
+function userRoleLabel(
+  user: ServiceRequest["comments"][number]["author"] | null | undefined,
+  locale: SupportedLocale,
+): string {
+  const roleCode = user?.roles?.[0]?.role.code;
+  if (!roleCode) return copy[locale].internalUser;
+  return codeLabel(roleCode.replace(/^ROLE-/, ""), locale);
+}
+
+function userDisplayWithRole(
+  user: ServiceRequest["comments"][number]["author"] | null | undefined,
+  fallback: string,
+  locale: SupportedLocale,
+): string {
+  if (!user) return fallback;
+  return `${user.displayName} - ${userRoleLabel(user, locale)}`;
+}
+
+function activityActorLabel(
+  event: ServiceRequest["activity"][number],
+  locale: SupportedLocale,
+): string {
+  const metadata =
+    event.metadata && typeof event.metadata === "object"
+      ? (event.metadata as Record<string, unknown>)
+      : {};
+  const actorDisplayName =
+    typeof metadata.actorDisplayName === "string" ? metadata.actorDisplayName : null;
+  const actorRole = codeLabel(event.actorRole.replace(/^ROLE-/, ""), locale);
+  return actorDisplayName ? `${actorDisplayName} - ${actorRole}` : actorRole;
+}
+
 function roleWorkspace(
   user: CurrentUser,
   locale: SupportedLocale,
@@ -726,6 +759,7 @@ export function RequestDetail({
     description: "",
     title: "",
   });
+  const [selectedOutputFile, setSelectedOutputFile] = useState<File | null>(null);
   const [documentForm, setDocumentForm] = useState({
     dueAt: "",
     instructions: "",
@@ -767,7 +801,7 @@ export function RequestDetail({
   const canExecute =
     hasGlobalOperations || (isSpecialist && (assignedAsSpecialist || assignedTask)) || assignedTask;
   const canSupervise = hasGlobalOperations || (isSupervisor && assignedAsSupervisor);
-  const canManageLifecycle = hasGlobalOperations || canSupervise;
+  const canManageLifecycle = hasGlobalOperations || canSupervise || canExecute;
   const canAddOperationalContext =
     hasGlobalOperations ||
     canExecute ||
@@ -983,6 +1017,10 @@ export function RequestDetail({
     }
   }
 
+  function selectOutputFile(event: ChangeEvent<HTMLInputElement>) {
+    setSelectedOutputFile(event.target.files?.[0] ?? null);
+  }
+
   function archiveAttachment(fileId: string) {
     if (!window.confirm(t.archiveAttachmentConfirm)) {
       return;
@@ -1022,13 +1060,20 @@ export function RequestDetail({
   function submitOutput(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void run("output", async () => {
+      const outputCode = outputForm.code.trim().toUpperCase();
       const updated = await createRequestOutput(request.id, {
-        code: outputForm.code,
+        code: outputCode,
         title: outputForm.title,
         ...(outputForm.description ? { description: outputForm.description } : {}),
       });
+      const createdOutput = updated.outputs.find((output) => output.code === outputCode);
+      const withFile =
+        selectedOutputFile && createdOutput
+          ? await uploadRequestOutputFile(request.id, createdOutput.id, selectedOutputFile)
+          : updated;
       setOutputForm({ code: "", description: "", title: "" });
-      return updated;
+      setSelectedOutputFile(null);
+      return withFile;
     });
   }
 
@@ -1711,6 +1756,19 @@ export function RequestDetail({
                   }
                 />
               </label>
+              <label className="client-file-drop form-span">
+                <input type="file" onChange={selectOutputFile} />
+                <span>{t.chooseFile}</span>
+                <small>{selectedOutputFile ? selectedOutputFile.name : t.fileUploadHint}</small>
+              </label>
+              {selectedOutputFile && (
+                <div className="client-upload-preview form-span">
+                  <strong>{t.fileReady}</strong>
+                  <span>
+                    {selectedOutputFile.name} - {selectedOutputFile.size} {t.bytes}
+                  </span>
+                </div>
+              )}
               <button
                 className="os-button os-button-primary"
                 type="submit"
@@ -1733,7 +1791,7 @@ export function RequestDetail({
                   </strong>
                   <small>
                     {codeLabel(output.status, locale)} - {t.createdBy}{" "}
-                    {output.createdBy?.displayName ?? t.internalUser}
+                    {userDisplayWithRole(output.createdBy, t.internalUser, locale)}
                     {output.reviewedBy ? ` - ${t.reviewedBy} ${output.reviewedBy.displayName}` : ""}
                     {output.sharedAt ? ` - ${t.sharedAt} ${dateTime(output.sharedAt, locale)}` : ""}
                   </small>
@@ -1747,6 +1805,24 @@ export function RequestDetail({
                     <p>
                       {t.decisionNote}: {output.clientReturnReason}
                     </p>
+                  )}
+                  {output.attachments.length > 0 && (
+                    <div className="activity-list compact">
+                      {output.attachments.map((file) => (
+                        <article key={file.id}>
+                          <strong>{file.originalName}</strong>
+                          <small>
+                            {file.mimeType} - {file.sizeBytes} {t.bytes} -{" "}
+                            {codeLabel(file.visibility, locale)}
+                          </small>
+                          {file.downloadUrl && (
+                            <a className="os-button os-button-secondary" href={file.downloadUrl}>
+                              {t.downloadFile}
+                            </a>
+                          )}
+                        </article>
+                      ))}
+                    </div>
                   )}
                   <div className="row-actions">
                     {canExecute && submittableOutputStatuses.includes(output.status) && (
@@ -2043,7 +2119,7 @@ export function RequestDetail({
             ) : (
               request.comments.map((comment) => (
                 <article key={comment.id}>
-                  <strong>{comment.author.displayName}</strong>
+                  <strong>{userDisplayWithRole(comment.author, t.internalUser, locale)}</strong>
                   <small>
                     {dateTime(comment.createdAt, locale)} -{" "}
                     {comment.isClientVisible ? t.clientVisible : t.internalOnly}
@@ -2080,7 +2156,7 @@ export function RequestDetail({
             ) : (
               request.internalNotes.map((note) => (
                 <article key={note.id}>
-                  <strong>{note.author.displayName}</strong>
+                  <strong>{userDisplayWithRole(note.author, t.internalUser, locale)}</strong>
                   <small>{dateTime(note.createdAt, locale)}</small>
                   <p>{note.body}</p>
                 </article>
@@ -2223,7 +2299,7 @@ export function RequestDetail({
                     {codeLabel(event.toState.code, locale)}
                   </strong>
                   <small>
-                    {dateTime(event.occurredAt, locale)} - {codeLabel(event.actorRole, locale)}
+                    {dateTime(event.occurredAt, locale)} - {activityActorLabel(event, locale)}
                   </small>
                   {event.reason && <p>{event.reason}</p>}
                 </article>

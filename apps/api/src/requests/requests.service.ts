@@ -53,19 +53,6 @@ import type {
 
 const workflowCode = "REQUEST_LIFECYCLE_FOUNDATION";
 
-const lifecycleTransitions: Record<RequestLifecycleStatus, RequestLifecycleStatus[]> = {
-  NEW: ["TRIAGE", "REJECTED"],
-  TRIAGE: ["ASSIGNED", "RETURNED", "REJECTED"],
-  ASSIGNED: ["IN_PROGRESS", "WAITING_SUPERVISOR", "RETURNED"],
-  IN_PROGRESS: ["WAITING_CLIENT", "WAITING_SUPERVISOR", "COMPLETED", "RETURNED"],
-  WAITING_CLIENT: ["IN_PROGRESS", "RETURNED", "REJECTED"],
-  WAITING_SUPERVISOR: ["IN_PROGRESS", "COMPLETED", "RETURNED", "REJECTED"],
-  COMPLETED: ["CLOSED", "RETURNED"],
-  CLOSED: [],
-  RETURNED: ["TRIAGE", "ASSIGNED", "IN_PROGRESS"],
-  REJECTED: [],
-};
-
 const statusLabels: Record<RequestLifecycleStatus, { ar: string; en: string; terminal?: boolean }> =
   {
     NEW: { ar: "جديد", en: "New" },
@@ -88,6 +75,17 @@ const userSummarySelect = {
   id: true,
   email: true,
   displayName: true,
+  roles: {
+    select: {
+      role: {
+        select: {
+          code: true,
+          nameAr: true,
+          nameEn: true,
+        },
+      },
+    },
+  },
 } satisfies Prisma.UserSelect;
 
 const assignmentCandidateSelect = {
@@ -241,6 +239,10 @@ const requestDetailInclude = {
       reviewedBy: { select: userSummarySelect },
       sharedBy: { select: userSummarySelect },
       clientDecisionBy: { select: userSummarySelect },
+      files: {
+        orderBy: { createdAt: "asc" },
+        include: { uploadedBy: { select: userSummarySelect } },
+      },
     },
   },
   documentRequests: {
@@ -1061,6 +1063,66 @@ export class RequestsService {
     return this.get(id, principal);
   }
 
+  async addOutputFile(
+    id: string,
+    outputId: string,
+    file: UploadedRequestFile | undefined,
+    input: Pick<AddAttachmentMetadataDto, "visibility">,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const request = await this.requireAccessibleRequest(id, principal);
+    this.assertAssignedWork(request, principal);
+    const output = await this.requireRequestOutput(id, outputId);
+    if (["SHARED_WITH_CLIENT", "ACCEPTED_BY_CLIENT", "CLOSED"].includes(output.status)) {
+      throw new ConflictException({
+        code: "REQUEST_OUTPUT_FILE_LOCKED",
+        message: "Files cannot be changed after an output is shared, accepted, or closed",
+      });
+    }
+    if (!file) {
+      throw new BadRequestException({
+        code: "FILE_REQUIRED",
+        message: "A file is required",
+      });
+    }
+
+    const stored = await this.fileStorage.storeRequestFile(id, "outputs", file);
+    const visibility = this.normalizeFileVisibility(input.visibility ?? "CLIENT_VISIBLE");
+    const created = await this.database.prisma.fileMetadata.create({
+      data: {
+        requestId: id,
+        requestOutputId: output.id,
+        uploadedById: principal.userId,
+        storageProvider: stored.storageProvider,
+        storageKey: stored.storageKey,
+        originalName: stored.originalName,
+        mimeType: stored.mimeType,
+        sizeBytes: BigInt(stored.sizeBytes),
+        sha256: stored.sha256,
+        visibility,
+      },
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.attachmentAdded,
+        entityType: "RequestOutput",
+        entityId: output.id,
+        after: {
+          fileId: created.id,
+          originalName: created.originalName,
+          requestId: id,
+          requestOutputId: output.id,
+          storageProvider: created.storageProvider,
+          visibility: created.visibility,
+        },
+      },
+      metadata,
+    );
+    return this.get(id, principal);
+  }
+
   async createTask(
     id: string,
     input: CreateRequestTaskDto,
@@ -1384,6 +1446,13 @@ export class RequestsService {
       input.reason ?? "Output shared with client",
       { outputId: updated.id, status: updated.status },
     );
+    await this.transitionRequest(
+      request,
+      "WAITING_CLIENT",
+      input.reason ?? "Output shared with client",
+      principal,
+      metadata,
+    );
     await this.notifyClientRequestUsers(
       request,
       principal,
@@ -1582,6 +1651,13 @@ export class RequestsService {
       `Client accepted output "${updated.title}".`,
       { outputId: updated.id, status: updated.status },
     );
+    await this.transitionRequest(
+      request,
+      "COMPLETED",
+      "Client accepted shared output",
+      principal,
+      metadata,
+    );
     const refreshed = await this.requireClientRequest(id, principal);
     return this.detailView(refreshed, true);
   }
@@ -1630,6 +1706,7 @@ export class RequestsService {
       `Client returned output "${updated.title}".`,
       { outputId: updated.id, status: updated.status },
     );
+    await this.transitionRequest(request, "IN_PROGRESS", input.reason.trim(), principal, metadata);
     const refreshed = await this.requireClientRequest(id, principal);
     return this.detailView(refreshed, true);
   }
@@ -1832,7 +1909,19 @@ export class RequestsService {
         id: fileId,
         requestId: id,
         archivedAt: null,
-        ...(clientSafe ? { visibility: "CLIENT_VISIBLE" as const } : {}),
+        ...(clientSafe
+          ? {
+              visibility: "CLIENT_VISIBLE" as const,
+              OR: [
+                { requestOutputId: null },
+                {
+                  requestOutput: {
+                    status: { in: [...CLIENT_VISIBLE_OUTPUT_STATUSES] },
+                  },
+                },
+              ],
+            }
+          : {}),
       },
     });
     if (!file) {
@@ -2321,14 +2410,6 @@ export class RequestsService {
     if (request.status === status) {
       return this.detailView(request, false);
     }
-    const allowed = lifecycleTransitions[request.status];
-    if (!allowed.includes(status)) {
-      throw new ConflictException({
-        code: "INVALID_REQUEST_STATUS_TRANSITION",
-        message: `Requests cannot move from ${request.status} to ${status}`,
-      });
-    }
-
     const workflow = await this.ensureRequestWorkflow();
     const toStateId = workflow.states[status];
     const updated = await this.database.prisma.request.update({
@@ -2336,10 +2417,16 @@ export class RequestsService {
       data: {
         status,
         currentStateId: toStateId,
-        ...(status === "CLOSED" ? { closedAt: new Date() } : {}),
+        closedAt: status === "CLOSED" ? new Date() : null,
       },
       include: requestDetailInclude,
     });
+    const eventMetadata = {
+      actorDisplayName: principal.displayName,
+      actorEmail: principal.email,
+      fromStatus: request.status,
+      toStatus: status,
+    };
     await this.database.prisma.workflowEvent.create({
       data: {
         workflowVersionId: updated.workflowVersionId,
@@ -2349,7 +2436,7 @@ export class RequestsService {
         actorId: principal.userId,
         actorRole: primaryRole(principal),
         ...(reason ? { reason } : {}),
-        metadata: json({ fromStatus: request.status, toStatus: status }),
+        metadata: json(eventMetadata),
       },
     });
     await this.audit.record(
@@ -2369,7 +2456,7 @@ export class RequestsService {
       principal,
       REQUEST_EVENT.statusChanged,
       `Request ${updated.requestNumber} moved to ${status.toLowerCase().replaceAll("_", " ")}.`,
-      { fromStatus: request.status, toStatus: status },
+      eventMetadata,
       [],
       `تم نقل الطلب ${updated.requestNumber} إلى ${statusLabels[status].ar}.`,
     );
@@ -2380,12 +2467,11 @@ export class RequestsService {
         REQUEST_EVENT.statusChanged,
         `Request ${updated.requestNumber} is waiting for your input.`,
         `الطلب ${updated.requestNumber} بانتظار إجراء من طرفكم.`,
-        { fromStatus: request.status, toStatus: status },
+        eventMetadata,
         `/client/requests/${updated.id}`,
       );
     }
-    const refreshed = await this.requireAccessibleRequest(request.id, principal);
-    return this.detailView(refreshed, false);
+    return this.detailView(updated, false);
   }
 
   private assertAssignedWork(
@@ -3188,7 +3274,13 @@ export class RequestsService {
 
   private fileDownloadUrl(requestId: string, fileId: string, clientSafe: boolean): string {
     const prefix = clientSafe ? "client-portal/requests" : "requests";
-    return `/api/v1/${prefix}/${requestId}/files/${fileId}/download`;
+    const path = `${prefix}/${requestId}/files/${fileId}/download`;
+    const configuredBase =
+      process.env.JZOOM_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL;
+    if (configuredBase) {
+      return `${configuredBase.replace(/\/$/, "")}/${path}`;
+    }
+    return `/api/v1/${path}`;
   }
 
   private metadataOnlyUpload(
@@ -3303,7 +3395,9 @@ export class RequestsService {
       attachments: request.files
         .filter(
           (file) =>
-            file.archivedAt === null && (!clientSafe || file.visibility === "CLIENT_VISIBLE"),
+            file.archivedAt === null &&
+            file.requestOutputId === null &&
+            (!clientSafe || file.visibility === "CLIENT_VISIBLE"),
         )
         .map((file) => ({
           id: file.id,
@@ -3525,6 +3619,27 @@ export class RequestsService {
       reviewedBy: clientSafe ? null : output.reviewedBy,
       sharedBy: clientSafe ? null : output.sharedBy,
       clientDecisionBy: clientSafe ? null : output.clientDecisionBy,
+      attachments: output.files
+        .filter(
+          (file) =>
+            file.archivedAt === null && (!clientSafe || file.visibility === "CLIENT_VISIBLE"),
+        )
+        .map((file) => ({
+          id: file.id,
+          uploadedBy: clientSafe ? null : file.uploadedBy,
+          originalName: file.originalName,
+          mimeType: file.mimeType,
+          sizeBytes: Number(file.sizeBytes),
+          sha256: file.sha256,
+          visibility: file.visibility,
+          version: file.version,
+          downloadUrl:
+            file.storageProvider === "local"
+              ? this.fileDownloadUrl(output.requestId, file.id, clientSafe)
+              : null,
+          createdAt: file.createdAt.toISOString(),
+          updatedAt: file.updatedAt.toISOString(),
+        })),
     };
   }
 

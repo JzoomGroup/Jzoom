@@ -7,6 +7,7 @@ import {
   requireMonthlyClosings,
   requireMonthlyUsage,
 } from "../../lib/operations-server";
+import { requireRequestIntakeOptions } from "../../lib/request-server";
 
 const ledgerRoles = [
   "ROLE-ADMIN",
@@ -30,10 +31,11 @@ export default async function HoursLedgerPage() {
   const canManageClosings = user.roles.some((role) =>
     closingRoles.includes(role as (typeof closingRoles)[number]),
   );
-  const [ledger, usage, closings] = await Promise.all([
+  const [ledger, usage, closings, intakeOptions] = await Promise.all([
     requireHoursLedger(),
     requireMonthlyUsage(),
     canManageClosings ? requireMonthlyClosings() : Promise.resolve([]),
+    requireRequestIntakeOptions(),
   ]);
 
   return (
@@ -47,6 +49,7 @@ export default async function HoursLedgerPage() {
     >
       <HoursLedger
         canManageClosings={canManageClosings}
+        clientOptions={intakeOptions.clients}
         initialClosings={closings}
         initialLedger={ledger}
         initialUsage={usage}

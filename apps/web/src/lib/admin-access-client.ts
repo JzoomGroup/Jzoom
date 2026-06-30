@@ -79,6 +79,11 @@ export interface CreateOperatingUserPayload {
   specialistIds: string[];
 }
 
+export type OperatingUserScopePayload = Omit<
+  CreateOperatingUserPayload,
+  "displayName" | "email" | "roleCode"
+>;
+
 export interface CreateOperatingUserResponse {
   snapshot: AdminUsersSnapshot;
   temporaryPasswordAssigned?: boolean;
@@ -97,4 +102,18 @@ export function resetOperatingUserPassword(userId: string): Promise<{ reset: boo
   return adminAccessRequest<{ reset: boolean }>(`auth/admin/users/${userId}/reset-password`, {
     method: "POST",
   });
+}
+
+export function updateOperatingUserScope(
+  userId: string,
+  payload: OperatingUserScopePayload,
+): Promise<{ updated: boolean }> {
+  return adminAccessRequest<{ updated: boolean }>(`auth/admin/users/${userId}/operating-scope`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function fetchAdminUsersSnapshot(): Promise<AdminUsersSnapshot> {
+  return adminAccessRequest<AdminUsersSnapshot>("auth/admin/users");
 }

@@ -170,6 +170,7 @@ function serviceRequest(): ServiceRequest {
         reviewedBy: null,
         sharedBy: null,
         clientDecisionBy: null,
+        attachments: [],
       },
     ],
     documentRequests: [
@@ -409,6 +410,7 @@ describe("Request lifecycle UI", () => {
     );
 
     render(<RequestList intakeOptions={requestIntakeOptions()} requests={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Create request" }));
 
     fireEvent.change(screen.getByLabelText("Client"), { target: { value: "client-1" } });
     expect(
@@ -648,7 +650,7 @@ describe("Request lifecycle UI", () => {
     expect(screen.getByRole("button", { name: "Create internal output" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add time" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Approve request" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Update status" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Update status" })).toBeInTheDocument();
   });
 
   it("shows assigned supervisors review controls without execution forms", () => {

@@ -275,6 +275,7 @@ export function RequestList({
   const router = useRouter();
   const [items, setItems] = useState(requests);
   const [creating, setCreating] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [templateNotice, setTemplateNotice] = useState<string | null>(null);
@@ -447,7 +448,10 @@ export function RequestList({
         eyebrow={t.commandEyebrow}
         title={t.pageTitle}
         description={t.pageDescription}
-        actions={[{ href: "/requests/queues", label: t.openQueues, variant: "primary" }]}
+        actions={[
+          { label: t.createRequest, onClick: () => setShowCreateModal(true), variant: "primary" },
+          { href: "/requests/queues", label: t.openQueues, variant: "secondary" },
+        ]}
       />
 
       <section className="request-list-command" aria-label={t.queueSnapshot}>
@@ -480,284 +484,320 @@ export function RequestList({
         </div>
       </section>
 
-      <SectionCard
-        eyebrow={t.intake}
-        title={t.createRequest}
-        description={t.createRequestDescription}
-      >
-        <form className="catalog-form wide-form request-list-intake-form" onSubmit={submit}>
-          <div className="request-intake-steps form-span">
-            <div className="active">
-              <span>01</span>
-              <strong>{t.stepClient}</strong>
-              <small>{t.requestSetup}</small>
-            </div>
-            <div>
-              <span>02</span>
-              <strong>{t.stepTemplate}</strong>
-              <small>{t.templateAndValidation}</small>
-            </div>
-            <div>
-              <span>03</span>
-              <strong>{t.stepLaunch}</strong>
-              <small>{t.readyToCreate}</small>
-            </div>
-          </div>
+      {showCreateModal ? (
+        <div className="request-create-backdrop">
+          <section
+            aria-label={t.createRequest}
+            aria-modal="true"
+            className="request-create-dialog"
+            role="dialog"
+          >
+            <SectionCard
+              eyebrow={t.intake}
+              title={t.createRequest}
+              description={t.createRequestDescription}
+            >
+              <div className="form-actions">
+                <button
+                  className="os-button os-button-secondary"
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                >
+                  {locale === "ar" ? "إغلاق" : "Close"}
+                </button>
+              </div>
+              <form className="catalog-form wide-form request-list-intake-form" onSubmit={submit}>
+                <div className="request-intake-steps form-span">
+                  <div className="active">
+                    <span>01</span>
+                    <strong>{t.stepClient}</strong>
+                    <small>{t.requestSetup}</small>
+                  </div>
+                  <div>
+                    <span>02</span>
+                    <strong>{t.stepTemplate}</strong>
+                    <small>{t.templateAndValidation}</small>
+                  </div>
+                  <div>
+                    <span>03</span>
+                    <strong>{t.stepLaunch}</strong>
+                    <small>{t.readyToCreate}</small>
+                  </div>
+                </div>
 
-          <section className="request-intake-panel form-span">
-            <div className="request-panel-heading">
-              <span>01</span>
-              <div>
-                <h3>{t.requestSetup}</h3>
-                <p>{t.requestSetupHint}</p>
-              </div>
-            </div>
-            <div className="request-field-grid request-field-grid-three">
-              <label>
-                {t.clientId}
-                <select
-                  required
-                  value={form.clientId}
-                  onChange={(event) => selectClient(event.target.value)}
-                >
-                  <option value="">{t.selectClient}</option>
-                  {options.clients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {clientLabel(client)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {t.subscriptionServiceId}
-                <select
-                  required
-                  disabled={!selectedClient || subscriptionServices.length === 0}
-                  value={form.subscriptionServiceId}
-                  onChange={(event) => selectSubscriptionService(event.target.value)}
-                >
-                  <option value="">
-                    {selectedClient ? t.selectSubscriptionService : t.selectClient}
-                  </option>
-                  {subscriptionServices.map((service) => (
-                    <option key={service.id} value={service.id}>
-                      {serviceLabel(service, locale, numberFormatter)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {t.serviceItemRevisionId}
-                <select
-                  disabled={!selectedSubscriptionService || serviceItems.length === 0}
-                  value={form.serviceItemRevisionId}
-                  onChange={(event) => selectServiceItem(event.target.value)}
-                >
-                  <option value="">{t.selectServiceItem}</option>
-                  {serviceItems.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {serviceItemLabel(item, locale)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            {options.clients.length === 0 && (
-              <p className="catalog-feedback form-span">{t.noClients}</p>
-            )}
-            {selectedClient && subscriptionServices.length === 0 && (
-              <p className="catalog-feedback form-span">{t.noSubscriptionServices}</p>
-            )}
-            {selectedSubscriptionService && serviceItems.length === 0 && (
-              <p className="catalog-feedback form-span">{t.noServiceItems}</p>
-            )}
-          </section>
+                <section className="request-intake-panel form-span">
+                  <div className="request-panel-heading">
+                    <span>01</span>
+                    <div>
+                      <h3>{t.requestSetup}</h3>
+                      <p>{t.requestSetupHint}</p>
+                    </div>
+                  </div>
+                  <div className="request-field-grid request-field-grid-three">
+                    <label>
+                      {t.clientId}
+                      <select
+                        required
+                        value={form.clientId}
+                        onChange={(event) => selectClient(event.target.value)}
+                      >
+                        <option value="">{t.selectClient}</option>
+                        {options.clients.map((client) => (
+                          <option key={client.id} value={client.id}>
+                            {clientLabel(client)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      {t.subscriptionServiceId}
+                      <select
+                        required
+                        disabled={!selectedClient || subscriptionServices.length === 0}
+                        value={form.subscriptionServiceId}
+                        onChange={(event) => selectSubscriptionService(event.target.value)}
+                      >
+                        <option value="">
+                          {selectedClient ? t.selectSubscriptionService : t.selectClient}
+                        </option>
+                        {subscriptionServices.map((service) => (
+                          <option key={service.id} value={service.id}>
+                            {serviceLabel(service, locale, numberFormatter)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      {t.serviceItemRevisionId}
+                      <select
+                        disabled={!selectedSubscriptionService || serviceItems.length === 0}
+                        value={form.serviceItemRevisionId}
+                        onChange={(event) => selectServiceItem(event.target.value)}
+                      >
+                        <option value="">{t.selectServiceItem}</option>
+                        {serviceItems.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {serviceItemLabel(item, locale)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  {options.clients.length === 0 && (
+                    <p className="catalog-feedback form-span">{t.noClients}</p>
+                  )}
+                  {selectedClient && subscriptionServices.length === 0 && (
+                    <p className="catalog-feedback form-span">{t.noSubscriptionServices}</p>
+                  )}
+                  {selectedSubscriptionService && serviceItems.length === 0 && (
+                    <p className="catalog-feedback form-span">{t.noServiceItems}</p>
+                  )}
+                </section>
 
-          <section className="request-intake-panel request-template-summary form-span">
-            <div className="request-panel-heading">
-              <span>02</span>
-              <div>
-                <h3>{t.templateAndValidation}</h3>
-                <p>{t.templateAndValidationHint}</p>
-              </div>
-            </div>
-            <div className="request-review-bar">
-              <div>
-                <span>{t.serviceItemRevisionId}</span>
-                <strong>
-                  {selectedServiceItem ? serviceItemLabel(selectedServiceItem, locale) : t.notSet}
-                </strong>
-              </div>
-              <button
-                className="os-button os-button-secondary"
-                type="button"
-                disabled={loadingTemplate || !form.serviceItemRevisionId.trim()}
-                onClick={() => void loadTemplate()}
-              >
-                {loadingTemplate ? t.loadingTemplate : t.loadRequestTemplate}
-              </button>
-            </div>
-          </section>
+                <section className="request-intake-panel request-template-summary form-span">
+                  <div className="request-panel-heading">
+                    <span>02</span>
+                    <div>
+                      <h3>{t.templateAndValidation}</h3>
+                      <p>{t.templateAndValidationHint}</p>
+                    </div>
+                  </div>
+                  <div className="request-review-bar">
+                    <div>
+                      <span>{t.serviceItemRevisionId}</span>
+                      <strong>
+                        {selectedServiceItem
+                          ? serviceItemLabel(selectedServiceItem, locale)
+                          : t.notSet}
+                      </strong>
+                    </div>
+                    <button
+                      className="os-button os-button-secondary"
+                      type="button"
+                      disabled={loadingTemplate || !form.serviceItemRevisionId.trim()}
+                      onClick={() => void loadTemplate()}
+                    >
+                      {loadingTemplate ? t.loadingTemplate : t.loadRequestTemplate}
+                    </button>
+                  </div>
+                </section>
 
-          <section className="request-intake-panel form-span">
-            <div className="request-panel-heading">
-              <span>03</span>
-              <div>
-                <h3>{t.assignmentAndSources}</h3>
-                <p>{t.assignmentAndSourcesHint}</p>
-              </div>
-            </div>
-            <div className="request-field-grid">
-              <label>
-                {t.sourceQuoteId}
-                <select
-                  disabled={!selectedClient || sourceQuotes.length === 0}
-                  value={form.sourceQuoteId}
-                  onChange={(event) => setForm({ ...form, sourceQuoteId: event.target.value })}
-                >
-                  <option value="">{sourceQuotes.length === 0 ? t.noQuotes : t.selectQuote}</option>
-                  {sourceQuotes.map((quote) => (
-                    <option key={quote.id} value={quote.id}>
-                      {quote.quoteNumber} - {quote.status}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {t.sourceInvoiceId}
-                <select
-                  disabled={!selectedClient || sourceInvoices.length === 0}
-                  value={form.sourceInvoiceId}
-                  onChange={(event) => setForm({ ...form, sourceInvoiceId: event.target.value })}
-                >
-                  <option value="">
-                    {sourceInvoices.length === 0 ? t.noInvoices : t.selectInvoice}
-                  </option>
-                  {sourceInvoices.map((invoice) => (
-                    <option key={invoice.id} value={invoice.id}>
-                      {invoice.invoiceNumber} - {invoice.status}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {t.specialistId}
-                <select
-                  value={form.assignedSpecialistId}
-                  onChange={(event) =>
-                    setForm({ ...form, assignedSpecialistId: event.target.value })
-                  }
-                >
-                  <option value="">{t.autoAssign}</option>
-                  {options.assignmentCandidates.specialists.map((candidate) => (
-                    <option key={candidate.id} value={candidate.id}>
-                      {candidateLabel(candidate)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {t.supervisorId}
-                <select
-                  value={form.assignedSupervisorId}
-                  onChange={(event) =>
-                    setForm({ ...form, assignedSupervisorId: event.target.value })
-                  }
-                >
-                  <option value="">{t.autoAssign}</option>
-                  {options.assignmentCandidates.supervisors.map((candidate) => (
-                    <option key={candidate.id} value={candidate.id}>
-                      {candidateLabel(candidate)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {t.accountManagerId}
-                <select
-                  value={form.accountManagerId}
-                  onChange={(event) => setForm({ ...form, accountManagerId: event.target.value })}
-                >
-                  <option value="">{t.autoAssign}</option>
-                  {options.assignmentCandidates.accountManagers.map((candidate) => (
-                    <option key={candidate.id} value={candidate.id}>
-                      {candidateLabel(candidate)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </section>
+                <section className="request-intake-panel form-span">
+                  <div className="request-panel-heading">
+                    <span>03</span>
+                    <div>
+                      <h3>{t.assignmentAndSources}</h3>
+                      <p>{t.assignmentAndSourcesHint}</p>
+                    </div>
+                  </div>
+                  <div className="request-field-grid">
+                    <label>
+                      {t.sourceQuoteId}
+                      <select
+                        disabled={!selectedClient || sourceQuotes.length === 0}
+                        value={form.sourceQuoteId}
+                        onChange={(event) =>
+                          setForm({ ...form, sourceQuoteId: event.target.value })
+                        }
+                      >
+                        <option value="">
+                          {sourceQuotes.length === 0 ? t.noQuotes : t.selectQuote}
+                        </option>
+                        {sourceQuotes.map((quote) => (
+                          <option key={quote.id} value={quote.id}>
+                            {quote.quoteNumber} - {quote.status}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      {t.sourceInvoiceId}
+                      <select
+                        disabled={!selectedClient || sourceInvoices.length === 0}
+                        value={form.sourceInvoiceId}
+                        onChange={(event) =>
+                          setForm({ ...form, sourceInvoiceId: event.target.value })
+                        }
+                      >
+                        <option value="">
+                          {sourceInvoices.length === 0 ? t.noInvoices : t.selectInvoice}
+                        </option>
+                        {sourceInvoices.map((invoice) => (
+                          <option key={invoice.id} value={invoice.id}>
+                            {invoice.invoiceNumber} - {invoice.status}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      {t.specialistId}
+                      <select
+                        value={form.assignedSpecialistId}
+                        onChange={(event) =>
+                          setForm({ ...form, assignedSpecialistId: event.target.value })
+                        }
+                      >
+                        <option value="">{t.autoAssign}</option>
+                        {options.assignmentCandidates.specialists.map((candidate) => (
+                          <option key={candidate.id} value={candidate.id}>
+                            {candidateLabel(candidate)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      {t.supervisorId}
+                      <select
+                        value={form.assignedSupervisorId}
+                        onChange={(event) =>
+                          setForm({ ...form, assignedSupervisorId: event.target.value })
+                        }
+                      >
+                        <option value="">{t.autoAssign}</option>
+                        {options.assignmentCandidates.supervisors.map((candidate) => (
+                          <option key={candidate.id} value={candidate.id}>
+                            {candidateLabel(candidate)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      {t.accountManagerId}
+                      <select
+                        value={form.accountManagerId}
+                        onChange={(event) =>
+                          setForm({ ...form, accountManagerId: event.target.value })
+                        }
+                      >
+                        <option value="">{t.autoAssign}</option>
+                        {options.assignmentCandidates.accountManagers.map((candidate) => (
+                          <option key={candidate.id} value={candidate.id}>
+                            {candidateLabel(candidate)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </section>
 
-          <section className="request-intake-panel request-details-panel form-span">
-            <div className="request-panel-heading">
-              <span>04</span>
-              <div>
-                <h3>{t.requestDetails}</h3>
-                <p>{t.requestDetailsHint}</p>
-              </div>
-            </div>
-            <div className="request-field-grid request-field-grid-three">
-              <label>
-                {t.title}
-                <input
-                  required
-                  value={form.title}
-                  onChange={(event) => setForm({ ...form, title: event.target.value })}
+                <section className="request-intake-panel request-details-panel form-span">
+                  <div className="request-panel-heading">
+                    <span>04</span>
+                    <div>
+                      <h3>{t.requestDetails}</h3>
+                      <p>{t.requestDetailsHint}</p>
+                    </div>
+                  </div>
+                  <div className="request-field-grid request-field-grid-three">
+                    <label>
+                      {t.title}
+                      <input
+                        required
+                        value={form.title}
+                        onChange={(event) => setForm({ ...form, title: event.target.value })}
+                      />
+                    </label>
+                    <label>
+                      {t.priority}
+                      <select
+                        value={form.priority}
+                        onChange={(event) =>
+                          setForm({ ...form, priority: event.target.value as typeof form.priority })
+                        }
+                      >
+                        {priorities.map((priority) => (
+                          <option key={priority} value={priority}>
+                            {priorityLabel(priority, locale)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      {t.dueAt}
+                      <input
+                        type="datetime-local"
+                        value={form.dueAt}
+                        onChange={(event) => setForm({ ...form, dueAt: event.target.value })}
+                      />
+                    </label>
+                    <label className="form-span">
+                      {t.description}
+                      <textarea
+                        required
+                        value={form.description}
+                        onChange={(event) => setForm({ ...form, description: event.target.value })}
+                      />
+                    </label>
+                  </div>
+                </section>
+                {templateNotice && (
+                  <p className="catalog-feedback success form-span">{templateNotice}</p>
+                )}
+                <RequestTemplateFields
+                  template={activeTemplate}
+                  locale={locale}
+                  values={templateAnswers}
+                  onChange={setTemplateAnswer}
                 />
-              </label>
-              <label>
-                {t.priority}
-                <select
-                  value={form.priority}
-                  onChange={(event) =>
-                    setForm({ ...form, priority: event.target.value as typeof form.priority })
-                  }
-                >
-                  {priorities.map((priority) => (
-                    <option key={priority} value={priority}>
-                      {priorityLabel(priority, locale)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {t.dueAt}
-                <input
-                  type="datetime-local"
-                  value={form.dueAt}
-                  onChange={(event) => setForm({ ...form, dueAt: event.target.value })}
-                />
-              </label>
-              <label className="form-span">
-                {t.description}
-                <textarea
-                  required
-                  value={form.description}
-                  onChange={(event) => setForm({ ...form, description: event.target.value })}
-                />
-              </label>
-            </div>
+                {error && <p className="form-error form-span">{error}</p>}
+                <div className="request-review-bar form-span">
+                  <div>
+                    <span>{t.readyToCreate}</span>
+                    <strong>{form.title || t.createRequest}</strong>
+                  </div>
+                  <button
+                    className="os-button os-button-primary"
+                    type="submit"
+                    disabled={!canSubmit}
+                  >
+                    {creating ? t.creating : t.createCta}
+                  </button>
+                </div>
+              </form>
+            </SectionCard>
           </section>
-          {templateNotice && <p className="catalog-feedback success form-span">{templateNotice}</p>}
-          <RequestTemplateFields
-            template={activeTemplate}
-            locale={locale}
-            values={templateAnswers}
-            onChange={setTemplateAnswer}
-          />
-          {error && <p className="form-error form-span">{error}</p>}
-          <div className="request-review-bar form-span">
-            <div>
-              <span>{t.readyToCreate}</span>
-              <strong>{form.title || t.createRequest}</strong>
-            </div>
-            <button className="os-button os-button-primary" type="submit" disabled={!canSubmit}>
-              {creating ? t.creating : t.createCta}
-            </button>
-          </div>
-        </form>
-      </SectionCard>
+        </div>
+      ) : null}
 
       <SectionCard eyebrow={t.liveOperations} title={t.requestList}>
         {items.length === 0 ? (

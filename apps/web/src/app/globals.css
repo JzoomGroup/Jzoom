@@ -1532,6 +1532,23 @@ h1 {
   padding: 22px;
 }
 
+.request-create-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 82;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.44);
+}
+
+.request-create-dialog {
+  width: min(1180px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 18px;
+}
+
 .quote-onboarding-header,
 .quote-onboarding-panel-heading,
 .quote-onboarding-toggle,
@@ -2574,6 +2591,59 @@ h3 {
 input[type="checkbox"],
 input[type="radio"] {
   accent-color: var(--jzoom-coral);
+}
+
+input[type="checkbox"] {
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  place-content: center;
+  margin: 0;
+  border: 1.5px solid rgba(13, 19, 33, 0.34);
+  border-radius: 5px;
+  appearance: none;
+  background: #ffffff;
+  color: #ffffff;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+input[type="checkbox"]::before {
+  width: 9px;
+  height: 9px;
+  clip-path: polygon(14% 44%, 0 58%, 38% 96%, 100% 18%, 86% 4%, 36% 68%);
+  content: "";
+  opacity: 0;
+  transform: scale(0.76);
+  transform-origin: center;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+  background: currentColor;
+}
+
+input[type="checkbox"]:checked {
+  border-color: var(--jzoom-coral);
+  background: var(--jzoom-coral);
+}
+
+input[type="checkbox"]:checked::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+input[type="checkbox"]:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 4px rgba(255, 90, 77, 0.16);
+}
+
+input[type="checkbox"]:disabled {
+  border-color: rgba(13, 19, 33, 0.14);
+  background: rgba(13, 19, 33, 0.06);
+  cursor: not-allowed;
 }
 
 .checkbox-field,

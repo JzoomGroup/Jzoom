@@ -10,6 +10,46 @@ import type {
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
 
+function absoluteRequestDownloadUrl(downloadUrl: string | null | undefined) {
+  if (!downloadUrl || /^https?:\/\//i.test(downloadUrl)) {
+    return downloadUrl ?? null;
+  }
+  const apiBase = apiBaseUrl.replace(/\/$/, "");
+  if (downloadUrl.startsWith("/api/v1/")) {
+    return `${apiBase}/${downloadUrl.slice("/api/v1/".length)}`;
+  }
+  if (downloadUrl.startsWith("api/v1/")) {
+    return `${apiBase}/${downloadUrl.slice("api/v1/".length)}`;
+  }
+  return downloadUrl;
+}
+
+function normalizeServiceRequestDownloadUrls(request: ServiceRequest): ServiceRequest {
+  return {
+    ...request,
+    attachments: request.attachments.map((attachment) => ({
+      ...attachment,
+      downloadUrl: absoluteRequestDownloadUrl(attachment.downloadUrl),
+    })),
+    documentRequests: request.documentRequests.map((documentRequest) => ({
+      ...documentRequest,
+      file: documentRequest.file
+        ? {
+            ...documentRequest.file,
+            downloadUrl: absoluteRequestDownloadUrl(documentRequest.file.downloadUrl),
+          }
+        : null,
+    })),
+    outputs: request.outputs.map((output) => ({
+      ...output,
+      attachments: output.attachments.map((attachment) => ({
+        ...attachment,
+        downloadUrl: absoluteRequestDownloadUrl(attachment.downloadUrl),
+      })),
+    })),
+  };
+}
+
 async function requireRequestResponse<T>(path: string): Promise<T> {
   const cookieStore = await cookies();
   const response = await fetch(`${apiBaseUrl}/${path}`, {
@@ -46,7 +86,9 @@ export function requireRequestQueue(
 }
 
 export function requireRequest(id: string): Promise<ServiceRequest> {
-  return requireRequestResponse<ServiceRequest>(`requests/${id}`);
+  return requireRequestResponse<ServiceRequest>(`requests/${id}`).then(
+    normalizeServiceRequestDownloadUrls,
+  );
 }
 
 export function requireRequestAssignmentCandidates(): Promise<RequestAssignmentCandidates> {
@@ -62,5 +104,7 @@ export function requireClientRequests(): Promise<RequestSummary[]> {
 }
 
 export function requireClientRequest(id: string): Promise<ServiceRequest> {
-  return requireRequestResponse<ServiceRequest>(`client-portal/requests/${id}`);
+  return requireRequestResponse<ServiceRequest>(`client-portal/requests/${id}`).then(
+    normalizeServiceRequestDownloadUrls,
+  );
 }

@@ -14,6 +14,13 @@ export interface RequestUser {
   id: string;
   email: string;
   displayName: string;
+  roles?: Array<{
+    role: {
+      code: string;
+      nameAr: string | null;
+      nameEn: string | null;
+    };
+  }>;
 }
 
 export interface RequestAssignmentCandidate extends RequestUser {
@@ -255,6 +262,7 @@ export interface RequestOutput {
   reviewedBy: RequestUser | null;
   sharedBy: RequestUser | null;
   clientDecisionBy: RequestUser | null;
+  attachments: Array<Omit<RequestAttachment, "uploadedBy"> & { uploadedBy: RequestUser | null }>;
 }
 
 export interface RequestDocumentRequest {

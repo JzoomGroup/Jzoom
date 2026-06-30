@@ -2,7 +2,8 @@
 
 import type { ApiErrorBody, CatalogSnapshot } from "./catalog-types";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
+export const catalogApiBaseUrl =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
 
 function cookieValue(name: string): string | undefined {
   return document.cookie
@@ -37,7 +38,7 @@ export async function catalogRequest<T>(path: string, options: RequestInit = {})
     headers.set("X-CSRF-Token", decodeURIComponent(csrf));
   }
 
-  const response = await fetch(`${apiBaseUrl}/${path}`, {
+  const response = await fetch(`${catalogApiBaseUrl}/${path}`, {
     ...options,
     method,
     credentials: "include",

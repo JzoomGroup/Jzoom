@@ -383,6 +383,7 @@ function requestOutput(
     reviewedBy: null,
     sharedBy: null,
     clientDecisionBy: null,
+    attachments: [],
     ...overrides,
   };
 }
@@ -456,7 +457,9 @@ describe("Client portal UI", () => {
     expect(screen.getByRole("heading", { name: "Open requests" })).toBeInTheDocument();
     expect(screen.getAllByText("Open requests").length).toBeGreaterThan(0);
     expect(screen.getByRole("heading", { name: "Service catalog" })).toBeInTheDocument();
-    const availableServiceCard = screen.getByRole("heading", { name: "Client Service" }).closest("article");
+    const availableServiceCard = screen
+      .getByRole("heading", { name: "Client Service" })
+      .closest("article");
     expect(availableServiceCard).not.toHaveTextContent(/Rate|Price|Duration|SAR/);
     expect(screen.getByRole("link", { name: "View quotes" })).toHaveAttribute(
       "href",

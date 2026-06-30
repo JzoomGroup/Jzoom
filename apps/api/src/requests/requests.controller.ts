@@ -341,6 +341,31 @@ export class RequestsController {
     return this.requests.updateOutput(id, outputId, input, request.auth!, metadata(request));
   }
 
+  @Post(":id/outputs/:outputId/files/upload")
+  @HttpCode(200)
+  @UseInterceptors(uploadInterceptor)
+  @ApiConsumes("multipart/form-data")
+  @ApiOperation({ summary: "Upload a file that belongs to a monthly request output" })
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        file: { type: "string", format: "binary" },
+        visibility: { type: "string", enum: ["INTERNAL", "CLIENT_VISIBLE"] },
+      },
+      required: ["file"],
+    },
+  })
+  uploadOutputFile(
+    @Param("id") id: string,
+    @Param("outputId") outputId: string,
+    @UploadedFile() file: UploadedRequestFile | undefined,
+    @Body() input: Pick<AddAttachmentMetadataDto, "visibility">,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.addOutputFile(id, outputId, file, input, request.auth!, metadata(request));
+  }
+
   @Post(":id/outputs/:outputId/submit")
   @HttpCode(200)
   @ApiOperation({ summary: "Submit an internal request output for supervisor review" })

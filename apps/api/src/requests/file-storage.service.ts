@@ -64,7 +64,7 @@ export class FileStorageService {
 
   async storeRequestFile(
     requestId: string,
-    scope: "attachments" | "client-documents",
+    scope: "attachments" | "client-documents" | "outputs",
     file: UploadedRequestFile,
   ): Promise<StoredRequestFile> {
     if (!file.buffer || file.size < 1) {

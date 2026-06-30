@@ -1,10 +1,54 @@
 "use client";
 
-import { catalogErrorMessage, catalogRequest } from "./catalog-client";
+import { catalogApiBaseUrl, catalogErrorMessage, catalogRequest } from "./catalog-client";
 import type { RequestTemplateAnswerInput } from "./request-template-types";
 import type { RequestQueueResponse, RequestStatus, ServiceRequest } from "./request-types";
 
 export const requestErrorMessage = catalogErrorMessage;
+
+function absoluteRequestDownloadUrl(downloadUrl: string | null | undefined) {
+  if (!downloadUrl || /^https?:\/\//i.test(downloadUrl)) {
+    return downloadUrl ?? null;
+  }
+  const apiBase = catalogApiBaseUrl.replace(/\/$/, "");
+  if (downloadUrl.startsWith("/api/v1/")) {
+    return `${apiBase}/${downloadUrl.slice("/api/v1/".length)}`;
+  }
+  if (downloadUrl.startsWith("api/v1/")) {
+    return `${apiBase}/${downloadUrl.slice("api/v1/".length)}`;
+  }
+  return downloadUrl;
+}
+
+function normalizeServiceRequestDownloadUrls(request: ServiceRequest): ServiceRequest {
+  return {
+    ...request,
+    attachments: request.attachments.map((attachment) => ({
+      ...attachment,
+      downloadUrl: absoluteRequestDownloadUrl(attachment.downloadUrl),
+    })),
+    documentRequests: request.documentRequests.map((documentRequest) => ({
+      ...documentRequest,
+      file: documentRequest.file
+        ? {
+            ...documentRequest.file,
+            downloadUrl: absoluteRequestDownloadUrl(documentRequest.file.downloadUrl),
+          }
+        : null,
+    })),
+    outputs: request.outputs.map((output) => ({
+      ...output,
+      attachments: output.attachments.map((attachment) => ({
+        ...attachment,
+        downloadUrl: absoluteRequestDownloadUrl(attachment.downloadUrl),
+      })),
+    })),
+  };
+}
+
+function requestAction(path: string, options: RequestInit): Promise<ServiceRequest> {
+  return catalogRequest<ServiceRequest>(path, options).then(normalizeServiceRequestDownloadUrls);
+}
 
 export function refreshRequestQueue(
   queue: RequestQueueResponse["queue"] = "all",
@@ -30,7 +74,7 @@ export function createServiceRequest(input: {
   priority?: "LOW" | "NORMAL" | "HIGH" | "URGENT";
   dueAt?: string;
 }): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>("requests", {
+  return requestAction("requests", {
     method: "POST",
     body: JSON.stringify(input),
   });
@@ -49,7 +93,7 @@ export function createClientServiceRequest(input: {
   priority?: "LOW" | "NORMAL" | "HIGH" | "URGENT";
   dueAt?: string;
 }): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>("client-portal/requests", {
+  return requestAction("client-portal/requests", {
     method: "POST",
     body: JSON.stringify(input),
   });
@@ -60,7 +104,7 @@ export function changeRequestStatus(
   status: RequestStatus,
   reason?: string,
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/status`, {
+  return requestAction(`requests/${id}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status, ...(reason ? { reason } : {}) }),
   });
@@ -75,14 +119,14 @@ export function assignRequest(
     reason?: string;
   },
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/assignment`, {
+  return requestAction(`requests/${id}/assignment`, {
     method: "PATCH",
     body: JSON.stringify(input),
   });
 }
 
 export function startRequestWork(id: string): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/start`, {
+  return requestAction(`requests/${id}/start`, {
     method: "POST",
     body: JSON.stringify({}),
   });
@@ -93,7 +137,7 @@ export function supervisorReviewRequest(
   action: "APPROVE" | "RETURN" | "REJECT" | "ESCALATE",
   reason?: string,
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/supervisor-review`, {
+  return requestAction(`requests/${id}/supervisor-review`, {
     method: "POST",
     body: JSON.stringify({ action, ...(reason ? { reason } : {}) }),
   });
@@ -118,7 +162,7 @@ export function createRequestTask(
     title: string;
   },
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/tasks`, {
+  return requestAction(`requests/${id}/tasks`, {
     method: "POST",
     body: JSON.stringify(input),
   });
@@ -144,7 +188,7 @@ export function updateRequestTask(
     title?: string;
   },
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/tasks/${taskId}`, {
+  return requestAction(`requests/${id}/tasks/${taskId}`, {
     method: "PATCH",
     body: JSON.stringify(input),
   });
@@ -161,7 +205,7 @@ export function createRequestOutput(
     title: string;
   },
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/outputs`, {
+  return requestAction(`requests/${id}/outputs`, {
     method: "POST",
     body: JSON.stringify(input),
   });
@@ -178,14 +222,14 @@ export function updateRequestOutput(
     title?: string;
   },
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/outputs/${outputId}`, {
+  return requestAction(`requests/${id}/outputs/${outputId}`, {
     method: "PATCH",
     body: JSON.stringify(input),
   });
 }
 
 export function submitRequestOutput(id: string, outputId: string): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/outputs/${outputId}/submit`, {
+  return requestAction(`requests/${id}/outputs/${outputId}/submit`, {
     method: "POST",
     body: JSON.stringify({}),
   });
@@ -197,7 +241,7 @@ export function reviewRequestOutput(
   action: "APPROVE" | "RETURN" | "REJECT",
   reason?: string,
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/outputs/${outputId}/review`, {
+  return requestAction(`requests/${id}/outputs/${outputId}/review`, {
     method: "POST",
     body: JSON.stringify({ action, ...(reason ? { reason } : {}) }),
   });
@@ -208,7 +252,7 @@ export function shareRequestOutput(
   outputId: string,
   reason?: string,
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/outputs/${outputId}/share`, {
+  return requestAction(`requests/${id}/outputs/${outputId}/share`, {
     method: "POST",
     body: JSON.stringify({ ...(reason ? { reason } : {}) }),
   });
@@ -219,7 +263,7 @@ export function closeRequestOutput(
   outputId: string,
   reason?: string,
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/outputs/${outputId}/close`, {
+  return requestAction(`requests/${id}/outputs/${outputId}/close`, {
     method: "POST",
     body: JSON.stringify({ ...(reason ? { reason } : {}) }),
   });
@@ -233,7 +277,7 @@ export function requestClientDocument(
     title: string;
   },
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/document-requests`, {
+  return requestAction(`requests/${id}/document-requests`, {
     method: "POST",
     body: JSON.stringify(input),
   });
@@ -245,13 +289,10 @@ export function changeClientDocumentRequestStatus(
   status: "CANCELLED" | "CLOSED",
   reason?: string,
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(
-    `requests/${id}/document-requests/${documentRequestId}/status`,
-    {
-      method: "PATCH",
-      body: JSON.stringify({ status, ...(reason ? { reason } : {}) }),
-    },
-  );
+  return requestAction(`requests/${id}/document-requests/${documentRequestId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status, ...(reason ? { reason } : {}) }),
+  });
 }
 
 export function createRequestTimeEntry(
@@ -263,7 +304,7 @@ export function createRequestTimeEntry(
     workDate: string;
   },
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/time-entries`, {
+  return requestAction(`requests/${id}/time-entries`, {
     method: "POST",
     body: JSON.stringify(input),
   });
@@ -280,14 +321,14 @@ export function updateRequestTimeEntry(
     workDate?: string;
   },
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/time-entries/${timeEntryId}`, {
+  return requestAction(`requests/${id}/time-entries/${timeEntryId}`, {
     method: "PATCH",
     body: JSON.stringify(input),
   });
 }
 
 export function submitRequestTimeEntry(id: string, timeEntryId: string): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/time-entries/${timeEntryId}/submit`, {
+  return requestAction(`requests/${id}/time-entries/${timeEntryId}/submit`, {
     method: "POST",
     body: JSON.stringify({}),
   });
@@ -299,7 +340,7 @@ export function reviewRequestTimeEntry(
   action: "APPROVE" | "REJECT",
   reason?: string,
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/time-entries/${timeEntryId}/review`, {
+  return requestAction(`requests/${id}/time-entries/${timeEntryId}/review`, {
     method: "POST",
     body: JSON.stringify({ action, ...(reason ? { reason } : {}) }),
   });
@@ -310,14 +351,14 @@ export function addRequestComment(
   body: string,
   isClientVisible: boolean,
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/comments`, {
+  return requestAction(`requests/${id}/comments`, {
     method: "POST",
     body: JSON.stringify({ body, isClientVisible }),
   });
 }
 
 export function addInternalNote(id: string, body: string): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/internal-notes`, {
+  return requestAction(`requests/${id}/internal-notes`, {
     method: "POST",
     body: JSON.stringify({ body }),
   });
@@ -333,7 +374,7 @@ export function addAttachmentMetadata(
     visibility: "INTERNAL" | "CLIENT_VISIBLE";
   },
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/attachments`, {
+  return requestAction(`requests/${id}/attachments`, {
     method: "POST",
     body: JSON.stringify(input),
   });
@@ -347,27 +388,42 @@ export function uploadRequestAttachment(
   const body = new FormData();
   body.set("file", file);
   body.set("visibility", visibility);
-  return catalogRequest<ServiceRequest>(`requests/${id}/attachments/upload`, {
+  return requestAction(`requests/${id}/attachments/upload`, {
+    method: "POST",
+    body,
+  });
+}
+
+export function uploadRequestOutputFile(
+  id: string,
+  outputId: string,
+  file: File,
+  visibility: "INTERNAL" | "CLIENT_VISIBLE" = "CLIENT_VISIBLE",
+): Promise<ServiceRequest> {
+  const body = new FormData();
+  body.set("file", file);
+  body.set("visibility", visibility);
+  return requestAction(`requests/${id}/outputs/${outputId}/files/upload`, {
     method: "POST",
     body,
   });
 }
 
 export function archiveRequestAttachment(id: string, fileId: string): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`requests/${id}/files/${fileId}`, {
+  return requestAction(`requests/${id}/files/${fileId}`, {
     method: "DELETE",
   });
 }
 
 export function addClientRequestComment(id: string, body: string): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`client-portal/requests/${id}/comments`, {
+  return requestAction(`client-portal/requests/${id}/comments`, {
     method: "POST",
     body: JSON.stringify({ body, isClientVisible: true }),
   });
 }
 
 export function acceptClientRequestOutput(id: string, outputId: string): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`client-portal/requests/${id}/outputs/${outputId}/accept`, {
+  return requestAction(`client-portal/requests/${id}/outputs/${outputId}/accept`, {
     method: "POST",
     body: JSON.stringify({}),
   });
@@ -378,7 +434,7 @@ export function returnClientRequestOutput(
   outputId: string,
   reason: string,
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`client-portal/requests/${id}/outputs/${outputId}/return`, {
+  return requestAction(`client-portal/requests/${id}/outputs/${outputId}/return`, {
     method: "POST",
     body: JSON.stringify({ reason }),
   });
@@ -398,7 +454,7 @@ export function uploadClientRequestedDocument(
   if (file) {
     const body = new FormData();
     body.set("file", file);
-    return catalogRequest<ServiceRequest>(
+    return requestAction(
       `client-portal/requests/${id}/document-requests/${documentRequestId}/upload`,
       {
         method: "POST",
@@ -407,7 +463,7 @@ export function uploadClientRequestedDocument(
     );
   }
 
-  return catalogRequest<ServiceRequest>(
+  return requestAction(
     `client-portal/requests/${id}/document-requests/${documentRequestId}/upload`,
     {
       method: "POST",
@@ -420,7 +476,7 @@ export function archiveClientRequestAttachment(
   id: string,
   fileId: string,
 ): Promise<ServiceRequest> {
-  return catalogRequest<ServiceRequest>(`client-portal/requests/${id}/files/${fileId}`, {
+  return requestAction(`client-portal/requests/${id}/files/${fileId}`, {
     method: "DELETE",
   });
 }

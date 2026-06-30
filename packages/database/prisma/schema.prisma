@@ -1820,34 +1820,35 @@ model ProjectOutput {
 }
 
 model RequestOutput {
-  id                 String       @id @default(uuid()) @db.Uuid
-  requestId          String       @db.Uuid
-  createdById        String       @db.Uuid
-  reviewedById       String?      @db.Uuid
-  sharedById         String?      @db.Uuid
-  clientDecisionById String?      @db.Uuid
+  id                 String         @id @default(uuid()) @db.Uuid
+  requestId          String         @db.Uuid
+  createdById        String         @db.Uuid
+  reviewedById       String?        @db.Uuid
+  sharedById         String?        @db.Uuid
+  clientDecisionById String?        @db.Uuid
   code               String
   title              String
-  description        String?      @db.Text
+  description        String?        @db.Text
   contentSnapshot    Json?
-  status             OutputStatus @default(DRAFT)
+  status             OutputStatus   @default(DRAFT)
   dueAt              DateTime?
   submittedAt        DateTime?
   reviewedAt         DateTime?
   sharedAt           DateTime?
   clientDecidedAt    DateTime?
   closedAt           DateTime?
-  reviewReason       String?      @db.Text
-  clientReturnReason String?      @db.Text
-  revision           Int          @default(1)
-  sortOrder          Int          @default(0)
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
-  request            Request      @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  createdBy          User         @relation("RequestOutputCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  reviewedBy         User?        @relation("RequestOutputReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
-  sharedBy           User?        @relation("RequestOutputSharer", fields: [sharedById], references: [id], onDelete: SetNull)
-  clientDecisionBy   User?        @relation("RequestOutputClientDecision", fields: [clientDecisionById], references: [id], onDelete: SetNull)
+  reviewReason       String?        @db.Text
+  clientReturnReason String?        @db.Text
+  revision           Int            @default(1)
+  sortOrder          Int            @default(0)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  request            Request        @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  createdBy          User           @relation("RequestOutputCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  reviewedBy         User?          @relation("RequestOutputReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  sharedBy           User?          @relation("RequestOutputSharer", fields: [sharedById], references: [id], onDelete: SetNull)
+  clientDecisionBy   User?          @relation("RequestOutputClientDecision", fields: [clientDecisionById], references: [id], onDelete: SetNull)
+  files              FileMetadata[]
 
   @@unique([requestId, code, revision])
   @@index([requestId, status, sortOrder])
@@ -1927,6 +1928,7 @@ model FileMetadata {
   requestId       String?                @db.Uuid
   projectId       String?                @db.Uuid
   outputId        String?                @db.Uuid
+  requestOutputId String?                @db.Uuid
   uploadedById    String                 @db.Uuid
   storageProvider String
   storageKey      String                 @unique
@@ -1942,12 +1944,14 @@ model FileMetadata {
   request         Request?               @relation(fields: [requestId], references: [id], onDelete: Cascade)
   project         Project?               @relation(fields: [projectId], references: [id], onDelete: Cascade)
   output          ProjectOutput?         @relation(fields: [outputId], references: [id], onDelete: Cascade)
+  requestOutput   RequestOutput?         @relation(fields: [requestOutputId], references: [id], onDelete: Cascade)
   uploadedBy      User                   @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
   documentRequest ClientDocumentRequest?
 
   @@index([requestId, visibility])
   @@index([projectId, visibility])
   @@index([outputId, visibility])
+  @@index([requestOutputId, visibility])
   @@map("files_metadata")
 }
 

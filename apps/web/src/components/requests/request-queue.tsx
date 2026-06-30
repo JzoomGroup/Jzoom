@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { type FormEvent, useState } from "react";
 import { refreshRequestQueue, requestErrorMessage } from "../../lib/request-client";
-import type { RequestQueueResponse, RequestStatus, RequestSummary } from "../../lib/request-types";
+import type {
+  RequestAssignmentCandidate,
+  RequestIntakeOptions,
+  RequestIntakeSubscriptionServiceOption,
+  RequestQueueResponse,
+  RequestStatus,
+  RequestSummary,
+} from "../../lib/request-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
 import {
   BentoGrid,
@@ -42,11 +49,14 @@ const copy = {
     activeQueue: "الطابور الحالي",
     allRequests: "كل الطلبات",
     anyPriority: "كل الأولويات",
+    anyAssignee: "كل المسؤولين",
+    anyClient: "كل العملاء",
+    anyService: "كل الخدمات",
     anyStatus: "كل الحالات",
     applyFilters: "تطبيق الفلاتر",
-    assigneeId: "معرف المسؤول",
+    assigneeId: "المسؤول",
     clientFollowUp: "متابعة العميل",
-    clientId: "معرف العميل",
+    clientId: "العميل",
     due: "الموعد",
     dueBefore: "مستحق قبل",
     emptyQueue: "لا توجد طلبات مطابقة لهذا الطابور.",
@@ -60,7 +70,7 @@ const copy = {
     queueFilters: "فلاتر الطابور",
     queueResults: "نتائج الطابور",
     segmentWork: "فرز وتصفية العمل",
-    serviceId: "معرف الخدمة",
+    serviceId: "الخدمة",
     specialist: "المختص",
     status: "الحالة",
     supervisor: "المشرف",
@@ -76,11 +86,14 @@ const copy = {
     activeQueue: "Active queue",
     allRequests: "All requests",
     anyPriority: "Any priority",
+    anyAssignee: "Any assignee",
+    anyClient: "Any client",
+    anyService: "Any service",
     anyStatus: "Any status",
     applyFilters: "Apply filters",
-    assigneeId: "Assignee ID",
+    assigneeId: "Assignee",
     clientFollowUp: "Client follow-up",
-    clientId: "Client ID",
+    clientId: "Client",
     due: "Due",
     dueBefore: "Due before",
     emptyQueue: "No requests match this queue.",
@@ -94,7 +107,7 @@ const copy = {
     queueFilters: "Queue filters",
     queueResults: "Queue results",
     segmentWork: "Segment and refine work",
-    serviceId: "Service ID",
+    serviceId: "Service",
     specialist: "Specialist",
     status: "Status",
     supervisor: "Supervisor",
@@ -134,6 +147,68 @@ const statusLabels = {
   WAITING_SUPERVISOR: { ar: "بانتظار المشرف", en: "Waiting for supervisor" },
 } satisfies Record<RequestStatus, Record<SupportedLocale, string>>;
 
+const emptyIntakeOptions: RequestIntakeOptions = {
+  assignmentCandidates: {
+    accountManagers: [],
+    specialists: [],
+    supervisors: [],
+  },
+  clients: [],
+};
+
+function intakeClientLabel(client: RequestIntakeOptions["clients"][number]): string {
+  return `${client.name} (${client.code})`;
+}
+
+function intakeServiceLabel(
+  service: RequestIntakeSubscriptionServiceOption,
+  locale: SupportedLocale,
+): string {
+  const monthlyName =
+    locale === "ar"
+      ? service.monthlyService.nameAr || service.monthlyService.nameEn
+      : service.monthlyService.nameEn || service.monthlyService.nameAr;
+  const level =
+    locale === "ar"
+      ? service.serviceLevel.labelAr || service.serviceLevel.labelEn
+      : service.serviceLevel.labelEn || service.serviceLevel.labelAr;
+  return `${monthlyName} (${service.monthlyService.code}) - ${level}`;
+}
+
+function candidateLabel(candidate: RequestAssignmentCandidate): string {
+  return `${candidate.displayName} - ${candidate.email}`;
+}
+
+function serviceFilterOptions(
+  options: RequestIntakeOptions,
+): RequestIntakeSubscriptionServiceOption[] {
+  const services = new Map<string, RequestIntakeSubscriptionServiceOption>();
+  for (const client of options.clients) {
+    for (const subscription of client.subscriptions) {
+      for (const service of subscription.services) {
+        services.set(service.monthlyService.id, service);
+      }
+    }
+  }
+  return [...services.values()].sort((left, right) =>
+    left.monthlyService.code.localeCompare(right.monthlyService.code),
+  );
+}
+
+function assigneeFilterOptions(options: RequestIntakeOptions): RequestAssignmentCandidate[] {
+  const users = new Map<string, RequestAssignmentCandidate>();
+  for (const candidate of [
+    ...options.assignmentCandidates.specialists,
+    ...options.assignmentCandidates.supervisors,
+    ...options.assignmentCandidates.accountManagers,
+  ]) {
+    users.set(candidate.id, candidate);
+  }
+  return [...users.values()].sort((left, right) =>
+    left.displayName.localeCompare(right.displayName),
+  );
+}
+
 function displayDate(value: string | null, locale: SupportedLocale): string {
   if (!value) return copy[locale].notSet;
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
@@ -156,14 +231,19 @@ function statusLabel(status: RequestStatus, locale: SupportedLocale): string {
 }
 
 export function RequestQueue({
+  intakeOptions = emptyIntakeOptions,
   initialQueue,
   locale: localeInput = "en",
 }: {
+  intakeOptions?: RequestIntakeOptions | null;
   initialQueue: RequestQueueResponse;
   locale?: string;
 }) {
   const locale = normalizeLocale(localeInput);
   const t = copy[locale];
+  const filterOptions = intakeOptions ?? emptyIntakeOptions;
+  const serviceOptions = serviceFilterOptions(filterOptions);
+  const assigneeOptions = assigneeFilterOptions(filterOptions);
   const [queue, setQueue] = useState(initialQueue);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -291,24 +371,45 @@ export function RequestQueue({
           </label>
           <label>
             {t.clientId}
-            <input
+            <select
               value={filters.clientId}
               onChange={(event) => setFilters({ ...filters, clientId: event.target.value })}
-            />
+            >
+              <option value="">{t.anyClient}</option>
+              {filterOptions.clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {intakeClientLabel(client)}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             {t.serviceId}
-            <input
+            <select
               value={filters.serviceId}
               onChange={(event) => setFilters({ ...filters, serviceId: event.target.value })}
-            />
+            >
+              <option value="">{t.anyService}</option>
+              {serviceOptions.map((service) => (
+                <option key={service.monthlyService.id} value={service.monthlyService.id}>
+                  {intakeServiceLabel(service, locale)}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             {t.assigneeId}
-            <input
+            <select
               value={filters.assigneeId}
               onChange={(event) => setFilters({ ...filters, assigneeId: event.target.value })}
-            />
+            >
+              <option value="">{t.anyAssignee}</option>
+              {assigneeOptions.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidateLabel(candidate)}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             {t.dueBefore}

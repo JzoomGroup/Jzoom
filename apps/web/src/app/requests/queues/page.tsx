@@ -1,7 +1,7 @@
 import { RequestQueue } from "../../../components/requests/request-queue";
 import { QuoteShell } from "../../../components/quotes/quote-shell";
 import { getCurrentUser } from "../../../lib/auth";
-import { requireRequestQueue } from "../../../lib/request-server";
+import { requireRequestIntakeOptions, requireRequestQueue } from "../../../lib/request-server";
 import { redirect } from "next/navigation";
 
 function canUseQueues(user: Awaited<ReturnType<typeof getCurrentUser>>) {
@@ -14,7 +14,11 @@ function canUseQueues(user: Awaited<ReturnType<typeof getCurrentUser>>) {
 }
 
 export default async function RequestQueuesPage() {
-  const [user, queue] = await Promise.all([getCurrentUser(), requireRequestQueue("all")]);
+  const [user, queue, intakeOptions] = await Promise.all([
+    getCurrentUser(),
+    requireRequestQueue("all"),
+    requireRequestIntakeOptions(),
+  ]);
   if (!user) {
     redirect("/login");
   }
@@ -31,7 +35,11 @@ export default async function RequestQueuesPage() {
       permissions={user.permissions}
       roles={user.roles}
     >
-      <RequestQueue initialQueue={queue} locale={user.preferredLocale} />
+      <RequestQueue
+        initialQueue={queue}
+        intakeOptions={intakeOptions}
+        locale={user.preferredLocale}
+      />
     </QuoteShell>
   );
 }

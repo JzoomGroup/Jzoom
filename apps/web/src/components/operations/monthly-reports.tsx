@@ -18,10 +18,20 @@ import {
   StatusChip,
 } from "../premium-os";
 
+interface ReportClientOption {
+  id: string;
+  code: string;
+  name: string;
+}
+
+function clientOptionLabel(client: ReportClientOption): string {
+  return `${client.name} (${client.code})`;
+}
+
 const copy = {
   ar: {
     approvedHours: "الساعات المعتمدة",
-    clientId: "معرف العميل",
+    clientId: "العميل",
     clientSnapshots: "عملاء مشمولون",
     description:
       "جهز ملخصًا شهريًا آمنًا للعميل من الطلبات والمخرجات والمستندات والساعات الأساسية. عند النشر يظهر التقرير لمستخدمي بوابة العميل.",
@@ -56,7 +66,7 @@ const copy = {
   },
   en: {
     approvedHours: "Hours",
-    clientId: "Client ID",
+    clientId: "Client",
     clientSnapshots: "Clients covered",
     description:
       "Prepare a client-safe monthly summary from requests, shared outputs, document requests, and basic hours. Publishing exposes the report to client portal users.",
@@ -130,9 +140,11 @@ function approvedHours(reports: MonthlyReport[]): number {
 }
 
 export function MonthlyReports({
+  clientOptions = [],
   initialReports,
   locale: localeInput = "en",
 }: {
+  clientOptions?: ReportClientOption[];
   initialReports: MonthlyReport[];
   locale?: string;
 }) {
@@ -229,11 +241,18 @@ export function MonthlyReports({
           <form className="catalog-form" onSubmit={submit}>
             <label>
               {t.clientId}
-              <input
+              <select
                 required
                 value={form.clientId}
                 onChange={(event) => setForm({ ...form, clientId: event.target.value })}
-              />
+              >
+                <option value="">{locale === "ar" ? "اختر العميل" : "Select client"}</option>
+                {clientOptions.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {clientOptionLabel(client)}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               {t.period}

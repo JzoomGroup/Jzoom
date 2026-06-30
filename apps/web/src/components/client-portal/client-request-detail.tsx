@@ -324,6 +324,32 @@ function answerValue(value: unknown, locale: ClientDisplayLocale): string {
   return "-";
 }
 
+function userRoleLabel(
+  user: ServiceRequest["comments"][number]["author"] | null | undefined,
+  locale: ClientDisplayLocale,
+): string {
+  const roleCode = user?.roles?.[0]?.role.code?.replace(/^ROLE-/, "");
+  if (!roleCode) return locale === "ar" ? "مستخدم" : "User";
+  const labels: Record<string, Record<ClientDisplayLocale, string>> = {
+    ADMIN: { ar: "الأدمن", en: "Admin" },
+    AM: { ar: "مدير الحساب", en: "Account manager" },
+    CLIENT: { ar: "العميل", en: "Client" },
+    MGMT: { ar: "الإدارة", en: "Management" },
+    SPECIALIST: { ar: "المختص", en: "Specialist" },
+    SUPERVISOR: { ar: "المشرف", en: "Supervisor" },
+  };
+  return labels[roleCode]?.[locale] ?? roleCode;
+}
+
+function userDisplayWithRole(
+  user: ServiceRequest["comments"][number]["author"] | null | undefined,
+  fallback: string,
+  locale: ClientDisplayLocale,
+): string {
+  if (!user) return fallback;
+  return `${user.displayName} - ${userRoleLabel(user, locale)}`;
+}
+
 export function ClientRequestDetail({
   locale: localeInput = "en",
   request: initialRequest,
@@ -532,7 +558,7 @@ export function ClientRequestDetail({
       at: comment.createdAt,
       detail: t.comments,
       id: `comment-${comment.id}`,
-      label: t.teamMessage,
+      label: userDisplayWithRole(comment.author, t.teamMessage, locale),
     })),
   ]
     .filter((item) => item.at)
@@ -669,6 +695,21 @@ export function ClientRequestDetail({
                       {t.returnedNote}:{" "}
                       {safeSystemText(output.clientReturnReason, t.returnNote, locale)}
                     </p>
+                  )}
+                  {output.attachments.length > 0 && (
+                    <div className="client-card-list compact">
+                      {output.attachments.map((file) => (
+                        <article key={file.id}>
+                          <strong>{file.originalName}</strong>
+                          <small>{fileSize(file.sizeBytes, locale)}</small>
+                          {file.downloadUrl && (
+                            <a className="os-button os-button-secondary" href={file.downloadUrl}>
+                              {t.downloadFile}
+                            </a>
+                          )}
+                        </article>
+                      ))}
+                    </div>
                   )}
                   <p>{outputActionCopy(output.status, locale)}</p>
                   {output.status === "SHARED_WITH_CLIENT" ? (
@@ -996,7 +1037,7 @@ export function ClientRequestDetail({
           ) : (
             request.comments.map((comment) => (
               <article key={comment.id}>
-                <strong>{comment.author.displayName}</strong>
+                <strong>{userDisplayWithRole(comment.author, t.teamMessage, locale)}</strong>
                 <small>{clientDateTime(comment.createdAt, locale)}</small>
                 <p>{comment.body}</p>
               </article>

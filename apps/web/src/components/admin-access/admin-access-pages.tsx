@@ -5,8 +5,11 @@ import { useMemo, useState, type FormEvent } from "react";
 import {
   adminAccessErrorMessage,
   createOperatingUser,
+  fetchAdminUsersSnapshot,
   resetOperatingUserPassword,
+  updateOperatingUserScope,
   type CreateOperatingUserPayload,
+  type OperatingUserScopePayload,
 } from "../../lib/admin-access-client";
 import {
   BentoGrid,
@@ -627,6 +630,72 @@ function toggleValue(values: string[], value: string): string[] {
   return values.includes(value) ? values.filter((entry) => entry !== value) : [...values, value];
 }
 
+function uniqueStrings(values: Array<string | null | undefined>): string[] {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))];
+}
+
+function primaryOperatingRoleCode(user: AdminAccessUser): string | null {
+  return user.roles.find((role) => Boolean(operatingRoleLabels[role.code]))?.code ?? null;
+}
+
+function emptyOperatingUserForm(): CreateOperatingUserPayload {
+  return {
+    clientIds: [],
+    displayName: "",
+    email: "",
+    monthlyServiceIds: [],
+    oneTimeServiceIds: [],
+    roleCode: "ROLE-SPECIALIST",
+    serviceItemIds: [],
+    specialistIds: [],
+  };
+}
+
+function operatingFormFromUser(user: AdminAccessUser): CreateOperatingUserPayload {
+  const roleCode = primaryOperatingRoleCode(user) ?? "ROLE-SPECIALIST";
+  return {
+    clientIds: uniqueStrings([
+      ...user.clientAssignments.map((assignment) => assignment.client.id),
+      ...user.specialistServiceScopes.map((scope) => scope.client?.id),
+      ...user.assignedSupervisors.map((assignment) => assignment.client?.id),
+      ...user.supervisedSpecialists.map((assignment) => assignment.client?.id),
+      ...user.scopes.map((scope) => scope.client?.id),
+    ]),
+    displayName: user.displayName,
+    email: user.email,
+    monthlyServiceIds: uniqueStrings(
+      user.specialistServiceScopes.map((scope) => scope.monthlyService?.id),
+    ),
+    oneTimeServiceIds: uniqueStrings(
+      user.specialistServiceScopes.map((scope) => scope.oneTimeService?.id),
+    ),
+    roleCode,
+    serviceItemIds: uniqueStrings(
+      user.specialistServiceScopes.map((scope) => scope.serviceItem?.id),
+    ),
+    specialistIds: uniqueStrings(
+      user.supervisedSpecialists.map((assignment) => assignment.specialist.id),
+    ),
+    supervisorId: user.assignedSupervisors[0]?.supervisor.id,
+  };
+}
+
+function scopePayloadFromForm(
+  form: CreateOperatingUserPayload,
+  roleCode: string,
+): OperatingUserScopePayload {
+  return {
+    clientIds: form.clientIds,
+    monthlyServiceIds: roleCode === "ROLE-SPECIALIST" ? form.monthlyServiceIds : [],
+    oneTimeServiceIds: roleCode === "ROLE-SPECIALIST" ? form.oneTimeServiceIds : [],
+    serviceItemIds: roleCode === "ROLE-SPECIALIST" ? form.serviceItemIds : [],
+    specialistIds: roleCode === "ROLE-SUPERVISOR" ? form.specialistIds : [],
+    ...(roleCode === "ROLE-SPECIALIST" && form.supervisorId
+      ? { supervisorId: form.supervisorId }
+      : {}),
+  };
+}
+
 function operatingScopeLabels(user: AdminAccessUser, locale: SupportedLocale): string[] {
   const labels: string[] = [];
   for (const assignment of user.clientAssignments) {
@@ -673,21 +742,14 @@ export function AdminUsersPageContent({
   const [currentUsers, setCurrentUsers] = useState(users);
   const [currentSetup, setCurrentSetup] = useState(setup);
   const [showCreator, setShowCreator] = useState(false);
-  const [form, setForm] = useState<CreateOperatingUserPayload>({
-    clientIds: [],
-    displayName: "",
-    email: "",
-    monthlyServiceIds: [],
-    oneTimeServiceIds: [],
-    roleCode: "ROLE-SPECIALIST",
-    serviceItemIds: [],
-    specialistIds: [],
-  });
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [form, setForm] = useState<CreateOperatingUserPayload>(emptyOperatingUserForm);
   const [saving, setSaving] = useState(false);
   const [resettingUserId, setResettingUserId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(
     null,
   );
+  const isEditingScope = editingUserId !== null;
   const activeUsers = currentUsers.filter(
     (user) => user.status === "ACTIVE" && !isLocked(user),
   ).length;
@@ -710,20 +772,55 @@ export function AdminUsersPageContent({
       form.monthlyServiceIds.length === 0 || selectedMonthlyServiceIds.has(item.monthlyServiceId),
   );
 
+  function closeOperatingForm() {
+    setShowCreator(false);
+    setEditingUserId(null);
+    setForm(emptyOperatingUserForm());
+  }
+
+  function openCreateForm() {
+    setEditingUserId(null);
+    setForm(emptyOperatingUserForm());
+    setShowCreator(true);
+    setFeedback(null);
+  }
+
+  function openScopeEditor(user: AdminAccessUser) {
+    if (!primaryOperatingRoleCode(user)) {
+      return;
+    }
+    setEditingUserId(user.id);
+    setForm(operatingFormFromUser(user));
+    setShowCreator(true);
+    setFeedback(null);
+  }
+
   async function handleCreateUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
     setFeedback(null);
     try {
+      if (editingUserId) {
+        await updateOperatingUserScope(editingUserId, scopePayloadFromForm(form, form.roleCode));
+        const snapshot = await fetchAdminUsersSnapshot();
+        setCurrentUsers(snapshot.users);
+        setCurrentSetup(snapshot.setup);
+        closeOperatingForm();
+        setFeedback({
+          type: "success",
+          text:
+            lang === "ar"
+              ? "تم تحديث نطاق المستخدم التشغيلي بنجاح."
+              : "Operating user scope updated successfully.",
+        });
+        return;
+      }
+
       const payload: CreateOperatingUserPayload = {
         ...form,
         displayName: form.displayName.trim(),
         email: form.email.trim().toLowerCase(),
-        clientIds: form.clientIds,
-        monthlyServiceIds: form.roleCode === "ROLE-SPECIALIST" ? form.monthlyServiceIds : [],
-        oneTimeServiceIds: form.roleCode === "ROLE-SPECIALIST" ? form.oneTimeServiceIds : [],
-        serviceItemIds: form.roleCode === "ROLE-SPECIALIST" ? form.serviceItemIds : [],
-        specialistIds: form.roleCode === "ROLE-SUPERVISOR" ? form.specialistIds : [],
+        ...scopePayloadFromForm(form, form.roleCode),
         ...(form.roleCode === "ROLE-SPECIALIST" && form.supervisorId
           ? { supervisorId: form.supervisorId }
           : {}),
@@ -731,17 +828,7 @@ export function AdminUsersPageContent({
       const response = await createOperatingUser(payload);
       setCurrentUsers(response.snapshot.users);
       setCurrentSetup(response.snapshot.setup);
-      setForm({
-        clientIds: [],
-        displayName: "",
-        email: "",
-        monthlyServiceIds: [],
-        oneTimeServiceIds: [],
-        roleCode: "ROLE-SPECIALIST",
-        serviceItemIds: [],
-        specialistIds: [],
-      });
-      setShowCreator(false);
+      closeOperatingForm();
       setFeedback({
         type: "success",
         text:
@@ -817,8 +904,11 @@ export function AdminUsersPageContent({
             className="button-primary"
             type="button"
             onClick={() => {
-              setShowCreator((value) => !value);
-              setFeedback(null);
+              if (showCreator) {
+                closeOperatingForm();
+              } else {
+                openCreateForm();
+              }
             }}
           >
             {showCreator
@@ -840,7 +930,15 @@ export function AdminUsersPageContent({
 
       {showCreator ? (
         <SectionCard
-          title={lang === "ar" ? "إنشاء مستخدم تشغيلي" : "Create operating user"}
+          title={
+            isEditingScope
+              ? lang === "ar"
+                ? "تعديل نطاق مستخدم تشغيلي"
+                : "Edit operating user scope"
+              : lang === "ar"
+                ? "إنشاء مستخدم تشغيلي"
+                : "Create operating user"
+          }
           eyebrow={lang === "ar" ? "نطاق العمل" : "Operating scope"}
         >
           <form className="operating-user-form" onSubmit={handleCreateUser}>
@@ -851,6 +949,7 @@ export function AdminUsersPageContent({
                   required
                   minLength={2}
                   value={form.displayName}
+                  disabled={isEditingScope}
                   onChange={(event) => setForm({ ...form, displayName: event.target.value })}
                 />
               </label>
@@ -860,6 +959,7 @@ export function AdminUsersPageContent({
                   required
                   type="email"
                   value={form.email}
+                  disabled={isEditingScope}
                   onChange={(event) => setForm({ ...form, email: event.target.value })}
                 />
               </label>
@@ -867,6 +967,7 @@ export function AdminUsersPageContent({
                 <span>{lang === "ar" ? "الدور" : "Role"}</span>
                 <select
                   value={form.roleCode}
+                  disabled={isEditingScope}
                   onChange={(event) =>
                     setForm({
                       ...form,
@@ -1056,11 +1157,7 @@ export function AdminUsersPageContent({
             </div>
 
             <div className="operating-user-actions">
-              <button
-                className="button-secondary"
-                type="button"
-                onClick={() => setShowCreator(false)}
-              >
+              <button className="button-secondary" type="button" onClick={closeOperatingForm}>
                 {lang === "ar" ? "إلغاء" : "Cancel"}
               </button>
               <button className="button-primary" type="submit" disabled={saving}>
@@ -1068,9 +1165,13 @@ export function AdminUsersPageContent({
                   ? lang === "ar"
                     ? "جاري الحفظ..."
                     : "Saving..."
-                  : lang === "ar"
-                    ? "إنشاء وربط النطاق"
-                    : "Create and scope"}
+                  : isEditingScope
+                    ? lang === "ar"
+                      ? "حفظ النطاق"
+                      : "Save scope"
+                    : lang === "ar"
+                      ? "إنشاء وربط النطاق"
+                      : "Create and scope"}
               </button>
             </div>
           </form>
@@ -1189,6 +1290,15 @@ export function AdminUsersPageContent({
                   )}
                 </details>
                 <div className="operating-user-actions">
+                  {primaryOperatingRoleCode(user) ? (
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={() => openScopeEditor(user)}
+                    >
+                      {lang === "ar" ? "تعديل النطاق" : "Edit scope"}
+                    </button>
+                  ) : null}
                   <button
                     className="button-secondary"
                     type="button"

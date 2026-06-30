@@ -3,11 +3,16 @@ import { MonthlyReports } from "../../components/operations/monthly-reports";
 import { QuoteShell } from "../../components/quotes/quote-shell";
 import { getCurrentUser } from "../../lib/auth";
 import { requireMonthlyReports } from "../../lib/operations-server";
+import { requireRequestIntakeOptions } from "../../lib/request-server";
 
 const internalReportRoles = ["ROLE-ADMIN", "ROLE-MGMT", "ROLE-AM"] as const;
 
 export default async function ReportsPage() {
-  const [user, reports] = await Promise.all([getCurrentUser(), requireMonthlyReports()]);
+  const [user, reports, intakeOptions] = await Promise.all([
+    getCurrentUser(),
+    requireMonthlyReports(),
+    requireRequestIntakeOptions(),
+  ]);
   if (!user) {
     redirect("/login");
   }
@@ -28,7 +33,11 @@ export default async function ReportsPage() {
       permissions={user.permissions}
       roles={user.roles}
     >
-      <MonthlyReports initialReports={reports} locale={user.preferredLocale} />
+      <MonthlyReports
+        clientOptions={intakeOptions.clients}
+        initialReports={reports}
+        locale={user.preferredLocale}
+      />
     </QuoteShell>
   );
 }
