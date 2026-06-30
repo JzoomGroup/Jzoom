@@ -280,6 +280,54 @@ function settingCategoryLabel(category: string, locale: SupportedLocale): string
   return labels[category] ?? formatCode(category);
 }
 
+function settingKeyLabel(key: string, locale: SupportedLocale): string {
+  const labels: Record<string, { ar: string; en: string }> = {
+    "approvals.default_route": { ar: "مسار الاعتماد الافتراضي", en: "Default approval route" },
+    "attachments.allowed_mime_types": {
+      ar: "أنواع الملفات المسموحة",
+      en: "Allowed attachment file types",
+    },
+    "attachments.max_size_mb": { ar: "الحد الأقصى للرفع", en: "Maximum upload size" },
+    "business_text.new_template": { ar: "نموذج نص تشغيلي جديد", en: "New business text template" },
+    "client_health.score_rules": { ar: "قواعد صحة العميل", en: "Client health score rules" },
+    "import_export.preview_required": { ar: "معاينة الاستيراد مطلوبة", en: "Import preview required" },
+    "import_export.rollback_required": {
+      ar: "خطة الرجوع للاستيراد مطلوبة",
+      en: "Import rollback required",
+    },
+    "notifications.outbound_mode": { ar: "وضع التنبيهات الخارجية", en: "Outbound notification mode" },
+    "pricing.discount.default_pct": { ar: "نسبة الخصم الافتراضية", en: "Default discount" },
+    "pricing.factors.branch_count": { ar: "عامل عدد الفروع", en: "Branch-count pricing factor" },
+    "pricing.factors.complexity": { ar: "عامل التعقيد", en: "Complexity pricing factor" },
+    "pricing.factors.data_readiness": { ar: "عامل جاهزية البيانات", en: "Data-readiness pricing factor" },
+    "pricing.factors.employee_count": { ar: "عامل عدد الموظفين", en: "Employee-count pricing factor" },
+    "pricing.factors.start_priority": { ar: "عامل أولوية البدء", en: "Start-priority pricing factor" },
+    "pricing.factors.transaction_volume": {
+      ar: "عامل حجم العمليات",
+      en: "Transaction-volume pricing factor",
+    },
+    "pricing.package.default_hours": { ar: "ساعات الباقة الافتراضية", en: "Default package hours" },
+    "pricing.package.default_price": { ar: "سعر الباقة الافتراضي", en: "Default package price" },
+    "pricing.quote.validity_days": { ar: "مدة صلاحية عرض السعر", en: "Quote validity days" },
+    "pricing.tax.default_pct": { ar: "نسبة الضريبة الافتراضية", en: "Default tax" },
+    "service_items.dynamic_fields.defaults": {
+      ar: "افتراضيات حقول بنود الخدمة",
+      en: "Service item field defaults",
+    },
+    "services.monthly.default_visibility": {
+      ar: "ظهور الخدمات الشهرية الافتراضي",
+      en: "Default monthly-service visibility",
+    },
+    "services.one_time.default_visibility": {
+      ar: "ظهور خدمات المرة الواحدة الافتراضي",
+      en: "Default one-time-service visibility",
+    },
+    "sla.default_days": { ar: "أيام SLA الافتراضية", en: "Default SLA days" },
+    "workflow.request.default": { ar: "سير الطلب الافتراضي", en: "Default request workflow" },
+  };
+  return labels[key]?.[locale] ?? formatCode(key);
+}
+
 interface ReadinessRequirement {
   action: string;
   area: string;
@@ -483,6 +531,7 @@ function CardHeader({
 
 function ReadinessCard({
   configuredLabel,
+  locale,
   missingLabel,
   nextActionLabel,
   requirement,
@@ -490,6 +539,7 @@ function ReadinessCard({
   settings,
 }: {
   configuredLabel: string;
+  locale: SupportedLocale;
   missingLabel: string;
   nextActionLabel: string;
   requirement: ReadinessRequirement;
@@ -515,7 +565,7 @@ function ReadinessCard({
       <div className="platform-readiness-keys">
         {requirement.keys.map((key) => (
           <span className={matchedKeys.includes(key) ? "matched" : undefined} key={key}>
-            {key}
+            {settingKeyLabel(key, locale)}
           </span>
         ))}
       </div>
@@ -547,7 +597,7 @@ function SettingCard({
         reason: String(form.get("reason") ?? "").trim() || undefined,
         value: parseSettingValue(setting.valueType, String(form.get("value") ?? ""), locale),
       });
-      onSaved(snapshot, t.settingRevised(setting.key));
+      onSaved(snapshot, t.settingRevised(settingKeyLabel(setting.key, locale)));
     } catch (error) {
       onError(platformConfigurationErrorMessage(error));
     }
@@ -559,8 +609,9 @@ function SettingCard({
         code={setting.key}
         label={settingCategoryLabel(setting.category, locale)}
         status={setting.status}
-        title={currentLabel(setting.current, locale)}
+        title={settingKeyLabel(setting.key, locale)}
       />
+      <p className="platform-muted">{setting.key}</p>
       {setting.current?.masked ? <p className="platform-muted">{t.maskedValue}</p> : null}
       <form className="catalog-form platform-card-form" onSubmit={submit}>
         <label className="full-span">
@@ -998,6 +1049,7 @@ export function PlatformConfigurationManager({
             <ReadinessCard
               key={requirement.area}
               configuredLabel={t.configured}
+              locale={locale}
               missingLabel={t.missingSetting}
               nextActionLabel={t.nextAction}
               requirement={requirement}
@@ -1013,6 +1065,11 @@ export function PlatformConfigurationManager({
           <label>
             {t.key}
             <input name="key" required placeholder="business_text.new_template" />
+            <small>
+              {locale === "ar"
+                ? "استخدم مفتاحا ثابتا للربط التقني. ستعرض المنصة اسما مفهوما للمفاتيح المعروفة."
+                : "Use a stable key for system wiring. Known keys are displayed with business-friendly names."}
+            </small>
           </label>
           <label>
             {t.category}

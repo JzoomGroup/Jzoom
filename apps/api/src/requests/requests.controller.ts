@@ -9,8 +9,21 @@ import {
   Post,
   Query,
   Req,
+  Res,
+  StreamableFile,
+  UploadedFile,
+  UseInterceptors,
 } from "@nestjs/common";
-import { ApiCookieAuth, ApiExtraModels, ApiOperation, ApiTags } from "@nestjs/swagger";
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiCookieAuth,
+  ApiExtraModels,
+  ApiOperation,
+  ApiTags,
+} from "@nestjs/swagger";
+import { FileInterceptor } from "@nestjs/platform-express";
+import type { Response } from "express";
 import { ADMIN_ROLE_CODE, MANAGEMENT_ROLE_CODE } from "../auth/auth.constants.js";
 import { RequireRoles } from "../auth/auth.decorators.js";
 import type { RequestMetadata } from "../auth/auth.types.js";
@@ -46,6 +59,8 @@ import {
   SPECIALIST_ROLE_CODE,
   SUPERVISOR_ROLE_CODE,
 } from "./requests.constants.js";
+import type { UploadedRequestFile } from "./file-storage.service.js";
+import { requestUploadMaxBytes } from "./file-storage.service.js";
 import { RequestsService } from "./requests.service.js";
 
 function metadata(request: RequestWithId): RequestMetadata {
@@ -56,6 +71,20 @@ function metadata(request: RequestWithId): RequestMetadata {
     ...(userAgent ? { userAgent } : {}),
   };
 }
+
+function setFileDownloadHeaders(response: Response, file: { originalName: string; mimeType: string }) {
+  const headerFileName = file.originalName.replace(/["\r\n]/g, "_");
+  const asciiFallback = headerFileName.replace(/[^\x20-\x7E]/g, "_") || "download";
+  response.setHeader("Content-Type", file.mimeType || "application/octet-stream");
+  response.setHeader(
+    "Content-Disposition",
+    `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(headerFileName)}`,
+  );
+}
+
+const uploadInterceptor = FileInterceptor("file", {
+  limits: { fileSize: requestUploadMaxBytes() },
+});
 
 @ApiTags("requests")
 @ApiCookieAuth()
@@ -201,13 +230,50 @@ export class RequestsController {
 
   @Post(":id/attachments")
   @HttpCode(200)
-  @ApiOperation({ summary: "Attach file metadata to a request without uploading file content" })
+  @ApiOperation({ summary: "Attach file metadata to a request" })
   addAttachmentMetadata(
     @Param("id") id: string,
     @Body() input: AddAttachmentMetadataDto,
     @Req() request: RequestWithId,
   ) {
     return this.requests.addAttachmentMetadata(id, input, request.auth!, metadata(request));
+  }
+
+  @Post(":id/attachments/upload")
+  @HttpCode(200)
+  @UseInterceptors(uploadInterceptor)
+  @ApiConsumes("multipart/form-data")
+  @ApiOperation({ summary: "Upload a file attachment to a request" })
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        file: { type: "string", format: "binary" },
+        visibility: { type: "string", enum: ["INTERNAL", "CLIENT_VISIBLE"] },
+      },
+      required: ["file"],
+    },
+  })
+  uploadAttachment(
+    @Param("id") id: string,
+    @UploadedFile() file: UploadedRequestFile | undefined,
+    @Body() input: Pick<AddAttachmentMetadataDto, "visibility">,
+    @Req() request: RequestWithId,
+  ) {
+    return this.requests.addAttachmentFile(id, file, input, request.auth!, metadata(request));
+  }
+
+  @Get(":id/files/:fileId/download")
+  @ApiOperation({ summary: "Download a request file after internal access validation" })
+  async downloadFile(
+    @Param("id") id: string,
+    @Param("fileId") fileId: string,
+    @Req() request: RequestWithId,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const file = await this.requests.downloadFile(id, fileId, request.auth!, false);
+    setFileDownloadHeaders(response, file);
+    return new StreamableFile(file.stream);
   }
 
   @Post(":id/tasks")
@@ -436,19 +502,49 @@ export class ClientRequestsController {
 
   @Post(":id/document-requests/:documentRequestId/upload")
   @HttpCode(200)
-  @ApiOperation({ summary: "Upload requested client document metadata" })
+  @UseInterceptors(uploadInterceptor)
+  @ApiConsumes("multipart/form-data")
+  @ApiOperation({ summary: "Upload requested client document file" })
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        file: { type: "string", format: "binary" },
+        originalName: { type: "string" },
+        mimeType: { type: "string" },
+        sizeBytes: { type: "number" },
+        sha256: { type: "string" },
+      },
+      required: ["file"],
+    },
+  })
   uploadDocument(
     @Param("id") id: string,
     @Param("documentRequestId") documentRequestId: string,
     @Body() input: UploadClientDocumentMetadataDto,
+    @UploadedFile() file: UploadedRequestFile | undefined,
     @Req() request: RequestWithId,
   ) {
     return this.requests.uploadClientDocument(
       id,
       documentRequestId,
       input,
+      file,
       request.auth!,
       metadata(request),
     );
+  }
+
+  @Get(":id/files/:fileId/download")
+  @ApiOperation({ summary: "Download a client-visible request file" })
+  async downloadFile(
+    @Param("id") id: string,
+    @Param("fileId") fileId: string,
+    @Req() request: RequestWithId,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const file = await this.requests.downloadFile(id, fileId, request.auth!, true);
+    setFileDownloadHeaders(response, file);
+    return new StreamableFile(file.stream);
   }
 }

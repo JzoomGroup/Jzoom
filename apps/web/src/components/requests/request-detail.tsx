@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useEffect, useState } from "react";
+import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
 import {
-  addAttachmentMetadata,
   addInternalNote,
   addRequestComment,
   assignRequest,
@@ -23,6 +22,7 @@ import {
   submitRequestTimeEntry,
   supervisorReviewRequest,
   updateRequestTask,
+  uploadRequestAttachment,
 } from "../../lib/request-client";
 import type { CurrentUser } from "../../lib/auth";
 import type {
@@ -90,7 +90,7 @@ const copy = {
     addChecklistItem: "إضافة بند",
     addComment: "إضافة تعليق",
     addInternalNote: "إضافة ملاحظة داخلية",
-    addMetadata: "إضافة البيانات",
+    addMetadata: "رفع المرفق",
     addTime: "إضافة وقت",
     actionShortcuts: "اختصارات التشغيل",
     approved: "معتمد",
@@ -99,7 +99,7 @@ const copy = {
     approvedReady: "معتمد وجاهز للمشاركة",
     assignee: "المسؤول",
     assignments: "الإسناد",
-    attachmentMetadata: "بيانات المرفقات",
+    attachmentMetadata: "مرفقات الطلب",
     attachmentUnavailable: "تحديث بيانات المرفقات متاح لمساحات العمل الداخلية المسندة.",
     backToRequests: "العودة للطلبات",
     basicTimeEntries: "سجل الوقت",
@@ -113,6 +113,7 @@ const copy = {
     clientDocuments: "مستندات العميل",
     clientDocumentUnavailable: "طلب مستندات العميل متاح لمساحات العمل الداخلية المسندة.",
     clientVisible: "ظاهر للعميل",
+    chooseFile: "اختيار ملف من الجهاز",
     close: "إغلاق",
     closeDelivery: "إغلاق التسليم",
     comment: "تعليق",
@@ -125,6 +126,7 @@ const copy = {
     description: "الوصف",
     documentTitle: "عنوان المستند",
     done: "منجز",
+    downloadFile: "تحميل الملف",
     due: "الموعد",
     dueAt: "الموعد",
     escalate: "تصعيد",
@@ -144,6 +146,9 @@ const copy = {
     lifecycle: "مسار الحالة",
     metadataVisibility: "الظهور",
     mimeType: "نوع الملف",
+    fileProcessing: "جاري تجهيز الملف...",
+    fileReady: "الملف جاهز للرفع",
+    fileUploadHint: "اختر ملفا وسيتم حفظه على الطلب مع بياناته تلقائيا.",
     noAction: "لا يوجد إجراء معطل الآن.",
     noActionBody: "لا يوجد إجراء مطلوب لهذا الدور في مساحة العمل الحالية.",
     noAnswers: "لا توجد إجابات منظمة مرسلة.",
@@ -249,7 +254,7 @@ const copy = {
     addChecklistItem: "Add checklist item",
     addComment: "Add comment",
     addInternalNote: "Add internal note",
-    addMetadata: "Add metadata",
+    addMetadata: "Upload attachment",
     addTime: "Add time",
     actionShortcuts: "Operations shortcuts",
     approved: "approved",
@@ -258,9 +263,8 @@ const copy = {
     approvedReady: "approved and ready to share",
     assignee: "Assignee",
     assignments: "Assignments",
-    attachmentMetadata: "Attachment metadata",
-    attachmentUnavailable:
-      "Attachment metadata updates are available to assigned internal workspaces.",
+    attachmentMetadata: "Request attachments",
+    attachmentUnavailable: "Attachment uploads are available to assigned internal workspaces.",
     backToRequests: "Back to requests",
     basicTimeEntries: "Basic time entries",
     billable: "Billable",
@@ -274,6 +278,7 @@ const copy = {
     clientDocumentUnavailable:
       "Client document requests are available to assigned internal workspaces.",
     clientVisible: "Client-visible",
+    chooseFile: "Choose file from device",
     close: "Close",
     closeDelivery: "Close delivery",
     comment: "Comment",
@@ -286,6 +291,7 @@ const copy = {
     description: "Description",
     documentTitle: "Document title",
     done: "Done",
+    downloadFile: "Download file",
     due: "Due",
     dueAt: "Due at",
     escalate: "Escalate",
@@ -306,6 +312,9 @@ const copy = {
     lifecycle: "Lifecycle",
     metadataVisibility: "Visibility",
     mimeType: "MIME type",
+    fileProcessing: "Preparing file...",
+    fileReady: "File ready to upload",
+    fileUploadHint: "Choose a file and Jzoom will store it on this request automatically.",
     noAction: "No blocking operation right now.",
     noActionBody: "The request has no role-specific pending action for your workspace.",
     noAnswers: "No structured answers were submitted.",
@@ -716,6 +725,8 @@ export function RequestDetail({
     sha256: "",
     visibility: "INTERNAL" as "INTERNAL" | "CLIENT_VISIBLE",
   });
+  const [selectedAttachmentFile, setSelectedAttachmentFile] = useState<File | null>(null);
+  const [attachmentProcessing, setAttachmentProcessing] = useState(false);
 
   useEffect(() => {
     setTimeForm((current) =>
@@ -901,14 +912,16 @@ export function RequestDetail({
 
   function submitAttachment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!selectedAttachmentFile) {
+      setError(t.fileUploadHint);
+      return;
+    }
     void run("attachment", async () => {
-      const updated = await addAttachmentMetadata(request.id, {
-        originalName: fileForm.originalName,
-        mimeType: fileForm.mimeType,
-        sizeBytes: Number(fileForm.sizeBytes),
-        sha256: fileForm.sha256,
-        visibility: fileForm.visibility,
-      });
+      const updated = await uploadRequestAttachment(
+        request.id,
+        selectedAttachmentFile,
+        fileForm.visibility,
+      );
       setFileForm({
         originalName: "",
         mimeType: "",
@@ -916,8 +929,35 @@ export function RequestDetail({
         sha256: "",
         visibility: "INTERNAL",
       });
+      setSelectedAttachmentFile(null);
       return updated;
     });
+  }
+
+  async function selectAttachmentFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setAttachmentProcessing(true);
+    setError(null);
+    try {
+      setSelectedAttachmentFile(file);
+      let sha256 = fileForm.sha256;
+      if (globalThis.crypto?.subtle) {
+        const digest = await globalThis.crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+        sha256 = Array.from(new Uint8Array(digest))
+          .map((byte) => byte.toString(16).padStart(2, "0"))
+          .join("");
+      }
+      setFileForm((current) => ({
+        ...current,
+        originalName: file.name,
+        mimeType: file.type || "application/octet-stream",
+        sizeBytes: String(Math.max(file.size, 1)),
+        sha256,
+      }));
+    } finally {
+      setAttachmentProcessing(false);
+    }
   }
 
   function submitTask(event: FormEvent<HTMLFormElement>) {
@@ -2007,10 +2047,24 @@ export function RequestDetail({
           <h2>{t.attachmentMetadata}</h2>
           {canAttachMetadata ? (
             <form className="catalog-form" onSubmit={submitAttachment}>
+              <label className="client-file-drop form-span">
+                <input type="file" onChange={(event) => void selectAttachmentFile(event)} />
+                <span>{t.chooseFile}</span>
+                <small>{attachmentProcessing ? t.fileProcessing : t.fileUploadHint}</small>
+              </label>
+              {fileForm.originalName && (
+                <div className="client-upload-preview form-span">
+                  <strong>{t.fileReady}</strong>
+                  <span>
+                    {fileForm.originalName} - {fileForm.sizeBytes} {t.bytes}
+                  </span>
+                </div>
+              )}
               <label>
                 {t.originalName}
                 <input
                   required
+                  readOnly
                   value={fileForm.originalName}
                   onChange={(event) =>
                     setFileForm({ ...fileForm, originalName: event.target.value })
@@ -2021,6 +2075,7 @@ export function RequestDetail({
                 {t.mimeType}
                 <input
                   required
+                  readOnly
                   value={fileForm.mimeType}
                   onChange={(event) => setFileForm({ ...fileForm, mimeType: event.target.value })}
                 />
@@ -2029,6 +2084,7 @@ export function RequestDetail({
                 {t.sizeBytes}
                 <input
                   required
+                  readOnly
                   min="1"
                   type="number"
                   value={fileForm.sizeBytes}
@@ -2039,6 +2095,7 @@ export function RequestDetail({
                 SHA-256
                 <input
                   required
+                  readOnly
                   minLength={64}
                   maxLength={64}
                   value={fileForm.sha256}
@@ -2082,6 +2139,11 @@ export function RequestDetail({
                     {file.mimeType} - {file.sizeBytes} {t.bytes} -{" "}
                     {codeLabel(file.visibility, locale)}
                   </small>
+                  {file.downloadUrl && (
+                    <a className="os-button os-button-secondary" href={file.downloadUrl}>
+                      {t.downloadFile}
+                    </a>
+                  )}
                 </article>
               ))
             )}

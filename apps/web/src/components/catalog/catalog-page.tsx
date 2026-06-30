@@ -25,6 +25,8 @@ export async function CatalogPage({
       activePath={activePath}
       displayName={user.displayName}
       locale={user.preferredLocale}
+      permissions={user.permissions}
+      roles={user.roles}
     >
       <CatalogWorkspace
         initialSnapshot={snapshot}

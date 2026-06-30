@@ -419,30 +419,34 @@ export class RequestClientDocumentDto {
 }
 
 export class UploadClientDocumentMetadataDto {
-  @ApiProperty({ type: String })
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(260)
-  originalName!: string;
+  originalName?: string;
 
-  @ApiProperty({ type: String })
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(160)
-  mimeType!: string;
+  mimeType?: string;
 
-  @ApiProperty({ type: Number, minimum: 1 })
+  @ApiPropertyOptional({ type: Number, minimum: 1 })
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(2_147_483_647)
-  sizeBytes!: number;
+  sizeBytes?: number;
 
-  @ApiProperty({ type: String })
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
   @IsString()
   @MinLength(64)
   @MaxLength(64)
-  sha256!: string;
+  sha256?: string;
 }
 
 export class ClientDocumentRequestStatusDto {

@@ -619,7 +619,7 @@ function buildPresetConfig(
         uploadRequired: requiresFile,
       }),
     ],
-    reason: `Applied ${presetId} preset from Admin form builder`,
+    reason: `تم تطبيق نموذج ${presetId} من إدارة نماذج الطلبات`,
   };
 }
 
@@ -633,7 +633,7 @@ function versionToEditableConfig(version: RequestTemplateVersion | null): Editab
       fields: [],
       downloadableFiles: [],
       documentChecklist: [],
-      reason: "Created from Admin form builder",
+      reason: "إنشاء من إدارة نماذج الطلبات",
     };
   }
 
@@ -699,7 +699,7 @@ function versionToEditableConfig(version: RequestTemplateVersion | null): Editab
       acceptedFileTypes: jsonText(document.acceptedFileTypes),
       sortOrder: document.sortOrder,
     })),
-    reason: "Revised from Admin form builder",
+    reason: "تعديل من إدارة نماذج الطلبات",
   };
 }
 
@@ -792,7 +792,7 @@ function editableConfigToPayload(config: EditableTemplateConfig): TemplatePayloa
         sortOrder: document.sortOrder,
       };
     }),
-    reason: optionalText(config.reason) ?? "Saved from Admin form builder",
+    reason: optionalText(config.reason) ?? "تم الحفظ من إدارة نماذج الطلبات",
   };
   const instructionsAr = optionalText(config.instructionsAr);
   const instructionsEn = optionalText(config.instructionsEn);
@@ -816,7 +816,7 @@ function TemplatePreview({ version }: { version: RequestTemplateVersion | null }
   if (!version) {
     return (
       <EmptyState>
-        No active, draft, or suggested template is available for this service item.
+        لا يوجد قالب نشط أو مسودة أو قالب مقترح لهذا البند.
       </EmptyState>
     );
   }
@@ -826,20 +826,21 @@ function TemplatePreview({ version }: { version: RequestTemplateVersion | null }
         <strong>
           v{version.version} - {version.status}
         </strong>
-        <p>{version.instructionsEn || version.instructionsAr || "No instructions configured."}</p>
+        <p>{version.instructionsAr || version.instructionsEn || "لا توجد تعليمات مضبوطة."}</p>
       </article>
       {version.sections.map((section) => (
         <article key={section.code}>
-          <strong>{section.titleEn}</strong>
-          {section.descriptionEn && <p>{section.descriptionEn}</p>}
-          <small>{section.titleAr}</small>
+          <strong>{section.titleAr || section.titleEn}</strong>
+          {section.descriptionAr && <p>{section.descriptionAr}</p>}
+          <small>{section.titleEn}</small>
           <ul>
             {version.fields
               .filter((field) => field.sectionCode === section.code)
               .map((field) => (
                 <li key={field.code}>
-                  {field.labelEn} - {field.fieldType} - {field.required ? "required" : "optional"} -{" "}
-                  {field.clientVisible ? "client-visible" : "internal-only"}
+                  {field.labelAr || field.labelEn} - {field.fieldType} -{" "}
+                  {field.required ? "مطلوب" : "اختياري"} -{" "}
+                  {field.clientVisible ? "ظاهر للعميل" : "داخلي فقط"}
                 </li>
               ))}
           </ul>
@@ -847,12 +848,12 @@ function TemplatePreview({ version }: { version: RequestTemplateVersion | null }
       ))}
       {version.downloadableFiles.length > 0 && (
         <article>
-          <strong>Reference files</strong>
+          <strong>ملفات مرجعية</strong>
           <ul>
             {version.downloadableFiles.map((file) => (
               <li key={file.code}>
-                {file.titleEn} -{" "}
-                {file.returnUploadRequired ? "return upload required" : "reference"}
+                {file.titleAr || file.titleEn} -{" "}
+                {file.returnUploadRequired ? "يتطلب رفع نسخة راجعة" : "مرجع"}
               </li>
             ))}
           </ul>
@@ -860,12 +861,12 @@ function TemplatePreview({ version }: { version: RequestTemplateVersion | null }
       )}
       {version.documentChecklist.length > 0 && (
         <article>
-          <strong>Required document checklist</strong>
+          <strong>قائمة المستندات المطلوبة</strong>
           <ul>
             {version.documentChecklist.map((document) => (
               <li key={document.code}>
-                {document.labelEn} -{" "}
-                {document.uploadRequired ? "upload required" : "optional upload"}
+                {document.labelAr || document.labelEn} -{" "}
+                {document.uploadRequired ? "الرفع مطلوب" : "الرفع اختياري"}
               </li>
             ))}
           </ul>
@@ -910,7 +911,7 @@ function FieldLibraryPanel({
         labelEn: "",
         systemKey: "",
       });
-      onSaved(snapshot, "Field library item created.");
+      onSaved(snapshot, "تم إنشاء حقل في المكتبة.");
     } catch (error) {
       onError(requestTemplateErrorMessage(error));
     }
@@ -918,14 +919,13 @@ function FieldLibraryPanel({
 
   return (
     <article className="catalog-panel">
-      <h2>Reusable field library</h2>
+      <h2>مكتبة الحقول القابلة لإعادة الاستخدام</h2>
       <p>
-        Create reusable field definitions once, then reference them from any service item request
-        template.
+        أنشئ الحقول المشتركة مرة واحدة، ثم استخدمها داخل أي قالب طلب مرتبط ببند خدمة.
       </p>
       <form className="catalog-form" onSubmit={submit}>
         <label>
-          Code
+          الرمز
           <input
             required
             value={form.code}
@@ -933,7 +933,7 @@ function FieldLibraryPanel({
           />
         </label>
         <label>
-          Field type
+          نوع الحقل
           <select
             value={form.fieldType}
             onChange={(event) =>
@@ -948,7 +948,7 @@ function FieldLibraryPanel({
           </select>
         </label>
         <label>
-          Arabic label
+          التسمية العربية
           <input
             required
             value={form.labelAr}
@@ -956,7 +956,7 @@ function FieldLibraryPanel({
           />
         </label>
         <label>
-          English label
+          التسمية الإنجليزية
           <input
             required
             value={form.labelEn}
@@ -964,24 +964,24 @@ function FieldLibraryPanel({
           />
         </label>
         <label>
-          System key
+          مفتاح النظام
           <input
             value={form.systemKey}
             onChange={(event) => setForm({ ...form, systemKey: event.target.value })}
           />
         </label>
         <button className="os-button os-button-primary" type="submit">
-          Add library field
+          إضافة حقل للمكتبة
         </button>
       </form>
       <div className="activity-list">
         {fields.slice(0, 18).map((field) => (
           <article key={field.id}>
-            <strong>{field.labelEn}</strong>
+            <strong>{field.labelAr || field.labelEn}</strong>
             <small>
               {field.code} - {field.fieldType} - {field.status}
             </small>
-            {field.systemKey && <p>System key: {field.systemKey}</p>}
+            {field.systemKey && <p>مفتاح النظام: {field.systemKey}</p>}
           </article>
         ))}
       </div>
@@ -1096,25 +1096,25 @@ function TemplateBuilder({
       <section className="template-builder-section form-span">
         <div className="entity-card-heading">
           <div>
-            <p className="eyebrow">Version settings</p>
-            <h3>Template behavior</h3>
+            <p className="eyebrow">إعدادات النسخة</p>
+            <h3>سلوك القالب</h3>
           </div>
         </div>
         <div className="catalog-form wide-form">
           <label>
-            Save status
+            حالة الحفظ
             <select
               value={config.status}
               onChange={(event) =>
                 setConfig({ status: event.target.value as EditableTemplateStatus })
               }
             >
-              <option value="DRAFT">Draft</option>
-              <option value="ACTIVE">Active</option>
+              <option value="DRAFT">مسودة</option>
+              <option value="ACTIVE">نشط</option>
             </select>
           </label>
           <label>
-            Change reason
+            سبب التغيير
             <input
               required
               value={config.reason}
@@ -1122,7 +1122,7 @@ function TemplateBuilder({
             />
           </label>
           <label className="form-span">
-            English client instructions
+            تعليمات العميل بالإنجليزية
             <textarea
               rows={3}
               value={config.instructionsEn}
@@ -1130,7 +1130,7 @@ function TemplateBuilder({
             />
           </label>
           <label className="form-span">
-            Arabic client instructions
+            تعليمات العميل بالعربية
             <textarea
               rows={3}
               value={config.instructionsAr}
@@ -1143,8 +1143,8 @@ function TemplateBuilder({
       <section className="template-builder-section form-span">
         <div className="entity-card-heading">
           <div>
-            <p className="eyebrow">Sections</p>
-            <h3>Group client-facing fields</h3>
+            <p className="eyebrow">الأقسام</p>
+            <h3>تجميع الحقول الظاهرة للعميل</h3>
           </div>
           <button
             className="os-button os-button-secondary"
@@ -1162,16 +1162,16 @@ function TemplateBuilder({
               })
             }
           >
-            Add section
+            إضافة قسم
           </button>
         </div>
         <div className="template-builder-stack">
           {config.sections.map((section, index) => (
             <fieldset className="template-fieldset" key={`${section.code}-${index}`}>
-              <legend>Section {index + 1}</legend>
+              <legend>القسم {index + 1}</legend>
               <div className="catalog-form wide-form">
                 <label>
-                  Code
+                  الرمز
                   <input
                     required
                     value={section.code}
@@ -1179,7 +1179,7 @@ function TemplateBuilder({
                   />
                 </label>
                 <label>
-                  Order
+                  الترتيب
                   <input
                     min="0"
                     type="number"
@@ -1190,7 +1190,7 @@ function TemplateBuilder({
                   />
                 </label>
                 <label>
-                  English title
+                  العنوان بالإنجليزية
                   <input
                     required
                     value={section.titleEn}
@@ -1198,7 +1198,7 @@ function TemplateBuilder({
                   />
                 </label>
                 <label>
-                  Arabic title
+                  العنوان بالعربية
                   <input
                     required
                     value={section.titleAr}
@@ -1206,7 +1206,7 @@ function TemplateBuilder({
                   />
                 </label>
                 <label className="form-span">
-                  English description
+                  الوصف بالإنجليزية
                   <textarea
                     rows={2}
                     value={section.descriptionEn}
@@ -1221,14 +1221,14 @@ function TemplateBuilder({
                     type="checkbox"
                     onChange={(event) => updateSection(index, { active: event.target.checked })}
                   />
-                  Active section
+                  قسم نشط
                 </label>
                 <button
                   className="os-button os-button-danger"
                   type="button"
                   onClick={() => removeSection(index)}
                 >
-                  Remove section
+                  حذف القسم
                 </button>
               </div>
             </fieldset>
@@ -1239,8 +1239,8 @@ function TemplateBuilder({
       <section className="template-builder-section form-span">
         <div className="entity-card-heading">
           <div>
-            <p className="eyebrow">Fields</p>
-            <h3>Build the request form</h3>
+            <p className="eyebrow">الحقول</p>
+            <h3>بناء نموذج الطلب</h3>
           </div>
           <button
             className="os-button os-button-secondary"
@@ -1254,19 +1254,19 @@ function TemplateBuilder({
               })
             }
           >
-            Add field
+            إضافة حقل
           </button>
         </div>
         {config.fields.length === 0 ? (
-          <EmptyState>No fields yet. Add the first field for this service item.</EmptyState>
+          <EmptyState>لا توجد حقول بعد. أضف أول حقل لهذا البند.</EmptyState>
         ) : (
           <div className="template-builder-stack">
             {config.fields.map((field, index) => (
               <fieldset className="template-fieldset" key={`${field.code}-${index}`}>
-                <legend>Field {index + 1}</legend>
+                <legend>الحقل {index + 1}</legend>
                 <div className="catalog-form wide-form">
                   <label>
-                    Code
+                    الرمز
                     <input
                       required
                       value={field.code}
@@ -1274,7 +1274,7 @@ function TemplateBuilder({
                     />
                   </label>
                   <label>
-                    Type
+                    النوع
                     <select
                       value={field.fieldType}
                       onChange={(event) =>
@@ -1291,12 +1291,12 @@ function TemplateBuilder({
                     </select>
                   </label>
                   <label>
-                    Section
+                    القسم
                     <select
                       value={field.sectionCode}
                       onChange={(event) => updateField(index, { sectionCode: event.target.value })}
                     >
-                      <option value="">No section</option>
+                      <option value="">بدون قسم</option>
                       {config.sections.map((section) => (
                         <option key={section.code} value={section.code}>
                           {section.titleEn} ({section.code})
@@ -1305,25 +1305,25 @@ function TemplateBuilder({
                     </select>
                   </label>
                   <label>
-                    Library field
+                    حقل من المكتبة
                     <select
                       value={field.libraryFieldCode}
                       onChange={(event) =>
                         updateField(index, { libraryFieldCode: event.target.value })
                       }
                     >
-                      <option value="">Custom field</option>
+                      <option value="">حقل مخصص</option>
                       {fieldLibrary
                         .filter((libraryField) => libraryField.status === "ACTIVE")
                         .map((libraryField) => (
                           <option key={libraryField.code} value={libraryField.code}>
-                            {libraryField.labelEn} ({libraryField.code})
+                            {libraryField.labelAr || libraryField.labelEn} ({libraryField.code})
                           </option>
                         ))}
                     </select>
                   </label>
                   <label>
-                    English label
+                    التسمية بالإنجليزية
                     <input
                       required
                       value={field.labelEn}
@@ -1331,7 +1331,7 @@ function TemplateBuilder({
                     />
                   </label>
                   <label>
-                    Arabic label
+                    التسمية بالعربية
                     <input
                       required
                       value={field.labelAr}
@@ -1339,7 +1339,7 @@ function TemplateBuilder({
                     />
                   </label>
                   <label>
-                    Order
+                    الترتيب
                     <input
                       min="0"
                       type="number"
@@ -1350,14 +1350,14 @@ function TemplateBuilder({
                     />
                   </label>
                   <label>
-                    System key
+                    مفتاح النظام
                     <input
                       value={field.systemKey}
                       onChange={(event) => updateField(index, { systemKey: event.target.value })}
                     />
                   </label>
                   <label className="form-span">
-                    English help text
+                    نص المساعدة بالإنجليزية
                     <textarea
                       rows={2}
                       value={field.helpTextEn}
@@ -1365,7 +1365,7 @@ function TemplateBuilder({
                     />
                   </label>
                   <label className="form-span">
-                    Arabic help text
+                    نص المساعدة بالعربية
                     <textarea
                       rows={2}
                       value={field.helpTextAr}
@@ -1378,7 +1378,7 @@ function TemplateBuilder({
                       type="checkbox"
                       onChange={(event) => updateField(index, { required: event.target.checked })}
                     />
-                    Required
+                    مطلوب
                   </label>
                   <label className="checkbox-label">
                     <input
@@ -1388,13 +1388,13 @@ function TemplateBuilder({
                         updateField(index, { clientVisible: event.target.checked })
                       }
                     />
-                    Client visible
+                    ظاهر للعميل
                   </label>
                   <details className="form-span">
-                    <summary>Advanced field settings</summary>
+                    <summary>إعدادات الحقل المتقدمة</summary>
                     <div className="catalog-form wide-form">
                       <label>
-                        Default value JSON
+                        القيمة الافتراضية بصيغة JSON
                         <input
                           value={field.defaultValue}
                           onChange={(event) =>
@@ -1403,7 +1403,7 @@ function TemplateBuilder({
                         />
                       </label>
                       <label>
-                        Validation JSON
+                        التحقق بصيغة JSON
                         <input
                           value={field.validation}
                           onChange={(event) =>
@@ -1418,14 +1418,14 @@ function TemplateBuilder({
                     type="button"
                     onClick={() => removeField(index)}
                   >
-                    Remove field
+                    حذف الحقل
                   </button>
                 </div>
                 {fieldUsesOptions(field.fieldType) && (
                   <div className="template-options">
                     <div className="entity-card-heading">
                       <div>
-                        <p className="eyebrow">Options</p>
+                        <p className="eyebrow">الخيارات</p>
                         <h4>{field.labelEn || field.code}</h4>
                       </div>
                       <button
@@ -1433,13 +1433,13 @@ function TemplateBuilder({
                         type="button"
                         onClick={() => addOption(index)}
                       >
-                        Add option
+                        إضافة خيار
                       </button>
                     </div>
                     {field.options.map((option, optionIndex) => (
                       <div className="catalog-form wide-form template-option-row" key={optionIndex}>
                         <label>
-                          Value
+                          القيمة
                           <input
                             required
                             value={option.value}
@@ -1449,7 +1449,7 @@ function TemplateBuilder({
                           />
                         </label>
                         <label>
-                          English label
+                          التسمية بالإنجليزية
                           <input
                             required
                             value={option.labelEn}
@@ -1459,7 +1459,7 @@ function TemplateBuilder({
                           />
                         </label>
                         <label>
-                          Arabic label
+                          التسمية بالعربية
                           <input
                             required
                             value={option.labelAr}
@@ -1469,7 +1469,7 @@ function TemplateBuilder({
                           />
                         </label>
                         <label>
-                          Order
+                          الترتيب
                           <input
                             min="0"
                             type="number"
@@ -1489,14 +1489,14 @@ function TemplateBuilder({
                               updateOption(index, optionIndex, { active: event.target.checked })
                             }
                           />
-                          Active
+                          نشط
                         </label>
                         <button
                           className="os-button os-button-danger"
                           type="button"
                           onClick={() => removeOption(index, optionIndex)}
                         >
-                          Remove option
+                          حذف الخيار
                         </button>
                       </div>
                     ))}
@@ -1511,8 +1511,8 @@ function TemplateBuilder({
       <section className="template-builder-section form-span">
         <div className="entity-card-heading">
           <div>
-            <p className="eyebrow">Documents</p>
-            <h3>Client upload checklist</h3>
+            <p className="eyebrow">المستندات</p>
+            <h3>قائمة رفع العميل</h3>
           </div>
           <button
             className="os-button os-button-secondary"
@@ -1526,19 +1526,19 @@ function TemplateBuilder({
               })
             }
           >
-            Add document
+            إضافة مستند
           </button>
         </div>
         {config.documentChecklist.length === 0 ? (
-          <EmptyState>No requested documents configured.</EmptyState>
+          <EmptyState>لا توجد مستندات مطلوبة مضبوطة.</EmptyState>
         ) : (
           <div className="template-builder-stack">
             {config.documentChecklist.map((document, index) => (
               <fieldset className="template-fieldset" key={`${document.code}-${index}`}>
-                <legend>Document {index + 1}</legend>
+                <legend>المستند {index + 1}</legend>
                 <div className="catalog-form wide-form">
                   <label>
-                    Code
+                    الرمز
                     <input
                       required
                       value={document.code}
@@ -1546,7 +1546,7 @@ function TemplateBuilder({
                     />
                   </label>
                   <label>
-                    Order
+                    الترتيب
                     <input
                       min="0"
                       type="number"
@@ -1557,7 +1557,7 @@ function TemplateBuilder({
                     />
                   </label>
                   <label>
-                    English label
+                    التسمية بالإنجليزية
                     <input
                       required
                       value={document.labelEn}
@@ -1565,7 +1565,7 @@ function TemplateBuilder({
                     />
                   </label>
                   <label>
-                    Arabic label
+                    التسمية بالعربية
                     <input
                       required
                       value={document.labelAr}
@@ -1573,7 +1573,7 @@ function TemplateBuilder({
                     />
                   </label>
                   <label className="form-span">
-                    English description
+                    الوصف بالإنجليزية
                     <textarea
                       rows={2}
                       value={document.descriptionEn}
@@ -1583,7 +1583,7 @@ function TemplateBuilder({
                     />
                   </label>
                   <label>
-                    Accepted file types JSON
+                    أنواع الملفات المقبولة بصيغة JSON
                     <input
                       placeholder='["application/pdf"]'
                       value={document.acceptedFileTypes}
@@ -1600,7 +1600,7 @@ function TemplateBuilder({
                         updateDocument(index, { required: event.target.checked })
                       }
                     />
-                    Required
+                    مطلوب
                   </label>
                   <label className="checkbox-label">
                     <input
@@ -1610,7 +1610,7 @@ function TemplateBuilder({
                         updateDocument(index, { uploadRequired: event.target.checked })
                       }
                     />
-                    Upload required
+                    الرفع مطلوب
                   </label>
                   <button
                     className="os-button os-button-danger"
@@ -1623,7 +1623,7 @@ function TemplateBuilder({
                       })
                     }
                   >
-                    Remove document
+                    حذف المستند
                   </button>
                 </div>
               </fieldset>
@@ -1633,11 +1633,11 @@ function TemplateBuilder({
       </section>
 
       <details className="template-builder-section form-span">
-        <summary>Reference files and technical payload</summary>
+        <summary>الملفات المرجعية والبيانات التقنية</summary>
         <div className="entity-card-heading">
           <div>
-            <p className="eyebrow">Files</p>
-            <h3>Reference file metadata</h3>
+            <p className="eyebrow">الملفات</p>
+            <h3>بيانات الملفات المرجعية</h3>
           </div>
           <button
             className="os-button os-button-secondary"
@@ -1651,15 +1651,15 @@ function TemplateBuilder({
               })
             }
           >
-            Add reference file
+            إضافة ملف مرجعي
           </button>
         </div>
         {config.downloadableFiles.map((file, index) => (
           <fieldset className="template-fieldset" key={`${file.code}-${index}`}>
-            <legend>Reference file {index + 1}</legend>
+            <legend>الملف المرجعي {index + 1}</legend>
             <div className="catalog-form wide-form">
               <label>
-                Code
+                الرمز
                 <input
                   required
                   value={file.code}
@@ -1667,7 +1667,7 @@ function TemplateBuilder({
                 />
               </label>
               <label>
-                English title
+                العنوان بالإنجليزية
                 <input
                   required
                   value={file.titleEn}
@@ -1675,7 +1675,7 @@ function TemplateBuilder({
                 />
               </label>
               <label>
-                Arabic title
+                العنوان بالعربية
                 <input
                   required
                   value={file.titleAr}
@@ -1683,14 +1683,14 @@ function TemplateBuilder({
                 />
               </label>
               <label>
-                File name
+                اسم الملف
                 <input
                   value={file.fileName}
                   onChange={(event) => updateFile(index, { fileName: event.target.value })}
                 />
               </label>
               <label>
-                Storage key
+                مفتاح التخزين
                 <input
                   value={file.storageKey}
                   onChange={(event) => updateFile(index, { storageKey: event.target.value })}
@@ -1702,7 +1702,7 @@ function TemplateBuilder({
                   type="checkbox"
                   onChange={(event) => updateFile(index, { clientVisible: event.target.checked })}
                 />
-                Client visible
+                ظاهر للعميل
               </label>
               <label className="checkbox-label">
                 <input
@@ -1712,7 +1712,7 @@ function TemplateBuilder({
                     updateFile(index, { returnUploadRequired: event.target.checked })
                   }
                 />
-                Return upload required
+                يتطلب رفع نسخة راجعة
               </label>
               <button
                 className="os-button os-button-danger"
@@ -1725,13 +1725,13 @@ function TemplateBuilder({
                   })
                 }
               >
-                Remove file
+                حذف الملف
               </button>
             </div>
           </fieldset>
         ))}
         <label className="form-span">
-          Technical payload preview
+          معاينة البيانات التقنية
           <textarea readOnly rows={18} value={previewPayload} />
         </label>
       </details>
@@ -1789,7 +1789,7 @@ export function RequestTemplateManager({
   async function applySuggested() {
     if (!selected) return;
     try {
-      saved(await applySuggestedRequestTemplate(selected.id), "Suggested template applied.");
+      saved(await applySuggestedRequestTemplate(selected.id), "تم تطبيق القالب المقترح.");
     } catch (caught) {
       setError(requestTemplateErrorMessage(caught));
     }
@@ -1800,7 +1800,7 @@ export function RequestTemplateManager({
     if (!selected) return;
     try {
       const payload = editableConfigToPayload(editor);
-      saved(await reviseRequestTemplate(selected.id, payload), "Template version saved.");
+      saved(await reviseRequestTemplate(selected.id, payload), "تم حفظ نسخة القالب.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : requestTemplateErrorMessage(caught));
       setSuccess(undefined);
@@ -1815,9 +1815,9 @@ export function RequestTemplateManager({
           selected.template.active.templateId,
           selected.template.active.id,
           "ARCHIVED",
-          "Archived from Admin request templates",
+          "أرشفة من إدارة نماذج الطلبات",
         ),
-        "Active template archived.",
+        "تمت أرشفة القالب النشط.",
       );
     } catch (caught) {
       setError(requestTemplateErrorMessage(caught));
@@ -1826,7 +1826,7 @@ export function RequestTemplateManager({
 
   function applyEditorPreset(presetId: TemplatePresetId) {
     setEditor(buildPresetConfig(presetId, selected));
-    setSuccess(`Preset applied in the editor. Review it, then save as Draft or Active.`);
+    setSuccess("تم تطبيق النموذج المقترح في المحرر. راجعه ثم احفظه كمسودة أو انشره كنشط.");
     setError(undefined);
   }
 
@@ -1835,40 +1835,40 @@ export function RequestTemplateManager({
   return (
     <>
       <SectionHeader
-        eyebrow="Admin request templates"
-        title="Service item form builder"
-        description="Build client-facing request forms per service item without editing raw JSON. Saving creates a new template version and preserves old request answers."
+        eyebrow="نماذج الطلبات"
+        title="منشئ نماذج بنود الخدمة"
+        description="أنشئ نماذج طلب ظاهرة للعميل لكل بند خدمة بدون تعديل JSON خام. الحفظ ينشئ نسخة جديدة ويحافظ على إجابات الطلبات السابقة."
       />
       <CatalogFeedback error={error} success={success} />
 
-      <section className="metric-grid" aria-label="Request template summary">
+      <section className="metric-grid" aria-label="ملخص نماذج الطلبات">
         <MetricCard
-          label="Service items"
+          label="بنود الخدمة"
           value={snapshot.serviceItems.length}
-          detail="Template-capable items"
+          detail="بنود قابلة للنمذجة"
         />
         <MetricCard
-          label="Active templates"
+          label="قوالب نشطة"
           value={templateCounts.active}
-          detail="Client-facing forms"
+          detail="نماذج ظاهرة للعميل"
           accent
         />
         <MetricCard
-          label="Suggested templates"
+          label="قوالب مقترحة"
           value={templateCounts.suggested}
-          detail="Ready to apply"
+          detail="جاهزة للتطبيق"
         />
         <MetricCard
-          label="Missing active"
+          label="بدون قالب نشط"
           value={templateCounts.missing}
-          detail="Needs configuration"
+          detail="تحتاج ضبط"
         />
       </section>
 
       <section className="quote-summary-grid">
         <SectionCard
-          title="Service item template status"
-          description="Select a service item to inspect, apply, archive, or revise its request form."
+          title="حالة قوالب بنود الخدمة"
+          description="اختر بند خدمة لمراجعة قالبه أو تطبيق المقترح أو أرشفة القالب النشط أو إنشاء نسخة جديدة."
         >
           <div className="activity-list">
             {snapshot.serviceItems.map((item) => (
@@ -1879,11 +1879,11 @@ export function RequestTemplateManager({
                 aria-pressed={item.id === selectedServiceItemId}
                 onClick={() => selectServiceItem(item)}
               >
-                <strong>{item.latestRevision?.nameEn ?? item.code}</strong>
+                <strong>{item.latestRevision?.nameAr ?? item.latestRevision?.nameEn ?? item.code}</strong>
                 <small>
-                  {item.code} - {item.template?.active ? "active" : "no active"} -{" "}
-                  {item.template?.suggested ? "suggested available" : "no suggestion"} -{" "}
-                  {item.template?.drafts.length ?? 0} drafts
+                  {item.code} - {item.template?.active ? "نشط" : "لا يوجد نشط"} -{" "}
+                  {item.template?.suggested ? "يوجد مقترح" : "لا يوجد مقترح"} -{" "}
+                  {item.template?.drafts.length ?? 0} مسودات
                 </small>
               </button>
             ))}
@@ -1895,24 +1895,28 @@ export function RequestTemplateManager({
 
       <section className="quote-summary-grid">
         <SectionCard
-          title={selected?.latestRevision?.nameEn ?? "Select a service item"}
+          title={
+            selected?.latestRevision?.nameAr ??
+            selected?.latestRevision?.nameEn ??
+            "اختر بند خدمة"
+          }
           description={
             selected?.latestRevision?.expectedOutput ??
-            "Choose a service item to inspect, apply, or revise its request template."
+            "اختر بند خدمة لمراجعة قالب الطلب أو تطبيقه أو إنشاء نسخة جديدة."
           }
         >
           <dl className="quote-definition-list">
             <div>
-              <dt>Service item</dt>
+              <dt>بند الخدمة</dt>
               <dd>{selected?.code ?? "-"}</dd>
             </div>
             <div>
-              <dt>Monthly service</dt>
+              <dt>الخدمة الشهرية</dt>
               <dd>{selected?.monthlyService.code ?? "-"}</dd>
             </div>
             <div>
-              <dt>Active template</dt>
-              <dd>{selected?.template?.active ? `v${selected.template.active.version}` : "No"}</dd>
+              <dt>القالب النشط</dt>
+              <dd>{selected?.template?.active ? `v${selected.template.active.version}` : "لا"}</dd>
             </div>
           </dl>
           <div className="row-actions">
@@ -1922,7 +1926,7 @@ export function RequestTemplateManager({
               disabled={!selected?.template?.suggested}
               onClick={() => void applySuggested()}
             >
-              Apply suggested
+              تطبيق المقترح
             </button>
             <button
               className="os-button os-button-danger"
@@ -1930,25 +1934,25 @@ export function RequestTemplateManager({
               disabled={!selected?.template?.active}
               onClick={() => void archiveActive()}
             >
-              Archive active
+              أرشفة النشط
             </button>
           </div>
           <TemplatePreview version={currentVersion} />
         </SectionCard>
 
         <SectionCard
-          title="Build template version"
-          description="Add sections, fields, options, and document requirements. Save as Draft for review or Active to publish it immediately for client request creation."
+          title="إنشاء نسخة قالب"
+          description="أضف الأقسام والحقول والخيارات ومتطلبات المستندات. احفظ كمسودة للمراجعة أو كنشط لنشره مباشرة في إنشاء طلبات العميل."
         >
           <form className="template-save-form" onSubmit={submitRevision}>
             <section className="template-preset-studio">
               <div className="entity-card-heading">
                 <div>
-                  <p className="eyebrow">Smart defaults</p>
-                  <h3>Start from a practical service-item form</h3>
+                  <p className="eyebrow">قوالب ذكية</p>
+                  <h3>ابدأ من نموذج عملي مناسب لبند الخدمة</h3>
                 </div>
                 <span className="template-recommended-pill">
-                  Recommended:{" "}
+                  المقترح:{" "}
                   {templatePresetDefinitions.find((preset) => preset.id === recommendedPreset)
                     ?.title ?? "نموذج عام مرن"}
                 </span>
@@ -1982,10 +1986,10 @@ export function RequestTemplateManager({
                 type="button"
                 onClick={() => setEditor(versionToEditableConfig(currentVersion))}
               >
-                Reset editor
+                إعادة ضبط المحرر
               </button>
               <button className="os-button os-button-primary" type="submit" disabled={!selected}>
-                Save new template version
+                حفظ نسخة قالب جديدة
               </button>
             </div>
           </form>

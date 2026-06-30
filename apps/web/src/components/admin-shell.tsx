@@ -6,21 +6,15 @@ export function AdminShell({
   activePath,
   displayName,
   locale = "en",
-  permissions = [
-    "PERM-MANAGE-CLIENTS",
-    "PERM-MANAGE-INVOICES",
-    "PERM-MANAGE-QUOTES",
-    "PERM-MANAGE-USERS",
-    "PERM-USE-PRICING-STUDIO",
-  ],
-  roles = ["ROLE-ADMIN"],
+  permissions,
+  roles,
 }: {
   children: ReactNode;
   activePath: string;
   displayName: string;
   locale?: string;
-  permissions?: string[];
-  roles?: string[];
+  permissions: string[];
+  roles: string[];
 }) {
   const isAdmin = roles.includes("ROLE-ADMIN");
   return (

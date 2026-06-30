@@ -9,15 +9,15 @@
     "pnpm": ">=11.0.0 <12"
   },
   "scripts": {
-    "build": "pnpm --workspace-concurrency=1 -r --if-present build",
-    "dev": "pnpm --parallel --filter @jzoom/web --filter @jzoom/api --filter @jzoom/worker dev",
+    "build": "corepack pnpm --workspace-concurrency=1 -r --if-present build",
+    "dev": "corepack pnpm --parallel --filter @jzoom/web --filter @jzoom/api --filter @jzoom/worker dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "pnpm --workspace-concurrency=1 -r --if-present lint",
-    "openapi:generate": "pnpm --filter @jzoom/api openapi:generate",
-    "prisma:generate": "pnpm --filter @jzoom/database generate",
-    "test": "pnpm build && pnpm --workspace-concurrency=1 -r --if-present test",
-    "typecheck": "pnpm --workspace-concurrency=1 --filter @jzoom/contracts --filter @jzoom/config --filter @jzoom/database -r build && pnpm --workspace-concurrency=1 -r --if-present typecheck"
+    "lint": "corepack pnpm --workspace-concurrency=1 -r --if-present lint",
+    "openapi:generate": "corepack pnpm --filter @jzoom/api openapi:generate",
+    "prisma:generate": "corepack pnpm --filter @jzoom/database generate",
+    "test": "corepack pnpm build && corepack pnpm --workspace-concurrency=1 -r --if-present test",
+    "typecheck": "corepack pnpm --workspace-concurrency=1 --filter @jzoom/contracts --filter @jzoom/config --filter @jzoom/database -r build && corepack pnpm --workspace-concurrency=1 -r --if-present typecheck"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

@@ -25,6 +25,8 @@ export async function OneTimeCatalogPage({
       activePath={activePath}
       displayName={user.displayName}
       locale={user.preferredLocale}
+      permissions={user.permissions}
+      roles={user.roles}
     >
       {section === "categories" ? (
         <OneTimeCategoryManager initialSnapshot={snapshot} locale={user.preferredLocale} />

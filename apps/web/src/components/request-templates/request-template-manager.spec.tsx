@@ -77,30 +77,30 @@ describe("RequestTemplateManager", () => {
 
     render(<RequestTemplateManager initialSnapshot={snapshot()} />);
 
-    expect(screen.getByRole("heading", { name: "Service item form builder" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "منشئ نماذج بنود الخدمة" })).toBeInTheDocument();
     expect(screen.queryByLabelText("Template config JSON")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Add field" }));
-    const fieldGroup = screen.getByRole("group", { name: "Field 1" });
-    fireEvent.change(within(fieldGroup).getByLabelText("English label"), {
+    fireEvent.click(screen.getByRole("button", { name: "إضافة حقل" }));
+    const fieldGroup = screen.getByRole("group", { name: "الحقل 1" });
+    fireEvent.change(within(fieldGroup).getByLabelText("التسمية بالإنجليزية"), {
       target: { value: "Number of employees" },
     });
-    fireEvent.change(within(fieldGroup).getByLabelText("Arabic label"), {
+    fireEvent.change(within(fieldGroup).getByLabelText("التسمية بالعربية"), {
       target: { value: "Number of employees" },
     });
-    fireEvent.change(within(fieldGroup).getByLabelText("Type"), {
+    fireEvent.change(within(fieldGroup).getByLabelText("النوع"), {
       target: { value: "NUMBER" },
     });
-    fireEvent.click(within(fieldGroup).getByLabelText("Required"));
+    fireEvent.click(within(fieldGroup).getByLabelText("مطلوب"));
 
-    fireEvent.click(screen.getByRole("button", { name: "Save new template version" }));
+    fireEvent.click(screen.getByRole("button", { name: "حفظ نسخة قالب جديدة" }));
 
     await waitFor(() => expect(reviseRequestTemplate).toHaveBeenCalledTimes(1));
     expect(reviseRequestTemplate).toHaveBeenCalledWith(
       "service-item-1",
       expect.objectContaining({
         status: "DRAFT",
-        reason: "Created from Admin form builder",
+        reason: "إنشاء من إدارة نماذج الطلبات",
         sections: [
           expect.objectContaining({
             code: "basic_request_information",
@@ -126,7 +126,7 @@ describe("RequestTemplateManager", () => {
     render(<RequestTemplateManager initialSnapshot={snapshot()} />);
 
     fireEvent.click(screen.getByRole("button", { name: /مستندات الموارد البشرية/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Save new template version" }));
+    fireEvent.click(screen.getByRole("button", { name: "حفظ نسخة قالب جديدة" }));
 
     await waitFor(() => expect(reviseRequestTemplate).toHaveBeenCalledTimes(1));
     expect(reviseRequestTemplate).toHaveBeenCalledWith(

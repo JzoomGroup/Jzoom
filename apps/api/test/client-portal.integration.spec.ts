@@ -514,6 +514,21 @@ describeWithDatabase("PR 12 client portal quote and invoice views", () => {
     expect(JSON.stringify(subscribedService)).not.toContain(excludedItemCode);
   });
 
+  it("does not expose catalog pricing or delivery estimates in the client account context", async () => {
+    const clientUser = await login(clientEmail);
+    const context = await clientUser.get("/api/v1/client-portal/me").expect(200);
+    const clientCatalogText = JSON.stringify({
+      availableMonthly: context.body.services.availableMonthly,
+      availableOneTime: context.body.services.availableOneTime,
+    });
+
+    expect(clientCatalogText).not.toContain("sellingHourlyRateSar");
+    expect(clientCatalogText).not.toContain("basePriceSar");
+    expect(clientCatalogText).not.toContain("estimatedHours");
+    expect(clientCatalogText).not.toContain("durationDays");
+    expect(clientCatalogText).not.toContain("internalHourlyCostSar");
+  });
+
   it("lists only client-safe quote and invoice records", async () => {
     const issuedQuote = await createQuoteFixture("ISSUED", "ISSUED");
     const acceptedQuote = await createQuoteFixture("ACCEPTED", "ACCEPTED");

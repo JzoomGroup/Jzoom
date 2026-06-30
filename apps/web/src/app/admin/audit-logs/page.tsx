@@ -19,6 +19,8 @@ export default async function AdminAuditLogsPage() {
       activePath="/admin/audit-logs"
       displayName={user.displayName}
       locale={user.preferredLocale}
+      permissions={user.permissions}
+      roles={user.roles}
     >
       <AdminAuditLogsPageContent locale={user.preferredLocale} logs={snapshot.logs} />
     </AdminShell>

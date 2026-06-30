@@ -21,6 +21,8 @@ export async function PricingRulesPage() {
       activePath="/admin/pricing-rules"
       displayName={user.displayName}
       locale={user.preferredLocale}
+      permissions={user.permissions}
+      roles={user.roles}
     >
       <PricingRuleManager initialSnapshot={snapshot} locale={user.preferredLocale} />
     </AdminShell>

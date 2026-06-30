@@ -22,6 +22,8 @@ export default async function AdminPlatformConfigurationPage() {
       activePath="/admin/platform-configuration"
       displayName={user.displayName}
       locale={user.preferredLocale}
+      permissions={user.permissions}
+      roles={user.roles}
     >
       <PlatformConfigurationManager initialSnapshot={snapshot} locale={user.preferredLocale} />
     </AdminShell>

@@ -456,6 +456,8 @@ describe("Client portal UI", () => {
     expect(screen.getByRole("heading", { name: "Open requests" })).toBeInTheDocument();
     expect(screen.getAllByText("Open requests").length).toBeGreaterThan(0);
     expect(screen.getByRole("heading", { name: "Service catalog" })).toBeInTheDocument();
+    const availableServiceCard = screen.getByRole("heading", { name: "Client Service" }).closest("article");
+    expect(availableServiceCard).not.toHaveTextContent(/Rate|Price|Duration|SAR/);
     expect(screen.getByRole("link", { name: "View quotes" })).toHaveAttribute(
       "href",
       "/client/quotes",
@@ -544,10 +546,10 @@ describe("Client portal UI", () => {
     expect(screen.getByText("Upload required")).toBeInTheDocument();
     expect(screen.getByLabelText("Request")).toHaveValue("document-request-1");
     expect(screen.getByText("Choose the requested document")).toBeInTheDocument();
-    expect(screen.getByText("Review file metadata")).toBeInTheDocument();
-    expect(screen.getByText("Submit upload metadata")).toBeInTheDocument();
+    expect(screen.getByText("Review file details")).toBeInTheDocument();
+    expect(screen.getAllByText("Upload file").length).toBeGreaterThan(0);
     expect(screen.getByText("Choose file from device")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Upload metadata" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upload file" })).toBeInTheDocument();
     expect(
       screen.getByText("This deliverable is no longer waiting for a client decision."),
     ).toBeInTheDocument();
@@ -585,7 +587,7 @@ describe("Client portal UI", () => {
 
     expect(screen.queryByRole("button", { name: "Accept output" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Return output" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Upload metadata" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Upload file" })).not.toBeInTheDocument();
     expect(
       screen.getByText("This deliverable is no longer waiting for a client decision."),
     ).toBeInTheDocument();

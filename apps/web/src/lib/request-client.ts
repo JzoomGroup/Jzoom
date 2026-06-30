@@ -339,6 +339,20 @@ export function addAttachmentMetadata(
   });
 }
 
+export function uploadRequestAttachment(
+  id: string,
+  file: File,
+  visibility: "INTERNAL" | "CLIENT_VISIBLE",
+): Promise<ServiceRequest> {
+  const body = new FormData();
+  body.set("file", file);
+  body.set("visibility", visibility);
+  return catalogRequest<ServiceRequest>(`requests/${id}/attachments/upload`, {
+    method: "POST",
+    body,
+  });
+}
+
 export function addClientRequestComment(id: string, body: string): Promise<ServiceRequest> {
   return catalogRequest<ServiceRequest>(`client-portal/requests/${id}/comments`, {
     method: "POST",
@@ -367,6 +381,7 @@ export function returnClientRequestOutput(
 export function uploadClientRequestedDocument(
   id: string,
   documentRequestId: string,
+  file: File | null,
   input: {
     originalName: string;
     mimeType: string;
@@ -374,6 +389,18 @@ export function uploadClientRequestedDocument(
     sha256: string;
   },
 ): Promise<ServiceRequest> {
+  if (file) {
+    const body = new FormData();
+    body.set("file", file);
+    return catalogRequest<ServiceRequest>(
+      `client-portal/requests/${id}/document-requests/${documentRequestId}/upload`,
+      {
+        method: "POST",
+        body,
+      },
+    );
+  }
+
   return catalogRequest<ServiceRequest>(
     `client-portal/requests/${id}/document-requests/${documentRequestId}/upload`,
     {

@@ -55,17 +55,18 @@ const copy = {
     documentTimeline: "تحديث مستند",
     documents: "المستندات",
     due: "الموعد",
+    downloadFile: "تحميل الملف",
     chooseFile: "اختيار ملف من الجهاز",
     fileName: "اسم الملف",
     fileFingerprint: "بصمة الملف SHA-256",
     fileProcessing: "جاري تجهيز بيانات الملف...",
     fileReady: "تم تجهيز بيانات الملف",
     fileUploadHint:
-      "اختر الملف المطلوب وسنملأ بياناته تلقائيًا. لا يزال التخزين الحالي يحفظ بيانات الملف فقط.",
+      "اختر الملف المطلوب وسنرفعه إلى جزوم مع حفظ بياناته تلقائيًا.",
     fileSizeBytes: "الحجم بالبايت",
     generalServiceItem: "طلب عام على الخدمة",
     jzoomWaiting: "جزوم بانتظار ردك على هذا الطلب.",
-    metadataUpload: "رفع بيانات الملف",
+    metadataUpload: "رفع الملف",
     mimeType: "نوع الملف",
     nextAction: "الإجراء التالي",
     noAction: "لا يوجد إجراء مطلوب منك الآن.",
@@ -108,7 +109,7 @@ const copy = {
     uploadRequired: "ارفع المستند المطلوب حتى يتمكن فريق جزوم من إكمال العمل.",
     uploadStepChoose: "اختر المستند المطلوب",
     uploadStepReview: "راجع بيانات الملف",
-    uploadStepSubmit: "أرسل بيانات الرفع",
+    uploadStepSubmit: "ارفع الملف",
     uploaded: "تم الرفع",
     uploadedPrefix: "تم الرفع",
     uploadedReview: "تم استلام الملف وهو الآن تحت مراجعة جزوم.",
@@ -142,17 +143,18 @@ const copy = {
     documentTimeline: "Document update",
     documents: "Documents",
     due: "Due",
+    downloadFile: "Download file",
     chooseFile: "Choose file from device",
     fileName: "File name",
     fileFingerprint: "File SHA-256 fingerprint",
-    fileProcessing: "Preparing file metadata...",
-    fileReady: "File metadata ready",
+    fileProcessing: "Preparing file...",
+    fileReady: "File ready",
     fileUploadHint:
-      "Choose the requested file and we will fill its metadata automatically. The current storage flow saves file metadata only.",
+      "Choose the requested file and Jzoom will upload it while saving its metadata automatically.",
     fileSizeBytes: "Size bytes",
     generalServiceItem: "General service request",
     jzoomWaiting: "Jzoom is waiting for your response on this request.",
-    metadataUpload: "Upload metadata",
+    metadataUpload: "Upload file",
     mimeType: "File type",
     nextAction: "Next action",
     noAction: "No action is pending from you.",
@@ -194,8 +196,8 @@ const copy = {
     uploadDocuments: "Upload documents",
     uploadRequired: "Upload the requested document so Jzoom can continue the work.",
     uploadStepChoose: "Choose the requested document",
-    uploadStepReview: "Review file metadata",
-    uploadStepSubmit: "Submit upload metadata",
+    uploadStepReview: "Review file details",
+    uploadStepSubmit: "Upload file",
     uploaded: "Uploaded",
     uploadedPrefix: "Uploaded",
     uploadedReview: "Your upload is with Jzoom for review.",
@@ -332,6 +334,7 @@ export function ClientRequestDetail({
     sha256: "",
     sizeBytes: "1",
   });
+  const [selectedUploadFile, setSelectedUploadFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [fileProcessing, setFileProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -376,14 +379,23 @@ export function ClientRequestDetail({
       setError(t.selectDocumentError);
       return;
     }
+    if (!selectedUploadFile) {
+      setError(t.fileUploadHint);
+      return;
+    }
 
     void run(async () => {
-      const updated = await uploadClientRequestedDocument(request.id, selectedDocumentRequestId, {
-        mimeType: uploadForm.mimeType,
-        originalName: uploadForm.originalName,
-        sha256: uploadForm.sha256,
-        sizeBytes: Number(uploadForm.sizeBytes),
-      });
+      const updated = await uploadClientRequestedDocument(
+        request.id,
+        selectedDocumentRequestId,
+        selectedUploadFile,
+        {
+          mimeType: uploadForm.mimeType,
+          originalName: uploadForm.originalName,
+          sha256: uploadForm.sha256,
+          sizeBytes: Number(uploadForm.sizeBytes),
+        },
+      );
       setUploadForm({
         documentRequestId: "",
         mimeType: "",
@@ -391,6 +403,7 @@ export function ClientRequestDetail({
         sha256: "",
         sizeBytes: "1",
       });
+      setSelectedUploadFile(null);
       return updated;
     });
   }
@@ -401,6 +414,7 @@ export function ClientRequestDetail({
     setFileProcessing(true);
     setError(null);
     try {
+      setSelectedUploadFile(file);
       let sha256 = uploadForm.sha256;
       if (globalThis.crypto?.subtle) {
         const digest = await globalThis.crypto.subtle.digest("SHA-256", await file.arrayBuffer());
@@ -813,10 +827,20 @@ export function ClientRequestDetail({
                     </p>
                   )}
                   {documentRequest.file && (
-                    <p>
-                      {t.uploadedPrefix}: {documentRequest.file.originalName} -{" "}
-                      {fileSize(documentRequest.file.sizeBytes, locale)}
-                    </p>
+                    <div>
+                      <p>
+                        {t.uploadedPrefix}: {documentRequest.file.originalName} -{" "}
+                        {fileSize(documentRequest.file.sizeBytes, locale)}
+                      </p>
+                      {documentRequest.file.downloadUrl && (
+                        <a
+                          className="os-button os-button-secondary"
+                          href={documentRequest.file.downloadUrl}
+                        >
+                          {t.downloadFile}
+                        </a>
+                      )}
+                    </div>
                   )}
                 </article>
               ))
@@ -879,6 +903,11 @@ export function ClientRequestDetail({
                 <article key={file.id}>
                   <strong>{file.originalName}</strong>
                   <small>{fileSize(file.sizeBytes, locale)}</small>
+                  {file.downloadUrl && (
+                    <a className="os-button os-button-secondary" href={file.downloadUrl}>
+                      {t.downloadFile}
+                    </a>
+                  )}
                 </article>
               ))
             )}

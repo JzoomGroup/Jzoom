@@ -10,17 +10,17 @@
     }
   },
   "scripts": {
-    "build": "pnpm generate && tsc -p tsconfig.build.json",
+    "build": "corepack pnpm generate && tsc -p tsconfig.build.json",
     "generate": "prisma generate",
     "lint": "eslint src prisma.config.ts",
     "migrate:deploy": "prisma migrate deploy",
     "migrate:status": "prisma migrate status",
     "demo:internal-users": "node dist/seed-demo-internal-users.js",
     "demo:subscriptions": "node dist/seed-demo-subscriptions.js",
-    "seed": "pnpm build && node dist/seed.js",
+    "seed": "corepack pnpm build && node dist/seed.js",
     "seed:run": "node dist/seed.js",
     "test": "node --test --test-isolation=none test/*.test.mjs",
-    "typecheck": "pnpm generate && tsc -p tsconfig.json --noEmit"
+    "typecheck": "corepack pnpm generate && tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.0.0",

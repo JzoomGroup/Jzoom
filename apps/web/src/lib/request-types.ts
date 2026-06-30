@@ -128,6 +128,7 @@ export interface RequestAttachment {
   sha256: string;
   visibility: "INTERNAL" | "CLIENT_VISIBLE";
   version: number;
+  downloadUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }

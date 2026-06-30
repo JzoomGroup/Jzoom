@@ -20,8 +20,9 @@ checklist and must not contain real secrets.
 - API service exposing `/api/v1`.
 - Web service configured with the staging API URL.
 - Worker service with the same release version as API and web.
-- Artifact storage only when future file/PDF storage is configured; current generated PDF behavior
-  should be verified against the implemented storage metadata path.
+- Persistent artifact storage for uploaded request attachments and requested client documents.
+  The API currently stores uploaded file bytes on the local filesystem path configured by
+  `JZOOM_UPLOAD_ROOT`; that path must survive container restarts and redeployments.
 
 ## Required environment variables
 
@@ -42,6 +43,10 @@ Use `.env.example` as the baseline and provide staging-specific values through t
 - `NEXT_PUBLIC_API_BASE_URL`
 - `NEXT_PUBLIC_AUTH_CSRF_COOKIE_NAME`
 - `WORKER_NAME`
+- `JZOOM_UPLOAD_ROOT` pointing to a persistent writable API volume, for example
+  `/var/lib/jzoom/uploads` or the platform equivalent.
+- `JZOOM_UPLOAD_MAX_BYTES`, set to the approved maximum request-file size in bytes. If omitted,
+  the API defaults to 25 MB.
 
 Use `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` only for a one-time bootstrap command,
 then remove them immediately from the staging environment. Never store bootstrap credentials as
@@ -72,6 +77,20 @@ long-lived runtime variables.
 7. Deploy or restart the web app.
 8. Verify health checks and core flows.
 
+## Upload storage verification
+
+Before opening staging to users:
+
+1. Confirm the API process can write to `JZOOM_UPLOAD_ROOT`.
+2. Upload a requested client document from the client portal.
+3. Download the same document from the client request detail.
+4. Upload an internal request attachment and download it from the internal request detail.
+5. Restart or redeploy the API service.
+6. Repeat the downloads and confirm the files still exist.
+
+If downloads fail after restart, the upload path is not persistent and staging is not ready for
+real user file testing.
+
 ## Health checks
 
 - API liveness: `GET /api/v1/health/live`
@@ -92,6 +111,7 @@ Run the QA checklist in `docs/QA_CHECKLIST.md`, with special attention to:
 - Quote and invoice snapshot immutability.
 - Quote and invoice PDF generation from snapshots.
 - Request lifecycle and internal/client visibility boundaries.
+- Request attachment upload/download and client requested-document upload/download.
 - RTL/mobile sanity after PR 20 design-system changes.
 
 ## Rollback notes

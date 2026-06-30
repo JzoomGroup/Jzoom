@@ -257,11 +257,11 @@ function closing(): MonthlyClosing {
 
 describe("Operations foundation UI", () => {
   it("renders authenticated-user notifications without external channels", () => {
-    render(<NotificationInbox initial={notifications()} />);
+    render(<NotificationInbox initial={notifications()} locale="en" />);
 
-    expect(screen.getByRole("heading", { name: "التنبيهات" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Notifications" })).toBeInTheDocument();
     expect(screen.getByText("A new output is ready for review.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "فتح" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Open" })).toHaveAttribute(
       "href",
       "/client/requests/request-1",
     );

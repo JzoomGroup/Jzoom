@@ -19,6 +19,8 @@ export default async function AdminUsersPage() {
       activePath="/admin/users"
       displayName={user.displayName}
       locale={user.preferredLocale}
+      permissions={user.permissions}
+      roles={user.roles}
     >
       <AdminUsersPageContent
         locale={user.preferredLocale}

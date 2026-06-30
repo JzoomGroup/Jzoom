@@ -18,7 +18,7 @@ export default async function NotificationsPage() {
         displayName={user.displayName}
         locale={user.preferredLocale}
       >
-        <NotificationInbox initial={notifications} />
+        <NotificationInbox initial={notifications} locale={user.preferredLocale} />
       </ClientShell>
     );
   }
@@ -32,7 +32,7 @@ export default async function NotificationsPage() {
       permissions={user.permissions}
       roles={user.roles}
     >
-      <NotificationInbox initial={notifications} />
+      <NotificationInbox initial={notifications} locale={user.preferredLocale} />
     </QuoteShell>
   );
 }

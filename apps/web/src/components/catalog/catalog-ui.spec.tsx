@@ -158,7 +158,17 @@ describe("Admin catalog UI", () => {
 
   it("renders the protected Admin navigation with its active catalog area", () => {
     render(
-      <AdminShell activePath="/admin/catalog/service-items" displayName="Admin User">
+      <AdminShell
+        activePath="/admin/catalog/service-items"
+        displayName="Admin User"
+        permissions={[
+          "PERM-MANAGE-CLIENTS",
+          "PERM-MANAGE-PLATFORM-CONFIGURATION",
+          "PERM-MANAGE-REQUEST-TEMPLATES",
+          "PERM-MANAGE-USERS",
+        ]}
+        roles={["ROLE-ADMIN"]}
+      >
         <p>Catalog content</p>
       </AdminShell>,
     );
@@ -181,7 +191,13 @@ describe("Admin catalog UI", () => {
 
   it("localizes the admin shell for Arabic RTL users", () => {
     const { container } = render(
-      <AdminShell activePath="/admin/clients" displayName="Faisal" locale="ar-SA">
+      <AdminShell
+        activePath="/admin/clients"
+        displayName="Faisal"
+        locale="ar-SA"
+        permissions={["PERM-MANAGE-CLIENTS"]}
+        roles={["ROLE-ADMIN"]}
+      >
         <p>Admin content</p>
       </AdminShell>,
     );

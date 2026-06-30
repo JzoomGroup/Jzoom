@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
+import type { ReadStream } from "node:fs";
 import { Prisma } from "@jzoom/database";
 import { ADMIN_ROLE_CODE, MANAGEMENT_ROLE_CODE } from "../auth/auth.constants.js";
 import { AuthAuditService } from "../auth/audit.service.js";
@@ -25,6 +26,7 @@ import {
   SPECIALIST_ROLE_CODE,
   SUPERVISOR_ROLE_CODE,
 } from "./requests.constants.js";
+import { FileStorageService, type UploadedRequestFile } from "./file-storage.service.js";
 import type {
   AddAttachmentMetadataDto,
   AddInternalNoteDto,
@@ -308,6 +310,7 @@ export class RequestsService {
     @Inject(AuthAuditService) private readonly audit: AuthAuditService,
     @Inject(NotificationsService) private readonly notifications: NotificationsService,
     @Inject(RequestTemplatesService) private readonly requestTemplates: RequestTemplatesService,
+    @Inject(FileStorageService) private readonly fileStorage: FileStorageService,
   ) {}
 
   async list(principal: AuthenticatedPrincipal) {
@@ -522,6 +525,8 @@ export class RequestsService {
       REQUEST_EVENT.created,
       `New request ${request.requestNumber}: ${request.title}`,
       { status: request.status },
+      [],
+      `طلب جديد ${request.requestNumber}: ${request.title}`,
     );
 
     if (templateSubmission) {
@@ -578,6 +583,7 @@ export class RequestsService {
       `Request ${updated.requestNumber} assignment changed.`,
       { status: updated.status },
       unique([assignedSpecialistId, assignedSupervisorId, accountManagerId]),
+      `تم تغيير إسناد الطلب ${updated.requestNumber}.`,
     );
     return this.detailView(updated, false);
   }
@@ -710,6 +716,54 @@ export class RequestsService {
           fileId: file.id,
           originalName: file.originalName,
           visibility: file.visibility,
+        },
+      },
+      metadata,
+    );
+    return this.get(id, principal);
+  }
+
+  async addAttachmentFile(
+    id: string,
+    file: UploadedRequestFile | undefined,
+    input: Pick<AddAttachmentMetadataDto, "visibility">,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    await this.requireAccessibleRequest(id, principal);
+    if (!file) {
+      throw new BadRequestException({
+        code: "FILE_REQUIRED",
+        message: "A file is required",
+      });
+    }
+
+    const stored = await this.fileStorage.storeRequestFile(id, "attachments", file);
+    const visibility = this.normalizeFileVisibility(input.visibility);
+    const created = await this.database.prisma.fileMetadata.create({
+      data: {
+        requestId: id,
+        uploadedById: principal.userId,
+        storageProvider: stored.storageProvider,
+        storageKey: stored.storageKey,
+        originalName: stored.originalName,
+        mimeType: stored.mimeType,
+        sizeBytes: BigInt(stored.sizeBytes),
+        sha256: stored.sha256,
+        visibility,
+      },
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: REQUEST_EVENT.attachmentAdded,
+        entityType: "Request",
+        entityId: id,
+        after: {
+          fileId: created.id,
+          originalName: created.originalName,
+          visibility: created.visibility,
+          storageProvider: created.storageProvider,
         },
       },
       metadata,
@@ -1399,6 +1453,7 @@ export class RequestsService {
     id: string,
     documentRequestId: string,
     input: UploadClientDocumentMetadataDto,
+    file: UploadedRequestFile | undefined,
     principal: AuthenticatedPrincipal,
     metadata: RequestMetadata,
   ) {
@@ -1410,16 +1465,19 @@ export class RequestsService {
         message: "Only open document requests can receive a client upload",
       });
     }
-    const file = await this.database.prisma.fileMetadata.create({
+    const stored = file
+      ? await this.fileStorage.storeRequestFile(id, "client-documents", file)
+      : this.metadataOnlyUpload(id, documentRequest.id, input);
+    const fileMetadata = await this.database.prisma.fileMetadata.create({
       data: {
         requestId: id,
         uploadedById: principal.userId,
-        storageProvider: "client-upload-metadata",
-        storageKey: `requests/${id}/client-documents/${documentRequest.id}/${randomUUID()}/${input.originalName}`,
-        originalName: input.originalName,
-        mimeType: input.mimeType,
-        sizeBytes: BigInt(input.sizeBytes),
-        sha256: input.sha256,
+        storageProvider: stored.storageProvider,
+        storageKey: stored.storageKey,
+        originalName: stored.originalName,
+        mimeType: stored.mimeType,
+        sizeBytes: BigInt(stored.sizeBytes),
+        sha256: stored.sha256,
         visibility: "CLIENT_VISIBLE",
       },
     });
@@ -1429,7 +1487,7 @@ export class RequestsService {
         status: "UPLOADED",
         fulfilledById: principal.userId,
         fulfilledAt: new Date(),
-        fileMetadataId: file.id,
+        fileMetadataId: fileMetadata.id,
       },
     });
     await this.audit.record(
@@ -1447,18 +1505,64 @@ export class RequestsService {
       request,
       principal,
       REQUEST_EVENT.documentUploaded,
-      "Client uploaded requested document metadata",
-      { documentRequestId: updated.id, fileId: file.id, status: updated.status },
+      "رفع العميل المستند المطلوب",
+      { documentRequestId: updated.id, fileId: fileMetadata.id, status: updated.status },
     );
     await this.notifyInternalRequestStakeholders(
       request,
       principal,
       REQUEST_EVENT.documentUploaded,
       `Client uploaded requested document "${updated.title}".`,
-      { documentRequestId: updated.id, fileId: file.id, status: updated.status },
+      { documentRequestId: updated.id, fileId: fileMetadata.id, status: updated.status },
+      [],
+      `رفع العميل المستند المطلوب "${updated.title}".`,
     );
     const refreshed = await this.requireClientRequest(id, principal);
     return this.detailView(refreshed, true);
+  }
+
+  async downloadFile(
+    id: string,
+    fileId: string,
+    principal: AuthenticatedPrincipal,
+    clientSafe: boolean,
+  ): Promise<{
+    originalName: string;
+    mimeType: string;
+    stream: ReadStream;
+  }> {
+    if (clientSafe) {
+      await this.requireClientRequest(id, principal);
+    } else {
+      await this.requireAccessibleRequest(id, principal);
+    }
+
+    const file = await this.database.prisma.fileMetadata.findFirst({
+      where: {
+        id: fileId,
+        requestId: id,
+        archivedAt: null,
+        ...(clientSafe ? { visibility: "CLIENT_VISIBLE" as const } : {}),
+      },
+    });
+    if (!file) {
+      throw new NotFoundException({
+        code: "FILE_NOT_FOUND",
+        message: "The file could not be found",
+      });
+    }
+    if (file.storageProvider !== "local") {
+      throw new NotFoundException({
+        code: "FILE_CONTENT_UNAVAILABLE",
+        message: "This file does not have downloadable stored content",
+      });
+    }
+
+    return {
+      originalName: file.originalName,
+      mimeType: file.mimeType,
+      stream: await this.fileStorage.readableFile(file.storageKey),
+    };
   }
 
   async createTimeEntry(
@@ -1873,6 +1977,8 @@ export class RequestsService {
       REQUEST_EVENT.statusChanged,
       `Request ${updated.requestNumber} moved to ${status.toLowerCase().replaceAll("_", " ")}.`,
       { fromStatus: request.status, toStatus: status },
+      [],
+      `تم نقل الطلب ${updated.requestNumber} إلى ${statusLabels[status].ar}.`,
     );
     if (status === "WAITING_CLIENT") {
       await this.notifyClientRequestUsers(
@@ -2040,6 +2146,7 @@ export class RequestsService {
     messageEn: string,
     payload: Record<string, unknown>,
     extraRecipients: string[] = [],
+    messageAr?: string,
   ): Promise<void> {
     const recipientUserIds = unique([
       request.assignedSpecialistId,
@@ -2054,6 +2161,7 @@ export class RequestsService {
       targetType: "Request",
       targetId: request.id,
       messageEn,
+      ...(messageAr ? { messageAr } : {}),
       deepLink: `/requests/${request.id}`,
       recipientUserIds,
       payload: {
@@ -2544,6 +2652,45 @@ export class RequestsService {
     return `REQ-${date}-${String(count + 1).padStart(5, "0")}`;
   }
 
+  private fileDownloadUrl(requestId: string, fileId: string, clientSafe: boolean): string {
+    const prefix = clientSafe ? "client-portal/requests" : "requests";
+    return `/api/v1/${prefix}/${requestId}/files/${fileId}/download`;
+  }
+
+  private metadataOnlyUpload(
+    requestId: string,
+    documentRequestId: string,
+    input: UploadClientDocumentMetadataDto,
+  ) {
+    if (!input.originalName || !input.mimeType || !input.sizeBytes || !input.sha256) {
+      throw new BadRequestException({
+        code: "FILE_REQUIRED",
+        message: "A file is required",
+      });
+    }
+    return {
+      originalName: input.originalName,
+      mimeType: input.mimeType,
+      sizeBytes: input.sizeBytes,
+      sha256: input.sha256,
+      storageProvider: "client-upload-metadata",
+      storageKey: `requests/${requestId}/client-documents/${documentRequestId}/${randomUUID()}/${input.originalName}`,
+    };
+  }
+
+  private normalizeFileVisibility(value: unknown): "INTERNAL" | "CLIENT_VISIBLE" {
+    if (value === undefined || value === null || value === "") {
+      return "INTERNAL";
+    }
+    if (value === "INTERNAL" || value === "CLIENT_VISIBLE") {
+      return value;
+    }
+    throw new BadRequestException({
+      code: "INVALID_FILE_VISIBILITY",
+      message: "File visibility must be INTERNAL or CLIENT_VISIBLE",
+    });
+  }
+
   private clientIdsFor(principal: AuthenticatedPrincipal): string[] {
     const clientIds = this.optionalClientIdsFor(principal);
     if (clientIds.length === 0) {
@@ -2639,6 +2786,10 @@ export class RequestsService {
           sha256: file.sha256,
           visibility: file.visibility,
           version: file.version,
+          downloadUrl:
+            file.storageProvider === "local"
+              ? this.fileDownloadUrl(request.id, file.id, clientSafe)
+              : null,
           createdAt: file.createdAt.toISOString(),
           updatedAt: file.updatedAt.toISOString(),
         })),
@@ -2843,6 +2994,14 @@ export class RequestsService {
             sha256: documentRequest.fileMetadata.sha256,
             visibility: documentRequest.fileMetadata.visibility,
             version: documentRequest.fileMetadata.version,
+            downloadUrl:
+              documentRequest.fileMetadata.storageProvider === "local"
+                ? this.fileDownloadUrl(
+                    documentRequest.requestId,
+                    documentRequest.fileMetadata.id,
+                    clientSafe,
+                  )
+                : null,
             createdAt: documentRequest.fileMetadata.createdAt.toISOString(),
             updatedAt: documentRequest.fileMetadata.updatedAt.toISOString(),
           }

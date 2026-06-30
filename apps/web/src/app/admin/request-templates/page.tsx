@@ -22,6 +22,8 @@ export default async function AdminRequestTemplatesPage() {
       activePath="/admin/request-templates"
       displayName={user.displayName}
       locale={user.preferredLocale}
+      permissions={user.permissions}
+      roles={user.roles}
     >
       <RequestTemplateManager initialSnapshot={snapshot} />
     </AdminShell>

@@ -144,7 +144,7 @@ describe("Admin platform configuration UI", () => {
 
     expect(screen.getByRole("heading", { name: "Platform configuration" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Create setting" })).toBeInTheDocument();
-    expect(screen.getByText("platform.name")).toBeInTheDocument();
+    expect(screen.getAllByText("platform.name").length).toBeGreaterThan(0);
     expect(
       screen.getAllByRole("heading", { name: "Operating configuration readiness" }).length,
     ).toBeGreaterThan(0);
