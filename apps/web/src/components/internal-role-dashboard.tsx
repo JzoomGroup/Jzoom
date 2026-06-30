@@ -25,7 +25,8 @@ const content = {
     specialist: {
       eyebrow: "مساحة المختص",
       title: "مركز إنجاز العمل",
-      description: "طلباتك المسندة، الأعمال المتأخرة، ما ينتظر العميل، والساعات المسجلة من نطاقك التشغيلي.",
+      description:
+        "طلباتك المسندة، الأعمال المتأخرة، ما ينتظر العميل، والساعات المسجلة من نطاقك التشغيلي.",
       queueLabel: "قائمة المختص",
     },
     supervisor: {
@@ -37,7 +38,8 @@ const content = {
     management: {
       eyebrow: "مساحة الإدارة",
       title: "لوحة القيادة التنفيذية",
-      description: "ملخص عالي المستوى لحجم الطلبات، التعثرات، استخدام الساعات، التقارير، وصحة العملاء.",
+      description:
+        "ملخص عالي المستوى لحجم الطلبات، التعثرات، استخدام الساعات، التقارير، وصحة العملاء.",
       queueLabel: "كل القوائم",
     },
     actions: {
@@ -175,7 +177,8 @@ const content = {
       queuesTitle: "Work queues",
       queuesDescription: "Filter assigned, review, account-manager, and all work queues.",
       requestsTitle: "Request details",
-      requestsDescription: "Open request execution, conversations, documents, hours, and deliverables.",
+      requestsDescription:
+        "Open request execution, conversations, documents, hours, and deliverables.",
       ledgerTitle: "Hours ledger",
       ledgerDescription: "Review submitted, approved, rejected, billable, and non-billable hours.",
       reportsTitle: "Reports",
@@ -250,28 +253,73 @@ export function InternalRoleDashboard({
       />
 
       <BentoGrid>
-        <MetricCard label={t.metrics.openRequests} value={number(queue.counters.open, language)} detail={page.queueLabel} accent />
-        <MetricCard label={t.metrics.delayedRequests} value={number(queue.counters.overdue, language)} detail={t.metrics.needsAttention} />
-        <MetricCard label={t.metrics.waitingClient} value={number(waitingClient.length, language)} detail={t.metrics.clientAction} />
-        <MetricCard label={t.metrics.waitingSupervisor} value={number(waitingSupervisor.length, language)} detail={t.metrics.reviewAction} />
-        <MetricCard label={t.metrics.approvedHours} value={hours(usage.totals.approvedHours, language)} detail={`${t.metrics.period} ${usage.period.key}`} />
-        <MetricCard label={t.metrics.submittedHours} value={hours(usage.totals.submittedHours, language)} detail={t.metrics.pendingApproval} />
+        <MetricCard
+          label={t.metrics.openRequests}
+          value={number(queue.counters.open, language)}
+          detail={page.queueLabel}
+          accent
+        />
+        <MetricCard
+          label={t.metrics.delayedRequests}
+          value={number(queue.counters.overdue, language)}
+          detail={t.metrics.needsAttention}
+        />
+        <MetricCard
+          label={t.metrics.waitingClient}
+          value={number(waitingClient.length, language)}
+          detail={t.metrics.clientAction}
+        />
+        <MetricCard
+          label={t.metrics.waitingSupervisor}
+          value={number(waitingSupervisor.length, language)}
+          detail={t.metrics.reviewAction}
+        />
+        <MetricCard
+          label={t.metrics.approvedHours}
+          value={hours(usage.totals.approvedHours, language)}
+          detail={`${t.metrics.period} ${usage.period.key}`}
+        />
+        <MetricCard
+          label={t.metrics.submittedHours}
+          value={hours(usage.totals.submittedHours, language)}
+          detail={t.metrics.pendingApproval}
+        />
         {mode === "management" ? (
-          <MetricCard label={t.metrics.monthlyReports} value={number(reports.length, language)} detail={t.metrics.preparedReports} />
+          <MetricCard
+            label={t.metrics.monthlyReports}
+            value={number(reports.length, language)}
+            detail={t.metrics.preparedReports}
+          />
         ) : (
-          <MetricCard label={t.metrics.trackedEntries} value={number(usage.totals.entries, language)} detail={t.metrics.ledgerEntries} />
+          <MetricCard
+            label={t.metrics.trackedEntries}
+            value={number(usage.totals.entries, language)}
+            detail={t.metrics.ledgerEntries}
+          />
         )}
         {mode === "management" ? (
-          <MetricCard label={t.metrics.healthWatch} value={number(attentionClients.length, language)} detail={t.metrics.clientPortfolio} />
+          <MetricCard
+            label={t.metrics.healthWatch}
+            value={number(attentionClients.length, language)}
+            detail={t.metrics.clientPortfolio}
+          />
         ) : (
-          <MetricCard label={t.metrics.billableHours} value={hours(usage.totals.billableHours, language)} detail={t.metrics.approvedOrSubmitted} />
+          <MetricCard
+            label={t.metrics.billableHours}
+            value={hours(usage.totals.billableHours, language)}
+            detail={t.metrics.approvedOrSubmitted}
+          />
         )}
       </BentoGrid>
 
       <SectionCard
         title={t.priority.title}
         description={t.priority.description}
-        action={<Link className="os-button os-button-secondary" href="/requests">{t.actions.requestList}</Link>}
+        action={
+          <Link className="os-button os-button-secondary" href="/requests">
+            {t.actions.requestList}
+          </Link>
+        }
       >
         {latestRequests.length === 0 ? (
           <EmptyState>{t.priority.empty}</EmptyState>
@@ -300,7 +348,9 @@ export function InternalRoleDashboard({
                     <td>
                       <StatusChip status={request.status} />
                     </td>
-                    <td><PriorityChip priority={request.priority} /></td>
+                    <td>
+                      <PriorityChip priority={request.priority} />
+                    </td>
                     <td>{date(request.updatedAt, language)}</td>
                   </tr>
                 ))}
@@ -314,7 +364,11 @@ export function InternalRoleDashboard({
         <SectionCard
           title={t.health.title}
           description={t.health.description}
-          action={<Link className="os-button os-button-secondary" href="/account-manager">{t.actions.portfolio}</Link>}
+          action={
+            <Link className="os-button os-button-secondary" href="/account-manager">
+              {t.actions.portfolio}
+            </Link>
+          }
         >
           {attentionClients.length === 0 ? (
             <EmptyState title={t.health.emptyTitle}>{t.health.emptyBody}</EmptyState>
@@ -359,14 +413,31 @@ export function InternalRoleDashboard({
 
       <SectionCard title={t.quick.title} description={t.quick.description}>
         <div className="admin-area-grid">
-          <ActionCard href="/requests/queues" index="01" title={t.quick.queuesTitle} description={t.quick.queuesDescription} />
-          <ActionCard href="/requests" index="02" title={t.quick.requestsTitle} description={t.quick.requestsDescription} />
-          <ActionCard href="/hours-ledger" index="03" title={t.quick.ledgerTitle} description={t.quick.ledgerDescription} />
+          <ActionCard
+            href="/requests/queues"
+            index="01"
+            title={t.quick.queuesTitle}
+            description={t.quick.queuesDescription}
+          />
+          <ActionCard
+            href="/requests"
+            index="02"
+            title={t.quick.requestsTitle}
+            description={t.quick.requestsDescription}
+          />
+          <ActionCard
+            href="/hours-ledger"
+            index="03"
+            title={t.quick.ledgerTitle}
+            description={t.quick.ledgerDescription}
+          />
           <ActionCard
             href={mode === "management" ? "/reports" : "/notifications"}
             index="04"
             title={mode === "management" ? t.quick.reportsTitle : t.quick.notificationsTitle}
-            description={mode === "management" ? t.quick.reportsDescription : t.quick.notificationsDescription}
+            description={
+              mode === "management" ? t.quick.reportsDescription : t.quick.notificationsDescription
+            }
           />
         </div>
       </SectionCard>

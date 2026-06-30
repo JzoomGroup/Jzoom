@@ -5,3 +5,4 @@ node_modules
 openapi.json
 pnpm-lock.yaml
 src/generated
+audit-artifacts

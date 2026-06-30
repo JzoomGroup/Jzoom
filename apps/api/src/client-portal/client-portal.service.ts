@@ -180,7 +180,8 @@ export class ClientPortalService {
           serviceItems: revision.monthlyService.items.flatMap((item) => {
             const itemRevision = item.revisions[0];
             return itemRevision?.levelInclusions.some(
-              (inclusion) => inclusion.included && inclusion.serviceLevelId === service.serviceLevelId,
+              (inclusion) =>
+                inclusion.included && inclusion.serviceLevelId === service.serviceLevelId,
             )
               ? [
                   {

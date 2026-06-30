@@ -814,11 +814,7 @@ function versionForEditing(item: RequestTemplateServiceItem | null): RequestTemp
 
 function TemplatePreview({ version }: { version: RequestTemplateVersion | null }) {
   if (!version) {
-    return (
-      <EmptyState>
-        لا يوجد قالب نشط أو مسودة أو قالب مقترح لهذا البند.
-      </EmptyState>
-    );
+    return <EmptyState>لا يوجد قالب نشط أو مسودة أو قالب مقترح لهذا البند.</EmptyState>;
   }
   return (
     <div className="activity-list">
@@ -920,9 +916,7 @@ function FieldLibraryPanel({
   return (
     <article className="catalog-panel">
       <h2>مكتبة الحقول القابلة لإعادة الاستخدام</h2>
-      <p>
-        أنشئ الحقول المشتركة مرة واحدة، ثم استخدمها داخل أي قالب طلب مرتبط ببند خدمة.
-      </p>
+      <p>أنشئ الحقول المشتركة مرة واحدة، ثم استخدمها داخل أي قالب طلب مرتبط ببند خدمة.</p>
       <form className="catalog-form" onSubmit={submit}>
         <label>
           الرمز
@@ -1853,16 +1847,8 @@ export function RequestTemplateManager({
           detail="نماذج ظاهرة للعميل"
           accent
         />
-        <MetricCard
-          label="قوالب مقترحة"
-          value={templateCounts.suggested}
-          detail="جاهزة للتطبيق"
-        />
-        <MetricCard
-          label="بدون قالب نشط"
-          value={templateCounts.missing}
-          detail="تحتاج ضبط"
-        />
+        <MetricCard label="قوالب مقترحة" value={templateCounts.suggested} detail="جاهزة للتطبيق" />
+        <MetricCard label="بدون قالب نشط" value={templateCounts.missing} detail="تحتاج ضبط" />
       </section>
 
       <section className="quote-summary-grid">
@@ -1879,7 +1865,9 @@ export function RequestTemplateManager({
                 aria-pressed={item.id === selectedServiceItemId}
                 onClick={() => selectServiceItem(item)}
               >
-                <strong>{item.latestRevision?.nameAr ?? item.latestRevision?.nameEn ?? item.code}</strong>
+                <strong>
+                  {item.latestRevision?.nameAr ?? item.latestRevision?.nameEn ?? item.code}
+                </strong>
                 <small>
                   {item.code} - {item.template?.active ? "نشط" : "لا يوجد نشط"} -{" "}
                   {item.template?.suggested ? "يوجد مقترح" : "لا يوجد مقترح"} -{" "}
@@ -1896,9 +1884,7 @@ export function RequestTemplateManager({
       <section className="quote-summary-grid">
         <SectionCard
           title={
-            selected?.latestRevision?.nameAr ??
-            selected?.latestRevision?.nameEn ??
-            "اختر بند خدمة"
+            selected?.latestRevision?.nameAr ?? selected?.latestRevision?.nameEn ?? "اختر بند خدمة"
           }
           description={
             selected?.latestRevision?.expectedOutput ??

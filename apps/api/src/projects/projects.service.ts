@@ -653,7 +653,7 @@ export class ProjectsService {
             output.status as (typeof PROJECT_CLIENT_VISIBLE_OUTPUT_STATUSES)[number],
           ),
         ).length,
-        outputsTotal: project.outputs.length,
+        outputsTotal: outputs.length,
       },
       tasks: clientSafe ? tasks.filter((task) => task.status !== "CANCELLED") : tasks,
       outputs,

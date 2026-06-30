@@ -31,7 +31,12 @@ export default async function SupervisorDashboardPage() {
       permissions={user.permissions}
       roles={user.roles}
     >
-      <InternalRoleDashboard locale={user.preferredLocale} mode="supervisor" queue={queue} usage={usage} />
+      <InternalRoleDashboard
+        locale={user.preferredLocale}
+        mode="supervisor"
+        queue={queue}
+        usage={usage}
+      />
     </QuoteShell>
   );
 }

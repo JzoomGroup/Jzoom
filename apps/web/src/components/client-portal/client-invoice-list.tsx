@@ -33,7 +33,8 @@ const copy = {
     beforeTax: "Before tax",
     commercialCenter: "Commercial center",
     commercialSnapshots: "Commercial snapshots",
-    description: "Issued invoice snapshots for your client account, kept separate from live catalog changes.",
+    description:
+      "Issued invoice snapshots for your client account, kept separate from live catalog changes.",
     invoiceLibrary: "Invoice library",
     invoices: "Your invoices",
     issued: "Issued",
@@ -69,7 +70,11 @@ export function ClientInvoiceList({
           value={clientNumber(invoices.length, locale)}
           detail={locale === "ar" ? "سجلات ظاهرة" : "Visible records"}
         />
-        <MetricCard label={t.totalDue} value={clientCurrency(totalDue, locale)} detail={t.beforeTax} />
+        <MetricCard
+          label={t.totalDue}
+          value={clientCurrency(totalDue, locale)}
+          detail={t.beforeTax}
+        />
         <MetricCard
           label={t.latestIssue}
           value={invoices[0] ? clientDate(invoices[0].issueDate, locale) : "-"}
@@ -89,11 +94,15 @@ export function ClientInvoiceList({
                     <small>{invoice.invoiceNumber}</small>
                     <h2>{localizedFreeText(invoice.title, locale, t.invoices)}</h2>
                     <p>
-                      {t.quote} {invoice.quoteNumber} - {t.issued} {clientDate(invoice.issueDate, locale)}
+                      {t.quote} {invoice.quoteNumber} - {t.issued}{" "}
+                      {clientDate(invoice.issueDate, locale)}
                     </p>
                   </div>
                   <div className="quote-list-meta">
-                    <StatusChip status={invoice.status} label={invoiceStatusLabel(invoice.status, locale)} />
+                    <StatusChip
+                      status={invoice.status}
+                      label={invoiceStatusLabel(invoice.status, locale)}
+                    />
                     <strong>{clientCurrency(invoice.finalDueNoTax, locale)}</strong>
                     <small>
                       {clientNumber(invoice.itemCount, locale)} {t.item}

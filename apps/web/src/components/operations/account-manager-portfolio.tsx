@@ -1,6 +1,13 @@
 import type { AccountManagerPortfolio as Portfolio } from "../../lib/operations-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
-import { BentoGrid, EmptyState, MetricCard, PageHeader, SectionCard, StatusChip } from "../premium-os";
+import {
+  BentoGrid,
+  EmptyState,
+  MetricCard,
+  PageHeader,
+  SectionCard,
+  StatusChip,
+} from "../premium-os";
 
 const copy = {
   ar: {
@@ -177,7 +184,10 @@ export function AccountManagerPortfolio({
               <article className="entity-card" key={entry.client.id}>
                 <div className="entity-card-heading">
                   <div>
-                    <StatusChip status={entry.health.code} label={healthLabel(entry.health.code, language)} />
+                    <StatusChip
+                      status={entry.health.code}
+                      label={healthLabel(entry.health.code, language)}
+                    />
                     <h3>{entry.client.name}</h3>
                   </div>
                   <span>{entry.client.code}</span>
@@ -210,7 +220,10 @@ export function AccountManagerPortfolio({
                   </div>
                   <div>
                     <dt>{t.assignedManagers}</dt>
-                    <dd>{entry.accountManagers.map((manager) => manager.displayName).join(", ") || "-"}</dd>
+                    <dd>
+                      {entry.accountManagers.map((manager) => manager.displayName).join(", ") ||
+                        "-"}
+                    </dd>
                   </div>
                 </dl>
                 <div className="activity-list">

@@ -527,7 +527,8 @@ describeWithDatabase("PR 12 client portal quote and invoice views", () => {
     const clientUser = await login(clientEmail);
     const context = await clientUser.get("/api/v1/client-portal/me").expect(200);
     const subscribedService = context.body.services.subscribedMonthly.find(
-      (service: { service: { code: string } }) => service.service.code === subscribedMonthlyServiceCode,
+      (service: { service: { code: string } }) =>
+        service.service.code === subscribedMonthlyServiceCode,
     );
 
     expect(subscribedService).toBeDefined();
@@ -655,9 +656,7 @@ describeWithDatabase("PR 12 client portal quote and invoice views", () => {
       },
     });
 
-    const detail = await clientUser
-      .get(`/api/v1/client-portal/requests/${requestId}`)
-      .expect(200);
+    const detail = await clientUser.get(`/api/v1/client-portal/requests/${requestId}`).expect(200);
     expect(detail.body.counts).toMatchObject({
       comments: 1,
       documentRequests: 1,

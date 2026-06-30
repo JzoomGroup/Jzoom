@@ -205,6 +205,17 @@ describe("PR 1 API foundation", () => {
         "/api/v1/client-portal/requests/{id}/document-requests/{documentRequestId}/upload"
       ],
     ).toBeDefined();
+    expect(document.paths["/api/v1/projects"]).toBeDefined();
+    expect(document.paths["/api/v1/projects/{id}"]).toBeDefined();
+    expect(document.paths["/api/v1/projects/{id}/status"]).toBeDefined();
+    expect(document.paths["/api/v1/projects/{id}/tasks/{taskId}"]).toBeDefined();
+    expect(document.paths["/api/v1/projects/{id}/outputs"]).toBeDefined();
+    expect(document.paths["/api/v1/projects/{id}/outputs/{outputId}/status"]).toBeDefined();
+    expect(document.paths["/api/v1/client-portal/projects"]).toBeDefined();
+    expect(document.paths["/api/v1/client-portal/projects/{id}"]).toBeDefined();
+    expect(
+      document.paths["/api/v1/client-portal/projects/{id}/outputs/{outputId}/status"],
+    ).toBeDefined();
     expect(document.paths["/api/v1/notifications"]).toBeDefined();
     expect(document.paths["/api/v1/notifications/unread-count"]).toBeDefined();
     expect(document.paths["/api/v1/notifications/read-all"]).toBeDefined();

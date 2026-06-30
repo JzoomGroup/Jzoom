@@ -38,7 +38,12 @@ export function LogoutButton({
   }
 
   return (
-    <button type="button" className="os-button os-button-secondary" onClick={logout} disabled={submitting}>
+    <button
+      type="button"
+      className="os-button os-button-secondary"
+      onClick={logout}
+      disabled={submitting}
+    >
       {submitting ? submittingLabel : label}
     </button>
   );

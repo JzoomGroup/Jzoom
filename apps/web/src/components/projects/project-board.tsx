@@ -46,6 +46,47 @@ const outputStatusLabels = {
   SHARED_WITH_CLIENT: { ar: "مشارك مع العميل", en: "Shared with client" },
 } satisfies Record<ProjectOutputStatus, Record<SupportedLocale, string>>;
 
+const clientVisibleOutputStatuses = new Set<ProjectOutputStatus>([
+  "SHARED_WITH_CLIENT",
+  "ACCEPTED_BY_CLIENT",
+  "RETURNED_BY_CLIENT",
+  "CLOSED",
+]);
+
+const shareableOutputStatuses = new Set<ProjectOutputStatus>([
+  "DRAFT",
+  "INTERNAL_REVIEW",
+  "APPROVED_INTERNAL",
+  "RETURNED_BY_CLIENT",
+]);
+
+const projectStatusGuidance = {
+  ACTIVE: {
+    ar: "المشروع قيد التنفيذ، ويمكن لفريق التشغيل تجهيز المهام والمخرجات قبل مشاركة العميل.",
+    en: "The project is in delivery. The team can prepare tasks and outputs before client sharing.",
+  },
+  ARCHIVED: {
+    ar: "المشروع مؤرشف للرجوع فقط ولا يحتاج إجراء تشغيلي.",
+    en: "This project is archived for reference and needs no operational action.",
+  },
+  CLIENT_REVIEW: {
+    ar: "المخرجات بانتظار قرار العميل. حافظ على وضوح النسخ والملاحظات.",
+    en: "Outputs are waiting for the client decision. Keep versions and notes clear.",
+  },
+  CLOSED: {
+    ar: "المشروع مغلق ولا تظهر عليه إجراءات تشغيلية جديدة.",
+    en: "This project is closed and no new delivery actions are expected.",
+  },
+  COMPLETED: {
+    ar: "اكتمل تسليم المشروع. راجع النشاط والمخرجات عند الحاجة.",
+    en: "Delivery is complete. Review activity and outputs when needed.",
+  },
+  DRAFT: {
+    ar: "المشروع مسودة ولم يبدأ التشغيل الفعلي بعد.",
+    en: "This project is still a draft and delivery has not started yet.",
+  },
+} satisfies Record<ProjectStatus, Record<SupportedLocale, string>>;
+
 const copy = {
   ar: {
     activity: "النشاط",
@@ -55,20 +96,27 @@ const copy = {
     clientProjects: "مشاريع المرة الواحدة",
     clientProjectsDescription:
       "تابع مشاريع البناء والخدمات ذات المرة الواحدة من بداية التفعيل حتى تسليم المخرجات.",
+    clientReviewActions: "قرار العميل",
     completedTasks: "المهام المنجزة",
     deliverables: "المخرجات المتوقعة",
+    deliveryPath: "مسار التسليم",
+    deliveryPathDescription:
+      "كل مرحلة مرتبطة بمخرجات واضحة حتى يعرف الفريق والعميل أين يقف المشروع.",
     description: "الوصف",
     due: "الموعد",
     empty: "لا توجد مشاريع مفعلة حتى الآن.",
+    emptyDescription: "عند اعتماد خدمة مرة واحدة وإنشاء مشروع، سيظهر هنا مع مراحله ومخرجاته.",
     estimatedHours: "الساعات التقديرية",
     internalProjects: "مشاريع العملاء",
     internalProjectsDescription:
       "غرفة تشغيل مخصصة لمشاريع خدمات المرة الواحدة، مرتبطة بالعروض والتكليفات والمخرجات.",
+    lastActivity: "آخر حركة",
     markActive: "تنشيط",
     markClientReview: "إرسال لمراجعة العميل",
     markCompleted: "إكمال المشروع",
     name: "اسم المخرج",
     noActivity: "لا توجد حركة بعد.",
+    noDeliveryPath: "لم تُربط مراحل تسليم بهذا المشروع بعد.",
     noOutputs: "لا توجد مخرجات بعد.",
     noTasks: "لا توجد مهام بعد.",
     notSet: "غير محدد",
@@ -81,12 +129,15 @@ const copy = {
     projectsCount: "عدد المشاريع",
     projectSpecialist: "مختص المشاريع",
     quote: "عرض السعر",
+    saved: "تم حفظ الإجراء وتحديث بيانات المشروع.",
     saveOutput: "حفظ المخرج",
+    saving: "جار الحفظ...",
     service: "الخدمة",
     shareOutput: "مشاركة مع العميل",
     returnOutput: "إرجاع للتعديل",
     startTask: "بدء",
     tasks: "المهام",
+    titleRequired: "اكتب اسم المخرج قبل الحفظ.",
     view: "فتح المشروع",
   },
   en: {
@@ -97,20 +148,28 @@ const copy = {
     clientProjects: "One-time projects",
     clientProjectsDescription:
       "Track one-time build and delivery projects from activation through outputs.",
+    clientReviewActions: "Client decision",
     completedTasks: "Completed tasks",
     deliverables: "Expected deliverables",
+    deliveryPath: "Delivery path",
+    deliveryPathDescription:
+      "Each phase is tied to clear deliverables so the team and client know where the project stands.",
     description: "Description",
     due: "Due",
     empty: "No activated projects yet.",
+    emptyDescription:
+      "When a one-time service is approved and a project is created, it will appear here with phases and outputs.",
     estimatedHours: "Estimated hours",
     internalProjects: "Client projects",
     internalProjectsDescription:
       "A delivery room for one-time service projects linked to quotes, assignments, and outputs.",
+    lastActivity: "Last activity",
     markActive: "Activate",
     markClientReview: "Send to client review",
     markCompleted: "Complete project",
     name: "Output name",
     noActivity: "No activity yet.",
+    noDeliveryPath: "No delivery phases are linked to this project yet.",
     noOutputs: "No outputs yet.",
     noTasks: "No tasks yet.",
     notSet: "Not set",
@@ -123,12 +182,15 @@ const copy = {
     projectsCount: "Projects",
     projectSpecialist: "Project specialist",
     quote: "Quote",
+    saved: "Action saved and project data refreshed.",
     saveOutput: "Save output",
+    saving: "Saving...",
     service: "Service",
     shareOutput: "Share with client",
     returnOutput: "Return for revision",
     startTask: "Start",
     tasks: "Tasks",
+    titleRequired: "Enter an output name before saving.",
     view: "Open project",
   },
 } as const;
@@ -157,6 +219,10 @@ function taskStatusLabel(status: ProjectTaskStatus, locale: SupportedLocale) {
 
 function outputStatusLabel(status: ProjectOutputStatus, locale: SupportedLocale) {
   return outputStatusLabels[status]?.[locale] ?? status;
+}
+
+function statusGuidance(status: ProjectStatus, locale: SupportedLocale) {
+  return projectStatusGuidance[status]?.[locale] ?? status;
 }
 
 function progressPercent(project: ProjectSummary) {
@@ -198,14 +264,16 @@ export function ProjectList({
         />
       </section>
       {projects.length === 0 ? (
-        <EmptyState title={t.empty} />
+        <EmptyState title={t.empty}>{t.emptyDescription}</EmptyState>
       ) : (
         <section className="entity-grid">
           {projects.map((project) => (
             <article className="entity-card" key={project.id}>
               <div className="entity-card-heading">
                 <div>
-                  <small>{project.projectNumber}</small>
+                  <small>
+                    {project.projectNumber} - {project.client.name}
+                  </small>
                   <h3>{project.name}</h3>
                 </div>
                 <StatusChip status={project.status} label={statusLabel(project.status, locale)} />
@@ -262,21 +330,36 @@ export function ProjectDetail({
   const [project, setProject] = useState(initialProject);
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [outputTitle, setOutputTitle] = useState("");
   const [outputCode, setOutputCode] = useState("");
   const [outputDescription, setOutputDescription] = useState("");
-  const phaseMap = useMemo(
-    () => new Map(project.phases.map((phase) => [phase.code, localizedName(phase, locale)])),
-    [locale, project.phases],
+  const visibleOutputs = useMemo(
+    () =>
+      clientMode
+        ? project.outputs.filter((output) => clientVisibleOutputStatuses.has(output.status))
+        : project.outputs,
+    [clientMode, project.outputs],
   );
+  const outputProgress = clientMode
+    ? `${visibleOutputs.length}/${visibleOutputs.length}`
+    : `${project.progress.outputsShared}/${project.progress.outputsTotal}`;
 
-  async function runAction(key: string, action: () => Promise<ProjectSummary>) {
+  async function runAction(
+    key: string,
+    action: () => Promise<ProjectSummary>,
+    successMessage = t.saved,
+  ) {
     setSaving(key);
     setError(null);
+    setNotice(null);
     try {
       setProject(await action());
+      setNotice(successMessage);
+      return true;
     } catch (actionError) {
       setError(projectErrorMessage(actionError));
+      return false;
     } finally {
       setSaving(null);
     }
@@ -284,17 +367,26 @@ export function ProjectDetail({
 
   async function submitOutput(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!outputTitle.trim()) return;
-    await runAction("output", () =>
+    if (!outputTitle.trim()) {
+      setError(t.titleRequired);
+      return;
+    }
+    const saved = await runAction("output", () =>
       createProjectOutput(project.id, {
         title: outputTitle,
         ...(outputCode.trim() ? { code: outputCode.trim() } : {}),
         ...(outputDescription.trim() ? { description: outputDescription.trim() } : {}),
       }),
     );
-    setOutputTitle("");
-    setOutputCode("");
-    setOutputDescription("");
+    if (saved) {
+      setOutputTitle("");
+      setOutputCode("");
+      setOutputDescription("");
+    }
+  }
+
+  function buttonLabel(key: string, label: string) {
+    return saving === key ? t.saving : label;
   }
 
   return (
@@ -303,11 +395,45 @@ export function ProjectDetail({
         eyebrow={t.projectDelivery}
         title={project.name}
         description={`${project.projectNumber} - ${project.client.name} - ${localizedName(project.service, locale)}`}
-        meta={<StatusChip status={project.status} label={statusLabel(project.status, locale)} />}
+        meta={
+          <div className="project-status-guide">
+            <StatusChip status={project.status} label={statusLabel(project.status, locale)} />
+            <span>{statusGuidance(project.status, locale)}</span>
+          </div>
+        }
       />
+      <section className="project-command-strip" aria-label={t.overview}>
+        <div>
+          <span>{t.service}</span>
+          <strong>{localizedName(project.service, locale)}</strong>
+        </div>
+        <div>
+          <span>{t.projectSpecialist}</span>
+          <strong>
+            {project.tasks.find((task) => task.assignee)?.assignee?.displayName ?? t.notSet}
+          </strong>
+        </div>
+        <div>
+          <span>{t.quote}</span>
+          <strong>{project.quote?.quoteNumber ?? t.notSet}</strong>
+        </div>
+        <div>
+          <span>{t.lastActivity}</span>
+          <strong>
+            {project.activity[0]?.occurredAt
+              ? formatDate(project.activity[0].occurredAt, locale, t.notSet)
+              : t.notSet}
+          </strong>
+        </div>
+      </section>
       {error ? (
         <div className="access-feedback error" role="alert">
           {error}
+        </div>
+      ) : null}
+      {notice ? (
+        <div className="access-feedback success" role="status">
+          {notice}
         </div>
       ) : null}
       <section className="os-bento-grid compact">
@@ -315,10 +441,7 @@ export function ProjectDetail({
           label={t.completedTasks}
           value={`${project.progress.tasksDone}/${project.progress.tasksTotal}`}
         />
-        <MetricCard
-          label={t.outputs}
-          value={`${project.progress.outputsShared}/${project.progress.outputsTotal}`}
-        />
+        <MetricCard label={t.outputs} value={outputProgress} />
         <MetricCard label={t.estimatedHours} value={project.service.estimatedHours} />
         <MetricCard accent label={t.due} value={formatDate(project.dueAt, locale, t.notSet)} />
       </section>
@@ -331,7 +454,7 @@ export function ProjectDetail({
             disabled={saving === "ACTIVE"}
             onClick={() => runAction("ACTIVE", () => changeProjectStatus(project.id, "ACTIVE"))}
           >
-            {t.markActive}
+            {buttonLabel("ACTIVE", t.markActive)}
           </button>
           <button
             className="os-button os-button-secondary"
@@ -341,7 +464,7 @@ export function ProjectDetail({
               runAction("CLIENT_REVIEW", () => changeProjectStatus(project.id, "CLIENT_REVIEW"))
             }
           >
-            {t.markClientReview}
+            {buttonLabel("CLIENT_REVIEW", t.markClientReview)}
           </button>
           <button
             className="os-button os-button-primary"
@@ -351,7 +474,7 @@ export function ProjectDetail({
               runAction("COMPLETED", () => changeProjectStatus(project.id, "COMPLETED"))
             }
           >
-            {t.markCompleted}
+            {buttonLabel("COMPLETED", t.markCompleted)}
           </button>
         </section>
       ) : null}
@@ -379,23 +502,37 @@ export function ProjectDetail({
         </dl>
       </SectionCard>
 
-      <SectionCard title={t.phasePlan} eyebrow={t.deliverables}>
-        <div className="entity-grid">
-          {project.deliverables.map((deliverable) => (
-            <article className="entity-card" key={deliverable.id}>
-              <div className="entity-card-heading">
-                <div>
-                  <small>
-                    {deliverable.phaseCode ? phaseMap.get(deliverable.phaseCode) : t.phasePlan}
-                  </small>
-                  <h3>{localizedName(deliverable, locale)}</h3>
-                </div>
-                <span>{deliverable.code}</span>
-              </div>
-              {deliverable.description ? <p>{deliverable.description}</p> : null}
-            </article>
-          ))}
-        </div>
+      <SectionCard
+        title={t.deliveryPath}
+        eyebrow={t.phasePlan}
+        description={t.deliveryPathDescription}
+      >
+        {project.phases.length === 0 ? (
+          <EmptyState title={t.noDeliveryPath} />
+        ) : (
+          <div className="project-timeline">
+            {project.phases.map((phase) => {
+              const phaseDeliverables = project.deliverables.filter(
+                (deliverable) => deliverable.phaseCode === phase.code,
+              );
+              return (
+                <article key={phase.id}>
+                  <span>{phase.sortOrder}</span>
+                  <div>
+                    <small>{phase.code}</small>
+                    <h3>{localizedName(phase, locale)}</h3>
+                    {phase.description ? <p>{phase.description}</p> : null}
+                    <ul>
+                      {phaseDeliverables.map((deliverable) => (
+                        <li key={deliverable.id}>{localizedName(deliverable, locale)}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
       </SectionCard>
 
       <SectionCard title={t.tasks}>
@@ -425,7 +562,7 @@ export function ProjectDetail({
                         )
                       }
                     >
-                      {t.startTask}
+                      {buttonLabel(task.id, t.startTask)}
                     </button>
                     <button
                       className="os-button os-button-primary"
@@ -437,7 +574,7 @@ export function ProjectDetail({
                         )
                       }
                     >
-                      {taskStatusLabel("DONE", locale)}
+                      {buttonLabel(`${task.id}-done`, taskStatusLabel("DONE", locale))}
                     </button>
                   </div>
                 ) : null}
@@ -482,11 +619,11 @@ export function ProjectDetail({
             </div>
           </form>
         ) : null}
-        {project.outputs.length === 0 ? (
+        {visibleOutputs.length === 0 ? (
           <EmptyState title={t.noOutputs} />
         ) : (
           <div className="entity-grid">
-            {project.outputs.map((output) => (
+            {visibleOutputs.map((output) => (
               <article className="entity-card" key={output.id}>
                 <div className="entity-card-heading">
                   <div>
@@ -499,7 +636,7 @@ export function ProjectDetail({
                   />
                 </div>
                 {output.description ? <p>{output.description}</p> : null}
-                {!clientMode ? (
+                {!clientMode && shareableOutputStatuses.has(output.status) ? (
                   <div className="row-actions">
                     <button
                       className="os-button os-button-secondary"
@@ -511,7 +648,7 @@ export function ProjectDetail({
                         )
                       }
                     >
-                      {t.shareOutput}
+                      {buttonLabel(output.id, t.shareOutput)}
                     </button>
                   </div>
                 ) : output.status === "SHARED_WITH_CLIENT" ? (
@@ -530,7 +667,7 @@ export function ProjectDetail({
                         )
                       }
                     >
-                      {t.acceptOutput}
+                      {buttonLabel(`${output.id}-accept`, t.acceptOutput)}
                     </button>
                     <button
                       className="os-button os-button-secondary"
@@ -546,7 +683,7 @@ export function ProjectDetail({
                         )
                       }
                     >
-                      {t.returnOutput}
+                      {buttonLabel(`${output.id}-return`, t.returnOutput)}
                     </button>
                   </div>
                 ) : null}

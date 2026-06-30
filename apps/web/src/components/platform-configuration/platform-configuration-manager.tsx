@@ -290,18 +290,33 @@ function settingKeyLabel(key: string, locale: SupportedLocale): string {
     "attachments.max_size_mb": { ar: "الحد الأقصى للرفع", en: "Maximum upload size" },
     "business_text.new_template": { ar: "نموذج نص تشغيلي جديد", en: "New business text template" },
     "client_health.score_rules": { ar: "قواعد صحة العميل", en: "Client health score rules" },
-    "import_export.preview_required": { ar: "معاينة الاستيراد مطلوبة", en: "Import preview required" },
+    "import_export.preview_required": {
+      ar: "معاينة الاستيراد مطلوبة",
+      en: "Import preview required",
+    },
     "import_export.rollback_required": {
       ar: "خطة الرجوع للاستيراد مطلوبة",
       en: "Import rollback required",
     },
-    "notifications.outbound_mode": { ar: "وضع التنبيهات الخارجية", en: "Outbound notification mode" },
+    "notifications.outbound_mode": {
+      ar: "وضع التنبيهات الخارجية",
+      en: "Outbound notification mode",
+    },
     "pricing.discount.default_pct": { ar: "نسبة الخصم الافتراضية", en: "Default discount" },
     "pricing.factors.branch_count": { ar: "عامل عدد الفروع", en: "Branch-count pricing factor" },
     "pricing.factors.complexity": { ar: "عامل التعقيد", en: "Complexity pricing factor" },
-    "pricing.factors.data_readiness": { ar: "عامل جاهزية البيانات", en: "Data-readiness pricing factor" },
-    "pricing.factors.employee_count": { ar: "عامل عدد الموظفين", en: "Employee-count pricing factor" },
-    "pricing.factors.start_priority": { ar: "عامل أولوية البدء", en: "Start-priority pricing factor" },
+    "pricing.factors.data_readiness": {
+      ar: "عامل جاهزية البيانات",
+      en: "Data-readiness pricing factor",
+    },
+    "pricing.factors.employee_count": {
+      ar: "عامل عدد الموظفين",
+      en: "Employee-count pricing factor",
+    },
+    "pricing.factors.start_priority": {
+      ar: "عامل أولوية البدء",
+      en: "Start-priority pricing factor",
+    },
     "pricing.factors.transaction_volume": {
       ar: "عامل حجم العمليات",
       en: "Transaction-volume pricing factor",

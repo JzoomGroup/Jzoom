@@ -9,7 +9,14 @@ import {
 } from "../../lib/operations-client";
 import type { AppNotification, NotificationListResponse } from "../../lib/operations-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
-import { BentoGrid, EmptyState, MetricCard, PageHeader, SectionCard, StatusChip } from "../premium-os";
+import {
+  BentoGrid,
+  EmptyState,
+  MetricCard,
+  PageHeader,
+  SectionCard,
+  StatusChip,
+} from "../premium-os";
 
 const copy = {
   ar: {
@@ -27,8 +34,7 @@ const copy = {
     open: "فتح",
     read: "مقروء",
     stream: "مسار التنبيهات",
-    streamDescription:
-      "كل تنبيه يحتفظ بالرابط العميق والسياق التشغيلي بدون إرسال خارجي.",
+    streamDescription: "كل تنبيه يحتفظ بالرابط العميق والسياق التشغيلي بدون إرسال خارجي.",
     target: "الوجهة",
     title: "التنبيهات",
     total: "إجمالي التنبيهات",

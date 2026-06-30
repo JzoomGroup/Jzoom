@@ -37,6 +37,7 @@ describe("frontend authorization routing", () => {
     expect(postLoginRoute(["ROLE-AM"])).toBe("/account-manager");
     expect(postLoginRoute(["ROLE-SUPERVISOR"])).toBe("/supervisor");
     expect(postLoginRoute(["ROLE-SPECIALIST"])).toBe("/specialist");
+    expect(postLoginRoute(["ROLE-PROJECT-SPECIALIST"])).toBe("/projects");
     expect(postLoginRoute(["ROLE-UNKNOWN"])).toBe("/profile");
   });
 });
