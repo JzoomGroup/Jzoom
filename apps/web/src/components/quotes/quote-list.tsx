@@ -13,7 +13,7 @@ import {
   quoteStatusLabel,
 } from "../commercial-i18n";
 import { EmptyState, MetricCard, PageHeader, SectionCard, StatusChip } from "../premium-os";
-import { QuoteLifecycleActions } from "./quote-lifecycle-actions";
+import { QuoteLifecycleActions, QuoteOnboardingLauncher } from "./quote-lifecycle-actions";
 
 export function QuoteList({
   locale: localeInput = "en",
@@ -135,6 +135,9 @@ export function QuoteList({
                     )
                   }
                 />
+                {quote.status === "ACCEPTED" ? (
+                  <QuoteOnboardingLauncher compact locale={locale} quoteId={quote.id} />
+                ) : null}
               </article>
             ))}
           </div>

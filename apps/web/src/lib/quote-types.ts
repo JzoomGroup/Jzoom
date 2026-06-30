@@ -109,3 +109,79 @@ export interface Quote {
   }>;
   items: QuoteItem[];
 }
+
+export interface QuoteOnboardingOptions {
+  quote: {
+    id: string;
+    quoteNumber: string;
+    status: QuoteStatus;
+  };
+  client: {
+    id: string | null;
+    code: string;
+    name: string;
+    legalName: string | null;
+    defaultPortalEmail: string;
+  };
+  portalUsers: Array<{
+    id: string;
+    email: string;
+    displayName: string;
+    preferredLocale: string;
+    status: string;
+  }>;
+  specialists: Array<{
+    id: string;
+    email: string;
+    displayName: string;
+  }>;
+  services: Array<{
+    quoteItemId: string;
+    lineType: "MONTHLY" | "ONE_TIME";
+    serviceCode: string;
+    nameAr: string;
+    nameEn: string;
+    serviceLevelLabel: string | null;
+    hoursAllocated: number | null;
+    monthlyServiceId: string | null;
+    monthlyServiceRevisionId: string | null;
+    oneTimeServiceId: string | null;
+    oneTimeServiceRevisionId: string | null;
+    serviceLevelId: string | null;
+    existingSpecialistIds: string[];
+  }>;
+}
+
+export interface QuoteOnboardingInput {
+  portalUser?: {
+    email: string;
+    displayName: string;
+    preferredLocale?: "ar" | "en";
+  };
+  serviceAssignments: Array<{
+    quoteItemId: string;
+    specialistIds: string[];
+  }>;
+}
+
+export interface QuoteOnboardingResult {
+  completed: boolean;
+  portalUser: null | {
+    id: string;
+    email: string;
+    displayName: string;
+    created: boolean;
+    temporaryPasswordAssigned: boolean;
+  };
+  subscription: {
+    subscriptionId: string | null;
+    createdServiceIds: string[];
+    reusedServiceIds: string[];
+  };
+  assignments: Array<{
+    quoteItemId: string;
+    lineType: "MONTHLY" | "ONE_TIME";
+    serviceCode: string;
+    specialistIds: string[];
+  }>;
+}

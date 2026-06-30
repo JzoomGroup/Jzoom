@@ -1,6 +1,9 @@
 import { Type } from "class-transformer";
 import {
+  ArrayMaxSize,
   IsDateString,
+  IsArray,
+  IsEmail,
   IsIn,
   IsInt,
   IsOptional,
@@ -86,4 +89,53 @@ export class QuoteLifecycleActionDto {
   @IsString()
   @MaxLength(2_000)
   note?: string;
+}
+
+export class QuoteOnboardingPortalUserDto {
+  @ApiProperty({ type: String, example: "client@example.com" })
+  @IsEmail()
+  @IsString()
+  @MinLength(3)
+  @MaxLength(254)
+  email!: string;
+
+  @ApiProperty({ type: String, example: "Client User" })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(160)
+  displayName!: string;
+
+  @ApiPropertyOptional({ enum: ["ar", "en"], default: "ar" })
+  @IsOptional()
+  @IsIn(["ar", "en"])
+  preferredLocale?: "ar" | "en";
+}
+
+export class QuoteOnboardingServiceAssignmentDto {
+  @ApiProperty({ type: String, format: "uuid" })
+  @IsUUID()
+  quoteItemId!: string;
+
+  @ApiPropertyOptional({ type: [String], format: "uuid" })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsUUID(undefined, { each: true })
+  specialistIds?: string[];
+}
+
+export class QuoteOnboardingDto {
+  @ApiPropertyOptional({ type: QuoteOnboardingPortalUserDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => QuoteOnboardingPortalUserDto)
+  portalUser?: QuoteOnboardingPortalUserDto;
+
+  @ApiPropertyOptional({ type: [QuoteOnboardingServiceAssignmentDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => QuoteOnboardingServiceAssignmentDto)
+  serviceAssignments?: QuoteOnboardingServiceAssignmentDto[];
 }

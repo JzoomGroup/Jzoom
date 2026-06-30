@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { quotePdfUrl } from "../../lib/quote-client";
-import type { Quote } from "../../lib/quote-types";
+import { getQuoteOnboardingOptions, quoteErrorMessage, quotePdfUrl } from "../../lib/quote-client";
+import type { Quote, QuoteOnboardingOptions } from "../../lib/quote-types";
 import {
   businessText,
   commercialCopy,
@@ -19,7 +19,8 @@ import {
 } from "../commercial-i18n";
 import { CreateInvoiceAction } from "../invoices/create-invoice-action";
 import { PageHeader, SectionCard, SmartTable, StatusChip } from "../premium-os";
-import { QuoteLifecycleActions } from "./quote-lifecycle-actions";
+import { QuoteLifecycleActions, QuoteOnboardingLauncher } from "./quote-lifecycle-actions";
+import { QuoteOnboardingDialog } from "./quote-onboarding-dialog";
 
 export function QuoteDetail({
   initialQuote,
@@ -31,6 +32,17 @@ export function QuoteDetail({
   const locale = commercialLocale(localeInput);
   const t = commercialCopy[locale];
   const [quote, setQuote] = useState(initialQuote);
+  const [onboardingOptions, setOnboardingOptions] = useState<QuoteOnboardingOptions | null>(null);
+  const [onboardingError, setOnboardingError] = useState<string | null>(null);
+
+  async function openOnboarding(nextQuoteId = quote.id) {
+    setOnboardingError(null);
+    try {
+      setOnboardingOptions(await getQuoteOnboardingOptions(nextQuoteId));
+    } catch (caught) {
+      setOnboardingError(quoteErrorMessage(caught));
+    }
+  }
 
   return (
     <>
@@ -57,6 +69,9 @@ export function QuoteDetail({
           >
             {t.viewPdf}
           </a>
+          {quote.status === "ACCEPTED" ? (
+            <QuoteOnboardingLauncher compact locale={locale} quoteId={quote.id} />
+          ) : null}
           <CreateInvoiceAction locale={locale} quote={quote} />
           <Link
             className="os-button os-button-secondary"
@@ -85,8 +100,22 @@ export function QuoteDetail({
             quoteId={quote.id}
             status={quote.status}
             onUpdated={setQuote}
+            onAccepted={(updated) => void openOnboarding(updated.id)}
           />
         </SectionCard>
+      ) : null}
+
+      {onboardingError ? (
+        <p className="quote-action-feedback error" role="status">
+          {onboardingError}
+        </p>
+      ) : null}
+      {onboardingOptions ? (
+        <QuoteOnboardingDialog
+          locale={locale}
+          options={onboardingOptions}
+          onClose={() => setOnboardingOptions(null)}
+        />
       ) : null}
 
       <section className="quote-summary-grid">

@@ -1,9 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { advanceQuoteLifecycle, quoteErrorMessage } from "../../lib/quote-client";
-import type { Quote, QuoteStatus } from "../../lib/quote-types";
+import {
+  advanceQuoteLifecycle,
+  getQuoteOnboardingOptions,
+  quoteErrorMessage,
+} from "../../lib/quote-client";
+import type { Quote, QuoteOnboardingOptions, QuoteStatus } from "../../lib/quote-types";
 import { commercialCopy, commercialLocale } from "../commercial-i18n";
+import { QuoteOnboardingDialog } from "./quote-onboarding-dialog";
 
 type LifecycleTarget = Exclude<QuoteStatus, "DRAFT">;
 
@@ -18,11 +23,13 @@ export function QuoteLifecycleActions({
   compact = false,
   locale: localeInput = "en",
   onUpdated,
+  onAccepted,
   quoteId,
   status,
 }: {
   compact?: boolean;
   locale?: string;
+  onAccepted?: (quote: Quote) => void;
   onUpdated?: (quote: Quote) => void;
   quoteId: string;
   status: QuoteStatus;
@@ -32,6 +39,7 @@ export function QuoteLifecycleActions({
   const [submitting, setSubmitting] = useState<LifecycleTarget>();
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
+  const [onboardingOptions, setOnboardingOptions] = useState<QuoteOnboardingOptions | null>(null);
   const actions: Partial<Record<QuoteStatus, LifecycleAction[]>> = {
     DRAFT: [
       { label: t.issueQuote, status: "ISSUED" },
@@ -77,6 +85,16 @@ export function QuoteLifecycleActions({
       const updated = await advanceQuoteLifecycle(quoteId, action.status, note);
       onUpdated?.(updated);
       setSuccess(t.quoteStatusChanged(action.status));
+      if (action.status === "ACCEPTED") {
+        onAccepted?.(updated);
+      }
+      if (action.status === "ACCEPTED" && !compact && !onAccepted) {
+        try {
+          setOnboardingOptions(await getQuoteOnboardingOptions(quoteId));
+        } catch (optionsError) {
+          setError(quoteErrorMessage(optionsError));
+        }
+      }
     } catch (lifecycleError) {
       setError(quoteErrorMessage(lifecycleError));
     } finally {
@@ -89,32 +107,96 @@ export function QuoteLifecycleActions({
   }
 
   return (
-    <div className={compact ? "quote-inline-actions" : "quote-lifecycle-actions"}>
-      <div className="row-actions">
-        {availableActions.map((action) => (
-          <button
-            key={action.status}
-            type="button"
-            className={
-              action.tone === "danger"
-                ? "os-button os-button-danger"
-                : "os-button os-button-primary"
-            }
-            disabled={Boolean(submitting)}
-            onClick={() => void run(action)}
+    <>
+      <div className={compact ? "quote-inline-actions" : "quote-lifecycle-actions"}>
+        <div className="row-actions">
+          {availableActions.map((action) => (
+            <button
+              key={action.status}
+              type="button"
+              className={
+                action.tone === "danger"
+                  ? "os-button os-button-danger"
+                  : "os-button os-button-primary"
+              }
+              disabled={Boolean(submitting)}
+              onClick={() => void run(action)}
+            >
+              {submitting === action.status ? t.saving : action.label}
+            </button>
+          ))}
+        </div>
+        {(error || success) && (
+          <small
+            className={error ? "quote-action-feedback error" : "quote-action-feedback success"}
+            role="status"
           >
-            {submitting === action.status ? t.saving : action.label}
-          </button>
-        ))}
+            {error ?? success}
+          </small>
+        )}
       </div>
-      {(error || success) && (
-        <small
-          className={error ? "quote-action-feedback error" : "quote-action-feedback success"}
-          role="status"
+      {onboardingOptions ? (
+        <QuoteOnboardingDialog
+          locale={locale}
+          options={onboardingOptions}
+          onClose={() => setOnboardingOptions(null)}
+        />
+      ) : null}
+    </>
+  );
+}
+
+export function QuoteOnboardingLauncher({
+  compact = false,
+  locale: localeInput = "en",
+  quoteId,
+}: {
+  compact?: boolean;
+  locale?: string;
+  quoteId: string;
+}) {
+  const locale = commercialLocale(localeInput);
+  const t = commercialCopy[locale];
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>();
+  const [onboardingOptions, setOnboardingOptions] = useState<QuoteOnboardingOptions | null>(null);
+
+  async function open() {
+    setLoading(true);
+    setError(undefined);
+    try {
+      setOnboardingOptions(await getQuoteOnboardingOptions(quoteId));
+    } catch (caught) {
+      setError(quoteErrorMessage(caught));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <div className={compact ? "quote-inline-actions" : "quote-lifecycle-actions"}>
+        <button
+          className="os-button os-button-primary"
+          disabled={loading}
+          type="button"
+          onClick={() => void open()}
         >
-          {error ?? success}
-        </small>
-      )}
-    </div>
+          {loading ? t.saving : t.activateClientServices}
+        </button>
+        {error ? (
+          <small className="quote-action-feedback error" role="status">
+            {error}
+          </small>
+        ) : null}
+      </div>
+      {onboardingOptions ? (
+        <QuoteOnboardingDialog
+          locale={locale}
+          options={onboardingOptions}
+          onClose={() => setOnboardingOptions(null)}
+        />
+      ) : null}
+    </>
   );
 }

@@ -95,7 +95,8 @@ const copy = {
     portalUserChecklist: "ضوابط مستخدم البوابة",
     portalUserGuardA: "هذا المستخدم يحصل على دور العميل فقط داخل نطاق هذا العميل.",
     portalUserGuardB: "اللغة الافتراضية عربية ويمكن تغييرها لاحقًا من الملف الشخصي.",
-    portalUserGuardC: "كلمة المرور مؤقتة ويجب تدويرها بعد الاختبار أو التسليم.",
+    portalUserGuardC:
+      "سيتم تعيين كلمة مرور مؤقتة افتراضية وسيُطلب من المستخدم تغييرها عند أول دخول.",
     portalUser: "مستخدم بوابة",
     portalUserCreated: "تم إنشاء مستخدم بوابة العميل.",
     portalUsers: "مستخدمو البوابة",
@@ -175,7 +176,8 @@ const copy = {
     portalUserChecklist: "Portal user guardrails",
     portalUserGuardA: "This user receives client access only within this client scope.",
     portalUserGuardB: "Arabic is the default locale and can be changed later from profile.",
-    portalUserGuardC: "The password is temporary and should be rotated after QA or handoff.",
+    portalUserGuardC:
+      "A default temporary password will be assigned and the user must change it at first login.",
     portalUser: "Portal user",
     portalUserCreated: "Client portal user created.",
     portalUsers: "Portal users",
@@ -390,10 +392,6 @@ function PortalUserForm({
         />
       </label>
       <label>
-        {t.password}
-        <input name="password" type="password" minLength={8} required />
-      </label>
-      <label>
         {t.language}
         <select name="preferredLocale" defaultValue="ar">
           <option value="ar">العربية</option>
@@ -606,7 +604,6 @@ export function ClientManager({
         body: JSON.stringify({
           displayName: text(form, "displayName"),
           email: text(form, "email"),
-          password: text(form, "password"),
           preferredLocale: text(form, "preferredLocale") ?? "ar",
         }),
         method: "POST",

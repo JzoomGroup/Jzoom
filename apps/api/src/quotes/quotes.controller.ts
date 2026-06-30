@@ -28,6 +28,9 @@ import { ACCOUNT_MANAGER_ROLE_CODE, MANAGE_QUOTES_PERMISSION } from "./quotes.co
 import {
   CreateQuoteDto,
   QuoteLifecycleActionDto,
+  QuoteOnboardingDto,
+  QuoteOnboardingPortalUserDto,
+  QuoteOnboardingServiceAssignmentDto,
   QuoteStatusDto,
   QuoteTermsDto,
 } from "./quotes.dto.js";
@@ -44,7 +47,15 @@ function metadata(request: RequestWithId): RequestMetadata {
 
 @ApiTags("quotes")
 @ApiCookieAuth()
-@ApiExtraModels(CreateQuoteDto, QuoteLifecycleActionDto, QuoteStatusDto, QuoteTermsDto)
+@ApiExtraModels(
+  CreateQuoteDto,
+  QuoteLifecycleActionDto,
+  QuoteOnboardingDto,
+  QuoteOnboardingPortalUserDto,
+  QuoteOnboardingServiceAssignmentDto,
+  QuoteStatusDto,
+  QuoteTermsDto,
+)
 @RequireRoles(ADMIN_ROLE_CODE, MANAGEMENT_ROLE_CODE, ACCOUNT_MANAGER_ROLE_CODE)
 @RequirePermissions(MANAGE_QUOTES_PERMISSION)
 @Controller("quotes")
@@ -61,6 +72,15 @@ export class QuotesController {
   @ApiOperation({ summary: "Retrieve an immutable quote snapshot" })
   get(@Param("id") id: string, @Req() request: RequestWithId) {
     return this.quotes.get(id, request.auth!);
+  }
+
+  @Get(":id/onboarding-options")
+  @ApiOperation({
+    summary:
+      "Return client portal, subscription, and specialist options after quote payment confirmation",
+  })
+  onboardingOptions(@Param("id") id: string, @Req() request: RequestWithId) {
+    return this.quotes.onboardingOptions(id, request.auth!);
   }
 
   @Get(":id/pdf")
@@ -105,6 +125,20 @@ export class QuotesController {
     @Req() request: RequestWithId,
   ) {
     return this.quotes.accept(id, input?.note, request.auth!, metadata(request));
+  }
+
+  @Post(":id/onboarding")
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      "Activate quote services, create a client portal user, and assign specialists after payment",
+  })
+  completeOnboarding(
+    @Param("id") id: string,
+    @Body() input: QuoteOnboardingDto,
+    @Req() request: RequestWithId,
+  ) {
+    return this.quotes.completeOnboarding(id, input, request.auth!, metadata(request));
   }
 
   @Post(":id/reject")

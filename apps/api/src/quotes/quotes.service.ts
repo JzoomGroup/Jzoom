@@ -7,13 +7,17 @@ import {
 } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 import type { Prisma } from "@jzoom/database";
-import { ADMIN_ROLE_CODE } from "../auth/auth.constants.js";
+import { ADMIN_ROLE_CODE, DEFAULT_TEMPORARY_PASSWORD } from "../auth/auth.constants.js";
 import { AuthAuditService } from "../auth/audit.service.js";
 import type { AuthenticatedPrincipal, RequestMetadata } from "../auth/auth.types.js";
+import { PasswordHasherService } from "../auth/password-hasher.service.js";
+import { CLIENT_ROLE_CODE } from "../client-portal/client-portal.constants.js";
 import { DatabaseService } from "../database/database.service.js";
 import { QuotePdfService } from "./quote-pdf.service.js";
 import { QUOTE_EVENT } from "./quotes.constants.js";
-import type { CreateQuoteDto } from "./quotes.dto.js";
+import type { CreateQuoteDto, QuoteOnboardingDto } from "./quotes.dto.js";
+
+const SPECIALIST_ROLE_CODE = "ROLE-SPECIALIST";
 
 type PublicQuoteStatus = "DRAFT" | "ISSUED" | "ACCEPTED" | "REJECTED" | "EXPIRED" | "CANCELLED";
 
@@ -53,6 +57,22 @@ interface SnapshotTotals {
   meetsTargetMargin: boolean | null;
 }
 
+export interface OnboardingServiceTarget {
+  quoteItemId: string;
+  lineType: "MONTHLY" | "ONE_TIME";
+  serviceCode: string;
+  nameAr: string;
+  nameEn: string;
+  serviceLevelLabel: string | null;
+  hoursAllocated: number | null;
+  monthlyServiceId: string | null;
+  monthlyServiceRevisionId: string | null;
+  oneTimeServiceId: string | null;
+  oneTimeServiceRevisionId: string | null;
+  serviceLevelId: string | null;
+  existingSpecialistIds: string[];
+}
+
 const transitions: Record<PublicQuoteStatus, PublicQuoteStatus[]> = {
   DRAFT: ["ISSUED", "CANCELLED"],
   ISSUED: ["ACCEPTED", "REJECTED", "EXPIRED", "CANCELLED"],
@@ -89,6 +109,21 @@ function stringValue(record: Record<string, unknown>, key: string): string | und
   return typeof value === "string" ? value : undefined;
 }
 
+function optionalNumericValue(record: Record<string, unknown>, key: string): number | null {
+  const value = record[key];
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function recordOrNull(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
 function numericValue(record: Record<string, unknown>, key: string): number {
   const value = Number(record[key]);
   if (!Number.isFinite(value)) {
@@ -119,6 +154,7 @@ export class QuotesService {
   constructor(
     @Inject(DatabaseService) private readonly database: DatabaseService,
     @Inject(AuthAuditService) private readonly audit: AuthAuditService,
+    @Inject(PasswordHasherService) private readonly passwords: PasswordHasherService,
     @Inject(QuotePdfService) private readonly quotePdf: QuotePdfService,
   ) {}
 
@@ -147,6 +183,168 @@ export class QuotesService {
   async get(id: string, principal: AuthenticatedPrincipal) {
     const quote = await this.requireAccessibleQuote(id, principal);
     return this.quoteView(quote);
+  }
+
+  async onboardingOptions(id: string, principal: AuthenticatedPrincipal) {
+    const quote = await this.requireAccessibleQuote(id, principal);
+    this.assertQuoteReadyForOnboarding(quote);
+    const clientId = quote.clientId!;
+    const client = this.clientSummary(quote.clientSnapshot);
+    const now = new Date();
+    const [services, specialists, portalUsers] = await Promise.all([
+      this.onboardingTargetsForQuote(quote),
+      this.database.prisma.user.findMany({
+        where: {
+          status: "ACTIVE",
+          userType: "INTERNAL",
+          roles: {
+            some: {
+              role: { code: SPECIALIST_ROLE_CODE, status: "ACTIVE" },
+            },
+          },
+        },
+        orderBy: [{ displayName: "asc" }, { email: "asc" }],
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+        },
+      }),
+      this.database.prisma.clientAssignment.findMany({
+        where: {
+          clientId,
+          roleCode: CLIENT_ROLE_CODE,
+          startsAt: { lte: now },
+          OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+          user: { status: "ACTIVE", userType: "EXTERNAL" },
+        },
+        orderBy: { startsAt: "desc" },
+        select: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              displayName: true,
+              preferredLocale: true,
+              status: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      quote: {
+        id: quote.id,
+        quoteNumber: quote.quoteNumber,
+        status: quote.status,
+      },
+      client: {
+        ...client,
+        defaultPortalEmail: `${client.code.toLowerCase()}@client.jzoom.local`,
+      },
+      portalUsers: portalUsers.map(({ user }) => user),
+      specialists,
+      services,
+    };
+  }
+
+  async completeOnboarding(
+    id: string,
+    input: QuoteOnboardingDto,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const quote = await this.requireAccessibleQuote(id, principal);
+    this.assertQuoteReadyForOnboarding(quote);
+    const clientId = quote.clientId!;
+    const now = new Date();
+    const services = await this.onboardingTargetsForQuote(quote);
+    const servicesByQuoteItemId = new Map(
+      services.map((service) => [service.quoteItemId, service]),
+    );
+    const requestedAssignments = input.serviceAssignments ?? [];
+    const unknownQuoteItemIds = requestedAssignments
+      .map((assignment) => assignment.quoteItemId)
+      .filter((quoteItemId) => !servicesByQuoteItemId.has(quoteItemId));
+    if (unknownQuoteItemIds.length > 0) {
+      throw new BadRequestException({
+        code: "QUOTE_ONBOARDING_SERVICE_NOT_FOUND",
+        message: "One or more selected services are not part of this quote",
+        quoteItemIds: unknownQuoteItemIds,
+      });
+    }
+
+    const specialistIds = this.uniqueIds(
+      requestedAssignments.flatMap((assignment) => assignment.specialistIds ?? []),
+    );
+    await this.assertActiveSpecialists(specialistIds);
+
+    const temporaryPasswordHash = input.portalUser
+      ? await this.passwords.hash(DEFAULT_TEMPORARY_PASSWORD)
+      : undefined;
+    const result = await this.database.prisma.$transaction(async (transaction) => {
+      const portalUser = input.portalUser
+        ? await this.createOrLinkPortalUserInTransaction(
+            transaction,
+            clientId,
+            input.portalUser,
+            temporaryPasswordHash!,
+            now,
+          )
+        : null;
+      const subscription = await this.ensureQuoteSubscriptionInTransaction(
+        transaction,
+        quote,
+        services,
+        now,
+      );
+      const assignments = [];
+      for (const assignment of requestedAssignments) {
+        const service = servicesByQuoteItemId.get(assignment.quoteItemId)!;
+        const selectedSpecialistIds = this.uniqueIds(assignment.specialistIds ?? []);
+        await this.replaceSpecialistScopesForServiceInTransaction(
+          transaction,
+          clientId,
+          service,
+          selectedSpecialistIds,
+          now,
+        );
+        assignments.push({
+          quoteItemId: service.quoteItemId,
+          lineType: service.lineType,
+          serviceCode: service.serviceCode,
+          specialistIds: selectedSpecialistIds,
+        });
+      }
+      return { assignments, portalUser, subscription };
+    });
+
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: QUOTE_EVENT.clientOnboardingCompleted,
+        entityType: "Quote",
+        entityId: quote.id,
+        after: {
+          clientId,
+          quoteNumber: quote.quoteNumber,
+          portalUserId: result.portalUser?.id ?? null,
+          portalUserCreated: result.portalUser?.created ?? false,
+          subscriptionId: result.subscription.subscriptionId,
+          subscriptionServicesCreated: result.subscription.createdServiceIds.length,
+          subscriptionServicesReused: result.subscription.reusedServiceIds.length,
+          assignments: result.assignments,
+        },
+        severity: "HIGH",
+      },
+      metadata,
+    );
+
+    return {
+      completed: true,
+      ...result,
+    };
   }
 
   async generatePdf(id: string, principal: AuthenticatedPrincipal, metadata: RequestMetadata) {
@@ -490,6 +688,502 @@ export class QuotesService {
     return this.changeStatus(id, "CANCELLED", note, principal, metadata);
   }
 
+  private assertQuoteReadyForOnboarding(
+    quote: Awaited<ReturnType<QuotesService["requireAccessibleQuote"]>>,
+  ): void {
+    if (!quote.clientId) {
+      throw new ConflictException({
+        code: "QUOTE_CLIENT_REQUIRED_FOR_ONBOARDING",
+        message: "The quote must be linked to a client before services can be activated",
+      });
+    }
+    if (quote.status !== "ACCEPTED") {
+      throw new ConflictException({
+        code: "ACCEPTED_QUOTE_REQUIRED_FOR_ONBOARDING",
+        message: "Client services can only be activated after payment confirmation",
+      });
+    }
+  }
+
+  private async onboardingTargetsForQuote(
+    quote: Awaited<ReturnType<QuotesService["requireAccessibleQuote"]>>,
+  ): Promise<OnboardingServiceTarget[]> {
+    return Promise.all(quote.items.map((item) => this.onboardingTargetForQuoteItem(quote, item)));
+  }
+
+  private async onboardingTargetForQuoteItem(
+    quote: Awaited<ReturnType<QuotesService["requireAccessibleQuote"]>>,
+    item: Awaited<ReturnType<QuotesService["requireAccessibleQuote"]>>["items"][number],
+  ): Promise<OnboardingServiceTarget> {
+    const snapshot = objectValue(
+      item.serviceSnapshot,
+      "INVALID_QUOTE_SERVICE_SNAPSHOT",
+      "A quote service snapshot is invalid",
+    );
+    const serviceCode = stringValue(snapshot, "serviceCode") ?? item.id;
+    const nameAr = stringValue(snapshot, "nameAr") ?? serviceCode;
+    const nameEn = stringValue(snapshot, "nameEn") ?? nameAr;
+    const serviceLevelLabel =
+      stringValue(snapshot, "serviceLevelLabel") ??
+      stringValue(snapshot, "serviceLevelCode") ??
+      null;
+    const snapshotHours = optionalNumericValue(snapshot, "hours");
+
+    if (item.lineType === "MONTHLY") {
+      const monthlyServiceRevisionId = item.monthlyServiceRevisionId;
+      if (!monthlyServiceRevisionId) {
+        throw new ConflictException({
+          code: "QUOTE_MONTHLY_REVISION_REQUIRED",
+          message: "Monthly quote lines must include a monthly service revision",
+        });
+      }
+      const revision = await this.database.prisma.monthlyServiceRevision.findUnique({
+        where: { id: monthlyServiceRevisionId },
+        select: {
+          id: true,
+          monthlyServiceId: true,
+        },
+      });
+      if (!revision) {
+        throw new ConflictException({
+          code: "QUOTE_MONTHLY_REVISION_NOT_FOUND",
+          message: "A quote monthly service revision is no longer available",
+        });
+      }
+      const serviceLevelId = await this.serviceLevelIdForQuoteItem(quote, item, snapshot);
+      const hoursAllocated =
+        item.hours === null
+          ? snapshotHours
+          : Number.isFinite(Number(item.hours))
+            ? Number(item.hours)
+            : snapshotHours;
+      const existingSpecialistIds = await this.existingSpecialistIdsForService({
+        clientId: quote.clientId!,
+        monthlyServiceId: revision.monthlyServiceId,
+      });
+      return {
+        quoteItemId: item.id,
+        lineType: "MONTHLY",
+        serviceCode,
+        nameAr,
+        nameEn,
+        serviceLevelLabel,
+        hoursAllocated,
+        monthlyServiceId: revision.monthlyServiceId,
+        monthlyServiceRevisionId,
+        oneTimeServiceId: null,
+        oneTimeServiceRevisionId: null,
+        serviceLevelId,
+        existingSpecialistIds,
+      };
+    }
+
+    const oneTimeServiceRevisionId = item.oneTimeServiceRevisionId;
+    if (!oneTimeServiceRevisionId) {
+      throw new ConflictException({
+        code: "QUOTE_ONE_TIME_REVISION_REQUIRED",
+        message: "One-time quote lines must include a one-time service revision",
+      });
+    }
+    const revision = await this.database.prisma.oneTimeServiceRevision.findUnique({
+      where: { id: oneTimeServiceRevisionId },
+      select: {
+        id: true,
+        oneTimeServiceId: true,
+      },
+    });
+    if (!revision) {
+      throw new ConflictException({
+        code: "QUOTE_ONE_TIME_REVISION_NOT_FOUND",
+        message: "A quote one-time service revision is no longer available",
+      });
+    }
+    const existingSpecialistIds = await this.existingSpecialistIdsForService({
+      clientId: quote.clientId!,
+      oneTimeServiceId: revision.oneTimeServiceId,
+    });
+    return {
+      quoteItemId: item.id,
+      lineType: "ONE_TIME",
+      serviceCode,
+      nameAr,
+      nameEn,
+      serviceLevelLabel,
+      hoursAllocated: snapshotHours,
+      monthlyServiceId: null,
+      monthlyServiceRevisionId: null,
+      oneTimeServiceId: revision.oneTimeServiceId,
+      oneTimeServiceRevisionId,
+      serviceLevelId: null,
+      existingSpecialistIds,
+    };
+  }
+
+  private async serviceLevelIdForQuoteItem(
+    quote: Awaited<ReturnType<QuotesService["requireAccessibleQuote"]>>,
+    item: Awaited<ReturnType<QuotesService["requireAccessibleQuote"]>>["items"][number],
+    snapshot: Record<string, unknown>,
+  ): Promise<string> {
+    const sourceDraft = recordOrNull(quote.sourceDraftSnapshot);
+    const selections = Array.isArray(sourceDraft?.selections) ? sourceDraft.selections : [];
+    const selection = selections
+      .map(recordOrNull)
+      .find(
+        (entry) =>
+          entry?.monthlyServiceRevisionId === item.monthlyServiceRevisionId ||
+          entry?.oneTimeServiceRevisionId === item.oneTimeServiceRevisionId,
+      );
+    const selectedLevelId = selection ? stringValue(selection, "serviceLevelId") : undefined;
+    if (selectedLevelId) {
+      const serviceLevel = await this.database.prisma.serviceLevel.findFirst({
+        where: { id: selectedLevelId, status: "ACTIVE" },
+        select: { id: true },
+      });
+      if (serviceLevel) {
+        return serviceLevel.id;
+      }
+    }
+
+    const serviceLevelCode = stringValue(snapshot, "serviceLevelCode");
+    if (serviceLevelCode) {
+      const serviceLevel = await this.database.prisma.serviceLevel.findFirst({
+        where: { code: serviceLevelCode, status: "ACTIVE" },
+        select: { id: true },
+      });
+      if (serviceLevel) {
+        return serviceLevel.id;
+      }
+    }
+
+    throw new ConflictException({
+      code: "QUOTE_SERVICE_LEVEL_NOT_FOUND",
+      message: "A monthly quote line does not reference an active service level",
+    });
+  }
+
+  private async existingSpecialistIdsForService(input: {
+    clientId: string;
+    monthlyServiceId?: string;
+    oneTimeServiceId?: string;
+  }): Promise<string[]> {
+    const scopes = await this.database.prisma.specialistServiceScope.findMany({
+      where: {
+        clientId: input.clientId,
+        status: "ACTIVE",
+        ...(input.monthlyServiceId ? { monthlyServiceId: input.monthlyServiceId } : {}),
+        ...(input.oneTimeServiceId ? { oneTimeServiceId: input.oneTimeServiceId } : {}),
+        user: {
+          status: "ACTIVE",
+          userType: "INTERNAL",
+          roles: { some: { role: { code: SPECIALIST_ROLE_CODE, status: "ACTIVE" } } },
+        },
+      },
+      orderBy: [{ isPrimary: "desc" }, { startsAt: "asc" }],
+      select: { userId: true },
+    });
+    return scopes.map((scope) => scope.userId);
+  }
+
+  private async assertActiveSpecialists(ids: string[]): Promise<void> {
+    if (ids.length === 0) {
+      return;
+    }
+    const specialists = await this.database.prisma.user.findMany({
+      where: {
+        id: { in: ids },
+        status: "ACTIVE",
+        userType: "INTERNAL",
+        roles: { some: { role: { code: SPECIALIST_ROLE_CODE, status: "ACTIVE" } } },
+      },
+      select: { id: true },
+    });
+    const found = new Set(specialists.map((specialist) => specialist.id));
+    const missingIds = ids.filter((id) => !found.has(id));
+    if (missingIds.length > 0) {
+      throw new BadRequestException({
+        code: "INVALID_SPECIALIST_ASSIGNMENT",
+        message: "One or more selected specialists are unavailable",
+        missingIds,
+      });
+    }
+  }
+
+  private async createOrLinkPortalUserInTransaction(
+    transaction: Prisma.TransactionClient,
+    clientId: string,
+    input: NonNullable<QuoteOnboardingDto["portalUser"]>,
+    temporaryPasswordHash: string,
+    now: Date,
+  ) {
+    const email = input.email.trim().toLowerCase();
+    const displayName = input.displayName.trim();
+    const role = await transaction.role.findUnique({
+      where: { code: CLIENT_ROLE_CODE },
+      select: { id: true, status: true },
+    });
+    if (!role || role.status !== "ACTIVE") {
+      throw new BadRequestException({
+        code: "CLIENT_ROLE_NOT_CONFIGURED",
+        message: "The client role is not configured",
+      });
+    }
+
+    const existing = await transaction.user.findUnique({
+      where: { email },
+      include: {
+        clientAssignments: {
+          where: { clientId, roleCode: CLIENT_ROLE_CODE },
+          select: { id: true },
+        },
+        roles: { include: { role: true } },
+      },
+    });
+    if (existing && existing.userType !== "EXTERNAL") {
+      throw new ConflictException({
+        code: "PORTAL_USER_EMAIL_ALREADY_INTERNAL",
+        message: "The email is already assigned to an internal user",
+      });
+    }
+
+    if (existing) {
+      if (
+        !existing.roles.some(({ role: assignedRole }) => assignedRole.code === CLIENT_ROLE_CODE)
+      ) {
+        await transaction.userRole.create({
+          data: { userId: existing.id, roleId: role.id },
+        });
+      }
+      if (existing.clientAssignments.length === 0) {
+        await transaction.clientAssignment.create({
+          data: {
+            clientId,
+            userId: existing.id,
+            roleCode: CLIENT_ROLE_CODE,
+            startsAt: now,
+          },
+        });
+      }
+      await transaction.user.update({
+        where: { id: existing.id },
+        data: {
+          displayName,
+          preferredLocale: input.preferredLocale ?? existing.preferredLocale ?? "ar",
+          status: "ACTIVE",
+        },
+      });
+      return {
+        id: existing.id,
+        email,
+        displayName,
+        created: false,
+        temporaryPasswordAssigned: false,
+      };
+    }
+
+    const created = await transaction.user.create({
+      data: {
+        email,
+        displayName,
+        preferredLocale: input.preferredLocale ?? "ar",
+        userType: "EXTERNAL",
+        status: "ACTIVE",
+        passwordHash: temporaryPasswordHash,
+        passwordChangedAt: null,
+        roles: {
+          create: {
+            roleId: role.id,
+          },
+        },
+        clientAssignments: {
+          create: {
+            clientId,
+            roleCode: CLIENT_ROLE_CODE,
+            startsAt: now,
+          },
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+      },
+    });
+
+    return {
+      ...created,
+      created: true,
+      temporaryPasswordAssigned: true,
+    };
+  }
+
+  private async ensureQuoteSubscriptionInTransaction(
+    transaction: Prisma.TransactionClient,
+    quote: Awaited<ReturnType<QuotesService["requireAccessibleQuote"]>>,
+    services: OnboardingServiceTarget[],
+    now: Date,
+  ) {
+    const clientId = quote.clientId!;
+    const monthlyServices = services.filter(
+      (service) =>
+        service.lineType === "MONTHLY" &&
+        service.monthlyServiceRevisionId &&
+        service.serviceLevelId,
+    );
+    let subscription = await transaction.subscription.findFirst({
+      where: {
+        clientId,
+        status: "ACTIVE",
+        startsAt: { lte: now },
+        OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+      },
+      orderBy: [{ startsAt: "desc" }, { createdAt: "desc" }],
+      select: { id: true },
+    });
+    if (!subscription && monthlyServices.length > 0) {
+      subscription = await transaction.subscription.create({
+        data: {
+          clientId,
+          status: "ACTIVE",
+          startsAt: now,
+        },
+        select: { id: true },
+      });
+    }
+
+    const createdServiceIds: string[] = [];
+    const reusedServiceIds: string[] = [];
+    if (!subscription) {
+      return {
+        subscriptionId: null,
+        createdServiceIds,
+        reusedServiceIds,
+      };
+    }
+
+    for (const service of monthlyServices) {
+      const existing = await transaction.subscriptionService.findFirst({
+        where: {
+          subscription: {
+            clientId,
+            status: "ACTIVE",
+            startsAt: { lte: now },
+            OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+          },
+          monthlyServiceRevisionId: service.monthlyServiceRevisionId!,
+          serviceLevelId: service.serviceLevelId!,
+          status: "ACTIVE",
+          startsAt: { lte: now },
+          OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+        },
+        select: { id: true },
+      });
+      if (existing) {
+        reusedServiceIds.push(existing.id);
+        continue;
+      }
+
+      const scopeSnapshot = {
+        source: "QUOTE_ONBOARDING",
+        quoteId: quote.id,
+        quoteNumber: quote.quoteNumber,
+        quoteItemId: service.quoteItemId,
+        serviceCode: service.serviceCode,
+        serviceLevelLabel: service.serviceLevelLabel,
+      };
+      const created = await transaction.subscriptionService.create({
+        data: {
+          subscriptionId: subscription.id,
+          monthlyServiceRevisionId: service.monthlyServiceRevisionId!,
+          serviceLevelId: service.serviceLevelId!,
+          hoursAllocated: service.hoursAllocated ?? 0,
+          startsAt: now,
+          status: "ACTIVE",
+          scopeSnapshot: json(scopeSnapshot),
+        },
+        select: { id: true },
+      });
+      await transaction.subscriptionServiceHistory.create({
+        data: {
+          subscriptionServiceId: created.id,
+          effectiveAt: now,
+          changeType: "CREATED_FROM_ACCEPTED_QUOTE",
+          afterSnapshot: json(scopeSnapshot),
+          reason: "Quote onboarding after payment confirmation",
+        },
+      });
+      createdServiceIds.push(created.id);
+    }
+
+    return {
+      subscriptionId: subscription.id,
+      createdServiceIds,
+      reusedServiceIds,
+    };
+  }
+
+  private async replaceSpecialistScopesForServiceInTransaction(
+    transaction: Prisma.TransactionClient,
+    clientId: string,
+    service: OnboardingServiceTarget,
+    specialistIds: string[],
+    now: Date,
+  ): Promise<void> {
+    if (!service.monthlyServiceId && !service.oneTimeServiceId) {
+      return;
+    }
+    const serviceWhere = service.monthlyServiceId
+      ? { monthlyServiceId: service.monthlyServiceId }
+      : { oneTimeServiceId: service.oneTimeServiceId! };
+    const existingScopes = await transaction.specialistServiceScope.findMany({
+      where: {
+        clientId,
+        status: "ACTIVE",
+        ...serviceWhere,
+      },
+      select: { id: true, userId: true },
+    });
+    const selected = new Set(specialistIds);
+    const scopesToDisable = existingScopes.filter((scope) => !selected.has(scope.userId));
+    if (scopesToDisable.length > 0) {
+      await transaction.specialistServiceScope.updateMany({
+        where: { id: { in: scopesToDisable.map((scope) => scope.id) } },
+        data: { status: "DISABLED", endsAt: now },
+      });
+    }
+
+    for (const [index, specialistId] of specialistIds.entries()) {
+      const existing = await transaction.specialistServiceScope.findFirst({
+        where: {
+          userId: specialistId,
+          clientId,
+          ...serviceWhere,
+        },
+        select: { id: true },
+      });
+      const data = {
+        status: "ACTIVE" as const,
+        endsAt: null,
+        isPrimary: index === 0,
+      };
+      if (existing) {
+        await transaction.specialistServiceScope.update({
+          where: { id: existing.id },
+          data,
+        });
+      } else {
+        await transaction.specialistServiceScope.create({
+          data: {
+            userId: specialistId,
+            clientId,
+            ...serviceWhere,
+            startsAt: now,
+            ...data,
+          },
+        });
+      }
+    }
+  }
+
   private async snapshotLine(
     rawLine: unknown,
     index: number,
@@ -800,5 +1494,9 @@ export class QuotesService {
   private quoteNumber(): string {
     const date = new Date().toISOString().slice(0, 10).replaceAll("-", "");
     return `QT-${date}-${randomUUID().slice(0, 8).toUpperCase()}`;
+  }
+
+  private uniqueIds(values: string[]): string[] {
+    return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
   }
 }

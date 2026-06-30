@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Quote, QuoteSummary } from "../../lib/quote-types";
 import { QuoteDetail } from "./quote-detail";
 import { QuoteList } from "./quote-list";
@@ -160,6 +160,48 @@ function quoteSummary(status: Quote["status"] = "ISSUED"): QuoteSummary {
   };
 }
 
+function onboardingOptions() {
+  return {
+    quote: {
+      id: "quote-1",
+      quoteNumber: "QT-20260622-ABC12345",
+      status: "ACCEPTED",
+    },
+    client: {
+      id: "client-1",
+      code: "CLIENT-1",
+      name: "Acme",
+      legalName: "Acme LLC",
+      defaultPortalEmail: "client-1@client.jzoom.local",
+    },
+    portalUsers: [],
+    specialists: [
+      {
+        id: "specialist-1",
+        email: "specialist@example.com",
+        displayName: "Specialist One",
+      },
+    ],
+    services: [
+      {
+        quoteItemId: "item-1",
+        lineType: "MONTHLY",
+        serviceCode: "MONTHLY-OPS",
+        nameAr: "خدمة شهرية",
+        nameEn: "Monthly operations",
+        serviceLevelLabel: "Growth",
+        hoursAllocated: 20,
+        monthlyServiceId: "monthly-service-1",
+        monthlyServiceRevisionId: "monthly-service-revision-1",
+        oneTimeServiceId: null,
+        oneTimeServiceRevisionId: null,
+        serviceLevelId: "service-level-1",
+        existingSpecialistIds: [],
+      },
+    ],
+  };
+}
+
 describe("Quote snapshot UI", () => {
   beforeEach(() => {
     pushMock.mockReset();
@@ -260,7 +302,8 @@ describe("Quote snapshot UI", () => {
           acceptedAt: "2026-06-22T02:00:00.000Z",
           issueDate: "2026-06-22T01:00:00.000Z",
         }),
-      );
+      )
+      .mockImplementationOnce(() => jsonResponse(onboardingOptions()));
 
     render(<QuoteDetail initialQuote={quote()} />);
     expect(screen.getByText("Acme LLC")).toBeInTheDocument();
@@ -281,10 +324,16 @@ describe("Quote snapshot UI", () => {
     expect(await screen.findByText("Quote status changed to Issued.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Confirm approval & payment" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     expect(fetchMock.mock.calls[1]?.[0]).toBe("http://localhost:4000/api/v1/quotes/quote-1/accept");
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({});
     expect(await screen.findByText("Externally confirmed")).toBeInTheDocument();
+    const onboardingDialog = await screen.findByRole("dialog", {
+      name: "Activate client services after payment",
+    });
+    expect(onboardingDialog).toBeInTheDocument();
+    expect(within(onboardingDialog).getByText("Monthly operations")).toBeInTheDocument();
+    expect(within(onboardingDialog).getByLabelText("Specialist One")).toBeInTheDocument();
   });
 
   it("renders compact lifecycle actions on the quote list", async () => {

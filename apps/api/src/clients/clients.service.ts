@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Inject, Injectable } from "@nestjs/common";
 import type { Prisma } from "@jzoom/database";
+import { DEFAULT_TEMPORARY_PASSWORD } from "../auth/auth.constants.js";
 import { AuthAuditService } from "../auth/audit.service.js";
 import type { RequestMetadata } from "../auth/auth.types.js";
 import { PasswordHasherService } from "../auth/password-hasher.service.js";
@@ -238,7 +239,7 @@ export class ClientsService {
     }
 
     const now = new Date();
-    const passwordHash = await this.passwords.hash(input.password);
+    const passwordHash = await this.passwords.hash(input.password ?? DEFAULT_TEMPORARY_PASSWORD);
     const created = await this.database.prisma.user.create({
       data: {
         email,
@@ -247,7 +248,7 @@ export class ClientsService {
         userType: "EXTERNAL",
         status: "ACTIVE",
         passwordHash,
-        passwordChangedAt: now,
+        passwordChangedAt: null,
         roles: {
           create: {
             roleId: role.id,
@@ -280,6 +281,7 @@ export class ClientsService {
           email: created.email,
           displayName: created.displayName,
           roleCode: CLIENT_ROLE_CODE,
+          temporaryPasswordAssigned: true,
         },
         severity: "HIGH",
       },

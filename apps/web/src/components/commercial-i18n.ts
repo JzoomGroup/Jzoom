@@ -4,6 +4,7 @@ export const commercialCopy = {
   ar: {
     acceptedQuotes: "العروض المؤكدة خارج النظام",
     acceptQuote: "تأكيد الموافقة والدفع",
+    activateClientServices: "تفعيل خدمات العميل",
     additional: "إضافية",
     allStatuses: "كل الحالات",
     allInvoices: "كل الفواتير",
@@ -113,6 +114,7 @@ export const commercialCopy = {
   en: {
     acceptedQuotes: "Externally confirmed quotes",
     acceptQuote: "Confirm approval & payment",
+    activateClientServices: "Activate client services",
     additional: "Additional",
     allStatuses: "All statuses",
     allInvoices: "All invoices",

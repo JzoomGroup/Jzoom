@@ -432,6 +432,10 @@ function eventLabel(eventCode: string, locale: SupportedLocale): string {
     },
     QUOTE_ACCEPTED: { ar: "قبول عرض سعر", en: "Quote accepted" },
     QUOTE_CANCELLED: { ar: "إلغاء عرض سعر", en: "Quote cancelled" },
+    QUOTE_CLIENT_ONBOARDING_COMPLETED: {
+      ar: "تفعيل خدمات العميل بعد الدفع",
+      en: "Client services activated after payment",
+    },
     QUOTE_CREATED: { ar: "إنشاء عرض سعر", en: "Quote created" },
     QUOTE_EXPIRED: { ar: "انتهاء عرض سعر", en: "Quote expired" },
     QUOTE_PDF_GENERATED: { ar: "توليد PDF لعرض السعر", en: "Quote PDF generated" },

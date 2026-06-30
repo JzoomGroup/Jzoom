@@ -152,10 +152,11 @@ export class CreateClientPortalUserDto {
   displayName!: string;
 
   @ApiProperty({ type: String, minLength: 8, maxLength: 200 })
+  @IsOptional()
   @IsString()
   @MinLength(8)
   @MaxLength(200)
-  password!: string;
+  password?: string;
 
   @ApiPropertyOptional({ enum: ["ar", "en"], default: "ar" })
   @IsOptional()

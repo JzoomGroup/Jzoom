@@ -1,7 +1,14 @@
 "use client";
 
 import { catalogErrorMessage, catalogRequest } from "./catalog-client";
-import type { Quote, QuoteStatus, QuoteSummary } from "./quote-types";
+import type {
+  Quote,
+  QuoteOnboardingInput,
+  QuoteOnboardingOptions,
+  QuoteOnboardingResult,
+  QuoteStatus,
+  QuoteSummary,
+} from "./quote-types";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
 const lifecyclePaths = {
@@ -44,6 +51,20 @@ export function changeQuoteStatus(id: string, status: QuoteStatus, note?: string
 
 export function quotePdfUrl(id: string): string {
   return `${apiBaseUrl}/quotes/${encodeURIComponent(id)}/pdf`;
+}
+
+export function getQuoteOnboardingOptions(id: string): Promise<QuoteOnboardingOptions> {
+  return quoteRequest<QuoteOnboardingOptions>(`quotes/${id}/onboarding-options`);
+}
+
+export function completeQuoteOnboarding(
+  id: string,
+  input: QuoteOnboardingInput,
+): Promise<QuoteOnboardingResult> {
+  return quoteRequest<QuoteOnboardingResult>(`quotes/${id}/onboarding`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }
 
 export function advanceQuoteLifecycle(
