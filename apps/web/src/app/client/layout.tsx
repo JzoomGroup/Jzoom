@@ -7,6 +7,9 @@ export default async function ClientLayout({ children }: { children: ReactNode }
   if (!user) {
     redirect("/login");
   }
+  if (user.mustChangePassword) {
+    redirect("/change-password");
+  }
   if (!user.roles.includes("ROLE-CLIENT")) {
     redirect("/403");
   }

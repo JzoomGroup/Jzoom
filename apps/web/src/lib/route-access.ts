@@ -1,6 +1,7 @@
 import type { CurrentUser } from "./auth";
 
 type PostLoginRoute =
+  | "/change-password"
   | "/admin"
   | "/client"
   | "/management"
@@ -12,9 +13,12 @@ type PostLoginRoute =
 export function protectedRouteRedirect(
   user: CurrentUser | null,
   adminOnly = false,
-): "/login" | "/403" | null {
+): "/login" | "/change-password" | "/403" | null {
   if (!user) {
     return "/login";
+  }
+  if (user.mustChangePassword) {
+    return "/change-password";
   }
 
   return adminOnly && !user.roles.includes("ROLE-ADMIN") ? "/403" : null;

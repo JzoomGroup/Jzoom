@@ -25,6 +25,7 @@ export class AccessService {
         revokedAt: true,
         user: {
           select: {
+            passwordChangedAt: true,
             status: true,
             sessionVersion: true,
           },
@@ -133,6 +134,7 @@ export class AccessService {
       displayName: user.displayName,
       preferredLocale: user.preferredLocale,
       userType: user.userType,
+      mustChangePassword: user.passwordChangedAt === null,
       roles: activeRoles.map((role) => role.code),
       permissions: [...permissions.entries()]
         .filter(([, allowed]) => allowed)

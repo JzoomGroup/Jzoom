@@ -1,5 +1,6 @@
 import { SetMetadata } from "@nestjs/common";
 import {
+  ALLOW_PASSWORD_CHANGE_REQUIRED_KEY,
   IS_PUBLIC_KEY,
   REQUIRED_PERMISSIONS_KEY,
   REQUIRED_ROLES_KEY,
@@ -8,6 +9,9 @@ import {
 import type { ScopeRequirement } from "./auth.types.js";
 
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
+
+export const AllowPasswordChangeRequired = () =>
+  SetMetadata(ALLOW_PASSWORD_CHANGE_REQUIRED_KEY, true);
 
 export const RequirePermissions = (...permissionCodes: string[]) =>
   SetMetadata(REQUIRED_PERMISSIONS_KEY, permissionCodes);

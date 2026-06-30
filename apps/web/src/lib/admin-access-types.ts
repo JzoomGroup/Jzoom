@@ -75,6 +75,7 @@ export interface AdminAccessUser {
   status: "INVITED" | "ACTIVE" | "DISABLED" | "ARCHIVED";
   lockedUntil: string | null;
   lastLoginAt: string | null;
+  mustChangePassword: boolean;
   sessionVersion: number;
   createdAt: string;
   updatedAt: string;

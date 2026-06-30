@@ -15,6 +15,7 @@ function principal(overrides: Partial<AuthenticatedPrincipal> = {}): Authenticat
     displayName: "User",
     preferredLocale: "en",
     userType: "INTERNAL",
+    mustChangePassword: false,
     roles: ["ROLE-ADMIN"],
     permissions: [],
     scopes: [],

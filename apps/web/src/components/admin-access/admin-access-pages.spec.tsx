@@ -56,6 +56,7 @@ const user: AdminAccessUser = {
   id: "user-1",
   lastLoginAt: "2026-06-01T09:00:00.000Z",
   lockedUntil: null,
+  mustChangePassword: false,
   permissionOverrides: [
     {
       effect: "ALLOW",
@@ -134,7 +135,7 @@ describe("Admin access pages", () => {
     render(<AdminAuditLogsPageContent locale="ar" logs={[auditLog]} />);
 
     expect(screen.getByRole("heading", { level: 1, name: "سجل التدقيق" })).toBeInTheDocument();
-    expect(screen.getByText("منع وصول بسبب الصلاحية")).toBeInTheDocument();
+    expect(screen.getAllByText("منع وصول بسبب الصلاحية")).not.toHaveLength(0);
     expect(screen.getAllByText("حرج")).not.toHaveLength(0);
     expect(screen.getByText("AUTH_PERMISSION_DENIED")).toBeInTheDocument();
     expect(screen.getAllByText("صلاحية غير متوفرة")).not.toHaveLength(0);

@@ -1,8 +1,13 @@
 import { BadRequestException, ConflictException, Inject, Injectable } from "@nestjs/common";
 import type { Prisma } from "@jzoom/database";
 import { DatabaseService } from "../database/database.service.js";
-import { ADMIN_ROLE_CODE, CRITICAL_ADMIN_PERMISSIONS } from "./auth.constants.js";
+import {
+  ADMIN_ROLE_CODE,
+  CRITICAL_ADMIN_PERMISSIONS,
+  DEFAULT_TEMPORARY_PASSWORD,
+} from "./auth.constants.js";
 import { AuthAuditService } from "./audit.service.js";
+import { PasswordHasherService } from "./password-hasher.service.js";
 import { TokenService } from "./token.service.js";
 import type { RequestMetadata } from "./auth.types.js";
 import type {
@@ -33,6 +38,7 @@ export class AdminAccessService {
   constructor(
     @Inject(DatabaseService) private readonly database: DatabaseService,
     @Inject(TokenService) private readonly tokens: TokenService,
+    @Inject(PasswordHasherService) private readonly passwords: PasswordHasherService,
     @Inject(AuthAuditService) private readonly audit: AuthAuditService,
   ) {}
 
@@ -50,6 +56,7 @@ export class AdminAccessService {
             status: true,
             lockedUntil: true,
             lastLoginAt: true,
+            passwordChangedAt: true,
             sessionVersion: true,
             createdAt: true,
             updatedAt: true,
@@ -235,6 +242,7 @@ export class AdminAccessService {
     return {
       users: users.map((user) => ({
         ...user,
+        mustChangePassword: user.passwordChangedAt === null,
         roles: user.roles.map(({ role }) => role),
         specialistServiceScopes: user.specialistServiceScopes.map((scope) => ({
           ...scope,
@@ -479,7 +487,6 @@ export class AdminAccessService {
   async createOperatingUser(
     input: CreateOperatingUserDto,
     actorId: string,
-    exposeToken: boolean,
     metadata: RequestMetadata,
   ) {
     const email = input.email.trim().toLowerCase();
@@ -504,13 +511,18 @@ export class AdminAccessService {
     const roleCode = role.code;
 
     await this.assertScopeReferences(input, roleCode);
-    const rawToken = this.tokens.issue();
+    const temporaryPasswordHash = await this.passwords.hash(DEFAULT_TEMPORARY_PASSWORD);
     const userId = await this.database.prisma.$transaction(async (transaction) => {
       const user = existing
         ? await transaction.user.update({
             where: { id: existing.id },
             data: {
               displayName: input.displayName.trim(),
+              failedLoginCount: 0,
+              lockedUntil: null,
+              passwordChangedAt: null,
+              passwordHash: temporaryPasswordHash,
+              status: "ACTIVE",
               userType: "INTERNAL",
             },
           })
@@ -518,9 +530,11 @@ export class AdminAccessService {
             data: {
               email,
               displayName: input.displayName.trim(),
+              passwordChangedAt: null,
+              passwordHash: temporaryPasswordHash,
               preferredLocale: "ar",
               userType: "INTERNAL",
-              status: "INVITED",
+              status: "ACTIVE",
             },
           });
 
@@ -529,17 +543,8 @@ export class AdminAccessService {
         data: { userId: user.id, roleId: role.id },
       });
       await transaction.authToken.updateMany({
-        where: { userId: user.id, type: "INVITATION", consumedAt: null },
+        where: { userId: user.id, consumedAt: null },
         data: { consumedAt: new Date() },
-      });
-      await transaction.authToken.create({
-        data: {
-          userId: user.id,
-          type: "INVITATION",
-          tokenHash: this.tokens.hash(rawToken),
-          expiresAt: new Date(Date.now() + 48 * 60 * 60_000),
-          createdById: actorId,
-        },
       });
       await this.replaceOperatingScopeInTransaction(transaction, user.id, [roleCode], input);
       return user.id;
@@ -559,6 +564,7 @@ export class AdminAccessService {
           oneTimeServiceIds: this.uniqueIds(input.oneTimeServiceIds),
           supervisorId: input.supervisorId ?? null,
           specialistIds: this.uniqueIds(input.specialistIds),
+          temporaryPasswordAssigned: true,
         },
         severity: "HIGH",
       },
@@ -567,8 +573,61 @@ export class AdminAccessService {
 
     return {
       snapshot: await this.listUsers(),
-      ...(exposeToken ? { invitationToken: rawToken } : {}),
+      temporaryPasswordAssigned: true,
     };
+  }
+
+  async resetUserPasswordToDefault(
+    userId: string,
+    actorId: string,
+    metadata: RequestMetadata,
+  ): Promise<void> {
+    const user = await this.database.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, status: true },
+    });
+    if (!user || user.status === "ARCHIVED") {
+      throw new BadRequestException({
+        code: "USER_NOT_FOUND",
+        message: "The user could not be found",
+      });
+    }
+
+    const now = new Date();
+    const passwordHash = await this.passwords.hash(DEFAULT_TEMPORARY_PASSWORD);
+    await this.database.prisma.$transaction(async (transaction) => {
+      await transaction.user.update({
+        where: { id: userId },
+        data: {
+          passwordHash,
+          passwordChangedAt: null,
+          failedLoginCount: 0,
+          lockedUntil: null,
+          status: "ACTIVE",
+          sessionVersion: { increment: 1 },
+        },
+      });
+      await transaction.authSession.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: now, revokeReason: "admin_password_reset_to_default" },
+      });
+      await transaction.authToken.updateMany({
+        where: { userId, consumedAt: null },
+        data: { consumedAt: now },
+      });
+    });
+
+    await this.audit.record(
+      {
+        actorId,
+        eventCode: "AUTH_PASSWORD_RESET_TO_DEFAULT",
+        entityType: "User",
+        entityId: userId,
+        after: { temporaryPasswordAssigned: true },
+        severity: "HIGH",
+      },
+      metadata,
+    );
   }
 
   async replaceOperatingScope(

@@ -81,7 +81,7 @@ export interface CreateOperatingUserPayload {
 
 export interface CreateOperatingUserResponse {
   snapshot: AdminUsersSnapshot;
-  invitationToken?: string;
+  temporaryPasswordAssigned?: boolean;
 }
 
 export function createOperatingUser(
@@ -90,5 +90,11 @@ export function createOperatingUser(
   return adminAccessRequest<CreateOperatingUserResponse>("auth/admin/users", {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+export function resetOperatingUserPassword(userId: string): Promise<{ reset: boolean }> {
+  return adminAccessRequest<{ reset: boolean }>(`auth/admin/users/${userId}/reset-password`, {
+    method: "POST",
   });
 }

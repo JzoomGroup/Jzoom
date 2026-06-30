@@ -5,6 +5,7 @@ import type { ApiEnvironment } from "@jzoom/config";
 import { createDatabaseClient, type JzoomDatabaseClient } from "@jzoom/database";
 import request from "supertest";
 import { AppModule } from "../src/app.module.js";
+import { DEFAULT_TEMPORARY_PASSWORD } from "../src/auth/auth.constants.js";
 import { PasswordHasherService } from "../src/auth/password-hasher.service.js";
 import { configureApiApplication } from "../src/bootstrap.js";
 
@@ -299,15 +300,45 @@ describeWithDatabase("PR 3 PostgreSQL authentication and RBAC", () => {
       })
       .expect(201);
 
-    expect(response.body.invitationToken).toEqual(expect.any(String));
+    expect(response.body.temporaryPasswordAssigned).toBe(true);
     expect(response.body.snapshot.users).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           displayName: "Operating Admin",
           email: "operator@pr3.test",
+          mustChangePassword: true,
+          status: "ACTIVE",
         }),
       ]),
     );
+
+    const operator = await login("operator@pr3.test", DEFAULT_TEMPORARY_PASSWORD);
+    const profile = await operator.agent.get("/api/v1/auth/me").expect(200);
+    expect(profile.body.user.mustChangePassword).toBe(true);
+
+    await operator.agent
+      .patch("/api/v1/auth/me/password")
+      .set("X-CSRF-Token", operator.csrf)
+      .send({ newPassword: "NewPass123", confirmPassword: "NewPass123" })
+      .expect(200);
+
+    const updatedProfile = await operator.agent.get("/api/v1/auth/me").expect(200);
+    expect(updatedProfile.body.user.mustChangePassword).toBe(false);
+  });
+
+  it("lets Admins reset a user password to the temporary default", async () => {
+    const client = await login("client@pr3.test");
+    const admin = await login("admin@pr3.test");
+
+    await admin.agent
+      .post(`/api/v1/auth/admin/users/${clientId}/reset-password`)
+      .set("X-CSRF-Token", admin.csrf)
+      .expect(200);
+
+    await client.agent.get("/api/v1/auth/me").expect(401);
+    const resetClient = await login("client@pr3.test", DEFAULT_TEMPORARY_PASSWORD);
+    const profile = await resetClient.agent.get("/api/v1/auth/me").expect(200);
+    expect(profile.body.user.mustChangePassword).toBe(true);
   });
 
   it("prevents disabling or de-roling the last active Admin", async () => {

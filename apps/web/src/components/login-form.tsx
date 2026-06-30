@@ -8,6 +8,7 @@ import { syncDocumentLocale } from "./locale-document-sync";
 
 interface LoginResponse {
   user: {
+    mustChangePassword?: boolean;
     preferredLocale?: string;
     roles: string[];
   };
@@ -67,7 +68,9 @@ export function LoginForm({ locale = "en" }: { locale?: string }) {
 
     const body = (await response.json()) as LoginResponse;
     syncDocumentLocale(body.user.preferredLocale ?? currentLocale);
-    router.replace(postLoginRoute(body.user.roles));
+    router.replace(
+      body.user.mustChangePassword ? "/change-password" : postLoginRoute(body.user.roles),
+    );
     router.refresh();
   }
 
@@ -83,7 +86,7 @@ export function LoginForm({ locale = "en" }: { locale?: string }) {
           name="password"
           type="password"
           autoComplete="current-password"
-          minLength={12}
+          minLength={8}
           required
         />
       </label>

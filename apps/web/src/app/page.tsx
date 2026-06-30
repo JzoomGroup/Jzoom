@@ -8,6 +8,9 @@ export default async function HomePage() {
   if (!user) {
     return redirect("/login");
   }
+  if (user.mustChangePassword) {
+    return redirect("/change-password");
+  }
 
   return redirect(postLoginRoute(user.roles));
 }

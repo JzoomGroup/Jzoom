@@ -6,6 +6,7 @@ export interface CurrentUser {
   displayName: string;
   preferredLocale: string;
   userType: "INTERNAL" | "EXTERNAL";
+  mustChangePassword: boolean;
   roles: string[];
   permissions: string[];
 }

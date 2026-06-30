@@ -29,6 +29,7 @@ describe("HomePage", () => {
       displayName: "Admin",
       preferredLocale: "ar",
       userType: "INTERNAL",
+      mustChangePassword: false,
       roles: ["ROLE-ADMIN"],
       permissions: [],
     });
@@ -36,5 +37,22 @@ describe("HomePage", () => {
     await HomePage();
 
     expect(redirectMock).toHaveBeenCalledWith("/admin");
+  });
+
+  it("redirects authenticated users to password change when required", async () => {
+    getCurrentUserMock.mockResolvedValue({
+      id: "user-1",
+      email: "admin@example.com",
+      displayName: "Admin",
+      preferredLocale: "ar",
+      userType: "INTERNAL",
+      mustChangePassword: true,
+      roles: ["ROLE-ADMIN"],
+      permissions: [],
+    });
+
+    await HomePage();
+
+    expect(redirectMock).toHaveBeenCalledWith("/change-password");
   });
 });

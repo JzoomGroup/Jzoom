@@ -1,12 +1,18 @@
-import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import { ForbiddenException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import type { CanActivate, ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { AccessService } from "./access.service.js";
-import { AUTH_ENVIRONMENT, IS_PUBLIC_KEY } from "./auth.constants.js";
+import {
+  ALLOW_PASSWORD_CHANGE_REQUIRED_KEY,
+  AUTH_ENVIRONMENT,
+  IS_PUBLIC_KEY,
+} from "./auth.constants.js";
 import { parseCookies } from "./cookie.js";
 import { TokenService } from "./token.service.js";
 import type { AuthRuntimeEnvironment } from "./auth.types.js";
 import type { RequestWithId } from "../request-context/request-with-id.js";
+
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -38,6 +44,21 @@ export class AuthGuard implements CanActivate {
     }
 
     request.auth = principal;
+    const allowPasswordChangeRequired = this.reflector.getAllAndOverride<boolean>(
+      ALLOW_PASSWORD_CHANGE_REQUIRED_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    if (
+      principal.mustChangePassword &&
+      !allowPasswordChangeRequired &&
+      !SAFE_METHODS.has(request.method)
+    ) {
+      throw new ForbiddenException({
+        code: "PASSWORD_CHANGE_REQUIRED",
+        message: "The password must be changed before continuing",
+      });
+    }
+
     return true;
   }
 

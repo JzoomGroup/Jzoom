@@ -1,7 +1,7 @@
 import { BadRequestException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { DatabaseService } from "../database/database.service.js";
 import { AccessService } from "./access.service.js";
-import { AUTH_ENVIRONMENT } from "./auth.constants.js";
+import { AUTH_ENVIRONMENT, DEFAULT_TEMPORARY_PASSWORD } from "./auth.constants.js";
 import { AuthAuditService } from "./audit.service.js";
 import { PasswordHasherService } from "./password-hasher.service.js";
 import { TokenService } from "./token.service.js";
@@ -129,6 +129,48 @@ export class AuthService {
         before: { preferredLocale: user.preferredLocale },
         after: { preferredLocale },
         severity: "LOW",
+      },
+      metadata,
+    );
+  }
+
+  async changePassword(
+    userId: string,
+    newPassword: string,
+    confirmPassword: string,
+    metadata: RequestMetadata,
+  ): Promise<void> {
+    if (newPassword !== confirmPassword) {
+      throw new BadRequestException({
+        code: "PASSWORD_CONFIRMATION_MISMATCH",
+        message: "The password confirmation does not match",
+      });
+    }
+    if (newPassword === DEFAULT_TEMPORARY_PASSWORD) {
+      throw new BadRequestException({
+        code: "PASSWORD_CANNOT_BE_DEFAULT",
+        message: "Choose a password different from the temporary default password",
+      });
+    }
+
+    const passwordHash = await this.passwords.hash(newPassword);
+    const now = new Date();
+    await this.database.prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash,
+        passwordChangedAt: now,
+        failedLoginCount: 0,
+        lockedUntil: null,
+      },
+    });
+    await this.audit.record(
+      {
+        actorId: userId,
+        eventCode: "AUTH_PASSWORD_CHANGED",
+        entityType: "User",
+        entityId: userId,
+        severity: "HIGH",
       },
       metadata,
     );

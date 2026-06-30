@@ -13,14 +13,14 @@ import {
   MinLength,
 } from "class-validator";
 
-const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{12,}$/;
+const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
 export class LoginDto {
   @ApiProperty({ type: String, example: "person@example.com" })
   @IsEmail()
   email!: string;
 
-  @ApiProperty({ type: String, format: "password", minLength: 12 })
+  @ApiProperty({ type: String, format: "password", minLength: 8 })
   @IsString()
   @MaxLength(256)
   password!: string;
@@ -38,7 +38,7 @@ export class PasswordResetConfirmDto {
   @MinLength(20)
   token!: string;
 
-  @ApiProperty({ type: String, format: "password", minLength: 12 })
+  @ApiProperty({ type: String, format: "password", minLength: 8 })
   @Matches(PASSWORD_PATTERN, {
     message: "password must contain upper-case, lower-case, and numeric characters",
   })
@@ -151,6 +151,22 @@ export class UpdateProfilePreferencesDto {
   @ApiProperty({ type: String, enum: ["ar", "en"] })
   @IsIn(["ar", "en"])
   preferredLocale!: "ar" | "en";
+}
+
+export class ChangePasswordDto {
+  @ApiProperty({ type: String, format: "password", minLength: 8 })
+  @Matches(PASSWORD_PATTERN, {
+    message: "newPassword must contain upper-case, lower-case, and numeric characters",
+  })
+  @MaxLength(256)
+  newPassword!: string;
+
+  @ApiProperty({ type: String, format: "password", minLength: 8 })
+  @Matches(PASSWORD_PATTERN, {
+    message: "confirmPassword must contain upper-case, lower-case, and numeric characters",
+  })
+  @MaxLength(256)
+  confirmPassword!: string;
 }
 
 export class ReplaceUserRolesDto {

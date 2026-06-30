@@ -272,6 +272,7 @@ function currentUser(overrides: Partial<CurrentUser> = {}): CurrentUser {
     id: "admin-user-1",
     email: "admin@example.com",
     displayName: "Admin User",
+    mustChangePassword: false,
     permissions: [],
     preferredLocale: "en",
     roles: ["ROLE-ADMIN"],

@@ -5,6 +5,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import {
   adminAccessErrorMessage,
   createOperatingUser,
+  resetOperatingUserPassword,
   type CreateOperatingUserPayload,
 } from "../../lib/admin-access-client";
 import {
@@ -350,6 +351,7 @@ function eventLabel(eventCode: string, locale: SupportedLocale): string {
     AUTH_LOGIN_FAILED: { ar: "محاولة دخول فاشلة", en: "Failed login attempt" },
     AUTH_LOGIN_SUCCEEDED: { ar: "تسجيل دخول ناجح", en: "Successful login" },
     AUTH_LOGOUT: { ar: "تسجيل خروج", en: "Sign out" },
+    AUTH_PASSWORD_CHANGED: { ar: "تغيير كلمة المرور", en: "Password changed" },
     AUTH_PASSWORD_RESET_COMPLETED: {
       ar: "إتمام إعادة تعيين كلمة المرور",
       en: "Password reset completed",
@@ -357,6 +359,10 @@ function eventLabel(eventCode: string, locale: SupportedLocale): string {
     AUTH_PASSWORD_RESET_REQUESTED: {
       ar: "طلب إعادة تعيين كلمة المرور",
       en: "Password reset requested",
+    },
+    AUTH_PASSWORD_RESET_TO_DEFAULT: {
+      ar: "إعادة كلمة المرور للافتراضية",
+      en: "Password reset to default",
     },
     AUTH_PERMISSION_DENIED: { ar: "منع وصول بسبب الصلاحية", en: "Permission denied" },
     AUTH_PROFILE_PREFERENCES_UPDATED: {
@@ -674,6 +680,7 @@ export function AdminUsersPageContent({
     specialistIds: [],
   });
   const [saving, setSaving] = useState(false);
+  const [resettingUserId, setResettingUserId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(
     null,
   );
@@ -736,12 +743,52 @@ export function AdminUsersPageContent({
         text:
           lang === "ar"
             ? "تم إنشاء المستخدم التشغيلي وربط نطاقه بنجاح."
-            : "Operating user created and scoped successfully.",
+            : "Operating user created with the default temporary password. They must change it at first sign-in.",
       });
     } catch (error) {
       setFeedback({ type: "error", text: adminAccessErrorMessage(error) });
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleResetPassword(user: AdminAccessUser) {
+    const message =
+      lang === "ar"
+        ? `هل تريد إعادة كلمة مرور ${user.displayName} إلى كلمة المرور الافتراضية؟ سيُطلب منه تغييرها عند الدخول.`
+        : `Reset ${user.displayName}'s password to the default temporary password? They will be required to change it at sign-in.`;
+    if (!window.confirm(message)) {
+      return;
+    }
+
+    setResettingUserId(user.id);
+    setFeedback(null);
+    try {
+      await resetOperatingUserPassword(user.id);
+      setCurrentUsers((users) =>
+        users.map((currentUser) =>
+          currentUser.id === user.id
+            ? {
+                ...currentUser,
+                lockedUntil: null,
+                mustChangePassword: true,
+                status: "ACTIVE",
+                sessionVersion: currentUser.sessionVersion + 1,
+              }
+            : currentUser,
+        ),
+      );
+      setFeedback({
+        type: "success",
+        text:
+          lang === "ar"
+            ? "تمت إعادة كلمة المرور إلى الافتراضية. سيُطلب من المستخدم تغييرها عند الدخول."
+            : "Password reset to the default temporary password. The user must change it at sign-in.",
+      });
+    } catch (error) {
+      setFeedback({ type: "error", text: adminAccessErrorMessage(error) });
+    } finally {
+      setResettingUserId(null);
     }
   }
 
@@ -1090,6 +1137,11 @@ export function AdminUsersPageContent({
                   {user.permissionOverrides.length > 0 ? (
                     <span className="attention">{t.usersWithOverrides}</span>
                   ) : null}
+                  {user.mustChangePassword ? (
+                    <span className="attention">
+                      {lang === "ar" ? "يتطلب تغيير كلمة المرور" : "Password change required"}
+                    </span>
+                  ) : null}
                 </div>
 
                 {operatingScopeLabels(user, lang).length > 0 ? (
@@ -1132,6 +1184,22 @@ export function AdminUsersPageContent({
                     </div>
                   )}
                 </details>
+                <div className="operating-user-actions">
+                  <button
+                    className="button-secondary"
+                    type="button"
+                    disabled={resettingUserId === user.id}
+                    onClick={() => void handleResetPassword(user)}
+                  >
+                    {resettingUserId === user.id
+                      ? lang === "ar"
+                        ? "جاري إعادة التعيين..."
+                        : "Resetting..."
+                      : lang === "ar"
+                        ? "إعادة كلمة المرور للافتراضية"
+                        : "Reset to default password"}
+                  </button>
+                </div>
               </article>
             ))}
           </div>

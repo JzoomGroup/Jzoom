@@ -6,6 +6,7 @@ const user = {
   displayName: "Person",
   preferredLocale: "en",
   userType: "INTERNAL" as const,
+  mustChangePassword: false,
   permissions: [],
 };
 
@@ -16,6 +17,12 @@ describe("frontend authorization routing", () => {
 
   it("allows every authenticated user to open profile", () => {
     expect(protectedRouteRedirect({ ...user, roles: ["ROLE-CLIENT"] })).toBeNull();
+  });
+
+  it("redirects users who must change their password", () => {
+    expect(
+      protectedRouteRedirect({ ...user, mustChangePassword: true, roles: ["ROLE-CLIENT"] }),
+    ).toBe("/change-password");
   });
 
   it("redirects non-Admins away from settings", () => {

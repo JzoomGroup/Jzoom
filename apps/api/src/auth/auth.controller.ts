@@ -26,9 +26,16 @@ import {
   MANAGE_USERS_PERMISSION,
   MODIFY_PERMISSIONS_PERMISSION,
 } from "./auth.constants.js";
-import { Public, RequirePermissions, RequireRoles, RequireScope } from "./auth.decorators.js";
+import {
+  AllowPasswordChangeRequired,
+  Public,
+  RequirePermissions,
+  RequireRoles,
+  RequireScope,
+} from "./auth.decorators.js";
 import {
   AcceptInvitationDto,
+  ChangePasswordDto,
   CreateOperatingUserDto,
   InviteUserDto,
   LoginDto,
@@ -61,6 +68,7 @@ function publicPrincipal(principal: NonNullable<RequestWithId["auth"]>) {
     displayName: principal.displayName,
     preferredLocale: principal.preferredLocale,
     userType: principal.userType,
+    mustChangePassword: principal.mustChangePassword,
     roles: principal.roles,
     permissions: principal.permissions,
     scopes: principal.scopes,
@@ -70,6 +78,7 @@ function publicPrincipal(principal: NonNullable<RequestWithId["auth"]>) {
 @ApiTags("authentication")
 @ApiExtraModels(
   AcceptInvitationDto,
+  ChangePasswordDto,
   InviteUserDto,
   LoginDto,
   PasswordResetConfirmDto,
@@ -113,6 +122,7 @@ export class AuthController {
 
   @Post("logout")
   @HttpCode(200)
+  @AllowPasswordChangeRequired()
   @ApiCookieAuth()
   @ApiOperation({ summary: "Revoke the current session" })
   async logout(@Req() request: RequestWithId, @Res({ passthrough: true }) response: Response) {
@@ -142,6 +152,22 @@ export class AuthController {
     );
     return {
       user: publicPrincipal({ ...request.auth!, preferredLocale: input.preferredLocale }),
+    };
+  }
+
+  @Patch("me/password")
+  @AllowPasswordChangeRequired()
+  @ApiCookieAuth()
+  @ApiOperation({ summary: "Change the authenticated user's password" })
+  async changePassword(@Body() input: ChangePasswordDto, @Req() request: RequestWithId) {
+    await this.auth.changePassword(
+      request.auth!.userId,
+      input.newPassword,
+      input.confirmPassword,
+      metadata(request),
+    );
+    return {
+      user: publicPrincipal({ ...request.auth!, mustChangePassword: false }),
     };
   }
 
@@ -226,7 +252,6 @@ export class AuthController {
     return this.admin.createOperatingUser(
       input,
       request.auth!.userId,
-      this.environment.auth.exposeTestTokens,
       metadata(request),
     );
   }
@@ -267,6 +292,17 @@ export class AuthController {
   async invalidateSessions(@Param("userId") userId: string, @Req() request: RequestWithId) {
     await this.auth.invalidateSessions(userId, request.auth!.userId, metadata(request));
     return { invalidated: true };
+  }
+
+  @Post("admin/users/:userId/reset-password")
+  @HttpCode(200)
+  @RequireRoles(ADMIN_ROLE_CODE)
+  @RequirePermissions(MANAGE_USERS_PERMISSION)
+  @ApiCookieAuth()
+  @ApiOperation({ summary: "Reset a user password to the temporary default password" })
+  async resetUserPassword(@Param("userId") userId: string, @Req() request: RequestWithId) {
+    await this.admin.resetUserPasswordToDefault(userId, request.auth!.userId, metadata(request));
+    return { reset: true };
   }
 
   @Patch("admin/users/:userId/status")
