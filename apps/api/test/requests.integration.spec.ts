@@ -225,6 +225,13 @@ describeWithDatabase("PR 13 request lifecycle foundation", () => {
     expect(accountManager.id).toBeDefined();
     expect(clientUser.id).toBeDefined();
     expect(otherClientUser.id).toBeDefined();
+    await database.specialistServiceScope.create({
+      data: {
+        userId: specialist.id,
+        clientId,
+        monthlyServiceId: monthlyService.id,
+      },
+    });
 
     const testingModule = await Test.createTestingModule({
       imports: [AppModule.forRoot(environment)],
@@ -318,6 +325,45 @@ describeWithDatabase("PR 13 request lifecycle foundation", () => {
     expect(response.body.assignmentCandidates.accountManagers).toEqual([
       expect.objectContaining({ displayName: "PR13 Account Manager" }),
     ]);
+  });
+
+  it("lets scoped specialists use friendly request intake options for their services", async () => {
+    const { agent, csrf } = await login(`specialist-${runId}@pr13.test`);
+    const optionsResponse = await agent.get("/api/v1/requests/intake-options").expect(200);
+
+    expect(optionsResponse.body.clients).toEqual([
+      expect.objectContaining({
+        id: clientId,
+        subscriptions: [
+          expect.objectContaining({
+            services: [
+              expect.objectContaining({
+                id: subscriptionServiceId,
+                serviceItems: [expect.objectContaining({ id: serviceItemRevisionId })],
+              }),
+            ],
+          }),
+        ],
+      }),
+    ]);
+    expect(optionsResponse.body.assignmentCandidates.specialists).toEqual([
+      expect.objectContaining({ id: specialistId }),
+    ]);
+
+    await agent
+      .post("/api/v1/requests")
+      .set("X-CSRF-Token", csrf)
+      .send({
+        clientId,
+        subscriptionServiceId,
+        serviceItemRevisionId,
+        title: "Scoped specialist request",
+        description: "Created from a specialist service scope.",
+      })
+      .expect(201)
+      .expect(({ body }) => {
+        expect(body.assignments.specialist.id).toBe(specialistId);
+      });
   });
 
   it("keeps internal notes hidden from client users and blocks cross-client access", async () => {

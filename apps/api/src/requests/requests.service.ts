@@ -109,6 +109,13 @@ type AssignmentCandidateRecord = Prisma.UserGetPayload<{
   select: typeof assignmentCandidateSelect;
 }>;
 
+type SpecialistIntakeScope = {
+  clientId: string | null;
+  monthlyServiceId: string | null;
+  serviceItemId: string | null;
+  serviceItem: { monthlyServiceId: string } | null;
+};
+
 const requestSummaryInclude = {
   client: {
     select: {
@@ -382,11 +389,57 @@ export class RequestsService {
   async intakeOptions(principal: AuthenticatedPrincipal) {
     const scopedClientIds = this.optionalClientIdsFor(principal);
     const canSeeAllClients = hasGlobalAccess(principal);
+    const specialistScopes = await this.specialistIntakeScopes(principal);
+    const specialistClientIds = unique(specialistScopes.map((scope) => scope.clientId));
+    const specialistMonthlyServiceIds = unique(
+      specialistScopes.map((scope) => this.scopeMonthlyServiceId(scope)),
+    );
+    const specialistGlobalMonthlyServiceIds = unique(
+      specialistScopes
+        .filter((scope) => !scope.clientId)
+        .map((scope) => this.scopeMonthlyServiceId(scope)),
+    );
+    const clientAccessFilters: Prisma.ClientWhereInput[] = [];
+    if (scopedClientIds.length > 0) {
+      clientAccessFilters.push({ id: { in: scopedClientIds } });
+    }
+    if (specialistGlobalMonthlyServiceIds.length > 0) {
+      clientAccessFilters.push({
+        subscriptions: {
+          some: {
+            services: {
+              some: {
+                monthlyServiceRevision: {
+                  monthlyServiceId: { in: specialistGlobalMonthlyServiceIds },
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+    if (specialistClientIds.length > 0 && specialistMonthlyServiceIds.length > 0) {
+      clientAccessFilters.push({
+        id: { in: specialistClientIds },
+        subscriptions: {
+          some: {
+            services: {
+              some: {
+                monthlyServiceRevision: {
+                  monthlyServiceId: { in: specialistMonthlyServiceIds },
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+
     const [clients, assignmentCandidates] = await Promise.all([
-      scopedClientIds.length > 0 || canSeeAllClients
+      canSeeAllClients || clientAccessFilters.length > 0
         ? this.database.prisma.client.findMany({
             where: {
-              ...(canSeeAllClients ? {} : { id: { in: scopedClientIds } }),
+              ...(canSeeAllClients ? {} : { OR: clientAccessFilters }),
               status: "ACTIVE",
               archivedAt: null,
             },
@@ -490,65 +543,100 @@ export class RequestsService {
     ]);
 
     return {
-      clients: clients.map((client) => ({
-        id: client.id,
-        code: client.code,
-        name: client.name,
-        legalName: client.legalName,
-        sector: client.sector,
-        city: client.city,
-        subscriptions: client.subscriptions.map((subscription) => ({
-          id: subscription.id,
-          status: subscription.status,
-          startsAt: subscription.startsAt.toISOString(),
-          endsAt: subscription.endsAt?.toISOString() ?? null,
-          services: subscription.services.map((service) => {
-            const revision = service.monthlyServiceRevision;
-            return {
-              id: service.id,
-              subscriptionId: service.subscriptionId,
-              status: service.status,
-              startsAt: service.startsAt.toISOString(),
-              endsAt: service.endsAt?.toISOString() ?? null,
-              hoursAllocated: Number(service.hoursAllocated),
-              monthlyService: {
-                id: revision.monthlyService.id,
-                code: revision.monthlyService.code,
-                revisionId: revision.id,
-                nameAr: revision.nameAr,
-                nameEn: revision.nameEn,
-                serviceLine: revision.serviceLine,
-                domain: revision.domain,
-              },
-              serviceLevel: service.serviceLevel,
-              serviceItems: revision.monthlyService.items.flatMap((item) => {
-                const itemRevision = item.revisions[0];
-                if (!itemRevision) return [];
-                const hasLevelRules = itemRevision.levelInclusions.length > 0;
-                const includedForLevel = itemRevision.levelInclusions.some(
-                  (inclusion) =>
-                    inclusion.included && inclusion.serviceLevelId === service.serviceLevelId,
-                );
-                if (hasLevelRules && !includedForLevel) return [];
-                return [
-                  {
-                    id: itemRevision.id,
-                    itemId: itemRevision.serviceItemId,
-                    code: item.code,
-                    nameAr: itemRevision.nameAr,
-                    nameEn: itemRevision.nameEn,
-                    expectedOutput: itemRevision.expectedOutput,
-                    requiresFile: itemRevision.requiresFile,
-                    requestType: itemRevision.requestType,
-                  },
-                ];
-              }),
-            };
-          }),
-        })),
-        sourceQuotes: client.quotes,
-        sourceInvoices: client.invoices,
-      })),
+      clients: clients
+        .map((client) => {
+          const hasDirectAccess = canSeeAllClients || scopedClientIds.includes(client.id);
+          return {
+            id: client.id,
+            code: client.code,
+            name: client.name,
+            legalName: client.legalName,
+            sector: client.sector,
+            city: client.city,
+            subscriptions: client.subscriptions
+              .map((subscription) => ({
+                id: subscription.id,
+                status: subscription.status,
+                startsAt: subscription.startsAt.toISOString(),
+                endsAt: subscription.endsAt?.toISOString() ?? null,
+                services: subscription.services
+                  .filter(
+                    (service) =>
+                      hasDirectAccess ||
+                      this.specialistScopeAllowsService(
+                        specialistScopes,
+                        client.id,
+                        service.monthlyServiceRevision.monthlyServiceId,
+                      ),
+                  )
+                  .map((service) => {
+                    const revision = service.monthlyServiceRevision;
+                    const monthlyServiceId = revision.monthlyServiceId;
+                    return {
+                      id: service.id,
+                      subscriptionId: service.subscriptionId,
+                      status: service.status,
+                      startsAt: service.startsAt.toISOString(),
+                      endsAt: service.endsAt?.toISOString() ?? null,
+                      hoursAllocated: Number(service.hoursAllocated),
+                      monthlyService: {
+                        id: revision.monthlyService.id,
+                        code: revision.monthlyService.code,
+                        revisionId: revision.id,
+                        nameAr: revision.nameAr,
+                        nameEn: revision.nameEn,
+                        serviceLine: revision.serviceLine,
+                        domain: revision.domain,
+                      },
+                      serviceLevel: service.serviceLevel,
+                      serviceItems: revision.monthlyService.items.flatMap((item) => {
+                        const itemRevision = item.revisions[0];
+                        if (!itemRevision) return [];
+                        const hasLevelRules = itemRevision.levelInclusions.length > 0;
+                        const includedForLevel = itemRevision.levelInclusions.some(
+                          (inclusion) =>
+                            inclusion.included &&
+                            inclusion.serviceLevelId === service.serviceLevelId,
+                        );
+                        if (hasLevelRules && !includedForLevel) return [];
+                        if (
+                          !hasDirectAccess &&
+                          !this.specialistScopeAllowsItem(
+                            specialistScopes,
+                            client.id,
+                            monthlyServiceId,
+                            itemRevision.serviceItemId,
+                          )
+                        ) {
+                          return [];
+                        }
+                        return [
+                          {
+                            id: itemRevision.id,
+                            itemId: itemRevision.serviceItemId,
+                            code: item.code,
+                            nameAr: itemRevision.nameAr,
+                            nameEn: itemRevision.nameEn,
+                            expectedOutput: itemRevision.expectedOutput,
+                            requiresFile: itemRevision.requiresFile,
+                            requestType: itemRevision.requestType,
+                          },
+                        ];
+                      }),
+                    };
+                  }),
+              }))
+              .filter((subscription) => subscription.services.length > 0 || hasDirectAccess),
+            sourceQuotes: client.quotes,
+            sourceInvoices: client.invoices,
+          };
+        })
+        .filter(
+          (client) =>
+            canSeeAllClients ||
+            scopedClientIds.includes(client.id) ||
+            client.subscriptions.some((subscription) => subscription.services.length > 0),
+        ),
       assignmentCandidates,
     };
   }
@@ -574,7 +662,10 @@ export class RequestsService {
     principal: AuthenticatedPrincipal,
     metadata: RequestMetadata,
   ) {
-    this.assertCanAccessClient(input.clientId, principal);
+    const hasDirectClientAccess = this.canAccessClient(input.clientId, principal);
+    if (!hasDirectClientAccess && !principal.roles.includes(SPECIALIST_ROLE_CODE)) {
+      this.throwClientScopeDenied();
+    }
 
     const client = await this.requireActiveClient(input.clientId);
     const subscriptionService = await this.requireActiveSubscriptionService(
@@ -584,6 +675,15 @@ export class RequestsService {
     const serviceItemRevision = await this.requireServiceItem(
       input.serviceItemRevisionId,
       subscriptionService,
+    );
+    await this.assertCreateServiceScope(
+      {
+        clientId: client.id,
+        monthlyServiceId: subscriptionService.monthlyServiceRevision.monthlyServiceId,
+        serviceItemId: serviceItemRevision?.serviceItemId ?? null,
+      },
+      principal,
+      hasDirectClientAccess,
     );
     await this.requireSourceQuote(input.sourceQuoteId, input.clientId);
     await this.requireSourceInvoice(input.sourceInvoiceId, input.clientId);
@@ -2587,12 +2687,20 @@ export class RequestsService {
   }
 
   private assertCanAccessClient(clientId: string, principal: AuthenticatedPrincipal): void {
+    if (this.canAccessClient(clientId, principal)) {
+      return;
+    }
+    this.throwClientScopeDenied();
+  }
+
+  private canAccessClient(clientId: string, principal: AuthenticatedPrincipal): boolean {
     if (hasGlobalAccess(principal)) {
-      return;
+      return true;
     }
-    if (this.optionalClientIdsFor(principal).includes(clientId)) {
-      return;
-    }
+    return this.optionalClientIdsFor(principal).includes(clientId);
+  }
+
+  private throwClientScopeDenied(): never {
     throw new ForbiddenException({
       code: "CLIENT_SCOPE_DENIED",
       message: "You do not have access to this client",
@@ -2882,6 +2990,92 @@ export class RequestsService {
       supervisors: principal.roles.includes(SUPERVISOR_ROLE_CODE) ? [currentUser] : [],
       accountManagers: principal.roles.includes(ACCOUNT_MANAGER_ROLE_CODE) ? [currentUser] : [],
     };
+  }
+
+  private async assertCreateServiceScope(
+    input: {
+      clientId: string;
+      monthlyServiceId: string;
+      serviceItemId: string | null;
+    },
+    principal: AuthenticatedPrincipal,
+    hasDirectClientAccess: boolean,
+  ): Promise<void> {
+    if (hasDirectClientAccess) {
+      return;
+    }
+    const scopes = await this.specialistIntakeScopes(principal);
+    const allowed = input.serviceItemId
+      ? this.specialistScopeAllowsItem(
+          scopes,
+          input.clientId,
+          input.monthlyServiceId,
+          input.serviceItemId,
+        )
+      : this.specialistScopeAllowsService(scopes, input.clientId, input.monthlyServiceId);
+    if (allowed) {
+      return;
+    }
+    throw new ForbiddenException({
+      code: "SPECIALIST_SERVICE_SCOPE_DENIED",
+      message: "This specialist is not scoped to the selected client service",
+    });
+  }
+
+  private async specialistIntakeScopes(
+    principal: AuthenticatedPrincipal,
+  ): Promise<SpecialistIntakeScope[]> {
+    if (!principal.roles.includes(SPECIALIST_ROLE_CODE)) {
+      return [];
+    }
+    const now = new Date();
+    return this.database.prisma.specialistServiceScope.findMany({
+      where: {
+        userId: principal.userId,
+        status: "ACTIVE",
+        startsAt: { lte: now },
+        OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+      },
+      select: {
+        clientId: true,
+        monthlyServiceId: true,
+        serviceItemId: true,
+        serviceItem: { select: { monthlyServiceId: true } },
+      },
+    });
+  }
+
+  private scopeMonthlyServiceId(scope: SpecialistIntakeScope): string | null {
+    return scope.monthlyServiceId ?? scope.serviceItem?.monthlyServiceId ?? null;
+  }
+
+  private specialistScopeMatchesClient(scope: SpecialistIntakeScope, clientId: string): boolean {
+    return scope.clientId === null || scope.clientId === clientId;
+  }
+
+  private specialistScopeAllowsService(
+    scopes: SpecialistIntakeScope[],
+    clientId: string,
+    monthlyServiceId: string,
+  ): boolean {
+    return scopes.some(
+      (scope) =>
+        this.specialistScopeMatchesClient(scope, clientId) &&
+        this.scopeMonthlyServiceId(scope) === monthlyServiceId,
+    );
+  }
+
+  private specialistScopeAllowsItem(
+    scopes: SpecialistIntakeScope[],
+    clientId: string,
+    monthlyServiceId: string,
+    serviceItemId: string,
+  ): boolean {
+    return scopes.some(
+      (scope) =>
+        this.specialistScopeMatchesClient(scope, clientId) &&
+        (scope.monthlyServiceId === monthlyServiceId || scope.serviceItemId === serviceItemId),
+    );
   }
 
   private activeSubscriptionWhere(): Prisma.SubscriptionWhereInput {
