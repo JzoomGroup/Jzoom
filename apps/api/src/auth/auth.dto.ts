@@ -133,10 +133,30 @@ export class CreateOperatingUserDto extends OperatingUserScopeDto {
 
   @ApiProperty({
     type: String,
-    enum: ["ROLE-SPECIALIST", "ROLE-SUPERVISOR", "ROLE-AM", "ROLE-MGMT", "ROLE-ADMIN"],
+    enum: [
+      "ROLE-SPECIALIST",
+      "ROLE-PROJECT-SPECIALIST",
+      "ROLE-SUPERVISOR",
+      "ROLE-AM",
+      "ROLE-MGMT",
+      "ROLE-ADMIN",
+    ],
   })
-  @IsIn(["ROLE-SPECIALIST", "ROLE-SUPERVISOR", "ROLE-AM", "ROLE-MGMT", "ROLE-ADMIN"])
-  roleCode!: "ROLE-SPECIALIST" | "ROLE-SUPERVISOR" | "ROLE-AM" | "ROLE-MGMT" | "ROLE-ADMIN";
+  @IsIn([
+    "ROLE-SPECIALIST",
+    "ROLE-PROJECT-SPECIALIST",
+    "ROLE-SUPERVISOR",
+    "ROLE-AM",
+    "ROLE-MGMT",
+    "ROLE-ADMIN",
+  ])
+  roleCode!:
+    | "ROLE-SPECIALIST"
+    | "ROLE-PROJECT-SPECIALIST"
+    | "ROLE-SUPERVISOR"
+    | "ROLE-AM"
+    | "ROLE-MGMT"
+    | "ROLE-ADMIN";
 }
 
 export class UpdateOperatingUserScopeDto extends OperatingUserScopeDto {}

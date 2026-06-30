@@ -8,6 +8,7 @@ type PostLoginRoute =
   | "/account-manager"
   | "/supervisor"
   | "/specialist"
+  | "/projects"
   | "/profile";
 
 export function protectedRouteRedirect(
@@ -42,6 +43,9 @@ export function postLoginRoute(roles: string[]): PostLoginRoute {
   }
   if (roles.includes("ROLE-SPECIALIST")) {
     return "/specialist";
+  }
+  if (roles.includes("ROLE-PROJECT-SPECIALIST")) {
+    return "/projects";
   }
   return "/profile";
 }

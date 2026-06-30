@@ -314,6 +314,36 @@ export async function seedBlueprint(
         });
         roleIds.set(role.code, record.id);
       }
+      const projectSpecialistRole = await tx.role.upsert({
+        where: { code: "ROLE-PROJECT-SPECIALIST" },
+        create: {
+          code: "ROLE-PROJECT-SPECIALIST",
+          name: "Project Specialist",
+          nameAr: "مختص مشاريع",
+          nameEn: "Project Specialist",
+          userType: "INTERNAL",
+          description: "Owns one-time service projects from activation through delivery.",
+          dataScope: "Assigned one-time service projects and scoped clients.",
+          capabilities: "Project delivery, project tasks, client-facing project outputs.",
+          restrictions: "No platform administration access.",
+          isSystem: true,
+          sortOrder: 45,
+        },
+        update: {
+          name: "Project Specialist",
+          nameAr: "مختص مشاريع",
+          nameEn: "Project Specialist",
+          userType: "INTERNAL",
+          description: "Owns one-time service projects from activation through delivery.",
+          dataScope: "Assigned one-time service projects and scoped clients.",
+          capabilities: "Project delivery, project tasks, client-facing project outputs.",
+          restrictions: "No platform administration access.",
+          status: "ACTIVE",
+          archivedAt: null,
+          isSystem: true,
+        },
+      });
+      roleIds.set("ROLE-PROJECT-SPECIALIST", projectSpecialistRole.id);
 
       for (const permission of blueprint.permissions) {
         const record = await tx.permission.upsert({

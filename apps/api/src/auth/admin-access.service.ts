@@ -5,6 +5,7 @@ import {
   ADMIN_ROLE_CODE,
   CRITICAL_ADMIN_PERMISSIONS,
   DEFAULT_TEMPORARY_PASSWORD,
+  PROJECT_SPECIALIST_ROLE_CODE,
 } from "./auth.constants.js";
 import { AuthAuditService } from "./audit.service.js";
 import { PasswordHasherService } from "./password-hasher.service.js";
@@ -23,6 +24,7 @@ const SPECIALIST_ROLE_CODE = "ROLE-SPECIALIST";
 const SUPERVISOR_ROLE_CODE = "ROLE-SUPERVISOR";
 const operatingRoleCodes = [
   SPECIALIST_ROLE_CODE,
+  PROJECT_SPECIALIST_ROLE_CODE,
   SUPERVISOR_ROLE_CODE,
   ACCOUNT_MANAGER_ROLE_CODE,
   MANAGEMENT_ROLE_CODE,
@@ -888,11 +890,14 @@ export class AdminAccessService {
       this.assertActiveMonthlyServices(monthlyServiceIds),
       this.assertActiveServiceItems(serviceItemIds),
       this.assertActiveOneTimeServices(oneTimeServiceIds),
-      roleCode === SPECIALIST_ROLE_CODE && input.supervisorId
+      this.isSpecialistRole(roleCode) && input.supervisorId
         ? this.assertInternalUsersWithRole([input.supervisorId], SUPERVISOR_ROLE_CODE)
         : Promise.resolve(),
       roleCode === SUPERVISOR_ROLE_CODE && specialistIds.length > 0
-        ? this.assertInternalUsersWithRole(specialistIds, SPECIALIST_ROLE_CODE)
+        ? this.assertInternalUsersWithRole(specialistIds, [
+            SPECIALIST_ROLE_CODE,
+            PROJECT_SPECIALIST_ROLE_CODE,
+          ])
         : Promise.resolve(),
     ]);
   }
@@ -933,17 +938,23 @@ export class AdminAccessService {
       });
     }
 
-    if (roleCodes.includes(SPECIALIST_ROLE_CODE)) {
+    if (roleCodes.some((roleCode) => this.isSpecialistRole(roleCode))) {
       const scopeRows: Prisma.SpecialistServiceScopeCreateManyInput[] = [];
+      const allowMonthlyScopes = roleCodes.includes(SPECIALIST_ROLE_CODE);
+      const allowProjectScopes = roleCodes.includes(PROJECT_SPECIALIST_ROLE_CODE);
       for (const clientId of scopedClientIds) {
-        for (const monthlyServiceId of monthlyServiceIds) {
-          scopeRows.push({ userId, clientId, monthlyServiceId });
+        if (allowMonthlyScopes) {
+          for (const monthlyServiceId of monthlyServiceIds) {
+            scopeRows.push({ userId, clientId, monthlyServiceId });
+          }
+          for (const serviceItemId of serviceItemIds) {
+            scopeRows.push({ userId, clientId, serviceItemId });
+          }
         }
-        for (const serviceItemId of serviceItemIds) {
-          scopeRows.push({ userId, clientId, serviceItemId });
-        }
-        for (const oneTimeServiceId of oneTimeServiceIds) {
-          scopeRows.push({ userId, clientId, oneTimeServiceId });
+        if (allowMonthlyScopes || allowProjectScopes) {
+          for (const oneTimeServiceId of oneTimeServiceIds) {
+            scopeRows.push({ userId, clientId, oneTimeServiceId });
+          }
         }
       }
       if (scopeRows.length > 0) {
@@ -1032,16 +1043,20 @@ export class AdminAccessService {
     );
   }
 
-  private async assertInternalUsersWithRole(ids: string[], roleCode: string): Promise<void> {
+  private async assertInternalUsersWithRole(
+    ids: string[],
+    roleCode: string | string[],
+  ): Promise<void> {
     if (ids.length === 0) {
       return;
     }
+    const roleCodes = Array.isArray(roleCode) ? roleCode : [roleCode];
     const records = await this.database.prisma.user.findMany({
       where: {
         id: { in: ids },
         status: { in: ["ACTIVE", "INVITED"] },
         userType: "INTERNAL",
-        roles: { some: { role: { code: roleCode, status: "ACTIVE" } } },
+        roles: { some: { role: { code: { in: roleCodes }, status: "ACTIVE" } } },
       },
       select: { id: true },
     });
@@ -1066,6 +1081,10 @@ export class AdminAccessService {
 
   private uniqueIds(values: string[] | undefined): string[] {
     return [...new Set((values ?? []).map((value) => value.trim()).filter(Boolean))];
+  }
+
+  private isSpecialistRole(roleCode: string): boolean {
+    return roleCode === SPECIALIST_ROLE_CODE || roleCode === PROJECT_SPECIALIST_ROLE_CODE;
   }
 
   private isOperatingRoleCode(value: string): value is OperatingRoleCode {

@@ -79,12 +79,14 @@ function publicPrincipal(principal: NonNullable<RequestWithId["auth"]>) {
 @ApiExtraModels(
   AcceptInvitationDto,
   ChangePasswordDto,
+  CreateOperatingUserDto,
   InviteUserDto,
   LoginDto,
   PasswordResetConfirmDto,
   PasswordResetRequestDto,
   ReplaceRolePermissionsDto,
   ReplaceUserRolesDto,
+  UpdateOperatingUserScopeDto,
   UpdateProfilePreferencesDto,
   UpdateUserStatusDto,
 )
@@ -249,11 +251,7 @@ export class AuthController {
   @ApiCookieAuth()
   @ApiOperation({ summary: "Create an internal operating user with client and service scope" })
   async createOperatingUser(@Body() input: CreateOperatingUserDto, @Req() request: RequestWithId) {
-    return this.admin.createOperatingUser(
-      input,
-      request.auth!.userId,
-      metadata(request),
-    );
+    return this.admin.createOperatingUser(input, request.auth!.userId, metadata(request));
   }
 
   @Get("admin/roles")

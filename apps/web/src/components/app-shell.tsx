@@ -59,6 +59,7 @@ const adminNavigation: NavItem[] = [
 const clientNavigation: NavItem[] = [
   { href: "/client", labelAr: "مركز الخدمة", labelEn: "Overview" },
   { href: "/client/requests", labelAr: "الطلبات", labelEn: "Requests" },
+  { href: "/client/projects", labelAr: "المشاريع", labelEn: "Projects" },
   { href: "/client/quotes", labelAr: "العروض", labelEn: "Quotes" },
   { href: "/client/invoices", labelAr: "الفواتير", labelEn: "Invoices" },
   { href: "/client/reports", labelAr: "التقارير", labelEn: "Reports" },
@@ -94,6 +95,18 @@ const internalNavigation: NavItem[] = [
     visible: ({ isAdmin, roles }) => isAdmin || roles.includes("ROLE-SPECIALIST"),
   },
   {
+    href: "/projects",
+    labelAr: "المشاريع",
+    labelEn: "Projects",
+    visible: ({ isAdmin, roles }) =>
+      isAdmin ||
+      roles.includes("ROLE-MGMT") ||
+      roles.includes("ROLE-AM") ||
+      roles.includes("ROLE-SUPERVISOR") ||
+      roles.includes("ROLE-SPECIALIST") ||
+      roles.includes("ROLE-PROJECT-SPECIALIST"),
+  },
+  {
     href: "/pricing",
     labelAr: "مسودات التسعير",
     labelEn: "Pricing drafts",
@@ -114,8 +127,28 @@ const internalNavigation: NavItem[] = [
     visible: ({ isAdmin, permissions, roles }) =>
       (isAdmin || roles.includes("ROLE-AM")) && permissions.includes("PERM-MANAGE-INVOICES"),
   },
-  { href: "/requests", labelAr: "الطلبات", labelEn: "Requests" },
-  { href: "/requests/queues", labelAr: "قوائم العمل", labelEn: "Work queues" },
+  {
+    href: "/requests",
+    labelAr: "الطلبات",
+    labelEn: "Requests",
+    visible: ({ isAdmin, roles }) =>
+      isAdmin ||
+      roles.includes("ROLE-MGMT") ||
+      roles.includes("ROLE-AM") ||
+      roles.includes("ROLE-SUPERVISOR") ||
+      roles.includes("ROLE-SPECIALIST"),
+  },
+  {
+    href: "/requests/queues",
+    labelAr: "قوائم العمل",
+    labelEn: "Work queues",
+    visible: ({ isAdmin, roles }) =>
+      isAdmin ||
+      roles.includes("ROLE-MGMT") ||
+      roles.includes("ROLE-AM") ||
+      roles.includes("ROLE-SUPERVISOR") ||
+      roles.includes("ROLE-SPECIALIST"),
+  },
   { href: "/hours-ledger", labelAr: "سجل الساعات", labelEn: "Hours Ledger" },
   {
     href: "/reports",

@@ -13,6 +13,7 @@ import { NotificationsModule } from "./notifications/notifications.module.js";
 import { OneTimeCatalogModule } from "./one-time-catalog/one-time-catalog.module.js";
 import { PlatformConfigurationModule } from "./platform-configuration/platform-configuration.module.js";
 import { PricingModule } from "./pricing/pricing.module.js";
+import { ProjectsModule } from "./projects/projects.module.js";
 import { QuotesModule } from "./quotes/quotes.module.js";
 import { ReportsModule } from "./reports/reports.module.js";
 import { RequestContextModule } from "./request-context/request-context.module.js";
@@ -32,6 +33,7 @@ export class AppModule {
         ClientsModule,
         OneTimeCatalogModule,
         PricingModule,
+        ProjectsModule,
         QuotesModule,
         InvoicesModule,
         NotificationsModule,

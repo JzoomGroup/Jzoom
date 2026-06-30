@@ -1,0 +1,71 @@
+import { PROJECT_SPECIALIST_ROLE_CODE } from "../auth/auth.constants.js";
+import {
+  ACCOUNT_MANAGER_ROLE_CODE,
+  SPECIALIST_ROLE_CODE,
+  SUPERVISOR_ROLE_CODE,
+} from "../requests/requests.constants.js";
+
+export { PROJECT_SPECIALIST_ROLE_CODE };
+
+export const PROJECT_STATUSES = [
+  "DRAFT",
+  "ACTIVE",
+  "CLIENT_REVIEW",
+  "COMPLETED",
+  "CLOSED",
+  "ARCHIVED",
+] as const;
+
+export type ProjectLifecycleStatus = (typeof PROJECT_STATUSES)[number];
+
+export const PROJECT_TASK_STATUSES = [
+  "TODO",
+  "IN_PROGRESS",
+  "DONE",
+  "BLOCKED",
+  "CANCELLED",
+] as const;
+
+export const PROJECT_OUTPUT_STATUSES = [
+  "DRAFT",
+  "INTERNAL_REVIEW",
+  "APPROVED_INTERNAL",
+  "SHARED_WITH_CLIENT",
+  "ACCEPTED_BY_CLIENT",
+  "RETURNED_BY_CLIENT",
+  "CLOSED",
+] as const;
+
+export const PROJECT_CLIENT_VISIBLE_OUTPUT_STATUSES = [
+  "SHARED_WITH_CLIENT",
+  "ACCEPTED_BY_CLIENT",
+  "RETURNED_BY_CLIENT",
+  "CLOSED",
+] as const;
+
+export const PROJECT_CLIENT_OUTPUT_DECISION_STATUSES = [
+  "ACCEPTED_BY_CLIENT",
+  "RETURNED_BY_CLIENT",
+] as const;
+
+export const PROJECT_SPECIALIST_ROLE_CODES = [
+  SPECIALIST_ROLE_CODE,
+  PROJECT_SPECIALIST_ROLE_CODE,
+] as const;
+
+export const PROJECT_INTERNAL_ROLE_CODES = [
+  "ROLE-ADMIN",
+  "ROLE-MGMT",
+  ACCOUNT_MANAGER_ROLE_CODE,
+  SPECIALIST_ROLE_CODE,
+  PROJECT_SPECIALIST_ROLE_CODE,
+  SUPERVISOR_ROLE_CODE,
+] as const;
+
+export const PROJECT_EVENT = {
+  createdFromQuote: "PROJECT_CREATED_FROM_QUOTE",
+  outputCreated: "PROJECT_OUTPUT_CREATED",
+  outputStatusChanged: "PROJECT_OUTPUT_STATUS_CHANGED",
+  statusChanged: "PROJECT_STATUS_CHANGED",
+  taskUpdated: "PROJECT_TASK_UPDATED",
+} as const;

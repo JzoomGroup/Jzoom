@@ -5,7 +5,7 @@ import { getCurrentUser } from "../../lib/auth";
 import { requireMonthlyUsage } from "../../lib/operations-server";
 import { requireRequestQueue } from "../../lib/request-server";
 
-const specialistRoles = ["ROLE-ADMIN", "ROLE-SPECIALIST"] as const;
+const specialistRoles = ["ROLE-ADMIN", "ROLE-SPECIALIST", "ROLE-PROJECT-SPECIALIST"] as const;
 
 export default async function SpecialistDashboardPage() {
   const user = await getCurrentUser();
@@ -16,6 +16,9 @@ export default async function SpecialistDashboardPage() {
     !user.roles.some((role) => specialistRoles.includes(role as (typeof specialistRoles)[number]))
   ) {
     redirect("/403");
+  }
+  if (user.roles.includes("ROLE-PROJECT-SPECIALIST") && !user.roles.includes("ROLE-SPECIALIST")) {
+    redirect("/projects");
   }
   const [queue, usage] = await Promise.all([
     requireRequestQueue("specialist"),
@@ -31,7 +34,12 @@ export default async function SpecialistDashboardPage() {
       permissions={user.permissions}
       roles={user.roles}
     >
-      <InternalRoleDashboard locale={user.preferredLocale} mode="specialist" queue={queue} usage={usage} />
+      <InternalRoleDashboard
+        locale={user.preferredLocale}
+        mode="specialist"
+        queue={queue}
+        usage={usage}
+      />
     </QuoteShell>
   );
 }

@@ -1,0 +1,47 @@
+INSERT INTO "roles" (
+  "id",
+  "code",
+  "name",
+  "nameAr",
+  "nameEn",
+  "userType",
+  "description",
+  "dataScope",
+  "capabilities",
+  "restrictions",
+  "isSystem",
+  "status",
+  "sortOrder",
+  "createdAt",
+  "updatedAt"
+)
+VALUES (
+  gen_random_uuid(),
+  'ROLE-PROJECT-SPECIALIST',
+  'Project Specialist',
+  'مختص مشاريع',
+  'Project Specialist',
+  'INTERNAL',
+  'Owns one-time service projects from activation through delivery.',
+  'Assigned one-time service projects and scoped clients.',
+  'Project delivery, project tasks, client-facing project outputs.',
+  'No platform administration access.',
+  true,
+  'ACTIVE',
+  45,
+  now(),
+  now()
+)
+ON CONFLICT ("code") DO UPDATE SET
+  "name" = EXCLUDED."name",
+  "nameAr" = EXCLUDED."nameAr",
+  "nameEn" = EXCLUDED."nameEn",
+  "userType" = EXCLUDED."userType",
+  "description" = EXCLUDED."description",
+  "dataScope" = EXCLUDED."dataScope",
+  "capabilities" = EXCLUDED."capabilities",
+  "restrictions" = EXCLUDED."restrictions",
+  "isSystem" = true,
+  "status" = 'ACTIVE',
+  "archivedAt" = null,
+  "updatedAt" = now();

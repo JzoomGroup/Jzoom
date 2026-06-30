@@ -607,11 +607,16 @@ const operatingRoleLabels: Record<string, Record<SupportedLocale, string>> = {
   "ROLE-AM": { ar: "مدير حساب", en: "Account Manager" },
   "ROLE-MGMT": { ar: "الإدارة", en: "Management" },
   "ROLE-SPECIALIST": { ar: "مختص", en: "Specialist" },
+  "ROLE-PROJECT-SPECIALIST": { ar: "مختص مشاريع", en: "Project Specialist" },
   "ROLE-SUPERVISOR": { ar: "مشرف", en: "Supervisor" },
 };
 
 function hasRole(user: AdminAccessUser, roleCode: string): boolean {
   return user.roles.some((role) => role.code === roleCode);
+}
+
+function isSpecialistScopeRole(roleCode: string): boolean {
+  return roleCode === "ROLE-SPECIALIST" || roleCode === "ROLE-PROJECT-SPECIALIST";
 }
 
 function operatingRoleLabel(roleCode: string, locale: SupportedLocale): string {
@@ -687,10 +692,10 @@ function scopePayloadFromForm(
   return {
     clientIds: form.clientIds,
     monthlyServiceIds: roleCode === "ROLE-SPECIALIST" ? form.monthlyServiceIds : [],
-    oneTimeServiceIds: roleCode === "ROLE-SPECIALIST" ? form.oneTimeServiceIds : [],
+    oneTimeServiceIds: isSpecialistScopeRole(roleCode) ? form.oneTimeServiceIds : [],
     serviceItemIds: roleCode === "ROLE-SPECIALIST" ? form.serviceItemIds : [],
     specialistIds: roleCode === "ROLE-SUPERVISOR" ? form.specialistIds : [],
-    ...(roleCode === "ROLE-SPECIALIST" && form.supervisorId
+    ...(isSpecialistScopeRole(roleCode) && form.supervisorId
       ? { supervisorId: form.supervisorId }
       : {}),
   };
@@ -759,7 +764,10 @@ export function AdminUsersPageContent({
     (user) => user.permissionOverrides.length > 0,
   ).length;
   const specialists = useMemo(
-    () => currentUsers.filter((user) => hasRole(user, "ROLE-SPECIALIST")),
+    () =>
+      currentUsers.filter(
+        (user) => hasRole(user, "ROLE-SPECIALIST") || hasRole(user, "ROLE-PROJECT-SPECIALIST"),
+      ),
     [currentUsers],
   );
   const supervisors = useMemo(
@@ -821,7 +829,7 @@ export function AdminUsersPageContent({
         displayName: form.displayName.trim(),
         email: form.email.trim().toLowerCase(),
         ...scopePayloadFromForm(form, form.roleCode),
-        ...(form.roleCode === "ROLE-SPECIALIST" && form.supervisorId
+        ...(isSpecialistScopeRole(form.roleCode) && form.supervisorId
           ? { supervisorId: form.supervisorId }
           : {}),
       };
@@ -987,7 +995,7 @@ export function AdminUsersPageContent({
                   ))}
                 </select>
               </label>
-              {form.roleCode === "ROLE-SPECIALIST" ? (
+              {isSpecialistScopeRole(form.roleCode) ? (
                 <label>
                   <span>{lang === "ar" ? "المشرف المسؤول" : "Supervisor"}</span>
                   <select
@@ -1093,33 +1101,35 @@ export function AdminUsersPageContent({
                       ))}
                     </div>
                   </fieldset>
-
-                  <fieldset>
-                    <legend>{lang === "ar" ? "خدمات المرة الواحدة" : "One-time services"}</legend>
-                    <p>
-                      {lang === "ar"
-                        ? "جاهزة لتوسيع توزيع مشاريع وخدمات المرة الواحدة بنفس نموذج النطاق."
-                        : "Prepared for one-time service and project routing using the same scope model."}
-                    </p>
-                    <div className="scope-picker-grid">
-                      {currentSetup.oneTimeServices.map((service) => (
-                        <label key={service.id}>
-                          <input
-                            type="checkbox"
-                            checked={form.oneTimeServiceIds.includes(service.id)}
-                            onChange={() =>
-                              setForm({
-                                ...form,
-                                oneTimeServiceIds: toggleValue(form.oneTimeServiceIds, service.id),
-                              })
-                            }
-                          />
-                          <span>{serviceLabel(service, lang)}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
                 </>
+              ) : null}
+
+              {isSpecialistScopeRole(form.roleCode) ? (
+                <fieldset>
+                  <legend>{lang === "ar" ? "خدمات المرة الواحدة" : "One-time services"}</legend>
+                  <p>
+                    {lang === "ar"
+                      ? "جاهزة لتوسيع توزيع مشاريع وخدمات المرة الواحدة بنفس نموذج النطاق."
+                      : "Prepared for one-time service and project routing using the same scope model."}
+                  </p>
+                  <div className="scope-picker-grid">
+                    {currentSetup.oneTimeServices.map((service) => (
+                      <label key={service.id}>
+                        <input
+                          type="checkbox"
+                          checked={form.oneTimeServiceIds.includes(service.id)}
+                          onChange={() =>
+                            setForm({
+                              ...form,
+                              oneTimeServiceIds: toggleValue(form.oneTimeServiceIds, service.id),
+                            })
+                          }
+                        />
+                        <span>{serviceLabel(service, lang)}</span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
               ) : null}
 
               {form.roleCode === "ROLE-SUPERVISOR" ? (

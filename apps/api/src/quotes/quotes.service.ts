@@ -7,17 +7,23 @@ import {
 } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 import type { Prisma } from "@jzoom/database";
-import { ADMIN_ROLE_CODE, DEFAULT_TEMPORARY_PASSWORD } from "../auth/auth.constants.js";
+import {
+  ADMIN_ROLE_CODE,
+  DEFAULT_TEMPORARY_PASSWORD,
+  PROJECT_SPECIALIST_ROLE_CODE,
+} from "../auth/auth.constants.js";
 import { AuthAuditService } from "../auth/audit.service.js";
 import type { AuthenticatedPrincipal, RequestMetadata } from "../auth/auth.types.js";
 import { PasswordHasherService } from "../auth/password-hasher.service.js";
 import { CLIENT_ROLE_CODE } from "../client-portal/client-portal.constants.js";
 import { DatabaseService } from "../database/database.service.js";
+import { ProjectsService } from "../projects/projects.service.js";
 import { QuotePdfService } from "./quote-pdf.service.js";
 import { QUOTE_EVENT } from "./quotes.constants.js";
 import type { CreateQuoteDto, QuoteOnboardingDto } from "./quotes.dto.js";
 
 const SPECIALIST_ROLE_CODE = "ROLE-SPECIALIST";
+const specialistRoleCodes = [SPECIALIST_ROLE_CODE, PROJECT_SPECIALIST_ROLE_CODE] as const;
 
 type PublicQuoteStatus = "DRAFT" | "ISSUED" | "ACCEPTED" | "REJECTED" | "EXPIRED" | "CANCELLED";
 
@@ -155,6 +161,7 @@ export class QuotesService {
     @Inject(DatabaseService) private readonly database: DatabaseService,
     @Inject(AuthAuditService) private readonly audit: AuthAuditService,
     @Inject(PasswordHasherService) private readonly passwords: PasswordHasherService,
+    @Inject(ProjectsService) private readonly projects: ProjectsService,
     @Inject(QuotePdfService) private readonly quotePdf: QuotePdfService,
   ) {}
 
@@ -199,7 +206,7 @@ export class QuotesService {
           userType: "INTERNAL",
           roles: {
             some: {
-              role: { code: SPECIALIST_ROLE_CODE, status: "ACTIVE" },
+              role: { code: { in: [...specialistRoleCodes] }, status: "ACTIVE" },
             },
           },
         },
@@ -300,6 +307,7 @@ export class QuotesService {
         now,
       );
       const assignments = [];
+      const projectAssignmentMap = new Map<string, string[]>();
       for (const assignment of requestedAssignments) {
         const service = servicesByQuoteItemId.get(assignment.quoteItemId)!;
         const selectedSpecialistIds = this.uniqueIds(assignment.specialistIds ?? []);
@@ -310,6 +318,7 @@ export class QuotesService {
           selectedSpecialistIds,
           now,
         );
+        projectAssignmentMap.set(service.quoteItemId, selectedSpecialistIds);
         assignments.push({
           quoteItemId: service.quoteItemId,
           lineType: service.lineType,
@@ -317,7 +326,14 @@ export class QuotesService {
           specialistIds: selectedSpecialistIds,
         });
       }
-      return { assignments, portalUser, subscription };
+      const projects = await this.projects.ensureQuoteProjectsInTransaction(
+        transaction,
+        quote,
+        services,
+        projectAssignmentMap,
+        now,
+      );
+      return { assignments, portalUser, projects, subscription };
     });
 
     await this.audit.record(
@@ -334,6 +350,8 @@ export class QuotesService {
           subscriptionId: result.subscription.subscriptionId,
           subscriptionServicesCreated: result.subscription.createdServiceIds.length,
           subscriptionServicesReused: result.subscription.reusedServiceIds.length,
+          projectsCreated: result.projects.createdProjectIds.length,
+          projectsReused: result.projects.reusedProjectIds.length,
           assignments: result.assignments,
         },
         severity: "HIGH",
@@ -875,7 +893,7 @@ export class QuotesService {
         user: {
           status: "ACTIVE",
           userType: "INTERNAL",
-          roles: { some: { role: { code: SPECIALIST_ROLE_CODE, status: "ACTIVE" } } },
+          roles: { some: { role: { code: { in: [...specialistRoleCodes] }, status: "ACTIVE" } } },
         },
       },
       orderBy: [{ isPrimary: "desc" }, { startsAt: "asc" }],
@@ -893,7 +911,7 @@ export class QuotesService {
         id: { in: ids },
         status: "ACTIVE",
         userType: "INTERNAL",
-        roles: { some: { role: { code: SPECIALIST_ROLE_CODE, status: "ACTIVE" } } },
+        roles: { some: { role: { code: { in: [...specialistRoleCodes] }, status: "ACTIVE" } } },
       },
       select: { id: true },
     });
