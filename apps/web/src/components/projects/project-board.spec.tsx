@@ -169,12 +169,12 @@ describe("project delivery UI", () => {
 
     expect(screen.getByRole("heading", { name: "مشروع الرؤية والرسالة" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "اعتماد المخرج" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "إرجاع للتعديل" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "طلب تعديل" })).toBeInTheDocument();
     expect(screen.queryByText("مخرج داخلي")).not.toBeInTheDocument();
     expect(screen.queryByText("1/2")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "إكمال المشروع" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "تعليم كمكتمل" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "حفظ المخرج" })).not.toBeInTheDocument();
-    expect(screen.queryByText("النشاط")).not.toBeInTheDocument();
+    expect(screen.getByText("النشاط")).toBeInTheDocument();
   });
 
   it("lets project specialists update tasks, outputs, and project state from one room", async () => {
@@ -189,7 +189,7 @@ describe("project delivery UI", () => {
 
     render(<ProjectDetail locale="ar" project={project()} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "بدء" }));
+    fireEvent.click(screen.getByRole("button", { name: "بدء المهمة" }));
     await waitFor(() =>
       expect(mockedUpdateProjectTaskStatus).toHaveBeenCalledWith(
         "project-1",
@@ -198,7 +198,7 @@ describe("project delivery UI", () => {
       ),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "مشاركة مع العميل" }));
+    fireEvent.click(screen.getByRole("button", { name: "مشاركة المخرج" }));
     await waitFor(() =>
       expect(mockedChangeProjectOutputStatus).toHaveBeenCalledWith(
         "project-1",
@@ -217,7 +217,7 @@ describe("project delivery UI", () => {
       }),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "إرسال لمراجعة العميل" }));
+    fireEvent.click(screen.getByRole("button", { name: "إرسال للعميل" }));
     await waitFor(() =>
       expect(mockedChangeProjectStatus).toHaveBeenCalledWith("project-1", "CLIENT_REVIEW"),
     );

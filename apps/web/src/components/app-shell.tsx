@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { directionForLocale, htmlLangForLocale, normalizeLocale } from "../lib/i18n";
 import { LanguageSwitcher } from "./language-switcher";
 import { LocaleDocumentSync } from "./locale-document-sync";
@@ -11,6 +11,8 @@ type NavItem = {
   href: string;
   labelAr: string;
   labelEn: string;
+  sectionAr?: string;
+  sectionEn?: string;
   visible?: (context: ShellContext) => boolean;
 };
 
@@ -21,12 +23,30 @@ type ShellContext = {
 };
 
 const adminNavigation: NavItem[] = [
-  { href: "/admin", labelAr: "لوحة التحكم", labelEn: "Dashboard" },
-  { href: "/admin/clients", labelAr: "العملاء", labelEn: "Clients" },
+  {
+    href: "/admin",
+    labelAr: "لوحة التحكم",
+    labelEn: "Dashboard",
+    sectionAr: "نظرة عامة",
+    sectionEn: "Overview",
+  },
+  {
+    href: "/admin/clients",
+    labelAr: "العملاء",
+    labelEn: "Clients",
+    sectionAr: "العملاء والوصول",
+    sectionEn: "Clients & access",
+  },
   { href: "/admin/users", labelAr: "المستخدمون", labelEn: "Users" },
   { href: "/admin/roles", labelAr: "الأدوار", labelEn: "Roles" },
   { href: "/admin/permissions", labelAr: "الصلاحيات", labelEn: "Permissions" },
-  { href: "/admin/catalog", labelAr: "كتالوج الخدمات", labelEn: "Catalog" },
+  {
+    href: "/admin/catalog",
+    labelAr: "كتالوج الخدمات",
+    labelEn: "Catalog",
+    sectionAr: "الخدمات والباقات",
+    sectionEn: "Services & packages",
+  },
   { href: "/admin/catalog/categories", labelAr: "تصنيفات شهرية", labelEn: "Monthly categories" },
   {
     href: "/admin/catalog/monthly-services",
@@ -45,15 +65,33 @@ const adminNavigation: NavItem[] = [
     labelAr: "خدمات لمرة واحدة",
     labelEn: "One-time services",
   },
-  { href: "/admin/request-templates", labelAr: "نماذج الطلبات", labelEn: "Request templates" },
+  {
+    href: "/admin/request-templates",
+    labelAr: "نماذج الطلبات",
+    labelEn: "Request templates",
+    sectionAr: "النماذج والتسعير",
+    sectionEn: "Forms & pricing",
+  },
   { href: "/admin/pricing-rules", labelAr: "قواعد التسعير", labelEn: "Pricing rules" },
-  { href: "/admin/audit-logs", labelAr: "سجل التدقيق", labelEn: "Audit logs" },
+  {
+    href: "/admin/audit-logs",
+    labelAr: "سجل التدقيق",
+    labelEn: "Audit logs",
+    sectionAr: "الحوكمة",
+    sectionEn: "Governance",
+  },
   {
     href: "/admin/platform-configuration",
     labelAr: "إعدادات المنصة",
     labelEn: "Platform configuration",
   },
-  { href: "/pricing", labelAr: "استوديو التسعير", labelEn: "Pricing Studio" },
+  {
+    href: "/pricing",
+    labelAr: "استوديو التسعير",
+    labelEn: "Pricing Studio",
+    sectionAr: "التشغيل التجاري",
+    sectionEn: "Commercial operations",
+  },
 ];
 
 const clientNavigation: NavItem[] = [
@@ -358,17 +396,27 @@ export function AppShell({
         </Link>
 
         <nav className="premium-nav" aria-label={copy.navigationLabel}>
-          {items.map((item) => {
+          {items.map((item, index) => {
             const active = isActivePath(activePath, item.href);
+            const sectionLabel = language === "ar" ? item.sectionAr : item.sectionEn;
+            const previousItem = items[index - 1];
+            const previousSectionLabel = previousItem
+              ? language === "ar"
+                ? previousItem.sectionAr
+                : previousItem.sectionEn
+              : undefined;
+            const showSection = sectionLabel && sectionLabel !== previousSectionLabel;
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={active ? "active" : undefined}
-              >
-                {language === "ar" ? item.labelAr : item.labelEn}
-              </Link>
+              <Fragment key={item.href}>
+                {showSection ? <span className="premium-nav-section">{sectionLabel}</span> : null}
+                <Link
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={active ? "active" : undefined}
+                >
+                  {language === "ar" ? item.labelAr : item.labelEn}
+                </Link>
+              </Fragment>
             );
           })}
         </nav>

@@ -346,10 +346,10 @@ export function InternalRoleDashboard({
                     </td>
                     <td>{request.client.name}</td>
                     <td>
-                      <StatusChip status={request.status} />
+                      <StatusChip locale={language} status={request.status} />
                     </td>
                     <td>
-                      <PriorityChip priority={request.priority} />
+                      <PriorityChip locale={language} priority={request.priority} />
                     </td>
                     <td>{date(request.updatedAt, language)}</td>
                   </tr>

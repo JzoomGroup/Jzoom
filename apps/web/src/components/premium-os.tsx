@@ -9,6 +9,7 @@ type Action = {
 };
 
 type ChipTone = "neutral" | "success" | "warning" | "danger" | "accent";
+type LocaleLike = "ar" | "en" | string;
 
 const statusTone: Record<string, ChipTone> = {
   ACTIVE: "success",
@@ -69,8 +70,78 @@ const priorityTone: Record<string, ChipTone> = {
   URGENT: "danger",
 };
 
+const statusFallbackLabels: Record<string, { ar: string; en: string }> = {
+  ACCEPTED: { ar: "مقبول", en: "Accepted" },
+  ACCEPTED_BY_CLIENT: { ar: "معتمد من العميل", en: "Accepted by client" },
+  ACTIVE: { ar: "نشط", en: "Active" },
+  APPROVED: { ar: "معتمد", en: "Approved" },
+  APPROVED_INTERNAL: { ar: "معتمد داخليًا", en: "Approved internally" },
+  ARCHIVED: { ar: "مؤرشف", en: "Archived" },
+  ASSIGNED: { ar: "مسند", en: "Assigned" },
+  BLOCKED: { ar: "متعثر", en: "Blocked" },
+  CANCELLED: { ar: "ملغي", en: "Cancelled" },
+  CLOSED: { ar: "مغلق", en: "Closed" },
+  COMPLETE: { ar: "مكتمل", en: "Complete" },
+  COMPLETED: { ar: "مكتمل", en: "Completed" },
+  DRAFT: { ar: "مسودة", en: "Draft" },
+  EXPIRED: { ar: "منتهي", en: "Expired" },
+  FINALIZED: { ar: "نهائي", en: "Finalized" },
+  IN_PROGRESS: { ar: "قيد التنفيذ", en: "In progress" },
+  INTERNAL_REVIEW: { ar: "مراجعة داخلية", en: "Internal review" },
+  INVITED: { ar: "مدعو", en: "Invited" },
+  ISSUED: { ar: "مصدر", en: "Issued" },
+  LOCKED: { ar: "مقفل", en: "Locked" },
+  NEW: { ar: "جديد", en: "New" },
+  OVERDUE: { ar: "متأخر", en: "Overdue" },
+  PAID: { ar: "مدفوع", en: "Paid" },
+  PENDING: { ar: "معلق", en: "Pending" },
+  PREPARED: { ar: "جاهز", en: "Prepared" },
+  PUBLISHED: { ar: "منشور", en: "Published" },
+  REJECTED: { ar: "مرفوض", en: "Rejected" },
+  RETURNED: { ar: "معاد", en: "Returned" },
+  RETURNED_BY_CLIENT: { ar: "معاد من العميل", en: "Returned by client" },
+  REVISION_REQUESTED: { ar: "مطلوب تعديل", en: "Revision requested" },
+  SHARED_WITH_CLIENT: { ar: "مشارك مع العميل", en: "Shared with client" },
+  SUBMITTED: { ar: "مرسل", en: "Submitted" },
+  TRIAGE: { ar: "فرز", en: "Triage" },
+  UPLOADED: { ar: "مرفوع", en: "Uploaded" },
+  VOIDED: { ar: "ملغى نهائيًا", en: "Voided" },
+  WAITING_CLIENT: { ar: "بانتظار العميل", en: "Waiting on client" },
+  WAITING_MANAGEMENT: { ar: "بانتظار الإدارة", en: "Waiting on management" },
+  WAITING_SUPERVISOR: { ar: "بانتظار المشرف", en: "Waiting on supervisor" },
+  WATCH: { ar: "تحت المتابعة", en: "Watch" },
+};
+
+const priorityFallbackLabels: Record<string, { ar: string; en: string }> = {
+  HIGH: { ar: "عالية", en: "High" },
+  LOW: { ar: "منخفضة", en: "Low" },
+  NORMAL: { ar: "عادية", en: "Normal" },
+  URGENT: { ar: "عاجلة", en: "Urgent" },
+};
+
 function actionClass(variant: Action["variant"]) {
   return variant === "primary" ? "os-button os-button-primary" : "os-button os-button-secondary";
+}
+
+function chipLocale(locale?: LocaleLike) {
+  return locale === "ar" || String(locale ?? "").startsWith("ar") ? "ar" : "en";
+}
+
+function fallbackChipLabel(
+  value: string,
+  labels: Record<string, { ar: string; en: string }>,
+  locale?: LocaleLike,
+) {
+  const normalized = value.toUpperCase();
+  const language = chipLocale(locale);
+  return (
+    labels[normalized]?.[language] ??
+    value
+      .toLowerCase()
+      .split("_")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ")
+  );
 }
 
 export function PageHeader({
@@ -205,14 +276,38 @@ export function ActionCard({
   );
 }
 
-export function StatusChip({ label, status }: { label?: string; status: string }) {
+export function StatusChip({
+  label,
+  locale,
+  status,
+}: {
+  label?: string;
+  locale?: LocaleLike;
+  status: string;
+}) {
   const tone = statusTone[status] ?? "neutral";
-  return <span className={`os-chip os-chip-${tone}`}>{label ?? status}</span>;
+  return (
+    <span className={`os-chip os-chip-${tone}`}>
+      {label ?? fallbackChipLabel(status, statusFallbackLabels, locale)}
+    </span>
+  );
 }
 
-export function PriorityChip({ label, priority }: { label?: string; priority: string }) {
+export function PriorityChip({
+  label,
+  locale,
+  priority,
+}: {
+  label?: string;
+  locale?: LocaleLike;
+  priority: string;
+}) {
   const tone = priorityTone[priority] ?? "neutral";
-  return <span className={`os-chip os-chip-${tone}`}>{label ?? priority}</span>;
+  return (
+    <span className={`os-chip os-chip-${tone}`}>
+      {label ?? fallbackChipLabel(priority, priorityFallbackLabels, locale)}
+    </span>
+  );
 }
 
 export function EmptyState({

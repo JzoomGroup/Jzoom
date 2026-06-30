@@ -260,7 +260,7 @@ describe("AdminDashboard", () => {
     expect(screen.getByText("1 active")).toBeInTheDocument();
     expect(screen.getByText("Used hours")).toBeInTheDocument();
     expect(screen.getAllByText("7.50h")).toHaveLength(3);
-    expect(screen.getByText("Waiting on client")).toBeInTheDocument();
+    expect(screen.getAllByText("Waiting on client").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("heading", { name: "Client health watchlist" })).toBeInTheDocument();
     expect(screen.getByText("Overdue work exists.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Client management/ })).toHaveAttribute(

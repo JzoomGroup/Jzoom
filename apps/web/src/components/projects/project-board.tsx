@@ -104,28 +104,46 @@ const copy = {
       "كل مرحلة مرتبطة بمخرجات واضحة حتى يعرف الفريق والعميل أين يقف المشروع.",
     description: "الوصف",
     due: "الموعد",
+    dueAt: "موعد التسليم",
     empty: "لا توجد مشاريع مفعلة حتى الآن.",
     emptyDescription: "عند اعتماد خدمة مرة واحدة وإنشاء مشروع، سيظهر هنا مع مراحله ومخرجاته.",
     estimatedHours: "الساعات التقديرية",
+    fileAndOutputRoom: "غرفة الملفات والمخرجات",
+    internalControls: "إجراءات التشغيل",
     internalProjects: "مشاريع العملاء",
     internalProjectsDescription:
       "غرفة تشغيل مخصصة لمشاريع خدمات المرة الواحدة، مرتبطة بالعروض والتكليفات والمخرجات.",
     lastActivity: "آخر حركة",
-    markActive: "تنشيط",
-    markClientReview: "إرسال لمراجعة العميل",
-    markCompleted: "إكمال المشروع",
+    markActive: "تفعيل المشروع",
+    markClientReview: "إرسال للعميل",
+    markCompleted: "تعليم كمكتمل",
     name: "اسم المخرج",
-    noActivity: "لا توجد حركة بعد.",
+    nextStep: "الخطوة التالية",
+    noActivity: "لا توجد حركة مسجلة بعد.",
+    noActivityDescription: "ستظهر هنا آخر الحركات المهمة عند مشاركة المخرجات أو اعتمادها.",
     noDeliveryPath: "لم تُربط مراحل تسليم بهذا المشروع بعد.",
+    noDeliveryPathDescription: "أضف مراحل ومخرجات الخدمة من إعدادات خدمات المرة الواحدة.",
     noOutputs: "لا توجد مخرجات بعد.",
+    noOutputsDescription: "أنشئ أول مخرج داخلي، ثم شاركه مع العميل عندما يكون جاهزًا للمراجعة.",
+    noClientOutputsDescription: "عندما يشارك الفريق مخرجًا معك، سيظهر هنا للاعتماد أو طلب التعديل.",
     noTasks: "لا توجد مهام بعد.",
+    noTasksDescription: "المهام تُنشأ من خطة خدمة المرة الواحدة وتساعد الفريق على تتبع التنفيذ.",
     notSet: "غير محدد",
+    outputDecisionHint: "راجع المخرج، ثم اعتمده أو اطلب تعديله مع ملاحظة واضحة.",
+    outputProgress: "اعتماد المخرجات",
+    outputReady: "جاهز لمراجعة العميل",
+    outputRevision: "النسخة",
     outputCode: "رمز اختياري",
     outputs: "المخرجات",
     overview: "ملخص المشروع",
     phasePlan: "خطة المراحل",
+    progress: "نسبة الإنجاز",
     projectDelivery: "تشغيل المشاريع",
     projectNumber: "رقم المشروع",
+    projectRoom: "غرفة المشروع",
+    projectRoomDescription:
+      "مساحة واحدة تجمع حالة المشروع، المهام، المخرجات، وقرار العميل بدون ضياع بين الشاشات.",
+    projectRoomClientDescription: "تابع تقدم المشروع والمخرجات التي تحتاج قرارك من مكان واحد واضح.",
     projectsCount: "عدد المشاريع",
     projectSpecialist: "مختص المشاريع",
     quote: "عرض السعر",
@@ -133,12 +151,17 @@ const copy = {
     saveOutput: "حفظ المخرج",
     saving: "جار الحفظ...",
     service: "الخدمة",
-    shareOutput: "مشاركة مع العميل",
-    returnOutput: "إرجاع للتعديل",
-    startTask: "بدء",
+    sharedAt: "تاريخ المشاركة",
+    shareOutput: "مشاركة المخرج",
+    returnOutput: "طلب تعديل",
+    startTask: "بدء المهمة",
     tasks: "المهام",
+    taskProgress: "إنجاز المهام",
     titleRequired: "اكتب اسم المخرج قبل الحفظ.",
+    updatedAt: "آخر تحديث",
     view: "فتح المشروع",
+    waitingForClient: "بانتظار قرار العميل",
+    waitingForTeam: "بانتظار تجهيز المخرجات",
   },
   en: {
     activity: "Activity",
@@ -156,29 +179,49 @@ const copy = {
       "Each phase is tied to clear deliverables so the team and client know where the project stands.",
     description: "Description",
     due: "Due",
+    dueAt: "Due date",
     empty: "No activated projects yet.",
     emptyDescription:
       "When a one-time service is approved and a project is created, it will appear here with phases and outputs.",
     estimatedHours: "Estimated hours",
+    fileAndOutputRoom: "Files and outputs room",
+    internalControls: "Operating actions",
     internalProjects: "Client projects",
     internalProjectsDescription:
       "A delivery room for one-time service projects linked to quotes, assignments, and outputs.",
     lastActivity: "Last activity",
-    markActive: "Activate",
-    markClientReview: "Send to client review",
-    markCompleted: "Complete project",
+    markActive: "Activate project",
+    markClientReview: "Send to client",
+    markCompleted: "Mark complete",
     name: "Output name",
-    noActivity: "No activity yet.",
+    nextStep: "Next step",
+    noActivity: "No activity recorded yet.",
+    noActivityDescription: "Key activity appears here when outputs are shared or approved.",
     noDeliveryPath: "No delivery phases are linked to this project yet.",
+    noDeliveryPathDescription: "Add phases and deliverables from one-time service settings.",
     noOutputs: "No outputs yet.",
+    noOutputsDescription: "Create the first internal output, then share it when it is ready.",
+    noClientOutputsDescription: "When the team shares an output with you, it will appear here.",
     noTasks: "No tasks yet.",
+    noTasksDescription: "Tasks are generated from the one-time service plan to track delivery.",
     notSet: "Not set",
+    outputDecisionHint:
+      "Review the output, then accept it or request a revision with a clear note.",
+    outputProgress: "Output approval",
+    outputReady: "Ready for client review",
+    outputRevision: "Revision",
     outputCode: "Optional code",
     outputs: "Outputs",
     overview: "Project overview",
     phasePlan: "Phase plan",
+    progress: "Progress",
     projectDelivery: "Project delivery",
     projectNumber: "Project number",
+    projectRoom: "Project room",
+    projectRoomDescription:
+      "One workspace for project status, tasks, outputs, and client decisions.",
+    projectRoomClientDescription:
+      "Track progress and outputs that need your decision from one clear place.",
     projectsCount: "Projects",
     projectSpecialist: "Project specialist",
     quote: "Quote",
@@ -186,12 +229,17 @@ const copy = {
     saveOutput: "Save output",
     saving: "Saving...",
     service: "Service",
-    shareOutput: "Share with client",
-    returnOutput: "Return for revision",
-    startTask: "Start",
+    sharedAt: "Shared",
+    shareOutput: "Share output",
+    returnOutput: "Request revision",
+    startTask: "Start task",
     tasks: "Tasks",
+    taskProgress: "Task progress",
     titleRequired: "Enter an output name before saving.",
+    updatedAt: "Updated",
     view: "Open project",
+    waitingForClient: "Waiting for client decision",
+    waitingForTeam: "Waiting for output preparation",
   },
 } as const;
 
@@ -206,6 +254,14 @@ function formatDate(value: string | null, locale: SupportedLocale, fallback: str
   if (!value) return fallback;
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
     dateStyle: "medium",
+  }).format(new Date(value));
+}
+
+function formatDateTime(value: string | null, locale: SupportedLocale, fallback: string) {
+  if (!value) return fallback;
+  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
+    dateStyle: "medium",
+    timeStyle: "short",
   }).format(new Date(value));
 }
 
@@ -228,6 +284,11 @@ function statusGuidance(status: ProjectStatus, locale: SupportedLocale) {
 function progressPercent(project: ProjectSummary) {
   if (project.progress.tasksTotal === 0) return 0;
   return Math.round((project.progress.tasksDone / project.progress.tasksTotal) * 100);
+}
+
+function boundedPercent(done: number, total: number) {
+  if (total <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round((done / total) * 100)));
 }
 
 export function ProjectList({
@@ -341,9 +402,34 @@ export function ProjectDetail({
         : project.outputs,
     [clientMode, project.outputs],
   );
+  const acceptedOutputs = visibleOutputs.filter(
+    (output) => output.status === "ACCEPTED_BY_CLIENT" || output.status === "CLOSED",
+  ).length;
+  const waitingClientOutputs = visibleOutputs.filter(
+    (output) => output.status === "SHARED_WITH_CLIENT",
+  ).length;
+  const shareableOutputs = visibleOutputs.filter((output) =>
+    shareableOutputStatuses.has(output.status),
+  ).length;
+  const taskPercent = progressPercent(project);
+  const outputPercent = clientMode
+    ? boundedPercent(acceptedOutputs, visibleOutputs.length)
+    : boundedPercent(project.progress.outputsShared, project.progress.outputsTotal);
   const outputProgress = clientMode
-    ? `${visibleOutputs.length}/${visibleOutputs.length}`
+    ? `${acceptedOutputs}/${visibleOutputs.length}`
     : `${project.progress.outputsShared}/${project.progress.outputsTotal}`;
+  const projectSpecialist =
+    project.tasks.find((task) => task.assignee)?.assignee?.displayName ?? t.notSet;
+  const latestActivityAt = project.activity[0]?.occurredAt ?? null;
+  const nextStep = clientMode
+    ? waitingClientOutputs > 0
+      ? t.waitingForClient
+      : t.waitingForTeam
+    : shareableOutputs > 0
+      ? t.shareOutput
+      : project.status === "CLIENT_REVIEW"
+        ? t.waitingForClient
+        : t.markClientReview;
 
   async function runAction(
     key: string,
@@ -409,9 +495,7 @@ export function ProjectDetail({
         </div>
         <div>
           <span>{t.projectSpecialist}</span>
-          <strong>
-            {project.tasks.find((task) => task.assignee)?.assignee?.displayName ?? t.notSet}
-          </strong>
+          <strong>{projectSpecialist}</strong>
         </div>
         <div>
           <span>{t.quote}</span>
@@ -420,11 +504,39 @@ export function ProjectDetail({
         <div>
           <span>{t.lastActivity}</span>
           <strong>
-            {project.activity[0]?.occurredAt
-              ? formatDate(project.activity[0].occurredAt, locale, t.notSet)
-              : t.notSet}
+            {latestActivityAt ? formatDate(latestActivityAt, locale, t.notSet) : t.notSet}
           </strong>
         </div>
+      </section>
+      <section className="project-room-board" aria-label={t.projectRoom}>
+        <div className="project-room-main">
+          <p className="os-eyebrow">{t.projectRoom}</p>
+          <h2>{clientMode ? t.fileAndOutputRoom : t.internalControls}</h2>
+          <p>{clientMode ? t.projectRoomClientDescription : t.projectRoomDescription}</p>
+          <div className="project-room-progress-grid">
+            <div className="project-room-progress-card">
+              <span>{t.taskProgress}</span>
+              <strong>
+                {project.progress.tasksDone}/{project.progress.tasksTotal}
+              </strong>
+              <div className="progress-track" aria-label={`${taskPercent}%`}>
+                <span style={{ inlineSize: `${taskPercent}%` }} />
+              </div>
+            </div>
+            <div className="project-room-progress-card">
+              <span>{t.outputProgress}</span>
+              <strong>{outputProgress}</strong>
+              <div className="progress-track" aria-label={`${outputPercent}%`}>
+                <span style={{ inlineSize: `${outputPercent}%` }} />
+              </div>
+            </div>
+          </div>
+        </div>
+        <aside className="project-room-next">
+          <span>{t.nextStep}</span>
+          <strong>{nextStep}</strong>
+          <p>{statusGuidance(project.status, locale)}</p>
+        </aside>
       </section>
       {error ? (
         <div className="access-feedback error" role="alert">
@@ -447,7 +559,7 @@ export function ProjectDetail({
       </section>
 
       {!clientMode ? (
-        <section className="row-actions">
+        <section className="project-room-actions row-actions" aria-label={t.internalControls}>
           <button
             className="os-button os-button-secondary"
             type="button"
@@ -491,9 +603,7 @@ export function ProjectDetail({
           </div>
           <div>
             <dt>{t.projectSpecialist}</dt>
-            <dd>
-              {project.tasks.find((task) => task.assignee)?.assignee?.displayName ?? t.notSet}
-            </dd>
+            <dd>{projectSpecialist}</dd>
           </div>
           <div>
             <dt>{t.description}</dt>
@@ -508,7 +618,7 @@ export function ProjectDetail({
         description={t.deliveryPathDescription}
       >
         {project.phases.length === 0 ? (
-          <EmptyState title={t.noDeliveryPath} />
+          <EmptyState title={t.noDeliveryPath}>{t.noDeliveryPathDescription}</EmptyState>
         ) : (
           <div className="project-timeline">
             {project.phases.map((phase) => {
@@ -537,7 +647,7 @@ export function ProjectDetail({
 
       <SectionCard title={t.tasks}>
         {project.tasks.length === 0 ? (
-          <EmptyState title={t.noTasks} />
+          <EmptyState title={t.noTasks}>{t.noTasksDescription}</EmptyState>
         ) : (
           <div className="entity-grid">
             {project.tasks.map((task) => (
@@ -584,7 +694,11 @@ export function ProjectDetail({
         )}
       </SectionCard>
 
-      <SectionCard title={t.outputs} eyebrow={t.deliverables}>
+      <SectionCard
+        title={t.outputs}
+        eyebrow={t.deliverables}
+        description={clientMode ? t.outputDecisionHint : t.noOutputsDescription}
+      >
         {!clientMode ? (
           <form className="operating-user-form" onSubmit={submitOutput}>
             <div className="operating-user-grid">
@@ -592,17 +706,23 @@ export function ProjectDetail({
                 <span>{t.name}</span>
                 <input
                   required
+                  placeholder={t.name}
                   value={outputTitle}
                   onChange={(event) => setOutputTitle(event.target.value)}
                 />
               </label>
               <label>
                 <span>{t.outputCode}</span>
-                <input value={outputCode} onChange={(event) => setOutputCode(event.target.value)} />
+                <input
+                  placeholder="OUT-01"
+                  value={outputCode}
+                  onChange={(event) => setOutputCode(event.target.value)}
+                />
               </label>
               <label>
                 <span>{t.description}</span>
                 <input
+                  placeholder={t.outputReady}
                   value={outputDescription}
                   onChange={(event) => setOutputDescription(event.target.value)}
                 />
@@ -620,7 +740,9 @@ export function ProjectDetail({
           </form>
         ) : null}
         {visibleOutputs.length === 0 ? (
-          <EmptyState title={t.noOutputs} />
+          <EmptyState title={t.noOutputs}>
+            {clientMode ? t.noClientOutputsDescription : t.noOutputsDescription}
+          </EmptyState>
         ) : (
           <div className="entity-grid">
             {visibleOutputs.map((output) => (
@@ -636,6 +758,27 @@ export function ProjectDetail({
                   />
                 </div>
                 {output.description ? <p>{output.description}</p> : null}
+                <dl className="entity-meta project-output-meta">
+                  <div>
+                    <dt>{t.outputRevision}</dt>
+                    <dd>{output.revision}</dd>
+                  </div>
+                  <div>
+                    <dt>{t.sharedAt}</dt>
+                    <dd>{formatDate(output.sharedAt, locale, t.notSet)}</dd>
+                  </div>
+                  <div>
+                    <dt>{t.dueAt}</dt>
+                    <dd>{formatDate(output.dueAt, locale, t.notSet)}</dd>
+                  </div>
+                  <div>
+                    <dt>{t.updatedAt}</dt>
+                    <dd>{formatDate(output.updatedAt, locale, t.notSet)}</dd>
+                  </div>
+                </dl>
+                {clientMode && output.status === "SHARED_WITH_CLIENT" ? (
+                  <p className="project-output-callout">{t.outputDecisionHint}</p>
+                ) : null}
                 {!clientMode && shareableOutputStatuses.has(output.status) ? (
                   <div className="row-actions">
                     <button
@@ -693,22 +836,20 @@ export function ProjectDetail({
         )}
       </SectionCard>
 
-      {!clientMode ? (
-        <SectionCard title={t.activity}>
-          {project.activity.length === 0 ? (
-            <EmptyState title={t.noActivity} />
-          ) : (
-            <div className="activity-list">
-              {project.activity.map((event) => (
-                <article key={event.id}>
-                  <strong>{event.reason ?? event.actorRole}</strong>
-                  <span>{formatDate(event.occurredAt, locale, t.notSet)}</span>
-                </article>
-              ))}
-            </div>
-          )}
-        </SectionCard>
-      ) : null}
+      <SectionCard title={t.activity} description={t.noActivityDescription}>
+        {project.activity.length === 0 ? (
+          <EmptyState title={t.noActivity}>{t.noActivityDescription}</EmptyState>
+        ) : (
+          <div className="activity-list">
+            {project.activity.map((event) => (
+              <article key={event.id}>
+                <strong>{event.reason ?? event.actorRole}</strong>
+                <span>{formatDateTime(event.occurredAt, locale, t.notSet)}</span>
+              </article>
+            ))}
+          </div>
+        )}
+      </SectionCard>
     </>
   );
 }
