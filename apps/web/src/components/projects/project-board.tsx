@@ -87,6 +87,20 @@ const projectStatusGuidance = {
   },
 } satisfies Record<ProjectStatus, Record<SupportedLocale, string>>;
 
+const fallbackPhaseNames: Record<string, Record<SupportedLocale, string>> = {
+  DISCOVERY: { ar: "الاكتشاف", en: "Discovery" },
+  WORKSHOP: { ar: "ورشة العمل", en: "Workshop" },
+  DRAFTING: { ar: "إعداد المسودة", en: "Drafting" },
+  REVIEW: { ar: "المراجعة", en: "Review" },
+  DELIVERY: { ar: "التسليم", en: "Delivery" },
+};
+
+const fallbackDeliverableNames: Record<string, Record<SupportedLocale, string>> = {
+  VISION: { ar: "الرؤية", en: "Vision" },
+  MISSION: { ar: "الرسالة", en: "Mission" },
+  "VALUES-DOCUMENT": { ar: "وثيقة القيم", en: "Values document" },
+};
+
 const copy = {
   ar: {
     activity: "النشاط",
@@ -134,9 +148,11 @@ const copy = {
     outputReady: "جاهز لمراجعة العميل",
     outputRevision: "النسخة",
     outputCode: "رمز اختياري",
+    outputReference: "مخرج",
     outputs: "المخرجات",
     overview: "ملخص المشروع",
     phasePlan: "خطة المراحل",
+    phaseReference: "مرحلة",
     progress: "نسبة الإنجاز",
     projectDelivery: "تشغيل المشاريع",
     projectNumber: "رقم المشروع",
@@ -146,6 +162,7 @@ const copy = {
     projectRoomClientDescription: "تابع تقدم المشروع والمخرجات التي تحتاج قرارك من مكان واحد واضح.",
     projectsCount: "عدد المشاريع",
     projectSpecialist: "مختص المشاريع",
+    projectCreatedFromQuote: "تم إنشاء المشروع من عرض خدمة مرة واحدة معتمد.",
     quote: "عرض السعر",
     saved: "تم حفظ الإجراء وتحديث بيانات المشروع.",
     saveOutput: "حفظ المخرج",
@@ -211,9 +228,11 @@ const copy = {
     outputReady: "Ready for client review",
     outputRevision: "Revision",
     outputCode: "Optional code",
+    outputReference: "Output",
     outputs: "Outputs",
     overview: "Project overview",
     phasePlan: "Phase plan",
+    phaseReference: "Phase",
     progress: "Progress",
     projectDelivery: "Project delivery",
     projectNumber: "Project number",
@@ -224,6 +243,7 @@ const copy = {
       "Track progress and outputs that need your decision from one clear place.",
     projectsCount: "Projects",
     projectSpecialist: "Project specialist",
+    projectCreatedFromQuote: "Project created from an accepted one-time quote.",
     quote: "Quote",
     saved: "Action saved and project data refreshed.",
     saveOutput: "Save output",
@@ -248,6 +268,74 @@ function localizedName(
   locale: SupportedLocale,
 ) {
   return locale === "ar" ? value.nameAr || value.nameEn || "" : value.nameEn || value.nameAr || "";
+}
+
+function lookupKey(code?: string | null, name?: string | null) {
+  const source = (code || name || "").trim().toUpperCase();
+  return source
+    .replace(/^PHASE-\d+-/, "")
+    .replace(/^DEL-\d+-/, "")
+    .replace(/^DEL-/, "")
+    .replace(/\s+/g, "-");
+}
+
+function localizedPhaseName(
+  phase: { code: string; nameAr?: string | null; nameEn?: string | null },
+  locale: SupportedLocale,
+) {
+  const fallback =
+    fallbackPhaseNames[lookupKey(phase.code)] ?? fallbackPhaseNames[lookupKey(null, phase.nameEn)];
+  if (locale === "ar" && !phase.nameAr && fallback) {
+    return fallback.ar;
+  }
+  return localizedName(phase, locale) || fallback?.[locale] || phase.code;
+}
+
+function localizedDeliverableName(
+  deliverable: { code: string; nameAr?: string | null; nameEn?: string | null },
+  locale: SupportedLocale,
+) {
+  const fallback =
+    fallbackDeliverableNames[lookupKey(deliverable.code)] ??
+    fallbackDeliverableNames[lookupKey(null, deliverable.nameEn)];
+  if (locale === "ar" && !deliverable.nameAr && fallback) {
+    return fallback.ar;
+  }
+  return localizedName(deliverable, locale) || fallback?.[locale] || deliverable.code;
+}
+
+function localizedOutputTitle(
+  output: { code: string; title: string },
+  locale: SupportedLocale,
+) {
+  if (locale !== "ar") return output.title;
+  const fallback =
+    fallbackDeliverableNames[lookupKey(output.code)] ??
+    fallbackDeliverableNames[lookupKey(null, output.title)];
+  return fallback?.ar ?? output.title;
+}
+
+function activityReason(
+  event: { actorRole: string; reason: string | null },
+  locale: SupportedLocale,
+  createdFromQuote: string,
+) {
+  const reason = event.reason?.trim();
+  if (reason) {
+    if (/project created from accepted one-time quote item/i.test(reason)) {
+      return createdFromQuote;
+    }
+    return reason;
+  }
+  const normalizedRole = event.actorRole.replace(/-/g, "_");
+  const actorLabels: Record<string, Record<SupportedLocale, string>> = {
+    ROLE_ADMIN: { ar: "مدير النظام", en: "Admin" },
+    ROLE_CLIENT: { ar: "العميل", en: "Client" },
+    ROLE_SPECIALIST: { ar: "المختص", en: "Specialist" },
+    ROLE_PROJECT_SPECIALIST: { ar: "مختص المشاريع", en: "Project specialist" },
+    ROLE_SUPERVISOR: { ar: "المشرف", en: "Supervisor" },
+  };
+  return actorLabels[normalizedRole]?.[locale] ?? event.actorRole;
 }
 
 function formatDate(value: string | null, locale: SupportedLocale, fallback: string) {
@@ -627,14 +715,16 @@ export function ProjectDetail({
               );
               return (
                 <article key={phase.id}>
-                  <span>{phase.sortOrder}</span>
+                  <span>{phase.sortOrder + 1}</span>
                   <div>
-                    <small>{phase.code}</small>
-                    <h3>{localizedName(phase, locale)}</h3>
+                    <small>
+                      {t.phaseReference} {phase.sortOrder + 1}
+                    </small>
+                    <h3>{localizedPhaseName(phase, locale)}</h3>
                     {phase.description ? <p>{phase.description}</p> : null}
                     <ul>
                       {phaseDeliverables.map((deliverable) => (
-                        <li key={deliverable.id}>{localizedName(deliverable, locale)}</li>
+                        <li key={deliverable.id}>{localizedDeliverableName(deliverable, locale)}</li>
                       ))}
                     </ul>
                   </div>
@@ -749,8 +839,10 @@ export function ProjectDetail({
               <article className="entity-card" key={output.id}>
                 <div className="entity-card-heading">
                   <div>
-                    <small>{output.code}</small>
-                    <h3>{output.title}</h3>
+                    <small>
+                      {t.outputReference} {output.sortOrder + 1}
+                    </small>
+                    <h3>{localizedOutputTitle(output, locale)}</h3>
                   </div>
                   <StatusChip
                     status={output.status}
@@ -843,7 +935,7 @@ export function ProjectDetail({
           <div className="activity-list">
             {project.activity.map((event) => (
               <article key={event.id}>
-                <strong>{event.reason ?? event.actorRole}</strong>
+                <strong>{activityReason(event, locale, t.projectCreatedFromQuote)}</strong>
                 <span>{formatDateTime(event.occurredAt, locale, t.notSet)}</span>
               </article>
             ))}
