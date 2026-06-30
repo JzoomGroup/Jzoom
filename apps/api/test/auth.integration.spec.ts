@@ -281,6 +281,35 @@ describeWithDatabase("PR 3 PostgreSQL authentication and RBAC", () => {
     await login("invited@pr3.test", "InvitedPassword123");
   });
 
+  it("creates an operating user from the Admin users payload", async () => {
+    const { agent, csrf } = await login("admin@pr3.test");
+
+    const response = await agent
+      .post("/api/v1/auth/admin/users")
+      .set("X-CSRF-Token", csrf)
+      .send({
+        clientIds: [],
+        displayName: "Operating Admin",
+        email: "operator@pr3.test",
+        monthlyServiceIds: [],
+        oneTimeServiceIds: [],
+        roleCode: "ROLE-ADMIN",
+        serviceItemIds: [],
+        specialistIds: [],
+      })
+      .expect(201);
+
+    expect(response.body.invitationToken).toEqual(expect.any(String));
+    expect(response.body.snapshot.users).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          displayName: "Operating Admin",
+          email: "operator@pr3.test",
+        }),
+      ]),
+    );
+  });
+
   it("prevents disabling or de-roling the last active Admin", async () => {
     const { agent, csrf } = await login("admin@pr3.test");
     const disable = await agent

@@ -29,16 +29,17 @@ import {
 import { Public, RequirePermissions, RequireRoles, RequireScope } from "./auth.decorators.js";
 import {
   AcceptInvitationDto,
+  CreateOperatingUserDto,
   InviteUserDto,
   LoginDto,
   PasswordResetConfirmDto,
   PasswordResetRequestDto,
   ReplaceRolePermissionsDto,
   ReplaceUserRolesDto,
+  UpdateOperatingUserScopeDto,
   UpdateProfilePreferencesDto,
   UpdateUserStatusDto,
 } from "./auth.dto.js";
-import type { CreateOperatingUserDto, UpdateOperatingUserScopeDto } from "./auth.dto.js";
 import { AuthService } from "./auth.service.js";
 import { clearAuthCookies, setAuthCookies } from "./cookie.js";
 import type { AuthRuntimeEnvironment, RequestMetadata } from "./auth.types.js";
