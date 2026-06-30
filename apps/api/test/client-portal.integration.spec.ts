@@ -66,6 +66,8 @@ describeWithDatabase("PR 12 client portal quote and invoice views", () => {
   let accountManagerId: string;
   let oneTimeServiceRevisionId: string;
   let subscribedMonthlyServiceCode: string;
+  let subscriptionServiceId: string;
+  let includedServiceItemRevisionId: string;
   let includedItemCode: string;
   let excludedItemCode: string;
   const runId = randomUUID().slice(0, 8);
@@ -77,6 +79,25 @@ describeWithDatabase("PR 12 client portal quote and invoice views", () => {
       .send({ email, password: "StrongPassword123" })
       .expect(200);
     return agent;
+  }
+
+  function csrfFrom(response: request.Response): string {
+    const header = response.headers["set-cookie"];
+    const cookies = Array.isArray(header) ? header : header ? [header] : [];
+    const csrfCookie = cookies.find((cookie) => cookie.startsWith("jzoom_csrf="));
+    if (!csrfCookie) {
+      throw new Error("CSRF cookie was not issued");
+    }
+    return decodeURIComponent(csrfCookie.split(";", 1)[0]!.slice("jzoom_csrf=".length));
+  }
+
+  async function loginWithCsrf(email: string) {
+    const agent = request.agent(app.getHttpServer());
+    const response = await agent
+      .post("/api/v1/auth/login")
+      .send({ email, password: "StrongPassword123" })
+      .expect(200);
+    return { agent, csrf: csrfFrom(response) };
   }
 
   async function createQuoteFixture(
@@ -440,6 +461,7 @@ describeWithDatabase("PR 12 client portal quote and invoice views", () => {
         },
       }),
     ]);
+    includedServiceItemRevisionId = includedRevision.id;
     await database.serviceItemLevelInclusion.createMany({
       data: [
         {
@@ -461,7 +483,7 @@ describeWithDatabase("PR 12 client portal quote and invoice views", () => {
         startsAt: new Date(Date.now() - 86_400_000),
       },
     });
-    await database.subscriptionService.create({
+    const subscriptionService = await database.subscriptionService.create({
       data: {
         subscriptionId: subscription.id,
         monthlyServiceRevisionId: monthlyServiceRevision.id,
@@ -471,6 +493,7 @@ describeWithDatabase("PR 12 client portal quote and invoice views", () => {
         scopeSnapshot: { source: "PR12 package inclusion test" },
       },
     });
+    subscriptionServiceId = subscriptionService.id;
 
     const module = await Test.createTestingModule({
       imports: [AppModule.forRoot(environment)],
@@ -527,6 +550,128 @@ describeWithDatabase("PR 12 client portal quote and invoice views", () => {
     expect(clientCatalogText).not.toContain("estimatedHours");
     expect(clientCatalogText).not.toContain("durationDays");
     expect(clientCatalogText).not.toContain("internalHourlyCostSar");
+  });
+
+  it("returns client-visible request counts in summaries and detail views", async () => {
+    const { agent: clientUser, csrf } = await loginWithCsrf(clientEmail);
+    const createResponse = await clientUser
+      .post("/api/v1/client-portal/requests")
+      .set("X-CSRF-Token", csrf)
+      .send({
+        clientId,
+        subscriptionServiceId,
+        serviceItemRevisionId: includedServiceItemRevisionId,
+        title: "Client visible count request",
+        description: "Verifies client-safe request counters.",
+        priority: "NORMAL",
+      })
+      .expect(201);
+    const requestId = createResponse.body.id as string;
+
+    await database.comment.createMany({
+      data: [
+        {
+          requestId,
+          authorId: accountManagerId,
+          body: "Visible client comment",
+          isClientVisible: true,
+        },
+        {
+          requestId,
+          authorId: accountManagerId,
+          body: "Internal-only comment",
+          isClientVisible: false,
+        },
+      ],
+    });
+    await database.fileMetadata.createMany({
+      data: [
+        {
+          requestId,
+          uploadedById: accountManagerId,
+          storageProvider: "metadata",
+          storageKey: `pr12/${runId}/${requestId}/client-visible.txt`,
+          originalName: "client-visible.txt",
+          mimeType: "text/plain",
+          sizeBytes: 10n,
+          sha256: snapshotHash("client-visible-file"),
+          visibility: "CLIENT_VISIBLE",
+        },
+        {
+          requestId,
+          uploadedById: accountManagerId,
+          storageProvider: "metadata",
+          storageKey: `pr12/${runId}/${requestId}/internal.txt`,
+          originalName: "internal.txt",
+          mimeType: "text/plain",
+          sizeBytes: 10n,
+          sha256: snapshotHash("internal-file"),
+          visibility: "INTERNAL",
+        },
+      ],
+    });
+    await database.requestOutput.createMany({
+      data: [
+        {
+          requestId,
+          createdById: accountManagerId,
+          sharedById: accountManagerId,
+          code: `PR12-SHARED-${runId}`,
+          title: "Shared output",
+          status: "SHARED_WITH_CLIENT",
+          sharedAt: new Date(),
+        },
+        {
+          requestId,
+          createdById: accountManagerId,
+          code: `PR12-DRAFT-${runId}`,
+          title: "Draft output",
+          status: "DRAFT",
+        },
+      ],
+    });
+    await database.clientDocumentRequest.createMany({
+      data: [
+        {
+          requestId,
+          requestedById: accountManagerId,
+          title: "Visible requested document",
+          status: "REQUESTED",
+        },
+        {
+          requestId,
+          requestedById: accountManagerId,
+          title: "Cancelled requested document",
+          status: "CANCELLED",
+          cancelledAt: new Date(),
+        },
+      ],
+    });
+    await database.internalNote.create({
+      data: {
+        requestId,
+        authorId: accountManagerId,
+        body: "Internal note must not be counted for clients",
+      },
+    });
+
+    const detail = await clientUser
+      .get(`/api/v1/client-portal/requests/${requestId}`)
+      .expect(200);
+    expect(detail.body.counts).toMatchObject({
+      comments: 1,
+      documentRequests: 1,
+      files: 1,
+      internalNotes: 0,
+      outputs: 1,
+      tasks: 0,
+      timeEntries: 0,
+      workflowEvents: 0,
+    });
+
+    const list = await clientUser.get("/api/v1/client-portal/requests").expect(200);
+    const summary = list.body.find((item: { id: string }) => item.id === requestId);
+    expect(summary.counts).toMatchObject(detail.body.counts);
   });
 
   it("lists only client-safe quote and invoice records", async () => {

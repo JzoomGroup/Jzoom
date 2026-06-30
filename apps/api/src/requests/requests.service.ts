@@ -197,6 +197,22 @@ const requestSummaryInclude = {
   },
 } satisfies Prisma.RequestInclude;
 
+const clientRequestSummaryInclude = {
+  ...requestSummaryInclude,
+  _count: {
+    select: {
+      comments: { where: { isClientVisible: true } },
+      files: { where: { visibility: "CLIENT_VISIBLE", archivedAt: null } },
+      internalNotes: true,
+      documentRequests: { where: { status: { not: "CANCELLED" } } },
+      outputs: { where: { status: { in: [...CLIENT_VISIBLE_OUTPUT_STATUSES] } } },
+      tasks: true,
+      timeEntries: true,
+      workflowEvents: true,
+    },
+  },
+} satisfies Prisma.RequestInclude;
+
 const requestDetailInclude = {
   ...requestSummaryInclude,
   comments: {
@@ -1167,7 +1183,7 @@ export class RequestsService {
         archivedAt: null,
       },
       orderBy: [{ createdAt: "desc" }],
-      include: requestSummaryInclude,
+      include: clientRequestSummaryInclude,
     });
     return requests.map((request) => this.summaryView(request, true));
   }
@@ -2738,24 +2754,15 @@ export class RequestsService {
       sourceQuote: request.sourceQuote,
       sourceInvoice: request.sourceInvoice,
       assignments: this.assignmentSummary(request),
-      counts: clientSafe
-        ? {
-            comments: 0,
-            documentRequests: 0,
-            files: 0,
-            internalNotes: 0,
-            outputs: 0,
-            tasks: 0,
-            timeEntries: 0,
-            workflowEvents: 0,
-          }
-        : request._count,
+      counts: clientSafe ? this.clientSafeSummaryCounts(request._count) : request._count,
     };
   }
 
   private detailView(request: RequestDetailRecord, clientSafe: boolean) {
+    const summary = this.summaryView(request, clientSafe);
     return {
-      ...this.summaryView(request, clientSafe),
+      ...summary,
+      counts: clientSafe ? this.clientSafeDetailCounts(request) : summary.counts,
       comments: request.comments
         .filter((comment) => !clientSafe || comment.isClientVisible)
         .map((comment) => ({
@@ -2833,6 +2840,40 @@ export class RequestsService {
         metadata: event.metadata,
         occurredAt: event.occurredAt.toISOString(),
       })),
+    };
+  }
+
+  private clientSafeSummaryCounts(counts: RequestSummaryRecord["_count"]) {
+    return {
+      comments: counts.comments,
+      documentRequests: counts.documentRequests,
+      files: counts.files,
+      internalNotes: 0,
+      outputs: counts.outputs,
+      tasks: 0,
+      timeEntries: 0,
+      workflowEvents: 0,
+    };
+  }
+
+  private clientSafeDetailCounts(request: RequestDetailRecord) {
+    return {
+      comments: request.comments.filter((comment) => comment.isClientVisible).length,
+      documentRequests: request.documentRequests.filter(
+        (documentRequest) => documentRequest.status !== "CANCELLED",
+      ).length,
+      files: request.files.filter(
+        (file) => file.visibility === "CLIENT_VISIBLE" && file.archivedAt === null,
+      ).length,
+      internalNotes: 0,
+      outputs: request.outputs.filter((output) =>
+        CLIENT_VISIBLE_OUTPUT_STATUSES.includes(
+          output.status as (typeof CLIENT_VISIBLE_OUTPUT_STATUSES)[number],
+        ),
+      ).length,
+      tasks: 0,
+      timeEntries: 0,
+      workflowEvents: 0,
     };
   }
 

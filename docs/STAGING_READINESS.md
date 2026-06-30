@@ -43,8 +43,9 @@ Use `.env.example` as the baseline and provide staging-specific values through t
 - `NEXT_PUBLIC_API_BASE_URL`
 - `NEXT_PUBLIC_AUTH_CSRF_COOKIE_NAME`
 - `WORKER_NAME`
-- `JZOOM_UPLOAD_ROOT` pointing to a persistent writable API volume, for example
-  `/var/lib/jzoom/uploads` or the platform equivalent.
+- `JZOOM_UPLOAD_ROOT` pointing to a persistent writable API volume or directory mount. On
+  Coolify staging2 this is `/app/.jzoom-uploads`, backed by a Coolify directory storage mounted to
+  the same container path.
 - `JZOOM_UPLOAD_MAX_BYTES`, set to the approved maximum request-file size in bytes. If omitted,
   the API defaults to 25 MB.
 
