@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type {
   RequestAssignmentCandidates,
+  RequestIntakeOptions,
   RequestQueueResponse,
   RequestSummary,
   ServiceRequest,
@@ -50,6 +51,10 @@ export function requireRequest(id: string): Promise<ServiceRequest> {
 
 export function requireRequestAssignmentCandidates(): Promise<RequestAssignmentCandidates> {
   return requireRequestResponse<RequestAssignmentCandidates>("requests/assignment-candidates");
+}
+
+export function requireRequestIntakeOptions(): Promise<RequestIntakeOptions> {
+  return requireRequestResponse<RequestIntakeOptions>("requests/intake-options");
 }
 
 export function requireClientRequests(): Promise<RequestSummary[]> {

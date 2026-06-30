@@ -6,6 +6,7 @@ import { RequestQueue } from "./request-queue";
 import type { CurrentUser } from "../../lib/auth";
 import type {
   RequestAssignmentCandidates,
+  RequestIntakeOptions,
   RequestQueueResponse,
   RequestSummary,
   ServiceRequest,
@@ -267,6 +268,69 @@ function assignmentCandidates(): RequestAssignmentCandidates {
   };
 }
 
+function requestIntakeOptions(): RequestIntakeOptions {
+  return {
+    assignmentCandidates: assignmentCandidates(),
+    clients: [
+      {
+        id: "client-1",
+        code: "CLIENT-1",
+        name: "Acme",
+        legalName: "Acme LLC",
+        sector: "Technology",
+        city: "Riyadh",
+        sourceQuotes: [{ id: "quote-1", quoteNumber: "Q-001", status: "ISSUED" }],
+        sourceInvoices: [{ id: "invoice-1", invoiceNumber: "INV-001", status: "ISSUED" }],
+        subscriptions: [
+          {
+            id: "subscription-1",
+            status: "ACTIVE",
+            startsAt: "2026-06-01T00:00:00.000Z",
+            endsAt: null,
+            services: [
+              {
+                id: "subscription-service-1",
+                subscriptionId: "subscription-1",
+                status: "ACTIVE",
+                startsAt: "2026-06-01T00:00:00.000Z",
+                endsAt: null,
+                hoursAllocated: 20,
+                monthlyService: {
+                  id: "monthly-service-1",
+                  code: "SEO",
+                  revisionId: "monthly-service-revision-1",
+                  nameAr: "تحسين محركات البحث",
+                  nameEn: "SEO operations",
+                  serviceLine: "Operate",
+                  domain: "Marketing",
+                },
+                serviceLevel: {
+                  id: "level-1",
+                  code: "GROWTH",
+                  labelAr: "نمو",
+                  labelEn: "Growth",
+                },
+                serviceItems: [
+                  {
+                    id: "service-item-revision-1",
+                    itemId: "service-item-1",
+                    code: "SEO-REPORT",
+                    nameAr: "تقرير SEO",
+                    nameEn: "SEO report",
+                    expectedOutput: "Monthly report",
+                    requiresFile: false,
+                    requestType: null,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
+
 function currentUser(overrides: Partial<CurrentUser> = {}): CurrentUser {
   return {
     id: "admin-user-1",
@@ -321,6 +385,54 @@ describe("Request lifecycle UI", () => {
       "href",
       "/requests/request-1",
     );
+  });
+
+  it("creates request intake choices from scoped client subscription data", async () => {
+    const fetchMock = jest.mocked(fetch);
+    fetchMock.mockImplementationOnce(() =>
+      jsonResponse({
+        serviceItemRevision: {
+          id: "service-item-revision-1",
+          serviceItemId: "service-item-1",
+          nameAr: "تقرير SEO",
+          nameEn: "SEO report",
+          expectedOutput: "Monthly report",
+          requiresFile: false,
+        },
+        serviceItem: {
+          id: "service-item-1",
+          code: "SEO-REPORT",
+          monthlyService: { id: "monthly-service-1", code: "SEO" },
+        },
+        template: null,
+      }),
+    );
+
+    render(<RequestList intakeOptions={requestIntakeOptions()} requests={[]} />);
+
+    fireEvent.change(screen.getByLabelText("Client"), { target: { value: "client-1" } });
+    expect(
+      screen.getByRole("option", { name: /SEO operations - Growth - 20 hours/ }),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Subscription service"), {
+      target: { value: "subscription-service-1" },
+    });
+    expect(screen.getByRole("option", { name: /SEO report - Monthly report/ })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Service item"), {
+      target: { value: "service-item-revision-1" },
+    });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "http://localhost:4000/api/v1/request-templates/service-item-revisions/service-item-revision-1/active",
+    );
+    expect(screen.getByRole("option", { name: "Q-001 - ISSUED" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "INV-001 - ISSUED" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Specialist User - specialist@example.com" }),
+    ).toBeInTheDocument();
   });
 
   it("updates request lifecycle through the backend API", async () => {

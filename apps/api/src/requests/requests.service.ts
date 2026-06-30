@@ -379,6 +379,180 @@ export class RequestsService {
     };
   }
 
+  async intakeOptions(principal: AuthenticatedPrincipal) {
+    const scopedClientIds = this.optionalClientIdsFor(principal);
+    const canSeeAllClients = hasGlobalAccess(principal);
+    const [clients, assignmentCandidates] = await Promise.all([
+      scopedClientIds.length > 0 || canSeeAllClients
+        ? this.database.prisma.client.findMany({
+            where: {
+              ...(canSeeAllClients ? {} : { id: { in: scopedClientIds } }),
+              status: "ACTIVE",
+              archivedAt: null,
+            },
+            orderBy: [{ name: "asc" }, { code: "asc" }],
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              legalName: true,
+              sector: true,
+              city: true,
+              quotes: {
+                where: { status: { in: ["ISSUED", "ACCEPTED"] } },
+                orderBy: [{ issueDate: "desc" }, { createdAt: "desc" }],
+                select: { id: true, quoteNumber: true, status: true },
+              },
+              invoices: {
+                where: { status: "ISSUED" },
+                orderBy: [{ issueDate: "desc" }, { createdAt: "desc" }],
+                select: { id: true, invoiceNumber: true, status: true },
+              },
+              subscriptions: {
+                where: this.activeSubscriptionWhere(),
+                orderBy: [{ startsAt: "desc" }, { createdAt: "desc" }],
+                select: {
+                  id: true,
+                  status: true,
+                  startsAt: true,
+                  endsAt: true,
+                  services: {
+                    where: this.activeSubscriptionServiceWhere(),
+                    orderBy: [{ startsAt: "desc" }, { createdAt: "desc" }],
+                    select: {
+                      id: true,
+                      subscriptionId: true,
+                      serviceLevelId: true,
+                      status: true,
+                      startsAt: true,
+                      endsAt: true,
+                      hoursAllocated: true,
+                      serviceLevel: {
+                        select: {
+                          id: true,
+                          code: true,
+                          labelAr: true,
+                          labelEn: true,
+                        },
+                      },
+                      monthlyServiceRevision: {
+                        select: {
+                          id: true,
+                          monthlyServiceId: true,
+                          nameAr: true,
+                          nameEn: true,
+                          serviceLine: true,
+                          domain: true,
+                          monthlyService: {
+                            select: {
+                              id: true,
+                              code: true,
+                              items: {
+                                where: { status: "ACTIVE", archivedAt: null },
+                                orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
+                                select: {
+                                  id: true,
+                                  code: true,
+                                  revisions: {
+                                    where: this.activeServiceItemRevisionWhere(),
+                                    orderBy: { version: "desc" },
+                                    take: 1,
+                                    select: {
+                                      id: true,
+                                      serviceItemId: true,
+                                      nameAr: true,
+                                      nameEn: true,
+                                      expectedOutput: true,
+                                      requiresFile: true,
+                                      requestType: true,
+                                      levelInclusions: {
+                                        select: {
+                                          serviceLevelId: true,
+                                          included: true,
+                                        },
+                                      },
+                                    },
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          })
+        : Promise.resolve([]),
+      this.assignmentCandidatesForIntake(principal),
+    ]);
+
+    return {
+      clients: clients.map((client) => ({
+        id: client.id,
+        code: client.code,
+        name: client.name,
+        legalName: client.legalName,
+        sector: client.sector,
+        city: client.city,
+        subscriptions: client.subscriptions.map((subscription) => ({
+          id: subscription.id,
+          status: subscription.status,
+          startsAt: subscription.startsAt.toISOString(),
+          endsAt: subscription.endsAt?.toISOString() ?? null,
+          services: subscription.services.map((service) => {
+            const revision = service.monthlyServiceRevision;
+            return {
+              id: service.id,
+              subscriptionId: service.subscriptionId,
+              status: service.status,
+              startsAt: service.startsAt.toISOString(),
+              endsAt: service.endsAt?.toISOString() ?? null,
+              hoursAllocated: Number(service.hoursAllocated),
+              monthlyService: {
+                id: revision.monthlyService.id,
+                code: revision.monthlyService.code,
+                revisionId: revision.id,
+                nameAr: revision.nameAr,
+                nameEn: revision.nameEn,
+                serviceLine: revision.serviceLine,
+                domain: revision.domain,
+              },
+              serviceLevel: service.serviceLevel,
+              serviceItems: revision.monthlyService.items.flatMap((item) => {
+                const itemRevision = item.revisions[0];
+                if (!itemRevision) return [];
+                const hasLevelRules = itemRevision.levelInclusions.length > 0;
+                const includedForLevel = itemRevision.levelInclusions.some(
+                  (inclusion) =>
+                    inclusion.included && inclusion.serviceLevelId === service.serviceLevelId,
+                );
+                if (hasLevelRules && !includedForLevel) return [];
+                return [
+                  {
+                    id: itemRevision.id,
+                    itemId: itemRevision.serviceItemId,
+                    code: item.code,
+                    nameAr: itemRevision.nameAr,
+                    nameEn: itemRevision.nameEn,
+                    expectedOutput: itemRevision.expectedOutput,
+                    requiresFile: itemRevision.requiresFile,
+                    requestType: itemRevision.requestType,
+                  },
+                ];
+              }),
+            };
+          }),
+        })),
+        sourceQuotes: client.quotes,
+        sourceInvoices: client.invoices,
+      })),
+      assignmentCandidates,
+    };
+  }
+
   async queue(input: RequestQueueQueryDto, principal: AuthenticatedPrincipal) {
     const queue = input.queue ?? "all";
     const where = this.queueAccessWhere(queue, input, principal);
@@ -2690,6 +2864,53 @@ export class RequestsService {
       });
     }
     return user.id;
+  }
+
+  private async assignmentCandidatesForIntake(principal: AuthenticatedPrincipal) {
+    if (hasGlobalAccess(principal) || principal.roles.includes(SUPERVISOR_ROLE_CODE)) {
+      return this.assignmentCandidates(principal);
+    }
+
+    const currentUser = {
+      id: principal.userId,
+      email: principal.email,
+      displayName: principal.displayName,
+      roleCodes: principal.roles,
+    };
+    return {
+      specialists: principal.roles.includes(SPECIALIST_ROLE_CODE) ? [currentUser] : [],
+      supervisors: principal.roles.includes(SUPERVISOR_ROLE_CODE) ? [currentUser] : [],
+      accountManagers: principal.roles.includes(ACCOUNT_MANAGER_ROLE_CODE) ? [currentUser] : [],
+    };
+  }
+
+  private activeSubscriptionWhere(): Prisma.SubscriptionWhereInput {
+    const now = new Date();
+    return {
+      status: "ACTIVE",
+      startsAt: { lte: now },
+      OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+    };
+  }
+
+  private activeSubscriptionServiceWhere(): Prisma.SubscriptionServiceWhereInput {
+    const now = new Date();
+    return {
+      status: "ACTIVE",
+      startsAt: { lte: now },
+      OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+    };
+  }
+
+  private activeServiceItemRevisionWhere(): Prisma.ServiceItemRevisionWhereInput {
+    const now = new Date();
+    return {
+      status: "ACTIVE",
+      AND: [
+        { OR: [{ effectiveFrom: null }, { effectiveFrom: { lte: now } }] },
+        { OR: [{ effectiveTo: null }, { effectiveTo: { gt: now } }] },
+      ],
+    };
   }
 
   private async ensureRequestWorkflow(): Promise<RequestWorkflow> {

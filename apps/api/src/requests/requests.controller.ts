@@ -156,6 +156,12 @@ export class RequestsController {
     return this.requests.assignmentCandidates(request.auth!);
   }
 
+  @Get("intake-options")
+  @ApiOperation({ summary: "List scoped request intake options for friendly request creation" })
+  intakeOptions(@Req() request: RequestWithId) {
+    return this.requests.intakeOptions(request.auth!);
+  }
+
   @Get(":id")
   @ApiOperation({ summary: "Retrieve an internal service request detail view" })
   get(@Param("id") id: string, @Req() request: RequestWithId) {

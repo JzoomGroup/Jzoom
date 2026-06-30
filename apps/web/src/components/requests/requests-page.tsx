@@ -3,6 +3,7 @@ import { getCurrentUser } from "../../lib/auth";
 import {
   requireRequest,
   requireRequestAssignmentCandidates,
+  requireRequestIntakeOptions,
   requireRequests,
 } from "../../lib/request-server";
 import { QuoteShell } from "../quotes/quote-shell";
@@ -39,6 +40,7 @@ export async function RequestsPage({ requestId }: { requestId?: string }) {
     requestId && !Array.isArray(content) && canUseAssignmentCandidates(user)
       ? await requireRequestAssignmentCandidates()
       : null;
+  const intakeOptions = Array.isArray(content) ? await requireRequestIntakeOptions() : null;
 
   return (
     <QuoteShell
@@ -50,7 +52,11 @@ export async function RequestsPage({ requestId }: { requestId?: string }) {
       roles={user.roles}
     >
       {Array.isArray(content) ? (
-        <RequestList locale={user.preferredLocale} requests={content} />
+        <RequestList
+          intakeOptions={intakeOptions}
+          locale={user.preferredLocale}
+          requests={content}
+        />
       ) : (
         <RequestDetail
           assignmentCandidates={assignmentCandidates}

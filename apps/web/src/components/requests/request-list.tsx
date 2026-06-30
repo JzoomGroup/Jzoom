@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useMemo, useState } from "react";
 import {
   RequestTemplateFields,
   type TemplateAnswerState,
@@ -10,26 +10,43 @@ import {
 import { createServiceRequest, requestErrorMessage } from "../../lib/request-client";
 import { answersForTemplate, fetchActiveRequestTemplate } from "../../lib/request-templates-client";
 import type { RequestTemplateVersion, TemplateAnswerValue } from "../../lib/request-template-types";
-import type { RequestStatus, RequestSummary } from "../../lib/request-types";
+import type {
+  RequestAssignmentCandidate,
+  RequestIntakeOptions,
+  RequestIntakeServiceItemOption,
+  RequestIntakeSubscriptionServiceOption,
+  RequestStatus,
+  RequestSummary,
+} from "../../lib/request-types";
 import { EmptyState, PageHeader, PriorityChip, SectionCard, StatusChip } from "../premium-os";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
 
 const priorities = ["LOW", "NORMAL", "HIGH", "URGENT"] as const;
 
+const emptyIntakeOptions: RequestIntakeOptions = {
+  clients: [],
+  assignmentCandidates: {
+    specialists: [],
+    supervisors: [],
+    accountManagers: [],
+  },
+};
+
 const copy = {
   ar: {
-    accountManagerId: "معرف مدير الحساب",
+    accountManagerId: "مدير الحساب",
     activeRequests: "طلبات نشطة",
     allRequests: "كل الطوابير",
     assignmentAndSources: "المصادر والتوزيع",
     assignmentAndSourcesHint: "اربط المراجع الداخلية وحدد فريق التشغيل إذا كانت البيانات متوفرة.",
-    clientId: "معرف العميل",
+    autoAssign: "تعيين تلقائي",
+    clientId: "العميل",
     clientAction: "بانتظار العميل",
     commandEyebrow: "مركز تشغيل الطلبات",
     createCta: "إنشاء وفتح الطلب",
     createRequest: "إنشاء طلب",
     createRequestDescription:
-      "أنشئ طلبًا تشغيليًا مرتبطًا بعميل واشتراك قائم. يتم حفظ نفس منطق العمل الحالي بدون تغيير.",
+      "أنشئ طلبا تشغيليا من بيانات العميل الفعلية: اختر العميل ثم خدمة الاشتراك والبند والمصادر المتاحة له.",
     creating: "جار إنشاء الطلب...",
     description: "الوصف",
     due: "الموعد",
@@ -42,6 +59,11 @@ const copy = {
     loadedTemplate: "تم تحميل النموذج",
     noActiveTemplate:
       "لا يوجد نموذج نشط لهذا البند. يمكنك إنشاء الطلب الآن بالبيانات الأساسية، وسيظهر نموذج مخصص هنا بعد تفعيله من إدارة النماذج.",
+    noClients: "لا توجد عملاء نشطون ضمن صلاحياتك حاليا.",
+    noInvoices: "لا توجد فواتير مصدرة لهذا العميل",
+    noQuotes: "لا توجد عروض سعر مصدرة أو مقبولة لهذا العميل",
+    noServiceItems: "لا توجد بنود خدمة متاحة لهذا الاشتراك",
+    noSubscriptionServices: "لا توجد خدمات اشتراك نشطة لهذا العميل",
     notSet: "غير محدد",
     openQueues: "فتح طوابير العمل",
     overdueRequests: "طلبات متأخرة",
@@ -54,38 +76,44 @@ const copy = {
     requestDetails: "وصف العمل والأولوية",
     requestDetailsHint: "اكتب عنوانًا واضحًا وحدد الأولوية والموعد ووصف المطلوب.",
     requestSetup: "بيانات الطلب",
-    requestSetupHint: "ابدأ بربط العميل والاشتراك وبند الخدمة حتى يظهر النموذج المناسب.",
+    requestSetupHint: "ابدأ باختيار العميل، ثم اختر خدمة الاشتراك والبند من بيانات اشتراكه النشطة.",
     requestList: "قائمة الطلبات",
-    serviceItemRevisionId: "معرف إصدار بند الخدمة",
-    sourceInvoiceId: "معرف الفاتورة المصدر",
-    sourceQuoteId: "معرف عرض السعر المصدر",
-    specialistId: "معرف المختص",
+    selectClient: "اختر العميل",
+    selectInvoice: "اختياري - اختر الفاتورة",
+    selectQuote: "اختياري - اختر عرض السعر",
+    selectServiceItem: "اختياري - اختر بند الخدمة",
+    selectSubscriptionService: "اختر خدمة الاشتراك",
+    serviceItemRevisionId: "بند الخدمة",
+    sourceInvoiceId: "الفاتورة المصدر",
+    sourceQuoteId: "عرض السعر المصدر",
+    specialistId: "المختص",
     stepClient: "العميل",
     stepLaunch: "التشغيل",
     stepTemplate: "النموذج",
-    subscriptionServiceId: "معرف خدمة الاشتراك",
+    subscriptionServiceId: "خدمة الاشتراك",
     supervisorReview: "بانتظار المشرف",
-    supervisorId: "معرف المشرف",
+    supervisorId: "المشرف",
     templateAndValidation: "النموذج الديناميكي",
     templateAndValidationHint: "حمّل نموذج البند عند توفره حتى تُحفظ الإجابات بنفس عقد البيانات.",
     templateFor: "لـ",
-    templateFirst: "أدخل معرف إصدار بند الخدمة أولًا.",
+    templateFirst: "اختر بند الخدمة أولا حتى يظهر النموذج المناسب.",
     title: "العنوان",
   },
   en: {
-    accountManagerId: "Account manager ID",
+    accountManagerId: "Account manager",
     activeRequests: "Active requests",
     allRequests: "All queues",
     assignmentAndSources: "Sources and assignment",
     assignmentAndSourcesHint:
       "Connect internal references and assign the delivery team when available.",
-    clientId: "Client ID",
+    autoAssign: "Auto assign",
+    clientId: "Client",
     clientAction: "Client action",
     commandEyebrow: "Request command center",
     createCta: "Create and open request",
     createRequest: "Create request",
     createRequestDescription:
-      "Create an operational request linked to an active client subscription while preserving the current backend contract.",
+      "Create an operational request from real client data: select the client, subscription service, service item, and available references.",
     creating: "Creating...",
     description: "Description",
     due: "Due",
@@ -98,6 +126,11 @@ const copy = {
     loadedTemplate: "Loaded template",
     noActiveTemplate:
       "No active template exists for this item. You can create the request with the basic fields now; a custom form will appear here after Admin activates one.",
+    noClients: "There are no active clients in your current scope.",
+    noInvoices: "No issued invoices for this client",
+    noQuotes: "No issued or accepted quotes for this client",
+    noServiceItems: "No service items are available for this subscription",
+    noSubscriptionServices: "No active subscription services for this client",
     notSet: "Not set",
     openQueues: "Open work queues",
     overdueRequests: "Overdue",
@@ -111,23 +144,28 @@ const copy = {
     requestDetailsHint: "Use a clear title, priority, due date, and delivery brief.",
     requestSetup: "Request setup",
     requestSetupHint:
-      "Start with client, subscription, and service item IDs so the right template can load.",
+      "Start by selecting the client, then choose from that client's active subscription data.",
     requestList: "Request list",
-    serviceItemRevisionId: "Service item revision ID",
-    sourceInvoiceId: "Source invoice ID",
-    sourceQuoteId: "Source quote ID",
-    specialistId: "Specialist ID",
+    selectClient: "Select client",
+    selectInvoice: "Optional - select invoice",
+    selectQuote: "Optional - select quote",
+    selectServiceItem: "Optional - select service item",
+    selectSubscriptionService: "Select subscription service",
+    serviceItemRevisionId: "Service item",
+    sourceInvoiceId: "Source invoice",
+    sourceQuoteId: "Source quote",
+    specialistId: "Specialist",
     stepClient: "Client",
     stepLaunch: "Launch",
     stepTemplate: "Template",
-    subscriptionServiceId: "Subscription service ID",
+    subscriptionServiceId: "Subscription service",
     supervisorReview: "Supervisor review",
-    supervisorId: "Supervisor ID",
+    supervisorId: "Supervisor",
     templateAndValidation: "Dynamic template",
     templateAndValidationHint:
       "Load the service-item template when available so answers keep the same data contract.",
     templateFor: "for",
-    templateFirst: "Enter a service item revision ID first.",
+    templateFirst: "Select a service item first so the right template can load.",
     title: "Title",
   },
 } as const;
@@ -180,6 +218,42 @@ function optional(value: string): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function localizedName(
+  value: { nameAr?: string | null; nameEn?: string | null },
+  locale: SupportedLocale,
+): string {
+  return locale === "ar" ? value.nameAr || value.nameEn || "" : value.nameEn || value.nameAr || "";
+}
+
+function clientLabel(client: RequestIntakeOptions["clients"][number]): string {
+  return `${client.name} - ${client.code}`;
+}
+
+function serviceLabel(
+  service: RequestIntakeSubscriptionServiceOption,
+  locale: SupportedLocale,
+  numberFormatter: Intl.NumberFormat,
+): string {
+  const serviceName = localizedName(service.monthlyService, locale);
+  const level =
+    locale === "ar"
+      ? service.serviceLevel.labelAr || service.serviceLevel.labelEn || service.serviceLevel.code
+      : service.serviceLevel.labelEn || service.serviceLevel.labelAr || service.serviceLevel.code;
+  const hours = numberFormatter.format(service.hoursAllocated);
+  return `${serviceName} - ${level} - ${hours} ${locale === "ar" ? "ساعة" : "hours"}`;
+}
+
+function serviceItemLabel(item: RequestIntakeServiceItemOption, locale: SupportedLocale): string {
+  const itemName = localizedName(item, locale);
+  return item.expectedOutput && item.expectedOutput !== itemName
+    ? `${itemName} - ${item.expectedOutput}`
+    : itemName;
+}
+
+function candidateLabel(candidate: RequestAssignmentCandidate): string {
+  return `${candidate.displayName} - ${candidate.email}`;
+}
+
 function isRequestOverdue(request: RequestSummary): boolean {
   if (!request.dueAt || closedStatuses.has(request.status)) return false;
   const dueTime = new Date(request.dueAt).getTime();
@@ -187,14 +261,17 @@ function isRequestOverdue(request: RequestSummary): boolean {
 }
 
 export function RequestList({
+  intakeOptions = emptyIntakeOptions,
   locale: localeInput = "en",
   requests,
 }: {
+  intakeOptions?: RequestIntakeOptions | null;
   locale?: string;
   requests: RequestSummary[];
 }) {
   const locale = normalizeLocale(localeInput);
   const t = copy[locale];
+  const options = intakeOptions ?? emptyIntakeOptions;
   const router = useRouter();
   const [items, setItems] = useState(requests);
   const [creating, setCreating] = useState(false);
@@ -218,6 +295,30 @@ export function RequestList({
     dueAt: "",
   });
   const numberFormatter = new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA");
+  const selectedClient = useMemo(
+    () => options.clients.find((client) => client.id === form.clientId) ?? null,
+    [form.clientId, options.clients],
+  );
+  const subscriptionServices = useMemo(
+    () => selectedClient?.subscriptions.flatMap((subscription) => subscription.services) ?? [],
+    [selectedClient],
+  );
+  const selectedSubscriptionService = useMemo(
+    () => subscriptionServices.find((service) => service.id === form.subscriptionServiceId) ?? null,
+    [form.subscriptionServiceId, subscriptionServices],
+  );
+  const serviceItems = selectedSubscriptionService?.serviceItems ?? [];
+  const selectedServiceItem =
+    serviceItems.find((item) => item.id === form.serviceItemRevisionId) ?? null;
+  const sourceQuotes = selectedClient?.sourceQuotes ?? [];
+  const sourceInvoices = selectedClient?.sourceInvoices ?? [];
+  const canSubmit = Boolean(
+    form.clientId &&
+    form.subscriptionServiceId &&
+    form.title.trim() &&
+    form.description.trim() &&
+    !creating,
+  );
   const activeRequests = items.filter((request) => !closedStatuses.has(request.status)).length;
   const clientActionRequests = items.filter(
     (request) => request.status === "WAITING_CLIENT",
@@ -227,11 +328,12 @@ export function RequestList({
   ).length;
   const overdueRequests = items.filter(isRequestOverdue).length;
 
-  async function loadTemplate() {
-    const serviceItemRevisionId = optional(form.serviceItemRevisionId);
+  async function loadTemplate(serviceItemRevisionIdInput = form.serviceItemRevisionId) {
+    const serviceItemRevisionId = optional(serviceItemRevisionIdInput);
     if (!serviceItemRevisionId) {
       setTemplateNotice(t.templateFirst);
       setActiveTemplate(null);
+      setTemplateAnswers({});
       return;
     }
     setLoadingTemplate(true);
@@ -255,6 +357,44 @@ export function RequestList({
       setError(requestErrorMessage(caught));
     } finally {
       setLoadingTemplate(false);
+    }
+  }
+
+  function clearTemplateState() {
+    setActiveTemplate(null);
+    setTemplateAnswers({});
+    setTemplateNotice(null);
+  }
+
+  function selectClient(clientId: string) {
+    setForm((current) => ({
+      ...current,
+      clientId,
+      subscriptionServiceId: "",
+      serviceItemRevisionId: "",
+      sourceQuoteId: "",
+      sourceInvoiceId: "",
+      assignedSpecialistId: "",
+      assignedSupervisorId: "",
+      accountManagerId: "",
+    }));
+    clearTemplateState();
+  }
+
+  function selectSubscriptionService(subscriptionServiceId: string) {
+    setForm((current) => ({
+      ...current,
+      subscriptionServiceId,
+      serviceItemRevisionId: "",
+    }));
+    clearTemplateState();
+  }
+
+  function selectServiceItem(serviceItemRevisionId: string) {
+    setForm((current) => ({ ...current, serviceItemRevisionId }));
+    clearTemplateState();
+    if (serviceItemRevisionId) {
+      void loadTemplate(serviceItemRevisionId);
     }
   }
 
@@ -375,35 +515,62 @@ export function RequestList({
             <div className="request-field-grid request-field-grid-three">
               <label>
                 {t.clientId}
-                <input
+                <select
                   required
                   value={form.clientId}
-                  onChange={(event) => setForm({ ...form, clientId: event.target.value })}
-                />
+                  onChange={(event) => selectClient(event.target.value)}
+                >
+                  <option value="">{t.selectClient}</option>
+                  {options.clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {clientLabel(client)}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label>
                 {t.subscriptionServiceId}
-                <input
+                <select
                   required
+                  disabled={!selectedClient || subscriptionServices.length === 0}
                   value={form.subscriptionServiceId}
-                  onChange={(event) =>
-                    setForm({ ...form, subscriptionServiceId: event.target.value })
-                  }
-                />
+                  onChange={(event) => selectSubscriptionService(event.target.value)}
+                >
+                  <option value="">
+                    {selectedClient ? t.selectSubscriptionService : t.selectClient}
+                  </option>
+                  {subscriptionServices.map((service) => (
+                    <option key={service.id} value={service.id}>
+                      {serviceLabel(service, locale, numberFormatter)}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label>
                 {t.serviceItemRevisionId}
-                <input
+                <select
+                  disabled={!selectedSubscriptionService || serviceItems.length === 0}
                   value={form.serviceItemRevisionId}
-                  onChange={(event) => {
-                    setForm({ ...form, serviceItemRevisionId: event.target.value });
-                    setActiveTemplate(null);
-                    setTemplateAnswers({});
-                    setTemplateNotice(null);
-                  }}
-                />
+                  onChange={(event) => selectServiceItem(event.target.value)}
+                >
+                  <option value="">{t.selectServiceItem}</option>
+                  {serviceItems.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {serviceItemLabel(item, locale)}
+                    </option>
+                  ))}
+                </select>
               </label>
             </div>
+            {options.clients.length === 0 && (
+              <p className="catalog-feedback form-span">{t.noClients}</p>
+            )}
+            {selectedClient && subscriptionServices.length === 0 && (
+              <p className="catalog-feedback form-span">{t.noSubscriptionServices}</p>
+            )}
+            {selectedSubscriptionService && serviceItems.length === 0 && (
+              <p className="catalog-feedback form-span">{t.noServiceItems}</p>
+            )}
           </section>
 
           <section className="request-intake-panel request-template-summary form-span">
@@ -417,7 +584,9 @@ export function RequestList({
             <div className="request-review-bar">
               <div>
                 <span>{t.serviceItemRevisionId}</span>
-                <strong>{form.serviceItemRevisionId || t.notSet}</strong>
+                <strong>
+                  {selectedServiceItem ? serviceItemLabel(selectedServiceItem, locale) : t.notSet}
+                </strong>
               </div>
               <button
                 className="os-button os-button-secondary"
@@ -441,42 +610,81 @@ export function RequestList({
             <div className="request-field-grid">
               <label>
                 {t.sourceQuoteId}
-                <input
+                <select
+                  disabled={!selectedClient || sourceQuotes.length === 0}
                   value={form.sourceQuoteId}
                   onChange={(event) => setForm({ ...form, sourceQuoteId: event.target.value })}
-                />
+                >
+                  <option value="">{sourceQuotes.length === 0 ? t.noQuotes : t.selectQuote}</option>
+                  {sourceQuotes.map((quote) => (
+                    <option key={quote.id} value={quote.id}>
+                      {quote.quoteNumber} - {quote.status}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label>
                 {t.sourceInvoiceId}
-                <input
+                <select
+                  disabled={!selectedClient || sourceInvoices.length === 0}
                   value={form.sourceInvoiceId}
                   onChange={(event) => setForm({ ...form, sourceInvoiceId: event.target.value })}
-                />
+                >
+                  <option value="">
+                    {sourceInvoices.length === 0 ? t.noInvoices : t.selectInvoice}
+                  </option>
+                  {sourceInvoices.map((invoice) => (
+                    <option key={invoice.id} value={invoice.id}>
+                      {invoice.invoiceNumber} - {invoice.status}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label>
                 {t.specialistId}
-                <input
+                <select
                   value={form.assignedSpecialistId}
                   onChange={(event) =>
                     setForm({ ...form, assignedSpecialistId: event.target.value })
                   }
-                />
+                >
+                  <option value="">{t.autoAssign}</option>
+                  {options.assignmentCandidates.specialists.map((candidate) => (
+                    <option key={candidate.id} value={candidate.id}>
+                      {candidateLabel(candidate)}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label>
                 {t.supervisorId}
-                <input
+                <select
                   value={form.assignedSupervisorId}
                   onChange={(event) =>
                     setForm({ ...form, assignedSupervisorId: event.target.value })
                   }
-                />
+                >
+                  <option value="">{t.autoAssign}</option>
+                  {options.assignmentCandidates.supervisors.map((candidate) => (
+                    <option key={candidate.id} value={candidate.id}>
+                      {candidateLabel(candidate)}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label>
                 {t.accountManagerId}
-                <input
+                <select
                   value={form.accountManagerId}
                   onChange={(event) => setForm({ ...form, accountManagerId: event.target.value })}
-                />
+                >
+                  <option value="">{t.autoAssign}</option>
+                  {options.assignmentCandidates.accountManagers.map((candidate) => (
+                    <option key={candidate.id} value={candidate.id}>
+                      {candidateLabel(candidate)}
+                    </option>
+                  ))}
+                </select>
               </label>
             </div>
           </section>
@@ -544,7 +752,7 @@ export function RequestList({
               <span>{t.readyToCreate}</span>
               <strong>{form.title || t.createRequest}</strong>
             </div>
-            <button className="os-button os-button-primary" type="submit" disabled={creating}>
+            <button className="os-button os-button-primary" type="submit" disabled={!canSubmit}>
               {creating ? t.creating : t.createCta}
             </button>
           </div>

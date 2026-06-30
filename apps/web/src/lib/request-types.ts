@@ -26,6 +26,73 @@ export interface RequestAssignmentCandidates {
   accountManagers: RequestAssignmentCandidate[];
 }
 
+export interface RequestIntakeServiceItemOption {
+  id: string;
+  itemId: string;
+  code: string;
+  nameAr: string;
+  nameEn: string;
+  expectedOutput: string | null;
+  requiresFile: boolean;
+  requestType: string | null;
+}
+
+export interface RequestIntakeSubscriptionServiceOption {
+  id: string;
+  subscriptionId: string;
+  status: string;
+  startsAt: string;
+  endsAt: string | null;
+  hoursAllocated: number;
+  monthlyService: {
+    id: string;
+    code: string;
+    revisionId: string;
+    nameAr: string;
+    nameEn: string;
+    serviceLine: string;
+    domain: string;
+  };
+  serviceLevel: {
+    id: string;
+    code: string;
+    labelAr: string;
+    labelEn: string | null;
+  };
+  serviceItems: RequestIntakeServiceItemOption[];
+}
+
+export interface RequestIntakeClientOption {
+  id: string;
+  code: string;
+  name: string;
+  legalName: string | null;
+  sector: string | null;
+  city: string | null;
+  subscriptions: Array<{
+    id: string;
+    status: string;
+    startsAt: string;
+    endsAt: string | null;
+    services: RequestIntakeSubscriptionServiceOption[];
+  }>;
+  sourceQuotes: Array<{
+    id: string;
+    quoteNumber: string;
+    status: string;
+  }>;
+  sourceInvoices: Array<{
+    id: string;
+    invoiceNumber: string;
+    status: string;
+  }>;
+}
+
+export interface RequestIntakeOptions {
+  clients: RequestIntakeClientOption[];
+  assignmentCandidates: RequestAssignmentCandidates;
+}
+
 export interface RequestSummary {
   id: string;
   requestNumber: string;

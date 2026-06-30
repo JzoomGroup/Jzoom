@@ -292,6 +292,34 @@ describeWithDatabase("PR 13 request lifecycle foundation", () => {
     );
   });
 
+  it("returns friendly request intake options from scoped client subscription data", async () => {
+    const { agent } = await login(`am-${runId}@pr13.test`);
+    const response = await agent.get("/api/v1/requests/intake-options").expect(200);
+    const clientOption = response.body.clients.find(
+      (client: { id: string }) => client.id === clientId,
+    );
+
+    expect(clientOption).toMatchObject({
+      id: clientId,
+      code: expect.stringContaining("PR13-CLIENT-A"),
+    });
+    expect(clientOption.subscriptions[0].services[0]).toMatchObject({
+      id: subscriptionServiceId,
+      monthlyService: {
+        nameEn: "Monthly request service",
+      },
+      serviceItems: [
+        {
+          id: serviceItemRevisionId,
+          nameEn: "Request service item",
+        },
+      ],
+    });
+    expect(response.body.assignmentCandidates.accountManagers).toEqual([
+      expect.objectContaining({ displayName: "PR13 Account Manager" }),
+    ]);
+  });
+
   it("keeps internal notes hidden from client users and blocks cross-client access", async () => {
     const { agent: amAgent, csrf } = await login(`am-${runId}@pr13.test`);
     const created = await amAgent
