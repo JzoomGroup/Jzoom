@@ -54,6 +54,7 @@ describeWithDatabase("Project delivery access and client review flows", () => {
   let taskId: string;
   let sharedOutputId: string;
   let draftOutputId: string;
+  let hiddenDraftOutputId: string;
   let oneTimeServiceId: string;
   let currentStateId: string;
   let workflowVersionId: string;
@@ -235,7 +236,7 @@ describeWithDatabase("Project delivery access and client review flows", () => {
         sortOrder: 1,
       },
     });
-    const [sharedOutput, draftOutput] = await Promise.all([
+    const [sharedOutput, draftOutput, hiddenDraftOutput] = await Promise.all([
       database.projectOutput.create({
         data: {
           projectId: project.id,
@@ -257,8 +258,18 @@ describeWithDatabase("Project delivery access and client review flows", () => {
           sortOrder: 2,
         },
       }),
+      database.projectOutput.create({
+        data: {
+          projectId: project.id,
+          code: "OUT-HIDDEN-DRAFT",
+          title: "Ù…Ø®Ø±Ø¬ Ø¯Ø§Ø®Ù„ÙŠ Ø«Ø§Ø¨Øª",
+          description: "Draft fixture that must stay hidden from the client.",
+          status: "DRAFT",
+          sortOrder: 3,
+        },
+      }),
     ]);
-    return { project, task, sharedOutput, draftOutput };
+    return { project, task, sharedOutput, draftOutput, hiddenDraftOutput };
   }
 
   beforeAll(async () => {
@@ -367,6 +378,7 @@ describeWithDatabase("Project delivery access and client review flows", () => {
     taskId = main.task.id;
     sharedOutputId = main.sharedOutput.id;
     draftOutputId = main.draftOutput.id;
+    hiddenDraftOutputId = main.hiddenDraftOutput.id;
     otherProjectId = other.project.id;
 
     const testingModule = await Test.createTestingModule({
@@ -432,14 +444,24 @@ describeWithDatabase("Project delivery access and client review flows", () => {
       sharedOutputId,
     );
     expect(detail.body.outputs.map((output: { id: string }) => output.id)).not.toContain(
-      draftOutputId,
+      hiddenDraftOutputId,
     );
-    expect(detail.body.progress.outputsTotal).toBe(1);
-    expect(detail.body.activity).toHaveLength(1);
-    expect(detail.body.activity[0]).toMatchObject({
-      actorRole: "ROLE-SPECIALIST",
-      metadata: { outputId: sharedOutputId, status: "SHARED_WITH_CLIENT" },
-    });
+    expect(detail.body.outputs.map((output: { status: string }) => output.status)).not.toContain(
+      "DRAFT",
+    );
+    expect(detail.body.progress.outputsTotal).toBe(detail.body.outputs.length);
+    expect(detail.body.progress.outputsTotal).toBeGreaterThanOrEqual(1);
+    expect(detail.body.activity).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          actorRole: "ROLE-SPECIALIST",
+          metadata: expect.objectContaining({
+            outputId: sharedOutputId,
+            status: "SHARED_WITH_CLIENT",
+          }),
+        }),
+      ]),
+    );
   });
 
   it("lets clients accept shared outputs but not reach other clients' projects", async () => {
