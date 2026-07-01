@@ -1,5 +1,7 @@
+"use client";
+
 import Link from "next/link";
-import { Fragment, type ReactNode } from "react";
+import { Fragment, useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { directionForLocale, htmlLangForLocale, normalizeLocale } from "../lib/i18n";
 import { LanguageSwitcher } from "./language-switcher";
 import { LocaleDocumentSync } from "./locale-document-sync";
@@ -308,6 +310,12 @@ const adminOnlyAdminPaths = new Set([
   "/admin/platform-configuration",
 ]);
 
+const mobileNavigationOpenStyle: CSSProperties = {
+  opacity: 1,
+  pointerEvents: "auto",
+  transform: "translateY(0)",
+};
+
 function visibleNavigation(items: NavItem[], context: ShellContext) {
   return items.filter((item) => {
     if (adminOnlyAdminPaths.has(item.href) && !context.isAdmin) {
@@ -373,6 +381,26 @@ export function AppShell({
     mode === "admin" ? adminNavigation : mode === "client" ? clientNavigation : internalNavigation;
   const context: ShellContext = { isAdmin, permissions, roles };
   const items = visibleNavigation(nav, context);
+  const [isMobileNavigationOpen, setIsMobileNavigationOpen] = useState(false);
+  const navigationId = "premium-shell-navigation";
+  const menuLabel = language === "ar" ? "القائمة" : "Menu";
+  const closeMenuLabel = language === "ar" ? "إغلاق القائمة" : "Close menu";
+  const closeMobileNavigation = () => setIsMobileNavigationOpen(false);
+
+  useEffect(() => {
+    if (!isMobileNavigationOpen) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMobileNavigationOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMobileNavigationOpen]);
 
   return (
     <div
@@ -381,10 +409,52 @@ export function AppShell({
       lang={htmlLangForLocale(normalizedLocale)}
     >
       <LocaleDocumentSync locale={normalizedLocale} />
-      <aside className="premium-sidebar">
+      <div className="premium-mobile-header">
+        <Link
+          className="premium-brand premium-mobile-brand"
+          href={mode === "client" ? "/client" : isAdmin ? "/admin" : "/profile"}
+        >
+          <span className="premium-brand-mark" aria-hidden="true">
+            J
+          </span>
+          <span>
+            <strong>Jzoom</strong>
+          </span>
+        </Link>
+        <button
+          type="button"
+          className="premium-mobile-menu-button"
+          aria-controls={navigationId}
+          aria-expanded={isMobileNavigationOpen}
+          onClick={() => setIsMobileNavigationOpen((current) => !current)}
+        >
+          <span>{menuLabel}</span>
+          <span className="premium-mobile-menu-icon" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+        </button>
+      </div>
+
+      {isMobileNavigationOpen ? (
+        <button
+          type="button"
+          className="premium-mobile-menu-backdrop"
+          aria-label={closeMenuLabel}
+          onClick={closeMobileNavigation}
+        />
+      ) : null}
+
+      <aside
+        id={navigationId}
+        className={`premium-sidebar${isMobileNavigationOpen ? " is-open" : ""}`}
+        style={isMobileNavigationOpen ? mobileNavigationOpenStyle : undefined}
+      >
         <Link
           className="premium-brand"
           href={mode === "client" ? "/client" : isAdmin ? "/admin" : "/profile"}
+          onClick={closeMobileNavigation}
         >
           <span className="premium-brand-mark" aria-hidden="true">
             J
@@ -413,6 +483,7 @@ export function AppShell({
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={active ? "active" : undefined}
+                  onClick={closeMobileNavigation}
                 >
                   {language === "ar" ? item.labelAr : item.labelEn}
                 </Link>
