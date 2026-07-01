@@ -304,10 +304,7 @@ function localizedDeliverableName(
   return localizedName(deliverable, locale) || fallback?.[locale] || deliverable.code;
 }
 
-function localizedOutputTitle(
-  output: { code: string; title: string },
-  locale: SupportedLocale,
-) {
+function localizedOutputTitle(output: { code: string; title: string }, locale: SupportedLocale) {
   if (locale !== "ar") return output.title;
   const fallback =
     fallbackDeliverableNames[lookupKey(output.code)] ??
@@ -724,7 +721,9 @@ export function ProjectDetail({
                     {phase.description ? <p>{phase.description}</p> : null}
                     <ul>
                       {phaseDeliverables.map((deliverable) => (
-                        <li key={deliverable.id}>{localizedDeliverableName(deliverable, locale)}</li>
+                        <li key={deliverable.id}>
+                          {localizedDeliverableName(deliverable, locale)}
+                        </li>
                       ))}
                     </ul>
                   </div>
