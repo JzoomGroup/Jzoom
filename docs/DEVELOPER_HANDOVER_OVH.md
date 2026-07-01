@@ -296,9 +296,21 @@ Expected role codes:
 - Specialist: `ROLE-SPECIALIST`
 - Client user: `ROLE-CLIENT`
 
-If deterministic demo users are required after every reset, create a dedicated future
-documentation/seed PR for a local/staging-only demo seed script. That script should be opt-in, must
-never run in production, and should hash passwords using the existing password hasher.
+Optional local/staging-only demo seed scripts are available, but they are intentionally opt-in and
+must never be wired into a production deployment command:
+
+```powershell
+$env:DEMO_SEED_ENABLED="true"
+$env:DEMO_INTERNAL_USERS_PASSWORD="replace_with_a_local_or_staging_only_password"
+pnpm --filter @jzoom/database demo:internal-users
+pnpm --filter @jzoom/database demo:subscriptions
+Remove-Item Env:\DEMO_SEED_ENABLED
+Remove-Item Env:\DEMO_INTERNAL_USERS_PASSWORD
+```
+
+These scripts require existing demo clients and active roles. They are not part of production
+bootstrap. Production user creation and password reset should use the Admin Console flow, which
+assigns the default temporary password and requires the user to change it at first sign-in.
 
 ## 8. OVH deployment guide
 

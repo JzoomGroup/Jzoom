@@ -128,3 +128,4 @@ See [PR 2 blueprint controls](docs/blueprint/pr2-control-updates.md).
 - [Local runbook](docs/RUNBOOK_LOCAL.md)
 - [Staging readiness notes](docs/STAGING_READINESS.md)
 - [Final QA checklist](docs/QA_CHECKLIST.md)
+- [Production promotion checklist](docs/PRODUCTION_PROMOTION_CHECKLIST.md)

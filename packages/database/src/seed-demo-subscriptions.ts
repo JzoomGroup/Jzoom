@@ -28,7 +28,15 @@ interface DemoSubscriptionServiceRow {
   createdAt: Date;
 }
 
+function assertDemoSeedEnabled(): void {
+  if (process.env.DEMO_SEED_ENABLED !== "true") {
+    throw new Error("DEMO_SEED_ENABLED must be true to run demo data seed scripts.");
+  }
+}
+
 async function main(): Promise<void> {
+  assertDemoSeedEnabled();
+
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error("DATABASE_URL is required to seed demo subscriptions.");

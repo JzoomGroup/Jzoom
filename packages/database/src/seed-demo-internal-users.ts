@@ -15,7 +15,6 @@ const stableAssignmentStart = "2026-06-27T00:00:00.000Z";
 interface DemoUser {
   email: string;
   displayName: string;
-  password: string;
   roleCode: "ROLE-MGMT" | "ROLE-AM" | "ROLE-SUPERVISOR" | "ROLE-SPECIALIST";
   preferredLocale: "ar" | "en";
 }
@@ -34,38 +33,51 @@ const demoUsers: DemoUser[] = [
   {
     email: "demo.management@jzoom.sa",
     displayName: "Demo Management User",
-    password: "DemoInternal2026!M",
     roleCode: "ROLE-MGMT",
     preferredLocale: "en",
   },
   {
     email: "demo.account.manager@jzoom.sa",
     displayName: "Demo Account Manager",
-    password: "DemoInternal2026!A",
     roleCode: "ROLE-AM",
     preferredLocale: "en",
   },
   {
     email: "demo.supervisor@jzoom.sa",
     displayName: "Demo Supervisor",
-    password: "DemoInternal2026!S",
     roleCode: "ROLE-SUPERVISOR",
     preferredLocale: "en",
   },
   {
     email: "demo.specialist@jzoom.sa",
     displayName: "Demo Specialist",
-    password: "DemoInternal2026!P",
     roleCode: "ROLE-SPECIALIST",
     preferredLocale: "en",
   },
 ];
 
+function required(name: string): string {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(`${name} is required.`);
+  }
+  return value;
+}
+
+function assertDemoSeedEnabled(): void {
+  if (process.env.DEMO_SEED_ENABLED !== "true") {
+    throw new Error("DEMO_SEED_ENABLED must be true to run demo data seed scripts.");
+  }
+}
+
 async function main(): Promise<void> {
+  assertDemoSeedEnabled();
+
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error("DATABASE_URL is required to seed demo internal users.");
   }
+  const demoPassword = required("DEMO_INTERNAL_USERS_PASSWORD");
 
   const database = new Client({ connectionString });
   await database.connect();
@@ -77,7 +89,7 @@ async function main(): Promise<void> {
     const seeded = [];
 
     for (const user of demoUsers) {
-      const userId = await upsertDemoUser(database, user);
+      const userId = await upsertDemoUser(database, user, demoPassword);
       await replaceUserRole(database, userId, roles.get(user.roleCode)!.id);
       await replaceDemoScopes(database, userId, user.roleCode, clients);
       await revokeSessions(database, userId);
@@ -137,8 +149,8 @@ async function loadDemoClients(database: Client): Promise<ClientRow[]> {
   return result.rows;
 }
 
-async function upsertDemoUser(database: Client, user: DemoUser): Promise<string> {
-  const passwordHash = await hashPassword(user.password);
+async function upsertDemoUser(database: Client, user: DemoUser, password: string): Promise<string> {
+  const passwordHash = await hashPassword(password);
   const result = await database.query<{ id: string }>(
     `
       insert into users (
