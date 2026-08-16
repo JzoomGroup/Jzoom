@@ -10521,6 +10521,46 @@ details,
   color: var(--ink);
 }
 
+.auth-shell,
+.auth-shell::before,
+.auth-shell::after {
+  background:
+    radial-gradient(circle at 12% 16%, rgba(255, 90, 77, 0.1), transparent 26%),
+    radial-gradient(circle at 84% 10%, rgba(37, 48, 71, 0.08), transparent 28%),
+    linear-gradient(180deg, #fbfcff 0%, #f6f8fb 100%) !important;
+}
+
+.auth-card {
+  width: min(100%, 480px);
+  border: 1px solid rgba(27, 36, 58, 0.1);
+  background: rgba(255, 255, 255, 0.94) !important;
+  color: var(--ink);
+  box-shadow: 0 24px 58px rgba(23, 32, 51, 0.09);
+}
+
+.auth-card::before {
+  background:
+    radial-gradient(circle at 22% 0%, rgba(255, 90, 77, 0.12), transparent 34%),
+    linear-gradient(90deg, rgba(255, 90, 77, 0.28), rgba(255, 255, 255, 0));
+}
+
+.auth-card h1,
+.auth-card h2 {
+  font-size: clamp(24px, 4vw, 31px);
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.auth-card .eyebrow,
+.auth-card .lead,
+.auth-card p {
+  color: var(--muted-strong);
+}
+
+.auth-card .brand-mark {
+  box-shadow: 0 14px 28px rgba(255, 90, 77, 0.18);
+}
+
 .catalog-empty,
 .os-empty-state,
 .request-intake-steps,
