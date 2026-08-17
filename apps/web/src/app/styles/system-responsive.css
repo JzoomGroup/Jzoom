@@ -124,6 +124,38 @@
     padding-inline: 13px;
   }
 
+  .pricing-shell-embedded,
+  .pricing-shell-embedded .pricing-layout,
+  .pricing-shell-embedded .pricing-main {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .pricing-shell-embedded .pricing-layout {
+    display: block;
+  }
+
+  .pricing-shell-embedded .pricing-drafts {
+    padding: 14px 13px;
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--polish-line);
+  }
+
+  .pricing-journey {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pricing-journey-main,
+  .pricing-journey-summary {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .pricing-journey-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .os-page-header,
   .catalog-header {
     gap: 14px;
@@ -205,6 +237,27 @@
   .entity-meta.four-up,
   .project-room-progress-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pricing-journey {
+    gap: 10px;
+  }
+
+  .pricing-journey-main,
+  .pricing-journey-summary {
+    padding: 13px;
+    border-radius: 14px;
+  }
+
+  .pricing-journey-steps,
+  .pricing-service-grid,
+  .pricing-selection-fields,
+  .quote-create-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pricing-journey-main h2 {
+    font-size: 18px;
   }
 
   .os-page-actions,

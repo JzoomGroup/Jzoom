@@ -75,3 +75,36 @@ test("opens and dismisses the Admin navigation on mobile", async ({ page }, test
   }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
 });
+
+test("stacks the pricing journey without horizontal overflow on mobile", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "Mobile pricing coverage runs on mobile.");
+  await signInAsAdmin(page);
+  await page.goto("/pricing");
+
+  const journey = page.locator(".pricing-journey");
+  await expect(journey).toBeVisible();
+
+  const layout = await journey.evaluate((element) => {
+    const [main, summary] = Array.from(element.children) as HTMLElement[];
+    const journeyRect = element.getBoundingClientRect();
+    const mainRect = main!.getBoundingClientRect();
+    const summaryRect = summary!.getBoundingClientRect();
+
+    return {
+      viewportWidth: document.documentElement.clientWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      journeyWidth: journeyRect.width,
+      mainWidth: mainRect.width,
+      summaryWidth: summaryRect.width,
+      mainBottom: mainRect.bottom,
+      summaryTop: summaryRect.top,
+    };
+  });
+
+  expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth);
+  expect(layout.mainWidth).toBeGreaterThan(layout.journeyWidth * 0.95);
+  expect(layout.summaryWidth).toBeGreaterThan(layout.journeyWidth * 0.95);
+  expect(layout.summaryTop).toBeGreaterThanOrEqual(layout.mainBottom - 1);
+});
