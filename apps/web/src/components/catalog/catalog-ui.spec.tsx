@@ -272,6 +272,16 @@ describe("Admin catalog UI", () => {
     expect(screen.getByRole("button", { name: "أرشفة" }).querySelector("svg")).not.toBeNull();
   });
 
+  it("uses the stable category code when the stored Arabic label contains English", () => {
+    const data = catalogSnapshot();
+    data.categories[0]!.nameAr = "HR";
+
+    render(<CategoryManager locale="ar" snapshot={data} setSnapshot={jest.fn()} />);
+
+    expect(screen.getByRole("heading", { name: "الموارد البشرية" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "HR" })).not.toBeInTheDocument();
+  });
+
   it("updates package inclusion through the revision-safe matrix API", async () => {
     const fetchMock = jest.mocked(fetch);
     fetchMock

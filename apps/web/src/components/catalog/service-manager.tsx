@@ -9,7 +9,7 @@ import type {
   ServiceLevel,
 } from "../../lib/catalog-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
-import { localizedDescription } from "../../lib/localized-content";
+import { localizedCatalogLabel, localizedDescription } from "../../lib/localized-content";
 import {
   CatalogFeedback,
   EmptyState,
@@ -199,10 +199,10 @@ function statusLabel(status: CatalogStatus, locale: SupportedLocale): string {
 }
 
 function localizedCategoryName(
-  category: { nameAr: string; nameEn: string },
+  category: { code?: string; nameAr: string; nameEn: string },
   locale: SupportedLocale,
 ): string {
-  return locale === "ar" ? category.nameAr || category.nameEn : category.nameEn || category.nameAr;
+  return localizedCatalogLabel(category, locale);
 }
 
 function localizedServiceName(service: MonthlyService, locale: SupportedLocale): string {

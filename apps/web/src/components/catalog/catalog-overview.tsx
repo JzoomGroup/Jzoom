@@ -1,5 +1,6 @@
 import type { CatalogSnapshot } from "../../lib/catalog-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { localizedCatalogLabel } from "../../lib/localized-content";
 import { ControlDeck, ControlTile, MetricCard, SectionCard, SmartTable } from "../premium-os";
 import { SectionHeader, StatusBadge } from "./catalog-shared";
 
@@ -8,7 +9,7 @@ const copy = {
     active: "نشطة",
     adminConsole: "لوحة الأدمن",
     administrationAreas: "مناطق الإدارة",
-    administrationDescription: "كل تغيير مصرح من الـ backend ويتم تسجيله في سجل التدقيق.",
+    administrationDescription: "كل تغيير معتمد من الخادم ويُسجل في سجل التدقيق.",
     categories: "التصنيفات",
     categoriesDescription: "تجميع محلي، ترتيب، وتحكم آمن بالحالة.",
     category: "التصنيف",
@@ -16,24 +17,24 @@ const copy = {
     items: "البنود",
     monthlyCatalog: "كتالوج الخدمات الشهرية",
     monthlyCatalogDescription:
-      "إدارة الكتالوج الشهري الحي المرتبط بقاعدة PostgreSQL مع الحفاظ على كل إصدار تاريخي مثبت.",
+      "إدارة الكتالوج الشهري الحي المرتبط بقاعدة البيانات مع الحفاظ على كل إصدار تاريخي مثبت.",
     monthlyGroups: "مجموعات شهرية",
     monthlyServices: "الخدمات الشهرية",
     monthlyServicesDescription: "أسماء، ساعات، أسعار، رسوم، وتوفر باقات مع إصدارات آمنة.",
     oneTimeCategories: "تصنيفات المرة الواحدة",
-    oneTimeCategoriesDescription: "تجميعات Build وDigital محلية مع تحكم آمن بالحالة.",
+    oneTimeCategoriesDescription: "تصنيفات محلية للبناء والحلول الرقمية مع تحكم آمن بالحالة.",
     oneTimeServices: "خدمات المرة الواحدة",
     oneTimeServicesDescription: "تسعير بإصدارات، مراحل، مخرجات، مهام، ومدة تنفيذ.",
     packageLevels: "مستويات الباقات",
     revision: "الإصدار",
     seededCatalog: "رؤية الكتالوج المحمل",
-    seededCatalogDescription: "إصدارات الخدمات الحية الحالية المحملة من Excel V3.",
+    seededCatalogDescription: "إصدارات الخدمات الحية الحالية المحملة من ملف الاستيراد المعتمد.",
     service: "الخدمة",
     serviceItems: "بنود الخدمة",
     serviceItemsDescription: "تعريفات البنود ومصفوفة شمول الباقات الكاملة.",
     serviceLevels: "مستويات الخدمة",
     serviceLevelsDescription:
-      "Basic وGrowth وAdvanced وPartnership ومستويات مستقبلية قابلة للتكوين.",
+      "الباقات الأساسية والنمو والمتقدمة والشراكة، مع دعم مستويات مستقبلية قابلة للتكوين.",
     status: "الحالة",
     subscriptionTiers: "شرائح الاشتراك",
   },
@@ -189,11 +190,7 @@ export function CatalogOverview({
                     </strong>
                     <small>{service.code}</small>
                   </td>
-                  <td>
-                    {locale === "ar"
-                      ? service.category.nameAr || service.category.nameEn
-                      : service.category.nameEn || service.category.nameAr}
-                  </td>
+                  <td>{localizedCatalogLabel(service.category, locale)}</td>
                   <td>v{service.revision?.version ?? "-"}</td>
                   <td>
                     <StatusBadge locale={locale} status={service.status} />

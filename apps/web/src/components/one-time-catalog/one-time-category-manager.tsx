@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { PencilLine } from "lucide-react";
 import { refreshOneTimeCatalog } from "../../lib/one-time-catalog-client";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
-import { localizedDescription } from "../../lib/localized-content";
+import { localizedCatalogLabel, localizedDescription } from "../../lib/localized-content";
 import type { OneTimeCatalogSnapshot, OneTimeCategory } from "../../lib/one-time-catalog-types";
 import {
   CatalogFeedback,
@@ -29,7 +29,7 @@ const copy = {
     codesImmutable: "الرموز ثابتة بعد الإنشاء.",
     description: "الوصف",
     descriptionBody:
-      "إدارة تصنيفات خدمات المرة الواحدة مثل Build وDigital بدون حذف السجلات التاريخية.",
+      "إدارة تصنيفات خدمات البناء والحلول الرقمية دون حذف السجلات التاريخية.",
     displayOrder: "ترتيب العرض",
     draft: "مسودة",
     edit: "تعديل",
@@ -97,9 +97,7 @@ const copy = {
 } as const;
 
 function localizedCategoryName(category: OneTimeCategory, locale: SupportedLocale): string {
-  return locale === "ar"
-    ? category.nameAr || category.nameEn || category.code
-    : category.nameEn || category.nameAr || category.code;
+  return localizedCatalogLabel(category, locale);
 }
 
 function number(value: number, locale: SupportedLocale): string {

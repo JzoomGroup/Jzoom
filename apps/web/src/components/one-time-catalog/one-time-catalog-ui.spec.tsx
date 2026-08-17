@@ -145,6 +145,16 @@ describe("One-time Admin catalog UI", () => {
     });
   });
 
+  it("shows a safe Arabic category label when legacy Arabic data is English", () => {
+    const data = snapshot();
+    data.categories[0]!.nameAr = "Build";
+
+    render(<OneTimeCategoryManager initialSnapshot={data} locale="ar" />);
+
+    expect(screen.getByRole("heading", { name: "البناء والتطوير" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Build" })).not.toBeInTheDocument();
+  });
+
   it("renders seeded services and saves pricing plus nested templates through APIs", async () => {
     const fetchMock = jest.mocked(fetch);
     fetchMock

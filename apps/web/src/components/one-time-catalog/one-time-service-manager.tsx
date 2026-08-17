@@ -12,7 +12,7 @@ import type {
 } from "../../lib/one-time-catalog-types";
 import type { CatalogStatus } from "../../lib/catalog-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
-import { localizedDescription } from "../../lib/localized-content";
+import { localizedCatalogLabel, localizedDescription } from "../../lib/localized-content";
 import {
   CatalogFeedback,
   EmptyState,
@@ -155,7 +155,7 @@ const copy = {
     oneTimeCatalog: "كتالوج المرة الواحدة",
     oneTimeServiceStudio: "استوديو خدمات المرة الواحدة",
     oneTimeServiceStudioDescription:
-      "إدارة خدمات Build وDigital ذات التسعير المستقل، المراحل، المخرجات، المهام، وسلوك إنشاء المشروع.",
+      "إدارة خدمات البناء والحلول الرقمية ذات التسعير المستقل، والمراحل، والمخرجات، والمهام، وسلوك إنشاء المشروع.",
     oneTimeServices: "خدمات المرة الواحدة",
     order: "الترتيب",
     phase: "المرحلة",
@@ -172,7 +172,7 @@ const copy = {
     sar: "ر.س",
     selectCategory: "اختر التصنيف",
     serviceDescription:
-      "تهيئة خدمات Build وDigital، الأسعار، المدد، المراحل، المخرجات، والمهام من خلال APIs آمنة بالإصدارات.",
+      "تهيئة خدمات البناء والحلول الرقمية وأسعارها ومددها ومراحلها ومخرجاتها ومهامها ضمن إصدارات محفوظة.",
     serviceLine: "مسار / نوع الخدمة",
     servicePath: (path: string) => (path === "Build" ? "بناء" : path === "Digital" ? "رقمي" : path),
     serviceRevisionCreated: "تم إنشاء إصدار جديد لخدمة المرة الواحدة.",
@@ -310,9 +310,7 @@ function localizedCategoryName(
   category: { nameAr: string; nameEn: string; code?: string },
   locale: SupportedLocale,
 ): string {
-  return locale === "ar"
-    ? category.nameAr || category.nameEn || category.code || ""
-    : category.nameEn || category.nameAr || category.code || "";
+  return localizedCatalogLabel(category, locale);
 }
 
 function localizedServiceName(service: OneTimeService, locale: SupportedLocale): string {

@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { PencilLine } from "lucide-react";
 import type { CatalogCategory, CatalogSnapshot } from "../../lib/catalog-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
-import { localizedDescription } from "../../lib/localized-content";
+import { localizedCatalogLabel, localizedDescription } from "../../lib/localized-content";
 import {
   CatalogFeedback,
   EmptyState,
@@ -227,7 +227,7 @@ export function CategoryManager({
                 <div className="entity-card-top">
                   <div>
                     <small>{category.code}</small>
-                    <h3>{locale === "ar" ? category.nameAr : category.nameEn}</h3>
+                    <h3>{localizedCatalogLabel(category, locale)}</h3>
                     {locale === "en" ? <p dir="rtl">{category.nameAr}</p> : null}
                   </div>
                   <StatusBadge locale={locale} status={category.status} />
