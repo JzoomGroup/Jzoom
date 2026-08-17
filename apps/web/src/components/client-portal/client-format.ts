@@ -74,6 +74,19 @@ const knownArabicFreeText: Record<string, string> = {
   "monthly hr operating support.": "دعم تشغيلي شهري للموارد البشرية.",
   "monthly request": "طلب خدمة شهري",
   "monthly service": "خدمة شهرية",
+  "admin support": "الدعم الإداري",
+  build: "بناء المنشأة",
+  digital: "الحلول الرقمية",
+  "executive support": "الدعم التنفيذي",
+  finance: "المالية",
+  hr: "الموارد البشرية",
+  legal: "الشؤون القانونية",
+  media: "الإعلام والمحتوى",
+  monthly: "الخدمات الشهرية",
+  "one-time": "خدمات المرة الواحدة",
+  operations: "العمليات",
+  reports: "التقارير",
+  systems: "الأنظمة والتحول الرقمي",
   "output shared with client": "تمت مشاركة مخرج مع العميل",
   "please prepare an employee letter.": "يرجى تجهيز خطاب موظف.",
   "specialist one": "المختص",
@@ -181,6 +194,16 @@ export function localizedFreeText(
   return knownArabicFreeText[normalizeFreeText(trimmed)] ?? fallback;
 }
 
+export function localizedServiceScope(
+  value: string | null | undefined,
+  locale: ClientDisplayLocale,
+): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  if (locale === "en" || hasArabic.test(trimmed)) return trimmed;
+  return knownArabicFreeText[normalizeFreeText(trimmed)] ?? null;
+}
+
 export function localizedLineType(lineType: string, locale: ClientDisplayLocale): string {
   if (lineType === "MONTHLY") return locale === "ar" ? "شهري" : "Monthly";
   if (lineType === "ONE_TIME") return locale === "ar" ? "مرة واحدة" : "One-time";
@@ -202,7 +225,7 @@ export function localizedServiceDescription({
 }): string {
   if (locale === "en") return description || "";
   if (description && hasArabic.test(description)) return description;
-  const scope = domain || serviceLine;
+  const scope = localizedServiceScope(domain || serviceLine, locale);
   return scope
     ? `خدمة ${name} ضمن مجال ${scope}، مصممة لمعالجة الطلبات المرتبطة بهذا الاشتراك من خلال فريق جزوم.`
     : `خدمة ${name} مقدمة ضمن اشتراكك لمعالجة الطلبات المرتبطة بها من خلال فريق جزوم.`;

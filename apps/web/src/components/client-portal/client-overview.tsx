@@ -7,7 +7,11 @@ import type {
   ClientPortalSubscribedMonthlyService,
   ClientQuoteSummary,
 } from "../../lib/client-portal-types";
-import { localizedFreeText, localizedServiceDescription } from "./client-format";
+import {
+  localizedFreeText,
+  localizedServiceDescription,
+  localizedServiceScope,
+} from "./client-format";
 import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
 import type { RequestSummary } from "../../lib/request-types";
 import {
@@ -206,7 +210,10 @@ function SubscribedServiceCard({
     <article className="entity-card">
       <div className="entity-card-heading">
         <div>
-          <small>{localizedName(service.service.category, locale)}</small>
+          <small>
+            {localizedServiceScope(localizedName(service.service.category, locale), locale) ??
+              (locale === "ar" ? "مجال الخدمة" : localizedName(service.service.category, locale))}
+          </small>
           <h3>{localizedName(service.service, locale)}</h3>
         </div>
         <span>{service.service.code}</span>
