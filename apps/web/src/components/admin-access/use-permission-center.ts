@@ -67,13 +67,13 @@ export function usePermissionCenter({
 
   useEffect(() => {
     setDraftPermissionCodes(sorted(assignedPermissionCodes));
-    setFeedback(null);
   }, [assignedPermissionCodes, selectedRoleCode]);
 
   function selectRole(roleCode: string) {
     setSelectedRoleCode(roleCode);
     setModuleFilter("all");
     setQuery("");
+    setFeedback(null);
   }
 
   function isProtected(permissionCode: string): boolean {

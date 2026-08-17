@@ -80,3 +80,39 @@ test("persists and restores user profile and permission exceptions", async ({ pa
     }
   }
 });
+
+test("persists and restores role permissions", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Role permission mutations run once on desktop.");
+  test.skip(!allowMutations, "Explicit UAT mutation opt-in is required.");
+  test.skip(!adminEmail || !password, "Missing UAT role permission mutation credentials.");
+
+  await page.goto("/login");
+  await page.getByLabel("البريد الإلكتروني").fill(adminEmail!);
+  await page.getByLabel("كلمة المرور").fill(password!);
+  await page.getByRole("button", { name: "تسجيل الدخول" }).click();
+  await page.waitForURL(/\/admin(?:\/|$)/, { timeout: 20_000 });
+  await page.goto("/admin/permissions");
+
+  await page.locator(".permission-role-list button").filter({ hasText: "ROLE-MGMT" }).click();
+  const permissionRow = page.locator(".permission-matrix-row").filter({
+    hasText: "PERM-MANAGE-CLIENTS",
+  });
+  const permissionCheckbox = permissionRow.locator("input[type='checkbox']");
+  await expect(permissionCheckbox).toBeChecked();
+
+  try {
+    await permissionCheckbox.uncheck();
+    page.once("dialog", (dialog) => dialog.accept());
+    await page.getByRole("button", { name: "حفظ صلاحيات الدور" }).click();
+    await expect(page.getByRole("status")).toContainText("تم تحديث صلاحيات الدور");
+    await expect(permissionCheckbox).not.toBeChecked();
+  } finally {
+    if (!(await permissionCheckbox.isChecked())) {
+      await permissionCheckbox.check();
+      page.once("dialog", (dialog) => dialog.accept());
+      await page.getByRole("button", { name: "حفظ صلاحيات الدور" }).click();
+      await expect(page.getByRole("status")).toContainText("تم تحديث صلاحيات الدور");
+      await expect(permissionCheckbox).toBeChecked();
+    }
+  }
+});
