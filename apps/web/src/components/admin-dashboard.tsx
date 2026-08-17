@@ -27,7 +27,6 @@ const copy = {
     title: "مركز تشغيل جزوم",
     description:
       "نظرة تنفيذية موحدة على العملاء، الطلبات، الساعات، التقارير، وصحة الحسابات باستخدام بيانات النظام الحالية.",
-    manageClients: "إدارة العملاء",
     metrics: {
       totalClients: "إجمالي العملاء",
       activeClients: "عميل نشط",
@@ -93,7 +92,6 @@ const copy = {
     title: "Operating dashboard",
     description:
       "A premium control room for clients, request queues, hours usage, reports, and client health using the current backend data contracts.",
-    manageClients: "Manage clients",
     metrics: {
       totalClients: "Total clients",
       activeClients: "active",
@@ -223,7 +221,6 @@ export function AdminDashboard({
         eyebrow={t.eyebrow}
         title={t.title}
         description={t.description}
-        actions={[{ href: "/admin/clients", label: t.manageClients, variant: "secondary" }]}
       />
 
       <BentoGrid>
