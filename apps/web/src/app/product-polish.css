@@ -1328,6 +1328,10 @@ body {
     box-shadow: 0 1px 8px rgba(23, 32, 51, 0.06);
   }
 
+  .premium-shell[dir="rtl"] .premium-mobile-header {
+    flex-direction: row-reverse;
+  }
+
   .premium-mobile-menu-button {
     gap: 7px;
     min-height: 34px;
