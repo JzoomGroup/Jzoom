@@ -939,6 +939,7 @@ body {
     position: static;
     display: grid;
     align-items: stretch;
+    justify-content: stretch;
     min-height: auto;
     gap: 9px;
     padding: 10px 13px;
