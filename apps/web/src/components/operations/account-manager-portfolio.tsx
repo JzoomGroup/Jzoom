@@ -107,6 +107,19 @@ function healthReason(code: "ATTENTION" | "WATCH" | "HEALTHY", locale: Supported
   return copy[locale].healthReason[code];
 }
 
+function uniqueRecentActivity<T extends { occurredAt: string; reason: string | null; request?: { id?: string } | null }>(
+  activity: T[],
+): T[] {
+  const seen = new Set<string>();
+  return activity.filter((entry) => {
+    const occurredAtSecond = new Date(entry.occurredAt).toISOString().slice(0, 19);
+    const key = `${entry.request?.id ?? "request"}|${entry.reason ?? "activity"}|${occurredAtSecond}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export function AccountManagerPortfolio({
   locale = "en",
   portfolio,
@@ -181,7 +194,9 @@ export function AccountManagerPortfolio({
           <EmptyState>{t.noClients}</EmptyState>
         ) : (
           <div className="entity-grid">
-            {portfolio.portfolio.map((entry) => (
+            {portfolio.portfolio.map((entry) => {
+              const recentActivity = uniqueRecentActivity(entry.recentActivity);
+              return (
               <article className="entity-card" key={entry.client.id}>
                 <div className="entity-card-heading">
                   <div>
@@ -229,10 +244,10 @@ export function AccountManagerPortfolio({
                 </dl>
                 <div className="activity-list">
                   <h4>{t.recentActivity}</h4>
-                  {entry.recentActivity.length === 0 ? (
+                  {recentActivity.length === 0 ? (
                     <EmptyState>{t.noActivity}</EmptyState>
                   ) : (
-                    entry.recentActivity.map((activity) => (
+                    recentActivity.map((activity) => (
                       <article key={activity.id}>
                         <strong>{activity.request?.requestNumber ?? t.requestActivity}</strong>
                         <p>{activity.reason ?? t.activityRecorded}</p>
@@ -242,7 +257,8 @@ export function AccountManagerPortfolio({
                   )}
                 </div>
               </article>
-            ))}
+              );
+            })}
           </div>
         )}
       </SectionCard>

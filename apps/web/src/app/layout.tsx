@@ -6,8 +6,8 @@ import "./globals.css";
 import "./product-polish.css";
 
 export const metadata: Metadata = {
-  title: "Jzoom Operating Platform",
-  description: "Production foundation for the Jzoom Operating Platform.",
+  title: "Jzoom | منصة التشغيل",
+  description: "منصة جزوم لإدارة الخدمات والطلبات والمشاريع والمخرجات.",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

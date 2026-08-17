@@ -117,6 +117,9 @@ const fallbackDeliverableNames: Record<string, Record<SupportedLocale, string>> 
   WEBSITE: { ar: "الموقع الإلكتروني", en: "Website" },
   TESTING: { ar: "تقرير الاختبار", en: "Testing report" },
   HANDOVER: { ar: "حزمة التسليم", en: "Handover package" },
+  "HANDOVER-GUIDE": { ar: "دليل التسليم", en: "Handover guide" },
+  "PUBLISHED-WEBSITE": { ar: "الموقع المنشور", en: "Published website" },
+  "UI-DESIGN": { ar: "تصميم الواجهات", en: "UI design" },
 };
 
 const copy = {
@@ -354,10 +357,11 @@ function localizedDeliverableName(
 
 function localizedOutputTitle(output: { code: string; title: string }, locale: SupportedLocale) {
   if (locale !== "ar") return output.title;
+  if (/[\u0600-\u06ff]/.test(output.title)) return output.title;
   const fallback =
     fallbackDeliverableNames[lookupKey(output.code)] ??
     fallbackDeliverableNames[lookupKey(null, output.title)];
-  return fallback?.ar ?? output.title;
+  return fallback?.ar ?? "مخرج المشروع";
 }
 
 function activityReason(
@@ -874,33 +878,39 @@ export function ProjectDetail({
                   </div>
                   <StatusChip status={task.status} label={taskStatusLabel(task.status, locale)} />
                 </div>
-                {task.description ? <p>{task.description}</p> : null}
+                {localizedOptionalDescription(task.description, locale) ? (
+                  <p>{localizedOptionalDescription(task.description, locale)}</p>
+                ) : null}
                 {project.capabilities.canDeliver ? (
                   <div className="row-actions">
-                    <button
-                      className="os-button os-button-secondary"
-                      type="button"
-                      disabled={saving === task.id}
-                      onClick={() =>
-                        runAction(task.id, () =>
-                          updateProjectTaskStatus(project.id, task.id, "IN_PROGRESS"),
-                        )
-                      }
-                    >
-                      {buttonLabel(task.id, t.startTask)}
-                    </button>
-                    <button
-                      className="os-button os-button-primary"
-                      type="button"
-                      disabled={saving === `${task.id}-done`}
-                      onClick={() =>
-                        runAction(`${task.id}-done`, () =>
-                          updateProjectTaskStatus(project.id, task.id, "DONE"),
-                        )
-                      }
-                    >
-                      {buttonLabel(`${task.id}-done`, taskStatusLabel("DONE", locale))}
-                    </button>
+                    {task.status !== "IN_PROGRESS" && task.status !== "DONE" ? (
+                      <button
+                        className="os-button os-button-secondary"
+                        type="button"
+                        disabled={saving === task.id}
+                        onClick={() =>
+                          runAction(task.id, () =>
+                            updateProjectTaskStatus(project.id, task.id, "IN_PROGRESS"),
+                          )
+                        }
+                      >
+                        {buttonLabel(task.id, t.startTask)}
+                      </button>
+                    ) : null}
+                    {task.status !== "DONE" ? (
+                      <button
+                        className="os-button os-button-primary"
+                        type="button"
+                        disabled={saving === `${task.id}-done`}
+                        onClick={() =>
+                          runAction(`${task.id}-done`, () =>
+                            updateProjectTaskStatus(project.id, task.id, "DONE"),
+                          )
+                        }
+                      >
+                        {buttonLabel(`${task.id}-done`, taskStatusLabel("DONE", locale))}
+                      </button>
+                    ) : null}
                   </div>
                 ) : null}
               </article>
@@ -980,10 +990,14 @@ export function ProjectDetail({
                     label={outputStatusLabel(output.status, locale)}
                   />
                 </div>
-                {output.description ? <p>{output.description}</p> : null}
+                {localizedOptionalDescription(output.description, locale) ? (
+                  <p>{localizedOptionalDescription(output.description, locale)}</p>
+                ) : null}
                 {output.decisionReason ? (
                   <p className="project-output-callout">
-                    {t.reviewNote}: {output.decisionReason}
+                    {t.reviewNote}:{" "}
+                    {localizedOptionalDescription(output.decisionReason, locale) ??
+                      (locale === "ar" ? "تم تسجيل ملاحظة مراجعة على المخرج." : t.reviewNote)}
                   </p>
                 ) : null}
                 <dl className="entity-meta project-output-meta">

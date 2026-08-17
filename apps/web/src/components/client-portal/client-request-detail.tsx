@@ -493,7 +493,7 @@ export function ClientRequestDetail({
   const uploadedDocuments = request.documentRequests.filter(
     (documentRequest) => documentRequest.status === "UPLOADED",
   );
-  const nextActions = [
+  const specificNextActions = [
     ...(outputsAwaitingDecision.length > 0
       ? [
           locale === "ar"
@@ -508,8 +508,13 @@ export function ClientRequestDetail({
             : `Upload ${requestedDocuments.length} requested document(s).`,
         ]
       : []),
-    ...(request.status === "WAITING_CLIENT" ? [t.jzoomWaiting] : []),
   ];
+  const nextActions =
+    specificNextActions.length > 0
+      ? specificNextActions
+      : request.status === "WAITING_CLIENT"
+        ? [t.jzoomWaiting]
+        : [];
   const uploadSelectionIsValid = requestedDocuments.some(
     (documentRequest) => documentRequest.id === uploadForm.documentRequestId,
   );
@@ -903,16 +908,18 @@ export function ClientRequestDetail({
                             {t.downloadFile}
                           </a>
                         )}
-                        <button
-                          className="os-button os-button-secondary"
-                          disabled={saving}
-                          type="button"
-                          onClick={() => {
-                            if (documentRequest.file) archiveAttachment(documentRequest.file.id);
-                          }}
-                        >
-                          {t.archiveAttachment}
-                        </button>
+                        {documentRequest.status === "UPLOADED" && isActiveRequest ? (
+                          <button
+                            className="os-button os-button-secondary"
+                            disabled={saving}
+                            type="button"
+                            onClick={() => {
+                              if (documentRequest.file) archiveAttachment(documentRequest.file.id);
+                            }}
+                          >
+                            {t.archiveAttachment}
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   )}

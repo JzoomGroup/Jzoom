@@ -195,6 +195,34 @@ describe("project delivery UI", () => {
     expect(screen.getByText("النشاط")).toBeInTheDocument();
   });
 
+  it("does not expose legacy English project copy in Arabic workspaces", () => {
+    render(
+      <ProjectDetail
+        locale="ar"
+        project={project({
+          tasks: [
+            {
+              ...project().tasks[0]!,
+              description: "Kickoff one-time project delivery.",
+            },
+          ],
+          outputs: [
+            {
+              ...project().outputs[1]!,
+              code: "OUT-UI",
+              title: "UI design",
+              description: "Legacy English output description.",
+            },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "تصميم الواجهات" })).toBeInTheDocument();
+    expect(screen.queryByText("Kickoff one-time project delivery.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Legacy English output description.")).not.toBeInTheDocument();
+  });
+
   it("lets project specialists update assigned work without exposing client decisions", async () => {
     const updatedProject = project({
       status: "CLIENT_REVIEW",

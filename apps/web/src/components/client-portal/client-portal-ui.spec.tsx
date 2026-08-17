@@ -537,7 +537,8 @@ describe("Client portal UI", () => {
     );
     expect(screen.getByText("Deliverables to review")).toBeInTheDocument();
     expect(screen.getAllByText("Requested documents").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Next action").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Next action")).toHaveLength(2);
+    expect(screen.queryByText("Jzoom is waiting for your response on this request.")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Review deliverables" })).toHaveAttribute(
       "href",
       "#client-deliverables",
@@ -573,6 +574,39 @@ describe("Client portal UI", () => {
     expect(screen.getByText("Upload required")).toBeInTheDocument();
     expect(screen.getByLabelText("Request")).toHaveValue("document-request-1");
     expect(screen.getByText("Choose file from device")).toBeInTheDocument();
+  });
+
+  it("keeps accepted client documents downloadable without allowing removal", () => {
+    const request = serviceRequest({
+      status: "COMPLETED",
+      documentRequests: [
+        documentRequest({
+          status: "CLOSED",
+          file: {
+            id: "file-1",
+            uploadedBy: {
+              id: "client-user-1",
+              email: "client@example.com",
+              displayName: "Client User",
+            },
+            originalName: "accepted-document.pdf",
+            mimeType: "application/pdf",
+            sizeBytes: 1024,
+            sha256: "a".repeat(64),
+            visibility: "CLIENT_VISIBLE",
+            version: 1,
+            downloadUrl: "/api/v1/client-portal/requests/request-1/files/file-1/download",
+            createdAt: "2026-06-22T00:00:00.000Z",
+            updatedAt: "2026-06-22T00:00:00.000Z",
+          },
+        }),
+      ],
+    });
+
+    render(<ClientRequestDetail request={request} />);
+
+    expect(screen.getByRole("link", { name: "Download file" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Remove file" })).not.toBeInTheDocument();
   });
 
   it("hides client request actions when no client decision or upload is pending", () => {

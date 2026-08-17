@@ -62,9 +62,9 @@ const workflowStages: RequestStatus[] = [
 ];
 
 const startableStatuses: RequestStatus[] = [
+  "NEW",
+  "TRIAGE",
   "ASSIGNED",
-  "WAITING_CLIENT",
-  "WAITING_SUPERVISOR",
   "RETURNED",
 ];
 
@@ -818,13 +818,14 @@ export function RequestDetail({
   const isAdmin = hasRole(currentUser, "ROLE-ADMIN");
   const isSupervisor = hasRole(currentUser, "ROLE-SUPERVISOR");
   const isSpecialist = hasRole(currentUser, "ROLE-SPECIALIST");
-  const canAssign = isAdmin || isSupervisor;
-  const canExecute = isAdmin || isSpecialist;
+  const requestIsLocked = ["COMPLETED", "CLOSED", "REJECTED"].includes(request.status);
+  const canAssign = (isAdmin || isSupervisor) && (!requestIsLocked || isAdmin);
+  const canExecute = (isAdmin || isSpecialist) && !requestIsLocked;
   const canSupervise = isAdmin || isSupervisor;
   const canManageLifecycle = isAdmin;
   const canAddOperationalContext = isAdmin || canExecute || canSupervise;
-  const canRequestDocuments = canAddOperationalContext;
-  const canAttachMetadata = canAddOperationalContext;
+  const canRequestDocuments = canAddOperationalContext && !requestIsLocked;
+  const canAttachMetadata = canAddOperationalContext && !requestIsLocked;
   const canStartWork = canExecute && startableStatuses.includes(request.status);
   const workspace = roleWorkspace(currentUser, locale);
   const taskAssignmentCandidates = assignmentCandidates?.specialists ?? [];

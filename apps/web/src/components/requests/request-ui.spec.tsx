@@ -605,12 +605,17 @@ describe("Request lifecycle UI", () => {
   it("exposes start work only when the request status can move to in progress", () => {
     const { unmount } = renderRequestDetail();
 
-    expect(screen.queryByRole("button", { name: "Start work" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start work" })).toBeInTheDocument();
 
     unmount();
-    renderRequestDetail({ ...serviceRequest(), status: "ASSIGNED" });
+    const waitingClient = renderRequestDetail({ ...serviceRequest(), status: "WAITING_CLIENT" });
 
-    expect(screen.getByRole("button", { name: "Start work" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Start work" })).not.toBeInTheDocument();
+
+    waitingClient.unmount();
+    renderRequestDetail({ ...serviceRequest(), status: "WAITING_SUPERVISOR" });
+
+    expect(screen.queryByRole("button", { name: "Start work" })).not.toBeInTheDocument();
   });
 
   it("shows assigned specialists an execution workbench without supervisor controls", () => {
