@@ -5288,13 +5288,12 @@ body {
 
 .access-command {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.52fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   margin-block-end: 14px;
 }
 
-.access-command-main,
-.access-command-notes {
+.access-command-main {
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: 22px;
@@ -5323,30 +5322,6 @@ body {
   color: var(--muted);
   font-size: 13.5px;
   line-height: 1.7;
-}
-
-.access-command-notes {
-  display: grid;
-  gap: 9px;
-  align-content: start;
-  padding: 16px;
-  background: radial-gradient(circle at 92% 0%, rgba(255, 90, 77, 0.1), transparent 34%), #ffffff;
-}
-
-.access-command-notes strong {
-  color: var(--ink);
-  font-size: 15px;
-  font-weight: 950;
-}
-
-.access-command-notes span {
-  padding: 10px 11px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--jzoom-off-white);
-  color: var(--muted-strong);
-  font-size: 12.5px;
-  font-weight: 850;
 }
 
 .access-user-grid,
@@ -5828,11 +5803,6 @@ body {
   font-weight: 900;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.access-audit-review span {
-  display: block;
-  color: var(--ink);
 }
 
 .platform-command {
@@ -10274,7 +10244,6 @@ details,
 .compact-filter,
 .order-control,
 .access-command-main,
-.access-command-notes,
 .access-user-card,
 .access-role-card,
 .access-permission-card,

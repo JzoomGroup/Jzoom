@@ -93,6 +93,8 @@ describe("Admin access pages", () => {
     render(<AdminUsersPageContent locale="en" users={[user]} />);
 
     expect(screen.getByRole("heading", { level: 1, name: "Portal users" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add operating user" })).toBeInTheDocument();
+    expect(screen.queryByText("Security notes")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "View audit logs" })).not.toBeInTheDocument();
     expect(screen.getByText("Ada Admin")).toBeInTheDocument();
     expect(screen.getByText("ada@example.com")).toBeInTheDocument();
@@ -107,6 +109,7 @@ describe("Admin access pages", () => {
     expect(screen.getByText("ROLE-ADMIN")).toBeInTheDocument();
     expect(screen.getByText("Can manage access records")).toBeInTheDocument();
     expect(screen.getByText("Manage users")).toBeInTheDocument();
+    expect(screen.queryByText("Security notes")).not.toBeInTheDocument();
   });
 
   it("renders permissions grouped by module", () => {
@@ -116,6 +119,7 @@ describe("Admin access pages", () => {
     expect(screen.getAllByText("Access")).not.toHaveLength(0);
     expect(screen.getByText("PERM-MANAGE-USERS")).toBeInTheDocument();
     expect(screen.getByText("Admin Only")).toBeInTheDocument();
+    expect(screen.queryByText("Security notes")).not.toBeInTheDocument();
   });
 
   it("renders permissions in Arabic without exposing internal English labels", () => {
@@ -136,5 +140,6 @@ describe("Admin access pages", () => {
     expect(screen.getAllByText("حرج")).not.toHaveLength(0);
     expect(screen.getByText("AUTH_PERMISSION_DENIED")).toBeInTheDocument();
     expect(screen.getAllByText("صلاحية غير متوفرة")).not.toHaveLength(0);
+    expect(screen.queryByText("ملاحظات الأمان")).not.toBeInTheDocument();
   });
 });

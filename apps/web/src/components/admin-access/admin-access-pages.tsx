@@ -75,7 +75,6 @@ const copy = {
     inherited: "موروثة من الدور",
     internal: "داخلي",
     invited: "مدعو",
-    latestEvent: "آخر حدث",
     lastLogin: "آخر دخول",
     locked: "مقفل مؤقتًا",
     lockedUsers: "مقفل مؤقتًا",
@@ -103,7 +102,6 @@ const copy = {
     rolesDescription: "ملفات الأدوار والنطاقات وعدد المستخدمين والصلاحيات المرتبطة بكل دور.",
     scopes: "النطاقات",
     security: "الأمان",
-    securityNotes: "ملاحظات الأمان",
     severity: "الخطورة",
     sensitiveEvents: "أحداث حساسة",
     status: "الحالة",
@@ -164,7 +162,6 @@ const copy = {
     inherited: "Inherited from role",
     internal: "Internal",
     invited: "Invited",
-    latestEvent: "Latest event",
     lastLogin: "Last login",
     locked: "Temporarily locked",
     lockedUsers: "Temporarily locked",
@@ -192,7 +189,6 @@ const copy = {
     rolesDescription: "Role profiles, scopes, user counts, and assigned permissions.",
     scopes: "Scopes",
     security: "Security",
-    securityNotes: "Security notes",
     severity: "Severity",
     sensitiveEvents: "Sensitive events",
     status: "Status",
@@ -880,38 +876,36 @@ export function AdminUsersPageContent({
 
   return (
     <>
-      <PageHeader eyebrow={t.access} title={t.portalUsers} description={t.usersDescription} />
+      <PageHeader
+        eyebrow={t.access}
+        title={t.portalUsers}
+        description={t.usersDescription}
+        actions={[
+          {
+            label: showCreator
+              ? lang === "ar"
+                ? "إغلاق نموذج الإنشاء"
+                : "Close creator"
+              : lang === "ar"
+                ? "إضافة مستخدم تشغيلي"
+                : "Add operating user",
+            onClick: () => {
+              if (showCreator) {
+                closeOperatingForm();
+              } else {
+                openCreateForm();
+              }
+            },
+            variant: showCreator ? "secondary" : "primary",
+          },
+        ]}
+      />
 
       <section className="access-command">
         <div className="access-command-main">
           <p className="eyebrow">{t.accessCenter}</p>
           <h2>{t.portalUsers}</h2>
           <p>{t.accessCenterDescription}</p>
-        </div>
-        <div className="access-command-notes">
-          <strong>{t.securityNotes}</strong>
-          <span>{t.noOverrides}</span>
-          <span>{t.inherited}</span>
-          <span>{t.lastLogin}</span>
-          <button
-            className="button-primary"
-            type="button"
-            onClick={() => {
-              if (showCreator) {
-                closeOperatingForm();
-              } else {
-                openCreateForm();
-              }
-            }}
-          >
-            {showCreator
-              ? lang === "ar"
-                ? "إغلاق نموذج الإنشاء"
-                : "Close creator"
-              : lang === "ar"
-                ? "إضافة مستخدم تشغيلي"
-                : "Add operating user"}
-          </button>
         </div>
       </section>
 
@@ -1342,18 +1336,6 @@ export function AdminRolesPageContent({
           <h2>{t.roles}</h2>
           <p>{t.rolesDescription}</p>
         </div>
-        <div className="access-command-notes">
-          <strong>{t.securityNotes}</strong>
-          <span>
-            {t.systemRole}: {number(systemRoles, lang)}
-          </span>
-          <span>
-            {t.customRoles}: {number(customRoles, lang)}
-          </span>
-          <span>
-            {t.permissions}: {number(permissions.length, lang)}
-          </span>
-        </div>
       </section>
 
       <BentoGrid compact>
@@ -1459,18 +1441,6 @@ export function AdminPermissionsPageContent({
           <h2>{t.permissions}</h2>
           <p>{t.permissionsDescription}</p>
         </div>
-        <div className="access-command-notes">
-          <strong>{t.securityNotes}</strong>
-          <span>
-            {t.moduleCoverage}: {number(Object.keys(grouped).length, lang)}
-          </span>
-          <span>
-            {t.active}: {number(activePermissions, lang)}
-          </span>
-          <span>
-            {t.scopes}: {t.noRestrictions}
-          </span>
-        </div>
       </section>
 
       <BentoGrid compact>
@@ -1571,7 +1541,6 @@ export function AdminAuditLogsPageContent({
   const sensitiveLogs = logs.filter(
     (log) => log.severity === "CRITICAL" || log.severity === "HIGH",
   );
-  const latestLog = logs[0] ?? null;
   const [filters, setFilters] = useState({
     category: "all",
     eventCode: "all",
@@ -1615,23 +1584,11 @@ export function AdminAuditLogsPageContent({
     <>
       <PageHeader eyebrow={t.security} title={t.auditLogs} description={t.auditDescription} />
 
-      <section className="access-command access-audit-command">
+      <section className="access-command">
         <div className="access-command-main">
           <p className="eyebrow">{t.auditCenter}</p>
           <h2>{t.auditTrail}</h2>
           <p>{t.auditCenterDescription}</p>
-        </div>
-        <div className="access-command-notes access-audit-review">
-          <strong>{t.securityNotes}</strong>
-          <span>
-            {t.unauthorized}: {number(deniedLogs.length, lang)}
-          </span>
-          <span>
-            {t.sensitiveEvents}: {number(sensitiveLogs.length, lang)}
-          </span>
-          <span>
-            {t.latestEvent}: {latestLog ? date(latestLog.occurredAt, lang, "-") : t.never}
-          </span>
         </div>
       </section>
 
