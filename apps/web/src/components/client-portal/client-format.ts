@@ -1,4 +1,4 @@
-import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
 
 export type ClientDisplayLocale = SupportedLocale;
 
@@ -108,7 +108,9 @@ export function sar(value: number): string {
 
 export function clientDate(value: string | null, locale: ClientDisplayLocale = "en"): string {
   if (!value) return locale === "ar" ? "غير محدد" : "Not set";
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA").format(new Date(value));
+  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
+    timeZone: platformTimeZone,
+  }).format(new Date(value));
 }
 
 export function dateLabel(value: string | null): string {
@@ -122,6 +124,7 @@ export function clientDateTime(value: string | null, locale: ClientDisplayLocale
     hour: "2-digit",
     minute: "2-digit",
     month: "short",
+    timeZone: platformTimeZone,
     year: "numeric",
   }).format(new Date(value));
 }

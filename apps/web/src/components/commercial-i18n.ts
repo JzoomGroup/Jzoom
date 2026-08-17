@@ -1,4 +1,4 @@
-import { normalizeLocale, type SupportedLocale } from "../lib/i18n";
+import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../lib/i18n";
 
 export const commercialCopy = {
   ar: {
@@ -242,7 +242,9 @@ export function countText(value: number, locale: SupportedLocale): string {
 
 export function dateText(value: string | null | undefined, locale: SupportedLocale): string {
   if (!value) return commercialCopy[locale].notAvailable;
-  return new Date(value).toLocaleDateString(locale === "ar" ? "ar-SA" : "en-SA");
+  return new Date(value).toLocaleDateString(locale === "ar" ? "ar-SA" : "en-SA", {
+    timeZone: platformTimeZone,
+  });
 }
 
 export function hashText(value: string | null | undefined, locale: SupportedLocale): string {

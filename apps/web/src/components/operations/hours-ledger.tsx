@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, type ReactNode, useState } from "react";
-import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
 import {
   fetchHoursLedger,
   fetchMonthlyClosings,
@@ -191,6 +191,7 @@ function date(value: string | null | undefined, locale: SupportedLocale): string
   if (!value) return locale === "ar" ? "غير محدد" : "Not set";
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
     dateStyle: "medium",
+    timeZone: platformTimeZone,
   }).format(new Date(value));
 }
 

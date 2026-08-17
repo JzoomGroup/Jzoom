@@ -8,7 +8,7 @@ import type {
   ClientQuoteSummary,
 } from "../../lib/client-portal-types";
 import { localizedFreeText, localizedServiceDescription } from "./client-format";
-import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
 import type { RequestSummary } from "../../lib/request-types";
 import {
   BentoGrid,
@@ -173,7 +173,9 @@ function formatCurrency(value: number, locale: SupportedLocale): string {
 
 function formatDate(value: string | null, locale: SupportedLocale, copy: ClientCopy): string {
   if (!value) return copy.notSet;
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA").format(new Date(value));
+  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
+    timeZone: platformTimeZone,
+  }).format(new Date(value));
 }
 
 function localizedName(value: { nameAr: string; nameEn: string }, locale: SupportedLocale): string {

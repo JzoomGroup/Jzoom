@@ -1,4 +1,6 @@
 export type SupportedLocale = "ar" | "en";
+
+export const platformTimeZone = "Asia/Riyadh";
 export type TextDirection = "rtl" | "ltr";
 
 export const DEFAULT_LOCALE: SupportedLocale = "ar";

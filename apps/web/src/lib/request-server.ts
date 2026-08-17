@@ -91,8 +91,12 @@ export function requireRequest(id: string): Promise<ServiceRequest> {
   );
 }
 
-export function requireRequestAssignmentCandidates(): Promise<RequestAssignmentCandidates> {
-  return requireRequestResponse<RequestAssignmentCandidates>("requests/assignment-candidates");
+export function requireRequestAssignmentCandidates(
+  requestId: string,
+): Promise<RequestAssignmentCandidates> {
+  return requireRequestResponse<RequestAssignmentCandidates>(
+    `requests/assignment-candidates?requestId=${encodeURIComponent(requestId)}`,
+  );
 }
 
 export function requireRequestIntakeOptions(): Promise<RequestIntakeOptions> {

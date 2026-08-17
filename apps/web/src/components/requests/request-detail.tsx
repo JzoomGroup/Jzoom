@@ -33,7 +33,7 @@ import type {
   RequestStatus,
   ServiceRequest,
 } from "../../lib/request-types";
-import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
 import { riyadhDateInputValue } from "../../lib/stable-date";
 import { PageHeader, PriorityChip, StatusChip } from "../premium-os";
 
@@ -515,6 +515,7 @@ function dateTime(value: string | null, locale: SupportedLocale): string {
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: platformTimeZone,
   }).format(new Date(value));
 }
 

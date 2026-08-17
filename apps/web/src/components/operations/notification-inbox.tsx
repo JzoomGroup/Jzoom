@@ -8,7 +8,7 @@ import {
   operationsErrorMessage,
 } from "../../lib/operations-client";
 import type { AppNotification, NotificationListResponse } from "../../lib/operations-types";
-import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
 import {
   BentoGrid,
   EmptyState,
@@ -69,7 +69,9 @@ const copy = {
 } as const;
 
 function displayDate(value: string, locale: SupportedLocale): string {
-  return new Date(value).toLocaleString(locale === "ar" ? "ar-SA" : "en-SA");
+  return new Date(value).toLocaleString(locale === "ar" ? "ar-SA" : "en-SA", {
+    timeZone: platformTimeZone,
+  });
 }
 
 function notificationMessage(notification: AppNotification, locale: SupportedLocale): string {

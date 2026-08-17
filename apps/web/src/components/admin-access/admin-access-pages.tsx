@@ -26,7 +26,7 @@ import type {
   AdminAccessUser,
   AdminAuditLog,
 } from "../../lib/admin-access-types";
-import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
 
 const copy = {
   ar: {
@@ -226,6 +226,7 @@ function date(value: string | null, locale: SupportedLocale, fallback: string): 
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: platformTimeZone,
   }).format(new Date(value));
 }
 
@@ -237,7 +238,9 @@ function roleLabel(
   role: Pick<AdminAccessRole, "name" | "nameAr" | "nameEn">,
   locale: SupportedLocale,
 ) {
-  return locale === "ar" ? (role.nameAr ?? role.name) : (role.nameEn ?? role.name);
+  return locale === "ar"
+    ? (role.nameAr ?? formatCode(role.name, locale))
+    : (role.nameEn ?? role.name);
 }
 
 function formatCode(value: string | null | undefined, locale: SupportedLocale = "en"): string {
@@ -268,6 +271,11 @@ function formatCode(value: string | null | undefined, locale: SupportedLocale = 
       REQUESTS: "الطلبات",
       SECURITY: "الأمان",
       SETTINGS: "الإعدادات",
+      SPECIALIST: "مختص",
+      PROJECT_SPECIALIST: "مختص مشاريع",
+      SUPERVISOR: "مشرف",
+      MANAGEMENT: "الإدارة",
+      ADMIN: "مدير النظام",
       TEAM: "الفريق",
       TEAM_SCOPED: "حسب الفريق",
       UPDATE: "تحديث",

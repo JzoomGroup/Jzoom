@@ -19,7 +19,7 @@ import type {
   RequestSummary,
 } from "../../lib/request-types";
 import { EmptyState, PageHeader, PriorityChip, SectionCard, StatusChip } from "../premium-os";
-import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
 
 const priorities = ["LOW", "NORMAL", "HIGH", "URGENT"] as const;
 
@@ -200,6 +200,7 @@ function displayDate(value: string | null, locale: SupportedLocale): string {
   if (!value) return copy[locale].notSet;
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
     dateStyle: "medium",
+    timeZone: platformTimeZone,
   }).format(new Date(value));
 }
 

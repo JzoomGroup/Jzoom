@@ -152,8 +152,11 @@ export class RequestsController {
 
   @Get("assignment-candidates")
   @ApiOperation({ summary: "List active internal users eligible for request assignment" })
-  assignmentCandidates(@Req() request: RequestWithId) {
-    return this.requests.assignmentCandidates(request.auth!);
+  assignmentCandidates(
+    @Req() request: RequestWithId,
+    @Query("requestId") requestId?: string,
+  ) {
+    return this.requests.assignmentCandidates(request.auth!, requestId);
   }
 
   @Get("intake-options")

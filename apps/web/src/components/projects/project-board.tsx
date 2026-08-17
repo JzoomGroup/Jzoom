@@ -17,7 +17,7 @@ import type {
   ProjectSummary,
   ProjectTaskStatus,
 } from "../../lib/project-types";
-import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
 import { EmptyState, MetricCard, PageHeader, SectionCard, StatusChip } from "../premium-os";
 
 const projectStatusLabels = {
@@ -405,6 +405,7 @@ function formatDate(value: string | null, locale: SupportedLocale, fallback: str
   if (!value) return fallback;
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
     dateStyle: "medium",
+    timeZone: platformTimeZone,
   }).format(new Date(value));
 }
 
@@ -413,6 +414,7 @@ function formatDateTime(value: string | null, locale: SupportedLocale, fallback:
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: platformTimeZone,
   }).format(new Date(value));
 }
 

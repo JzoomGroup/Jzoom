@@ -353,7 +353,7 @@ export class RequestsService {
     return this.detailView(request, false);
   }
 
-  async assignmentCandidates(principal: AuthenticatedPrincipal) {
+  async assignmentCandidates(principal: AuthenticatedPrincipal, requestId?: string) {
     if (!hasGlobalAccess(principal) && !principal.roles.includes(SUPERVISOR_ROLE_CODE)) {
       throw new ForbiddenException({
         code: "REQUEST_ASSIGNMENT_CANDIDATES_FORBIDDEN",
@@ -382,6 +382,57 @@ export class RequestsService {
     const byRole = (roleCode: string) =>
       candidates.filter((candidate) => candidate.roleCodes.includes(roleCode));
 
+    let eligibleSpecialistIds: Set<string> | null = null;
+    let eligibleSupervisorIds: Set<string> | null = null;
+    if (requestId) {
+      const request = await this.requireAccessibleRequest(requestId, principal);
+      const now = new Date();
+      const monthlyServiceId = request.subscriptionService.monthlyServiceRevision.monthlyServiceId;
+      const serviceScopes = await this.database.prisma.specialistServiceScope.findMany({
+        where: {
+          monthlyServiceId,
+          status: "ACTIVE",
+          startsAt: { lte: now },
+          AND: [
+            { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+            { OR: [{ clientId: request.clientId }, { clientId: null }] },
+          ],
+        },
+        select: { userId: true },
+      });
+      eligibleSpecialistIds = new Set(serviceScopes.map((scope) => scope.userId));
+      if (request.assignedSpecialistId) {
+        eligibleSpecialistIds.add(request.assignedSpecialistId);
+      }
+
+      const supervisorLinks =
+        eligibleSpecialistIds.size > 0
+          ? await this.database.prisma.supervisorSpecialistAssignment.findMany({
+              where: {
+                specialistId: { in: [...eligibleSpecialistIds] },
+                status: "ACTIVE",
+                startsAt: { lte: now },
+                AND: [
+                  { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+                  { OR: [{ clientId: request.clientId }, { clientId: null }] },
+                ],
+              },
+              select: { supervisorId: true },
+            })
+          : [];
+      eligibleSupervisorIds = new Set(supervisorLinks.map((link) => link.supervisorId));
+      if (request.assignedSupervisorId) {
+        eligibleSupervisorIds.add(request.assignedSupervisorId);
+      }
+    }
+
+    const eligibleSpecialists = byRole(SPECIALIST_ROLE_CODE).filter(
+      (candidate) => !eligibleSpecialistIds || eligibleSpecialistIds.has(candidate.id),
+    );
+    const eligibleSupervisors = byRole(SUPERVISOR_ROLE_CODE).filter(
+      (candidate) => !eligibleSupervisorIds || eligibleSupervisorIds.has(candidate.id),
+    );
+
     if (
       principal.roles.includes(SUPERVISOR_ROLE_CODE) &&
       !principal.roles.includes(ADMIN_ROLE_CODE)
@@ -398,15 +449,15 @@ export class RequestsService {
       });
       const teamIds = new Set(teamAssignments.map((assignment) => assignment.specialistId));
       return {
-        specialists: byRole(SPECIALIST_ROLE_CODE).filter((candidate) => teamIds.has(candidate.id)),
-        supervisors: candidates.filter((candidate) => candidate.id === principal.userId),
+        specialists: eligibleSpecialists.filter((candidate) => teamIds.has(candidate.id)),
+        supervisors: eligibleSupervisors.filter((candidate) => candidate.id === principal.userId),
         accountManagers: [],
       };
     }
 
     return {
-      specialists: byRole(SPECIALIST_ROLE_CODE),
-      supervisors: byRole(SUPERVISOR_ROLE_CODE),
+      specialists: eligibleSpecialists,
+      supervisors: eligibleSupervisors,
       accountManagers: byRole(ACCOUNT_MANAGER_ROLE_CODE),
     };
   }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ClientsSnapshot } from "../lib/clients-types";
-import { normalizeLocale, type SupportedLocale } from "../lib/i18n";
+import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../lib/i18n";
 import type {
   AccountManagerPortfolio,
   MonthlyReport,
@@ -196,6 +196,7 @@ function date(value: string, locale: SupportedLocale): string {
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
     day: "2-digit",
     month: "short",
+    timeZone: platformTimeZone,
     year: "numeric",
   }).format(new Date(value));
 }

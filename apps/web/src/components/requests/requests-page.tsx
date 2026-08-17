@@ -42,7 +42,7 @@ export async function RequestsPage({ requestId }: { requestId?: string }) {
   }
   const assignmentCandidates =
     requestId && !Array.isArray(content) && canUseAssignmentCandidates(user)
-      ? await requireRequestAssignmentCandidates()
+      ? await requireRequestAssignmentCandidates(requestId)
       : null;
   const canCreate = canCreateRequests(user);
   const intakeOptions =

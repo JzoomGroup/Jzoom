@@ -1,5 +1,5 @@
 import type { AccountManagerPortfolio as Portfolio } from "../../lib/operations-types";
-import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
 import {
   BentoGrid,
   EmptyState,
@@ -94,6 +94,7 @@ function dateTime(value: string, locale: SupportedLocale): string {
     hour: "2-digit",
     minute: "2-digit",
     month: "short",
+    timeZone: platformTimeZone,
     year: "numeric",
   }).format(new Date(value));
 }

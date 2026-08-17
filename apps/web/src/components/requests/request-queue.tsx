@@ -11,7 +11,7 @@ import type {
   RequestStatus,
   RequestSummary,
 } from "../../lib/request-types";
-import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
 import {
   BentoGrid,
   EmptyState,
@@ -213,6 +213,7 @@ function displayDate(value: string | null, locale: SupportedLocale): string {
   if (!value) return copy[locale].notSet;
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
     dateStyle: "medium",
+    timeZone: platformTimeZone,
   }).format(new Date(value));
 }
 
