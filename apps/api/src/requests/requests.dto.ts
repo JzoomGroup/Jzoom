@@ -3,7 +3,6 @@ import {
   IsArray,
   IsBoolean,
   IsDateString,
-  IsDivisibleBy,
   IsIn,
   IsInt,
   IsNumber,
@@ -16,7 +15,9 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateBy,
   ValidateNested,
+  type ValidationOptions,
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { RequestTemplateAnswerInputDto } from "../request-templates/request-templates.dto.js";
@@ -33,6 +34,20 @@ import {
 } from "./requests.constants.js";
 
 const REQUEST_OUTPUT_CODE_PATTERN = /^[A-Z0-9][A-Z0-9_-]{1,79}$/;
+
+function IsQuarterHour(validationOptions?: ValidationOptions) {
+  return ValidateBy(
+    {
+      name: "isQuarterHour",
+      validator: {
+        validate: (value: unknown) =>
+          typeof value === "number" && Number.isFinite(value) && Number.isInteger(value * 4),
+        defaultMessage: () => "$property must use quarter-hour increments",
+      },
+    },
+    validationOptions,
+  );
+}
 
 export class CreateRequestDto {
   @ApiProperty({ type: String, format: "uuid" })
@@ -471,7 +486,7 @@ export class CreateTimeEntryDto {
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0.25)
-  @IsDivisibleBy(0.25)
+  @IsQuarterHour()
   @Max(24)
   hours!: number;
 
@@ -498,7 +513,7 @@ export class UpdateTimeEntryDto {
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0.25)
-  @IsDivisibleBy(0.25)
+  @IsQuarterHour()
   @Max(24)
   hours?: number;
 

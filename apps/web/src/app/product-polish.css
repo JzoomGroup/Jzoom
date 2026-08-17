@@ -697,6 +697,31 @@ body {
   box-shadow: none;
 }
 
+.request-action-feedback {
+  position: sticky;
+  z-index: 40;
+  top: 10px;
+  margin: 0 0 12px;
+  padding: 11px 12px;
+  border: 1px solid;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(13, 19, 33, 0.08);
+}
+
+.request-action-feedback.success {
+  border-color: rgba(20, 122, 85, 0.2);
+  background: #eef9f4;
+  color: var(--polish-success);
+}
+
+.request-action-feedback.error {
+  border-color: rgba(180, 35, 24, 0.18);
+  background: #fff4f2;
+  color: var(--polish-danger);
+}
+
 .catalog-feedback.success,
 .access-feedback.success,
 .quote-action-feedback.success {

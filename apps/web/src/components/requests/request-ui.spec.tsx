@@ -458,6 +458,9 @@ describe("Request lifecycle UI", () => {
       status: "TRIAGE",
     });
     expect(await screen.findAllByText("In review")).not.toHaveLength(0);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "The action was saved and the request was updated successfully.",
+    );
   });
 
   it("assigns users through friendly assignment candidate selectors", async () => {
@@ -656,6 +659,41 @@ describe("Request lifecycle UI", () => {
     expect(screen.getByRole("button", { name: "Add time" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Approve request" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Update status" })).not.toBeInTheDocument();
+  });
+
+  it("presents completed specialist requests as Arabic read-only workspaces", () => {
+    const request = {
+      ...serviceRequest(),
+      status: "COMPLETED" as const,
+      assignments: {
+        ...serviceRequest().assignments,
+        specialist: {
+          id: "specialist-user-1",
+          email: "specialist@example.com",
+          displayName: "Specialist User",
+        },
+      },
+    };
+
+    renderRequestDetail(
+      request,
+      currentUser({
+        id: "specialist-user-1",
+        email: "specialist@example.com",
+        displayName: "Specialist User",
+        preferredLocale: "ar",
+        roles: ["ROLE-SPECIALIST"],
+      }),
+    );
+
+    expect(
+      screen.getAllByText("اكتمل هذا الطلب، وتظهر تفاصيل هذا القسم للقراءة فقط.").length,
+    ).toBeGreaterThanOrEqual(5);
+    expect(screen.queryByRole("button", { name: "إضافة بند" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "إنشاء مخرج داخلي" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "طلب مستند" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "إضافة وقت" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "رفع المرفق" })).not.toBeInTheDocument();
   });
 
   it("shows assigned supervisors review controls without execution forms", () => {

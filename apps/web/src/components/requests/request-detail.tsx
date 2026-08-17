@@ -114,6 +114,7 @@ const copy = {
     clientDocumentUnavailable: "طلب مستندات العميل متاح لمساحات العمل الداخلية المسندة.",
     clientVisible: "ظاهر للعميل",
     chooseFile: "اختيار ملف من الجهاز",
+    changeSaved: "تم حفظ الإجراء وتحديث الطلب بنجاح.",
     close: "إغلاق",
     closeDelivery: "إغلاق التسليم",
     comment: "تعليق",
@@ -126,6 +127,7 @@ const copy = {
     confirmOutputSubmit: "تأكيد إرسال هذا المخرج لمراجعة المشرف؟",
     confirmSupervisorAction: "تأكيد تنفيذ قرار المشرف على الطلب؟",
     completeness: "الاكتمال",
+    completedReadOnly: "اكتمل هذا الطلب، وتظهر تفاصيل هذا القسم للقراءة فقط.",
     createInternalOutput: "إنشاء مخرج داخلي",
     createdBy: "أنشئ بواسطة",
     current: "الحالة الحالية",
@@ -295,6 +297,7 @@ const copy = {
       "Client document requests are available to assigned internal workspaces.",
     clientVisible: "Client-visible",
     chooseFile: "Choose file from device",
+    changeSaved: "The action was saved and the request was updated successfully.",
     close: "Close",
     closeDelivery: "Close delivery",
     comment: "Comment",
@@ -307,6 +310,7 @@ const copy = {
     confirmOutputSubmit: "Submit this output for supervisor review?",
     confirmSupervisorAction: "Apply this supervisor decision to the request?",
     completeness: "Completeness",
+    completedReadOnly: "This request is complete. This section is read-only.",
     createInternalOutput: "Create internal output",
     createdBy: "created by",
     current: "Current",
@@ -762,6 +766,7 @@ export function RequestDetail({
   const t = copy[locale];
   const [request, setRequest] = useState(initialRequest);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const [statusForm, setStatusForm] = useState({ status: request.status, reason: "" });
   const [assignmentForm, setAssignmentForm] = useState({
@@ -905,10 +910,12 @@ export function RequestDetail({
   async function run(label: string, action: () => Promise<ServiceRequest>) {
     setSaving(label);
     setError(null);
+    setSuccess(null);
     try {
       const updated = await action();
       setRequest(updated);
       setStatusForm((current) => ({ ...current, status: updated.status }));
+      setSuccess(t.changeSaved);
     } catch (caught) {
       setError(requestErrorMessage(caught));
     } finally {
@@ -1283,7 +1290,14 @@ export function RequestDetail({
         </div>
       </PageHeader>
 
-      {error && <p className="form-error">{error}</p>}
+      {(error || success) && (
+        <p
+          className={`request-action-feedback ${error ? "error" : "success"}`}
+          role={error ? "alert" : "status"}
+        >
+          {error ?? success}
+        </p>
+      )}
 
       <RequestDetailNav locale={locale} />
 
@@ -1522,7 +1536,7 @@ export function RequestDetail({
             </button>
           </form>
         ) : (
-          <p>{t.statusUnavailable}</p>
+          <p>{requestIsLocked ? t.completedReadOnly : t.statusUnavailable}</p>
         )}
         <div className="row-actions">
           {canStartWork && (
@@ -1700,7 +1714,7 @@ export function RequestDetail({
               </button>
             </form>
           ) : (
-            <p>{t.checklistUnavailable}</p>
+            <p>{requestIsLocked ? t.completedReadOnly : t.checklistUnavailable}</p>
           )}
           <div className="activity-list">
             {request.tasks.length === 0 ? (
@@ -1810,7 +1824,7 @@ export function RequestDetail({
               </button>
             </form>
           ) : (
-            <p>{t.internalOutputUnavailable}</p>
+            <p>{requestIsLocked ? t.completedReadOnly : t.internalOutputUnavailable}</p>
           )}
           <div className="activity-list">
             {request.outputs.length === 0 ? (
@@ -1996,7 +2010,7 @@ export function RequestDetail({
               </button>
             </form>
           ) : (
-            <p>{t.clientDocumentUnavailable}</p>
+            <p>{requestIsLocked ? t.completedReadOnly : t.clientDocumentUnavailable}</p>
           )}
           <div className="activity-list">
             {request.documentRequests.length === 0 ? (
@@ -2092,7 +2106,7 @@ export function RequestDetail({
               </button>
             </form>
           ) : (
-            <p>{t.timeUnavailable}</p>
+            <p>{requestIsLocked ? t.completedReadOnly : t.timeUnavailable}</p>
           )}
           <div className="activity-list">
             {request.timeEntries.length === 0 ? (
@@ -2333,7 +2347,7 @@ export function RequestDetail({
               </button>
             </form>
           ) : (
-            <p>{t.attachmentUnavailable}</p>
+            <p>{requestIsLocked ? t.completedReadOnly : t.attachmentUnavailable}</p>
           )}
           <div className="activity-list">
             {request.attachments.length === 0 ? (
