@@ -1501,6 +1501,8 @@ body {
   }
 
   .catalog-card-footer .order-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
   }
 
@@ -1534,6 +1536,11 @@ body {
 
   .catalog-card-footer :is(.os-button, .os-button-danger) {
     width: 100%;
+  }
+
+  .catalog-card-footer .order-control .os-button {
+    width: auto;
+    min-width: 112px;
   }
 }
 
