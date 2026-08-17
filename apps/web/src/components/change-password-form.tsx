@@ -1,45 +1,12 @@
 "use client";
 
+import { changePasswordFormCopy as copy } from "../i18n/dictionaries/administration";
+
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { changePassword, AuthApiError } from "../lib/auth-client";
-import { normalizeLocale, type SupportedLocale } from "../lib/i18n";
+import { normalizeLocale } from "../lib/i18n";
 import { postLoginRoute } from "../lib/route-access";
-
-const copy: Record<
-  SupportedLocale,
-  {
-    confirmPassword: string;
-    invalidPolicy: string;
-    mismatch: string;
-    newPassword: string;
-    policy: string;
-    submit: string;
-    submitting: string;
-    genericError: string;
-  }
-> = {
-  ar: {
-    confirmPassword: "تأكيد كلمة المرور",
-    invalidPolicy: "استخدم 8 أحرف على الأقل، مع حرف كبير وحرف صغير ورقم.",
-    mismatch: "تأكيد كلمة المرور غير مطابق.",
-    newPassword: "كلمة المرور الجديدة",
-    policy: "استخدم 8 أحرف على الأقل، مع حرف كبير وحرف صغير ورقم.",
-    submit: "تغيير كلمة المرور",
-    submitting: "جاري التغيير...",
-    genericError: "تعذر تغيير كلمة المرور.",
-  },
-  en: {
-    confirmPassword: "Confirm password",
-    invalidPolicy: "Use at least 8 characters with uppercase, lowercase, and a number.",
-    mismatch: "Password confirmation does not match.",
-    newPassword: "New password",
-    policy: "Use at least 8 characters with uppercase, lowercase, and a number.",
-    submit: "Change password",
-    submitting: "Changing...",
-    genericError: "The password could not be changed.",
-  },
-};
 
 export function ChangePasswordForm({ locale = "en" }: { locale?: string }) {
   const router = useRouter();

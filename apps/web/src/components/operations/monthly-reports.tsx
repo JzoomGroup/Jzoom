@@ -1,5 +1,7 @@
 "use client";
 
+import { monthlyReportsCopy as copy } from "../../i18n/dictionaries/operations";
+
 import { type FormEvent, useState } from "react";
 import {
   operationsErrorMessage,
@@ -27,80 +29,6 @@ interface ReportClientOption {
 function clientOptionLabel(client: ReportClientOption): string {
   return `${client.name} (${client.code})`;
 }
-
-const copy = {
-  ar: {
-    approvedHours: "الساعات المعتمدة",
-    clientId: "العميل",
-    clientSnapshots: "عملاء مشمولون",
-    description:
-      "جهز ملخصًا شهريًا آمنًا للعميل من الطلبات والمخرجات والمستندات والساعات الأساسية. عند النشر يظهر التقرير لمستخدمي بوابة العميل.",
-    documents: "المستندات",
-    finalizedClosing: "يستخدم لقطة إغلاق شهرية نهائية",
-    hours: "الساعات",
-    latestPeriod: "أحدث فترة",
-    managementReports: "تقارير الإدارة",
-    monthlyReports: "تقارير العملاء الشهرية",
-    noReports: "لم يتم تجهيز أي تقرير شهري حتى الآن.",
-    noReportsTitle: "لا توجد تقارير شهرية",
-    outputs: "المخرجات",
-    pendingPublish: "بانتظار النشر",
-    period: "الفترة",
-    prepareReport: "تجهيز التقرير",
-    prepareSnapshot: "تجهيز اللقطة",
-    preparedReports: "التقارير المجهزة",
-    published: "منشورة",
-    publishToClient: "نشر للعميل",
-    readyLibrary: "مكتبة تقارير جاهزة",
-    reportCardsDescription:
-      "كل بطاقة تعرض ما سيظهر للعميل قبل النشر مع أرقام الطلبات والمخرجات والمستندات والساعات.",
-    reportBuilder: "منشئ التقرير",
-    reportBuilderDescription: "جهز تقريرًا لفترة محددة ثم راجعه قبل نشره للعميل.",
-    reportCommand: "مركز التقارير",
-    reportLibrary: "مكتبة التقارير",
-    reportSummary: "ملخص التقارير",
-    requests: "الطلبات",
-    saving: "جاري الحفظ...",
-    source: "المصدر",
-    title: "العنوان",
-  },
-  en: {
-    approvedHours: "Hours",
-    clientId: "Client",
-    clientSnapshots: "Clients covered",
-    description:
-      "Prepare a client-safe monthly summary from requests, shared outputs, document requests, and basic hours. Publishing exposes the report to client portal users.",
-    documents: "Documents",
-    finalizedClosing: "Uses finalized closing snapshot",
-    hours: "Hours",
-    latestPeriod: "Latest period",
-    managementReports: "Management reports",
-    monthlyReports: "Client monthly reports",
-    noReports: "No monthly reports have been prepared yet.",
-    noReportsTitle: "No monthly reports",
-    outputs: "Outputs",
-    pendingPublish: "Pending publish",
-    period: "Period",
-    prepareReport: "Prepare report",
-    prepareSnapshot: "Prepare snapshot",
-    preparedReports: "Prepared reports",
-    published: "Published",
-    publishToClient: "Publish to client",
-    readyLibrary: "Ready report library",
-    reportCardsDescription:
-      "Each card previews what the client will see before publishing, with requests, outputs, documents, and hours.",
-    reportBuilder: "Report builder",
-    reportBuilderDescription:
-      "Prepare a report for a specific period, then review it before client publishing.",
-    reportCommand: "Report center",
-    reportLibrary: "Report library",
-    reportSummary: "Report summary",
-    requests: "Requests",
-    saving: "Saving...",
-    source: "Source",
-    title: "Title",
-  },
-} as const;
 
 function currentPeriod(): string {
   const now = new Date();

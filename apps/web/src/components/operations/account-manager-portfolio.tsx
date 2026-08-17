@@ -1,3 +1,4 @@
+import { accountManagerPortfolioCopy as copy } from "../../i18n/dictionaries/operations";
 import type { AccountManagerPortfolio as Portfolio } from "../../lib/operations-types";
 import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
 import {
@@ -8,79 +9,6 @@ import {
   SectionCard,
   StatusChip,
 } from "../premium-os";
-
-const copy = {
-  ar: {
-    activityRecorded: "تم تسجيل نشاط",
-    approvedHours: "الساعات المعتمدة",
-    assignedManagers: "مديرو الحساب",
-    city: "المدينة",
-    clientHealthActivity: "صحة العملاء والنشاط",
-    clientPortfolio: "محفظة العملاء",
-    clients: "العملاء",
-    generated: "تم التحديث",
-    healthReason: {
-      ATTENTION: "تحتاج هذه المحفظة متابعة عاجلة بسبب مؤشرات تشغيلية عالية المخاطر.",
-      HEALTHY: "نشاط العميل مستقر ضمن المؤشرات الحالية.",
-      WATCH: "توجد مؤشرات تستحق المتابعة خلال الفترة الحالية.",
-    },
-    healthStatus: {
-      ATTENTION: "تحتاج متابعة",
-      HEALTHY: "مستقرة",
-      WATCH: "تحت المتابعة",
-    },
-    hours: "الساعات",
-    noActivity: "لا يوجد نشاط حديث لهذا العميل.",
-    noClients: "لا يوجد عملاء نشطون مسندون لهذه المحفظة.",
-    open: "مفتوحة",
-    openRequests: "طلبات مفتوحة",
-    overdue: "متأخرة",
-    overdueRequests: "طلبات متأخرة",
-    pageDescription:
-      "مركز محفظة يوضح صحة العملاء، الاستخدام، الأعمال المفتوحة، ومؤشرات المتابعة باستخدام بيانات النظام الحالية.",
-    portfolioCommandCenter: "مركز محفظة العملاء",
-    recentActivity: "النشاط الأخير",
-    requestActivity: "نشاط على الطلب",
-    sector: "القطاع",
-    waitingClient: "بانتظار العميل",
-    waitingClientRequests: "بانتظار العميل",
-  },
-  en: {
-    activityRecorded: "Activity recorded",
-    approvedHours: "Approved hours",
-    assignedManagers: "Account managers",
-    city: "City",
-    clientHealthActivity: "Client health and activity",
-    clientPortfolio: "Client portfolio",
-    clients: "Clients",
-    generated: "Generated",
-    healthReason: {
-      ATTENTION: "This portfolio needs urgent follow-up due to high-risk operating indicators.",
-      HEALTHY: "Client activity is stable across the current indicators.",
-      WATCH: "Current indicators should be monitored this period.",
-    },
-    healthStatus: {
-      ATTENTION: "Needs attention",
-      HEALTHY: "Healthy",
-      WATCH: "Watch",
-    },
-    hours: "Hours",
-    noActivity: "No recent activity for this client.",
-    noClients: "No assigned active clients in this portfolio.",
-    open: "Open",
-    openRequests: "Open requests",
-    overdue: "Overdue",
-    overdueRequests: "Overdue requests",
-    pageDescription:
-      "Assigned clients, open work, attention indicators, and health signals based on existing request, delivery, document, and hours data.",
-    portfolioCommandCenter: "Portfolio command center",
-    recentActivity: "Recent activity",
-    requestActivity: "Request activity",
-    sector: "Sector",
-    waitingClient: "Waiting client",
-    waitingClientRequests: "Waiting client",
-  },
-} as const;
 
 function number(value: number, locale: SupportedLocale): string {
   return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA", {
@@ -107,9 +35,9 @@ function healthReason(code: "ATTENTION" | "WATCH" | "HEALTHY", locale: Supported
   return copy[locale].healthReason[code];
 }
 
-function uniqueRecentActivity<T extends { occurredAt: string; reason: string | null; request?: { id?: string } | null }>(
-  activity: T[],
-): T[] {
+function uniqueRecentActivity<
+  T extends { occurredAt: string; reason: string | null; request?: { id?: string } | null },
+>(activity: T[]): T[] {
   const seen = new Set<string>();
   return activity.filter((entry) => {
     const occurredAtSecond = new Date(entry.occurredAt).toISOString().slice(0, 19);
@@ -197,66 +125,66 @@ export function AccountManagerPortfolio({
             {portfolio.portfolio.map((entry) => {
               const recentActivity = uniqueRecentActivity(entry.recentActivity);
               return (
-              <article className="entity-card" key={entry.client.id}>
-                <div className="entity-card-heading">
-                  <div>
-                    <StatusChip
-                      status={entry.health.code}
-                      label={healthLabel(entry.health.code, language)}
-                    />
-                    <h3>{entry.client.name}</h3>
+                <article className="entity-card" key={entry.client.id}>
+                  <div className="entity-card-heading">
+                    <div>
+                      <StatusChip
+                        status={entry.health.code}
+                        label={healthLabel(entry.health.code, language)}
+                      />
+                      <h3>{entry.client.name}</h3>
+                    </div>
+                    <span>{entry.client.code}</span>
                   </div>
-                  <span>{entry.client.code}</span>
-                </div>
-                <p>{healthReason(entry.health.code, language)}</p>
-                <dl className="entity-meta four-up">
-                  <div>
-                    <dt>{t.open}</dt>
-                    <dd>{number(entry.indicators.openRequests, language)}</dd>
+                  <p>{healthReason(entry.health.code, language)}</p>
+                  <dl className="entity-meta four-up">
+                    <div>
+                      <dt>{t.open}</dt>
+                      <dd>{number(entry.indicators.openRequests, language)}</dd>
+                    </div>
+                    <div>
+                      <dt>{t.overdue}</dt>
+                      <dd>{number(entry.indicators.overdueRequests, language)}</dd>
+                    </div>
+                    <div>
+                      <dt>{t.waitingClient}</dt>
+                      <dd>{number(entry.indicators.waitingClientRequests, language)}</dd>
+                    </div>
+                    <div>
+                      <dt>{t.hours}</dt>
+                      <dd>{number(entry.indicators.approvedHoursThisMonth, language)}</dd>
+                    </div>
+                    <div>
+                      <dt>{t.sector}</dt>
+                      <dd>{entry.client.sector}</dd>
+                    </div>
+                    <div>
+                      <dt>{t.city}</dt>
+                      <dd>{entry.client.city ?? "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>{t.assignedManagers}</dt>
+                      <dd>
+                        {entry.accountManagers.map((manager) => manager.displayName).join(", ") ||
+                          "-"}
+                      </dd>
+                    </div>
+                  </dl>
+                  <div className="activity-list">
+                    <h4>{t.recentActivity}</h4>
+                    {recentActivity.length === 0 ? (
+                      <EmptyState>{t.noActivity}</EmptyState>
+                    ) : (
+                      recentActivity.map((activity) => (
+                        <article key={activity.id}>
+                          <strong>{activity.request?.requestNumber ?? t.requestActivity}</strong>
+                          <p>{activity.reason ?? t.activityRecorded}</p>
+                          <small>{dateTime(activity.occurredAt, language)}</small>
+                        </article>
+                      ))
+                    )}
                   </div>
-                  <div>
-                    <dt>{t.overdue}</dt>
-                    <dd>{number(entry.indicators.overdueRequests, language)}</dd>
-                  </div>
-                  <div>
-                    <dt>{t.waitingClient}</dt>
-                    <dd>{number(entry.indicators.waitingClientRequests, language)}</dd>
-                  </div>
-                  <div>
-                    <dt>{t.hours}</dt>
-                    <dd>{number(entry.indicators.approvedHoursThisMonth, language)}</dd>
-                  </div>
-                  <div>
-                    <dt>{t.sector}</dt>
-                    <dd>{entry.client.sector}</dd>
-                  </div>
-                  <div>
-                    <dt>{t.city}</dt>
-                    <dd>{entry.client.city ?? "-"}</dd>
-                  </div>
-                  <div>
-                    <dt>{t.assignedManagers}</dt>
-                    <dd>
-                      {entry.accountManagers.map((manager) => manager.displayName).join(", ") ||
-                        "-"}
-                    </dd>
-                  </div>
-                </dl>
-                <div className="activity-list">
-                  <h4>{t.recentActivity}</h4>
-                  {recentActivity.length === 0 ? (
-                    <EmptyState>{t.noActivity}</EmptyState>
-                  ) : (
-                    recentActivity.map((activity) => (
-                      <article key={activity.id}>
-                        <strong>{activity.request?.requestNumber ?? t.requestActivity}</strong>
-                        <p>{activity.reason ?? t.activityRecorded}</p>
-                        <small>{dateTime(activity.occurredAt, language)}</small>
-                      </article>
-                    ))
-                  )}
-                </div>
-              </article>
+                </article>
               );
             })}
           </div>

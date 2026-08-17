@@ -1,19 +1,17 @@
 # Jzoom Operating Platform
 
-Production-grade TypeScript foundation and database configuration layer for the Jzoom Operating
-Platform.
-
-PR 2 adds the revisioned Prisma business schema and Excel V3 normalization/seed pipeline. It still
-does not contain business screens, authentication UI, pricing UI, PDF generation, client portal, or
-request workflow UI.
+Production-grade TypeScript monorepo for the Jzoom Operating Platform. It includes the Arabic-first
+Next.js portal, NestJS API, role and permission enforcement, revisioned PostgreSQL business data,
+service and pricing management, requests, projects, files, outputs, approvals, reports, and audit
+records.
 
 ## Workspace
 
 ```text
 apps/
   api/       NestJS REST API
-  web/       Next.js application shell
-  worker/    Empty NestJS background-worker process
+  web/       Next.js portal, centralized interface copy, and Playwright browser tests
+  worker/    NestJS background-worker foundation
 packages/
   config/    Validated environment contracts
   contracts/ Shared API/request types
@@ -21,7 +19,8 @@ packages/
 data/
   blueprints/ Checked-in Excel V3 source, manifest, and approved control additions
 docs/
-  blueprint/ Formal PR 2 control updates
+  blueprint/        Formal data and control references
+  RUNBOOK_LOCAL.md  Local setup and safe test commands
 ```
 
 ## Prerequisites
@@ -82,6 +81,10 @@ pnpm openapi:generate
 
 `pnpm test` builds the workspace first so tests consume the same generated Prisma client and
 compiled workspace packages used by production.
+
+Frontend ownership is documented beside the code in
+`apps/web/src/app/styles/README.md`, `apps/web/src/i18n/README.md`, and
+`apps/web/src/components/admin-access/README.md`.
 
 The GitHub Actions foundation workflow runs formatting, linting, type-checking, build/tests,
 PostgreSQL migrations and seed idempotency checks, OpenAPI artifact generation, and independent

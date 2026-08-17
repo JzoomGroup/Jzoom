@@ -8,6 +8,8 @@ coverage/
 dist/
 out/
 *.tsbuildinfo
+apps/web/playwright-report/
+apps/web/test-results/
 
 # Generated sources and artifacts
 apps/api/openapi.json

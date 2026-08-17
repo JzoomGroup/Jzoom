@@ -1,5 +1,7 @@
 "use client";
 
+import { requestQueueCopy as copy } from "../../i18n/dictionaries/workflow";
+
 import Link from "next/link";
 import { type FormEvent, useState } from "react";
 import { refreshRequestQueue, requestErrorMessage } from "../../lib/request-client";
@@ -42,83 +44,6 @@ const statuses = [
 ] as const;
 
 const priorities = ["", "LOW", "NORMAL", "HIGH", "URGENT"] as const;
-
-const copy = {
-  ar: {
-    accountManager: "مدير الحساب",
-    activeQueue: "الطابور الحالي",
-    allRequests: "كل الطلبات",
-    anyPriority: "كل الأولويات",
-    anyAssignee: "كل المسؤولين",
-    anyClient: "كل العملاء",
-    anyService: "كل الخدمات",
-    anyStatus: "كل الحالات",
-    applyFilters: "تطبيق الفلاتر",
-    assigneeId: "المسؤول",
-    clientFollowUp: "متابعة العميل",
-    clientId: "العميل",
-    due: "الموعد",
-    dueBefore: "مستحق قبل",
-    emptyQueue: "لا توجد طلبات مطابقة لهذا الطابور.",
-    executionQueue: "طابور التنفيذ",
-    internalExecution: "التنفيذ الداخلي",
-    needsAttention: "تحتاج متابعة",
-    notSet: "غير محدد",
-    open: "مفتوحة",
-    overdue: "متأخرة",
-    priority: "الأولوية",
-    queueFilters: "فلاتر الطابور",
-    queueResults: "نتائج الطابور",
-    segmentWork: "فرز وتصفية العمل",
-    serviceId: "الخدمة",
-    specialist: "المختص",
-    status: "الحالة",
-    supervisor: "المشرف",
-    reviewQueue: "طابور المراجعة",
-    visibleActiveWork: "عمل نشط ظاهر",
-    visibleRequests: "طلبات ظاهرة",
-    workQueues: "طوابير عمل الطلبات",
-    workQueuesDescription:
-      "تابع عمل المختص والمشرف ومدير الحساب من طوابير طلبات مرتبطة بصلاحيات backend.",
-  },
-  en: {
-    accountManager: "Account manager",
-    activeQueue: "Active queue",
-    allRequests: "All requests",
-    anyPriority: "Any priority",
-    anyAssignee: "Any assignee",
-    anyClient: "Any client",
-    anyService: "Any service",
-    anyStatus: "Any status",
-    applyFilters: "Apply filters",
-    assigneeId: "Assignee",
-    clientFollowUp: "Client follow-up",
-    clientId: "Client",
-    due: "Due",
-    dueBefore: "Due before",
-    emptyQueue: "No requests match this queue.",
-    executionQueue: "Execution queue",
-    internalExecution: "Internal execution",
-    needsAttention: "Needs attention",
-    notSet: "Not set",
-    open: "Open",
-    overdue: "Overdue",
-    priority: "Priority",
-    queueFilters: "Queue filters",
-    queueResults: "Queue results",
-    segmentWork: "Segment and refine work",
-    serviceId: "Service",
-    specialist: "Specialist",
-    status: "Status",
-    supervisor: "Supervisor",
-    reviewQueue: "Review queue",
-    visibleActiveWork: "Visible active work",
-    visibleRequests: "visible requests",
-    workQueues: "Request work queues",
-    workQueuesDescription:
-      "Track specialist, supervisor, and account-manager work from backend-scoped request queues.",
-  },
-} as const;
 
 const queueLabels: Record<RequestQueueResponse["queue"], Record<SupportedLocale, string>> = {
   "account-manager": { ar: "مدير الحساب", en: "Account manager" },

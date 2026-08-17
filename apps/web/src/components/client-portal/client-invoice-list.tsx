@@ -1,3 +1,4 @@
+import { clientInvoiceListCopy as copy } from "../../i18n/dictionaries/client-portal";
 import Link from "next/link";
 import type { ClientInvoiceSummary } from "../../lib/client-portal-types";
 import { EmptyState, MetricCard, PageHeader, SectionCard, StatusChip } from "../premium-os";
@@ -9,44 +10,6 @@ import {
   invoiceStatusLabel,
   localizedFreeText,
 } from "./client-format";
-
-const copy = {
-  ar: {
-    basedOrder: "حسب ترتيب القائمة الحالي",
-    beforeTax: "قبل الضريبة",
-    commercialCenter: "المركز التجاري",
-    commercialSnapshots: "السجلات التجارية",
-    description: "الفواتير الصادرة لحسابك، محفوظة كسجلات ثابتة منفصلة عن تغييرات الكتالوج.",
-    invoiceLibrary: "سجل الفواتير",
-    invoices: "فواتيرك",
-    issued: "صادرة",
-    issuedInvoices: "الفواتير الصادرة",
-    item: "بند",
-    latestIssue: "أحدث إصدار",
-    noInvoices: "لا توجد فواتير حتى الآن",
-    noInvoicesBody: "لا توجد فواتير صادرة متاحة حتى الآن.",
-    quote: "العرض",
-    totalDue: "إجمالي المستحق",
-  },
-  en: {
-    basedOrder: "Based on current list order",
-    beforeTax: "Before tax",
-    commercialCenter: "Commercial center",
-    commercialSnapshots: "Commercial snapshots",
-    description:
-      "Issued invoice snapshots for your client account, kept separate from live catalog changes.",
-    invoiceLibrary: "Invoice library",
-    invoices: "Your invoices",
-    issued: "Issued",
-    issuedInvoices: "Issued invoices",
-    item: "items",
-    latestIssue: "Latest issue",
-    noInvoices: "No invoices yet",
-    noInvoicesBody: "No issued invoices are available yet.",
-    quote: "Quote",
-    totalDue: "Total due",
-  },
-} as const;
 
 export function ClientInvoiceList({
   invoices,

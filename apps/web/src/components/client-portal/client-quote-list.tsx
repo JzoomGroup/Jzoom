@@ -1,3 +1,4 @@
+import { clientQuoteListCopy as copy } from "../../i18n/dictionaries/client-portal";
 import Link from "next/link";
 import type { ClientQuoteSummary } from "../../lib/client-portal-types";
 import { EmptyState, MetricCard, PageHeader, SectionCard, StatusChip } from "../premium-os";
@@ -9,42 +10,6 @@ import {
   localizedFreeText,
   quoteStatusLabel,
 } from "./client-format";
-
-const copy = {
-  ar: {
-    acceptedIssued: "صادرة أو مؤكدة خارج النظام",
-    basedOrder: "حسب ترتيب القائمة الحالي",
-    commercialCenter: "المركز التجاري",
-    commercialSnapshots: "السجلات التجارية",
-    description:
-      "عروض الأسعار الصادرة والمؤكدة خارج النظام لحسابك، محفوظة كسجلات تجارية ثابتة للقراءة فقط.",
-    item: "بند",
-    latestValidity: "أحدث صلاحية",
-    noQuotes: "لا توجد عروض حتى الآن",
-    noQuotesBody: "ستظهر عروض الأسعار الصادرة والمؤكدة خارج النظام هنا عند توفرها.",
-    quotes: "عروضك",
-    totalValue: "إجمالي القيمة",
-    validUntil: "صالح حتى",
-    visibleQuotes: "العروض الظاهرة",
-  },
-  en: {
-    acceptedIssued: "Issued or externally confirmed",
-    basedOrder: "Based on current list order",
-    commercialCenter: "Commercial center",
-    commercialSnapshots: "Commercial snapshots",
-    description:
-      "Issued and externally confirmed quote snapshots for your client account, presented as read-only immutable commercial records.",
-    item: "items",
-    latestValidity: "Latest validity",
-    noQuotes: "No quotes yet",
-    noQuotesBody:
-      "Issued and externally confirmed quote snapshots will appear here when they are available.",
-    quotes: "Your quotes",
-    totalValue: "Total value",
-    validUntil: "Valid until",
-    visibleQuotes: "Visible quotes",
-  },
-} as const;
 
 export function ClientQuoteList({
   locale: localeInput = "en",

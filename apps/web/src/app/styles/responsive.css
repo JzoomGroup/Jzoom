@@ -1,0 +1,429 @@
+@media (max-width: 1180px) {
+  .os-bento-grid,
+  .metric-grid,
+  .pricing-total-grid,
+  .client-request-form .pricing-total-grid,
+  .template-preset-grid,
+  .admin-area-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .catalog-form.wide-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .request-signal-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .request-primary-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .request-workflow-stepper ol {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .os-control-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .project-command-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .project-room-board {
+    grid-template-columns: 1fr;
+  }
+
+  .request-intake-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .request-field-grid-three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .client-request-command,
+  .client-action-grid,
+  .client-request-context-grid,
+  .operations-report-workspace,
+  .pricing-journey,
+  .request-ops-command,
+  .request-list-command,
+  .access-command,
+  .access-audit-card,
+  .platform-command,
+  .client-admin-command,
+  .package-admin-command,
+  .service-admin-command,
+  .item-admin-command,
+  .one-time-service-command,
+  .one-time-category-command {
+    grid-template-columns: 1fr;
+  }
+
+  .client-command-metrics,
+  .request-ops-metrics,
+  .request-list-metrics,
+  .access-module-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .client-request-readiness,
+  .client-upload-steps,
+  .client-request-card-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .access-user-grid,
+  .access-role-grid,
+  .access-permission-grid,
+  .operations-record-grid,
+  .platform-card-grid,
+  .platform-readiness-grid,
+  .client-admin-grid,
+  .package-admin-grid,
+  .service-admin-grid,
+  .item-admin-grid,
+  .one-time-service-grid,
+  .one-time-category-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .os-page-header,
+  .catalog-header,
+  .quote-list-main,
+  .os-section-heading,
+  .panel-heading,
+  .entity-card-heading,
+  .client-admin-card-top,
+  .client-admin-editor-heading,
+  .package-admin-card-top,
+  .service-admin-card-top,
+  .item-admin-card-top,
+  .one-time-service-card-top,
+  .one-time-category-card-top {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .os-page-actions,
+  .quote-header-actions {
+    justify-content: flex-start;
+  }
+
+  .os-bento-grid,
+  .metric-grid,
+  .pricing-total-grid,
+  .client-request-form .pricing-total-grid,
+  .template-preset-grid,
+  .admin-area-grid,
+  .entity-grid,
+  .operations-record-grid,
+  .operations-record-grid .entity-meta.four-up,
+  .quote-list-grid,
+  .quote-summary-grid,
+  .service-grid,
+  .catalog-form,
+  .catalog-form.wide-form,
+  .entity-meta.four-up,
+  .project-output-meta,
+  .project-room-progress-grid,
+  .project-command-strip,
+  .request-filter-bar,
+  .client-request-readiness,
+  .client-upload-steps,
+  .client-request-card-stats,
+  .request-primary-actions,
+  .request-intake-steps,
+  .pricing-journey-steps,
+  .request-field-grid,
+  .request-field-grid-three,
+  .request-signal-strip,
+  .request-list-metrics,
+  .access-definition-grid,
+  .access-definition-grid.compact,
+  .access-module-grid,
+  .access-notes-grid,
+  .platform-card-form,
+  .platform-readiness-grid,
+  .client-admin-definition-grid,
+  .client-admin-mini-metrics,
+  .package-admin-metrics,
+  .package-admin-rules,
+  .service-admin-metrics,
+  .service-admin-hours,
+  .item-admin-metrics,
+  .one-time-service-metrics,
+  .one-time-service-template,
+  .one-time-category-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .project-timeline article {
+    grid-template-columns: 1fr;
+  }
+
+  .request-intake-steps span,
+  .request-panel-heading > span {
+    justify-self: start;
+  }
+
+  .request-review-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .client-command-metrics,
+  .client-decision-bar,
+  .request-ops-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .client-admin-command-main,
+  .client-admin-guardrails,
+  .client-admin-editor,
+  .client-admin-card,
+  .package-admin-command-main,
+  .package-admin-guardrails,
+  .package-admin-editor,
+  .package-admin-card,
+  .service-admin-command-main,
+  .service-admin-guardrails,
+  .service-admin-editor,
+  .service-admin-card,
+  .item-admin-command-main,
+  .item-admin-guardrails,
+  .item-admin-editor,
+  .item-admin-card,
+  .one-time-service-command-main,
+  .one-time-service-guardrails,
+  .one-time-service-editor,
+  .one-time-service-card,
+  .one-time-category-command-main,
+  .one-time-category-guardrails,
+  .one-time-category-editor,
+  .one-time-category-card {
+    border-radius: 18px;
+  }
+
+  .client-admin-actions .os-button,
+  .client-admin-actions .os-button-danger,
+  .package-admin-actions .os-button,
+  .package-admin-actions .os-button-danger,
+  .service-admin-actions .os-button,
+  .service-admin-actions .os-button-danger,
+  .item-admin-actions .os-button,
+  .item-admin-actions .os-button-danger,
+  .one-time-service-actions .os-button,
+  .one-time-service-actions .os-button-danger,
+  .one-time-category-actions .os-button,
+  .one-time-category-actions .os-button-danger {
+    width: 100%;
+  }
+
+  .request-queue-tabs,
+  .request-queue-result-bar,
+  .access-user-top,
+  .access-role-heading,
+  .platform-config-card-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .request-queue-tabs .os-button,
+  .request-queue-filter-form button {
+    width: 100%;
+  }
+
+  .access-user-top,
+  .access-role-heading,
+  .platform-config-card-header {
+    display: flex;
+  }
+
+  .client-panel-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  #request-lifecycle .row-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .quote-list-meta {
+    justify-content: flex-start;
+    text-align: start;
+  }
+
+  .request-hero {
+    padding: 20px;
+    border-radius: 24px;
+  }
+
+  .request-workflow-heading {
+    flex-direction: column;
+  }
+
+  .request-workflow-stepper ol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .os-control-grid,
+  .os-control-deck-heading {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.pricing-shell-embedded .pricing-layout {
+  min-height: auto;
+}
+
+@media (max-width: 900px) {
+  .premium-shell,
+  [dir="rtl"].premium-shell {
+    display: block;
+  }
+
+  .premium-mobile-header {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    min-height: 72px;
+    padding-block: 12px;
+    padding-inline: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background:
+      linear-gradient(180deg, rgba(255, 90, 77, 0.08), transparent 92px),
+      linear-gradient(180deg, #0d1321 0%, #07111f 100%);
+    color: #ffffff;
+    box-shadow: 0 18px 42px rgba(7, 17, 31, 0.18);
+  }
+
+  .premium-mobile-brand {
+    min-height: 48px;
+  }
+
+  .premium-mobile-brand .premium-brand-mark {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+    border-radius: 12px;
+    font-size: 20px;
+  }
+
+  .premium-mobile-menu-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 42px;
+    padding-block: 9px;
+    padding-inline: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 850;
+    cursor: pointer;
+    box-shadow: inset 0 1px rgba(255, 255, 255, 0.08);
+  }
+
+  .premium-mobile-menu-button[aria-expanded="true"] {
+    border-color: rgba(255, 90, 77, 0.44);
+    background: rgba(255, 90, 77, 0.16);
+  }
+
+  .premium-mobile-menu-icon {
+    display: grid;
+    gap: 4px;
+    width: 18px;
+  }
+
+  .premium-mobile-menu-icon span {
+    display: block;
+    height: 2px;
+    border-radius: 999px;
+    background: currentColor;
+  }
+
+  .premium-mobile-menu-backdrop {
+    position: fixed;
+    inset: 72px 0 0;
+    z-index: 40;
+    display: block;
+    width: 100%;
+    border: 0;
+    background: rgba(7, 17, 31, 0.34);
+    cursor: pointer;
+  }
+
+  .premium-sidebar {
+    position: fixed;
+    inset-block-start: 72px;
+    inset-inline: 12px;
+    z-index: 50;
+    height: min(72dvh, 620px);
+    max-height: calc(100dvh - 92px);
+    min-height: 0;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0 0 24px 24px;
+    box-shadow: 0 26px 62px rgba(7, 17, 31, 0.34);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-118%);
+    transition:
+      opacity 180ms ease,
+      transform 220ms ease;
+  }
+
+  .premium-shell .premium-sidebar.is-open {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: translateY(0) !important;
+  }
+
+  .premium-nav {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    margin-block: 0;
+  }
+
+  .premium-nav a {
+    min-height: 44px;
+    border-radius: 12px;
+    font-size: 14px;
+  }
+
+  .premium-nav-section {
+    margin-block: 14px 4px;
+  }
+
+  .premium-sidebar-card {
+    display: none;
+  }
+
+  .premium-topbar {
+    position: relative;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .premium-topbar-actions {
+    justify-content: flex-start;
+  }
+}

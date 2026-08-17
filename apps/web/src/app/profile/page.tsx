@@ -2,29 +2,10 @@ import { redirect } from "next/navigation";
 import { AppShell } from "../../components/app-shell";
 import { LogoutButton } from "../../components/logout-button";
 import { PageHeader, SectionCard } from "../../components/premium-os";
+import { profilePageCopy, profileRoleLabel } from "../../i18n/pages";
 import { getCurrentUser } from "../../lib/auth";
 import { normalizeLocale } from "../../lib/i18n";
 import { protectedRouteRedirect } from "../../lib/route-access";
-
-const roleLabels = {
-  "ROLE-ADMIN": { ar: "أدمن", en: "Admin" },
-  "ROLE-AM": { ar: "مدير حساب", en: "Account Manager" },
-  "ROLE-CLIENT": { ar: "عميل", en: "Client" },
-  "ROLE-MGMT": { ar: "الإدارة", en: "Management" },
-  "ROLE-SPECIALIST": { ar: "مختص", en: "Specialist" },
-  "ROLE-SUPERVISOR": { ar: "مشرف", en: "Supervisor" },
-} as const;
-
-function accountTypeLabel(userType: "INTERNAL" | "EXTERNAL", locale: "ar" | "en"): string {
-  if (userType === "EXTERNAL") {
-    return locale === "ar" ? "حساب عميل" : "Client account";
-  }
-  return locale === "ar" ? "حساب داخلي" : "Internal account";
-}
-
-function roleLabel(role: string, locale: "ar" | "en"): string {
-  return roleLabels[role as keyof typeof roleLabels]?.[locale] ?? role.replace(/^ROLE-/, "");
-}
 
 export default async function ProfilePage() {
   const user = await getCurrentUser();
@@ -34,30 +15,7 @@ export default async function ProfilePage() {
   }
 
   const locale = normalizeLocale(user!.preferredLocale);
-  const copy =
-    locale === "ar"
-      ? {
-          eyebrow: "الملف الشخصي",
-          title: "ملف الحساب",
-          lead: "معلومات الدخول والصلاحيات الحالية داخل منصة جزوم.",
-          email: "البريد الإلكتروني",
-          accountType: "نوع الحساب",
-          roles: "الأدوار",
-          language: "اللغة",
-          signOut: "تسجيل الخروج",
-          signingOut: "جاري تسجيل الخروج...",
-        }
-      : {
-          eyebrow: "Authenticated profile",
-          title: "Account profile",
-          lead: "Current sign-in, role, and permission context for the Jzoom platform.",
-          email: "Email",
-          accountType: "Account type",
-          roles: "Roles",
-          language: "Language",
-          signOut: "Sign out",
-          signingOut: "Signing out...",
-        };
+  const copy = profilePageCopy[locale];
   const mode = user!.userType === "EXTERNAL" ? "client" : "internal";
 
   return (
@@ -80,15 +38,15 @@ export default async function ProfilePage() {
           </div>
           <div>
             <dt>{copy.accountType}</dt>
-            <dd>{accountTypeLabel(user!.userType, locale)}</dd>
+            <dd>{user!.userType === "EXTERNAL" ? copy.clientAccount : copy.internalAccount}</dd>
           </div>
           <div>
             <dt>{copy.roles}</dt>
-            <dd>{user!.roles.map((role) => roleLabel(role, locale)).join(", ")}</dd>
+            <dd>{user!.roles.map((role) => profileRoleLabel(role, locale)).join(", ")}</dd>
           </div>
           <div>
             <dt>{copy.language}</dt>
-            <dd>{locale === "ar" ? "العربية" : "English"}</dd>
+            <dd>{locale === "ar" ? copy.arabic : copy.english}</dd>
           </div>
         </dl>
         <LogoutButton label={copy.signOut} submittingLabel={copy.signingOut} />

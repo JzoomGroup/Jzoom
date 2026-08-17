@@ -82,13 +82,14 @@ export class FileStorageService {
     directory: string,
     file: UploadedRequestFile,
   ): Promise<StoredRequestFile> {
-    if (!file.buffer || file.size < 1) {
+    const actualSize = file.buffer?.byteLength ?? 0;
+    if (!file.buffer || actualSize < 1) {
       throw new BadRequestException({
         code: "FILE_REQUIRED",
         message: "A non-empty file is required",
       });
     }
-    if (file.size > this.maxBytes) {
+    if (actualSize > this.maxBytes) {
       throw new BadRequestException({
         code: "FILE_TOO_LARGE",
         message: `File size must not exceed ${this.maxBytes} bytes`,
@@ -104,7 +105,7 @@ export class FileStorageService {
     return {
       originalName,
       mimeType: file.mimetype || "application/octet-stream",
-      sizeBytes: file.size,
+      sizeBytes: actualSize,
       sha256: createHash("sha256").update(file.buffer).digest("hex"),
       storageProvider: "local",
       storageKey,

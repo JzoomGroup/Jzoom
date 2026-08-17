@@ -1,5 +1,7 @@
 "use client";
 
+import { requestTemplateFieldsCopy as copy } from "../../i18n/dictionaries/catalog";
+
 import type { ChangeEvent } from "react";
 import type {
   RequestTemplateField,
@@ -9,35 +11,6 @@ import type {
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
 
 export type TemplateAnswerState = Record<string, TemplateAnswerValue | undefined>;
-
-const copy = {
-  ar: {
-    attachmentPlaceholder: "مرجع بيانات المرفق أو الملف",
-    choose: "اختر...",
-    documentChecklist: "قائمة المستندات المطلوبة",
-    fieldRequired: "مطلوب",
-    optionalUpload: "رفع اختياري",
-    referenceFile: "ملف مرجعي",
-    returnUploadRequired: "يتطلب رفع النسخة المعادة",
-    templateFiles: "ملفات النموذج القابلة للتنزيل",
-    templateForm: "نموذج الطلب",
-    uploadRequired: "الرفع مطلوب",
-    yes: "نعم",
-  },
-  en: {
-    attachmentPlaceholder: "Attachment/file metadata reference",
-    choose: "Select...",
-    documentChecklist: "Required document checklist",
-    fieldRequired: "Required",
-    optionalUpload: "Optional upload",
-    referenceFile: "Reference file",
-    returnUploadRequired: "Return upload required",
-    templateFiles: "Downloadable template files",
-    templateForm: "Template form",
-    uploadRequired: "Upload required",
-    yes: "Yes",
-  },
-} as const;
 
 function fieldValue(values: TemplateAnswerState, field: RequestTemplateField) {
   return values[field.code] ?? "";

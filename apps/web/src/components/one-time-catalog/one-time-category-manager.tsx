@@ -1,5 +1,7 @@
 "use client";
 
+import { oneTimeCategoryManagerCopy as copy } from "../../i18n/dictionaries/catalog";
+
 import { useState, type FormEvent } from "react";
 import { PencilLine } from "lucide-react";
 import { refreshOneTimeCatalog } from "../../lib/one-time-catalog-client";
@@ -16,85 +18,6 @@ import {
   useCatalogMutation,
 } from "../catalog/catalog-shared";
 import { BentoGrid, MetricCard, PageHeader, SectionCard } from "../premium-os";
-
-const copy = {
-  ar: {
-    active: "نشط",
-    addCategory: "إضافة تصنيف",
-    arabicName: "الاسم العربي",
-    code: "الرمز",
-    configuredCategories: "التصنيفات المفعلة",
-    createCategory: "إنشاء التصنيف",
-    created: "تم إنشاء تصنيف المرة الواحدة.",
-    codesImmutable: "الرموز ثابتة بعد الإنشاء.",
-    description: "الوصف",
-    descriptionBody:
-      "إدارة تصنيفات خدمات البناء والحلول الرقمية دون حذف السجلات التاريخية.",
-    displayOrder: "ترتيب العرض",
-    draft: "مسودة",
-    edit: "تعديل",
-    editCategory: (code: string) => `تعديل ${code}`,
-    englishName: "الاسم الإنجليزي",
-    initialStatus: "الحالة الأولية",
-    newCategory: "تصنيف مرة واحدة جديد",
-    noCategories: "لا توجد تصنيفات لخدمات المرة الواحدة حتى الآن.",
-    noDescription: "لا يوجد وصف.",
-    oneTimeCatalog: "كتالوج المرة الواحدة",
-    oneTimeCategoryStudio: "استوديو تصنيفات المرة الواحدة",
-    oneTimeCategoryStudioDescription:
-      "تنظيم مسارات خدمات المرة الواحدة وربطها بالخدمات والأسعار والطلبات المستقبلية بشكل آمن.",
-    oneTimeCategories: "تصنيفات خدمات المرة الواحدة",
-    order: "الترتيب",
-    records: (count: number) =>
-      `${new Intl.NumberFormat("ar-SA").format(count)} سجل مرتبط بقاعدة البيانات.`,
-    saveCategory: "حفظ التصنيف",
-    services: "الخدمات",
-    studioRules: "ضوابط التصنيف",
-    studioSafetyA: "رمز التصنيف ثابت بعد الإنشاء لحماية الخدمات والطلبات السابقة.",
-    studioSafetyB: "أرشفة التصنيف لا تحذف الخدمات المرتبطة أو الإصدارات التاريخية.",
-    studioSafetyC: "التصنيف النشط فقط يجب أن يظهر في إنشاء خدمات جديدة.",
-    totalCategories: "إجمالي التصنيفات",
-    updated: "تم تحديث تصنيف المرة الواحدة.",
-  },
-  en: {
-    active: "Active",
-    addCategory: "Add category",
-    arabicName: "Arabic name",
-    code: "Code",
-    configuredCategories: "Configured categories",
-    createCategory: "Create category",
-    created: "One-time category created.",
-    codesImmutable: "Codes are immutable after creation.",
-    description: "Description",
-    descriptionBody:
-      "Manage localized categories for Build and Digital services without deleting historical revisions.",
-    displayOrder: "Display order",
-    draft: "Draft",
-    edit: "Edit",
-    editCategory: (code: string) => `Edit ${code}`,
-    englishName: "English name",
-    initialStatus: "Initial status",
-    newCategory: "New one-time category",
-    noCategories: "No one-time categories exist yet.",
-    noDescription: "No description provided.",
-    oneTimeCatalog: "One-time catalog",
-    oneTimeCategoryStudio: "One-time category studio",
-    oneTimeCategoryStudioDescription:
-      "Organize one-time service paths and keep them connected to services, pricing, and future requests safely.",
-    oneTimeCategories: "One-time service categories",
-    order: "Order",
-    records: (count: number) => `${count} PostgreSQL-backed records.`,
-    saveCategory: "Save category",
-    services: "Services",
-    studioRules: "Category guardrails",
-    studioSafetyA:
-      "Category codes stay stable after creation to protect services and prior requests.",
-    studioSafetyB: "Archiving a category never deletes linked services or historical revisions.",
-    studioSafetyC: "Only active categories should be used when creating new services.",
-    totalCategories: "Total categories",
-    updated: "One-time category updated.",
-  },
-} as const;
 
 function localizedCategoryName(category: OneTimeCategory, locale: SupportedLocale): string {
   return localizedCatalogLabel(category, locale);

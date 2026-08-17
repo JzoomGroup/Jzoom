@@ -1,5 +1,8 @@
 import "reflect-metadata";
 import { randomUUID } from "node:crypto";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import type { ApiEnvironment } from "@jzoom/config";
@@ -55,6 +58,9 @@ describeWithDatabase("Project delivery access and client review flows", () => {
   let sharedOutputId: string;
   let draftOutputId: string;
   let hiddenDraftOutputId: string;
+  let uploadedFileId: string;
+  let uploadRoot: string;
+  const previousUploadRoot = process.env.JZOOM_UPLOAD_ROOT;
   let oneTimeServiceId: string;
   let currentStateId: string;
   let workflowVersionId: string;
@@ -273,6 +279,8 @@ describeWithDatabase("Project delivery access and client review flows", () => {
   }
 
   beforeAll(async () => {
+    uploadRoot = await mkdtemp(join(tmpdir(), "jzoom-project-integration-"));
+    process.env.JZOOM_UPLOAD_ROOT = uploadRoot;
     database = createDatabaseClient(environment.databaseUrl);
     const passwordHash = await new PasswordHasherService().hash(password);
     const [clientRole, specialistRole, projectSpecialistRole, supervisorRole] = await Promise.all([
@@ -413,6 +421,8 @@ describeWithDatabase("Project delivery access and client review flows", () => {
   afterAll(async () => {
     await app?.close();
     await database?.$disconnect();
+    process.env.JZOOM_UPLOAD_ROOT = previousUploadRoot;
+    await rm(uploadRoot, { force: true, recursive: true });
   });
 
   it("lists only scoped projects for a project specialist", async () => {
@@ -439,7 +449,7 @@ describeWithDatabase("Project delivery access and client review flows", () => {
         });
       });
 
-    await agent
+    const upload = await agent
       .post(`/api/v1/projects/${projectId}/outputs/${draftOutputId}/files/upload`)
       .set("X-CSRF-Token", csrf)
       .attach("file", Buffer.from("project output"), {
@@ -447,6 +457,21 @@ describeWithDatabase("Project delivery access and client review flows", () => {
         contentType: "text/plain",
       })
       .expect(200);
+    const uploadedFile = upload.body.outputs
+      .find((output: { id: string }) => output.id === draftOutputId)
+      ?.files.find((file: { originalName: string }) => file.originalName === "project-output.txt");
+    expect(uploadedFile).toMatchObject({
+      mimeType: "text/plain",
+      originalName: "project-output.txt",
+      sizeBytes: Buffer.byteLength("project output"),
+    });
+    uploadedFileId = uploadedFile.id;
+
+    const internalDownload = await agent
+      .get(`/api/v1/projects/${projectId}/files/${uploadedFileId}/download`)
+      .expect(200)
+      .expect("Content-Type", /text\/plain/);
+    expect(internalDownload.text).toBe("project output");
 
     await agent
       .patch(`/api/v1/projects/${projectId}/outputs/${draftOutputId}/status`)
@@ -502,6 +527,16 @@ describeWithDatabase("Project delivery access and client review flows", () => {
     );
     expect(detail.body.progress.outputsTotal).toBe(detail.body.outputs.length);
     expect(detail.body.progress.outputsTotal).toBeGreaterThanOrEqual(1);
+    expect(
+      detail.body.outputs
+        .find((output: { id: string }) => output.id === draftOutputId)
+        ?.files.find((file: { id: string }) => file.id === uploadedFileId),
+    ).toMatchObject({ originalName: "project-output.txt", sizeBytes: 14 });
+    const clientDownload = await agent
+      .get(`/api/v1/client-portal/projects/${projectId}/files/${uploadedFileId}/download`)
+      .expect(200)
+      .expect("Content-Type", /text\/plain/);
+    expect(clientDownload.text).toBe("project output");
     expect(detail.body.activity).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

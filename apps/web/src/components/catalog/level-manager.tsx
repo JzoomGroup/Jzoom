@@ -1,5 +1,7 @@
 "use client";
 
+import { levelManagerCopy as copy } from "../../i18n/dictionaries/catalog";
+
 import { useState, type FormEvent } from "react";
 import { PencilLine } from "lucide-react";
 import type { CatalogSnapshot, ServiceLevel } from "../../lib/catalog-types";
@@ -14,105 +16,6 @@ import {
   useCatalogMutation,
 } from "./catalog-shared";
 import { BentoGrid, MetricCard, PageHeader, SectionCard } from "../premium-os";
-
-const copy = {
-  ar: {
-    active: "نشط",
-    addLevel: "إضافة باقة",
-    arabicLabel: "المسمى العربي",
-    code: "الرمز",
-    activeLinks: "روابط تشغيلية",
-    configuredPackages: "الباقات المكونة",
-    createLevel: "إنشاء باقة",
-    custom: "مخصصة",
-    customPackageLevel: "مستوى باقة مخصص",
-    draft: "مسودة",
-    edit: "تعديل",
-    editLevel: (code: string) => `تعديل ${code}`,
-    englishLabel: "المسمى الإنجليزي",
-    governanceRule: "قاعدة الحوكمة",
-    initialStatus: "الحالة الأولية",
-    linkedItems: "البنود المرتبطة",
-    linkedServices: "الخدمات المرتبطة",
-    levelCreated: "تم إنشاء مستوى الخدمة.",
-    levelUpdated: "تم تحديث مستوى الخدمة.",
-    monthlyCatalog: "كتالوج الخدمات الشهرية",
-    newServiceLevel: "باقة جديدة",
-    noPackagePurpose: "لا يوجد غرض محدد للباقة.",
-    noServiceLevels: "لا توجد مستويات خدمة حتى الآن.",
-    notSet: "غير محدد",
-    packageCodesImmutable: "لا يمكن تغيير رموز الباقات بعد الإنشاء.",
-    packageStudio: "استوديو الباقات",
-    packageStudioDescription:
-      "إدارة مستويات الباقات التي تتحكم في ساعات الخدمات، شمول البنود، ظهورها في التسعير، ونطاق اشتراك العميل.",
-    packagesDescription: "تستخدم في ساعات الخدمات ومصفوفة شمول بنود الخدمة.",
-    packagesReady: "باقات جاهزة",
-    purpose: "الغرض",
-    rules: "قواعد الباقة",
-    saveLevel: "حفظ الباقة",
-    scope: "النطاق",
-    scopeRule: "قاعدة النطاق",
-    serviceLevels: "مستويات الخدمة والباقات",
-    serviceLevelsDescription:
-      "إدارة مسميات الباقات وقواعد الحوكمة. الاعتمادات النشطة تمنع تعطيل أو أرشفة المستويات بشكل غير آمن.",
-    sla: "اتفاقية الخدمة",
-    slaRule: "قاعدة SLA",
-    displayOrder: "ترتيب العرض",
-    safetyA: "رمز الباقة يبقى ثابتًا بعد الإنشاء لحماية الاشتراكات والطلبات السابقة.",
-    safetyB: "تعطيل أو أرشفة باقة يتطلب سببًا واضحًا ولا يحذف أي علاقات تاريخية.",
-    safetyC: "ساعات كل خدمة داخل الباقة تدار من شاشة الخدمات الشهرية لضمان إصدار آمن.",
-    totalPackages: "إجمالي الباقات",
-  },
-  en: {
-    active: "Active",
-    addLevel: "Add service level",
-    arabicLabel: "Arabic label",
-    code: "Code",
-    activeLinks: "Active links",
-    configuredPackages: "Configured packages",
-    createLevel: "Create level",
-    custom: "Custom",
-    customPackageLevel: "Custom package level",
-    draft: "Draft",
-    edit: "Edit",
-    editLevel: (code: string) => `Edit ${code}`,
-    englishLabel: "English label",
-    governanceRule: "Governance rule",
-    initialStatus: "Initial status",
-    linkedItems: "Linked items",
-    linkedServices: "Linked services",
-    levelCreated: "Service level created.",
-    levelUpdated: "Service level updated.",
-    monthlyCatalog: "Monthly catalog",
-    newServiceLevel: "New service level",
-    noPackagePurpose: "No package purpose provided.",
-    noServiceLevels: "No service levels exist yet.",
-    notSet: "Not set",
-    packageCodesImmutable: "Package codes are immutable after creation.",
-    packageStudio: "Package studio",
-    packageStudioDescription:
-      "Manage package levels that control service hours, item inclusion, pricing visibility, and client subscription scope.",
-    packagesDescription: "Used by service hours and the service-item inclusion matrix.",
-    packagesReady: "Ready packages",
-    purpose: "Purpose",
-    rules: "Package rules",
-    saveLevel: "Save level",
-    scope: "Scope",
-    scopeRule: "Scope rule",
-    serviceLevels: "Service levels & packages",
-    serviceLevelsDescription:
-      "Manage package labels and governance. Active dependencies protect levels from unsafe disabling or archiving.",
-    sla: "SLA",
-    slaRule: "SLA rule",
-    displayOrder: "Display order",
-    safetyA:
-      "Package codes remain stable after creation to protect prior subscriptions and requests.",
-    safetyB: "Disabling or archiving requires a clear reason and never deletes historical links.",
-    safetyC:
-      "Service hours per package are managed from monthly services for revision-safe updates.",
-    totalPackages: "Total packages",
-  },
-} as const;
 
 function levelLocale(locale: string | undefined): SupportedLocale {
   return normalizeLocale(locale);

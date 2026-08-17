@@ -1,8 +1,10 @@
 "use client";
 
+import { loginFormCopy as copy } from "../i18n/dictionaries/administration";
+
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { normalizeLocale, type SupportedLocale } from "../lib/i18n";
+import { normalizeLocale } from "../lib/i18n";
 import { postLoginRoute } from "../lib/route-access";
 import { syncDocumentLocale } from "./locale-document-sync";
 
@@ -13,35 +15,6 @@ interface LoginResponse {
     roles: string[];
   };
 }
-
-const copy: Record<
-  SupportedLocale,
-  {
-    email: string;
-    password: string;
-    required: string;
-    invalid: string;
-    submit: string;
-    submitting: string;
-  }
-> = {
-  ar: {
-    email: "البريد الإلكتروني",
-    password: "كلمة المرور",
-    required: "أدخل بريداً إلكترونياً صحيحاً وكلمة المرور.",
-    invalid: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
-    submit: "تسجيل الدخول",
-    submitting: "جاري تسجيل الدخول...",
-  },
-  en: {
-    email: "Email",
-    password: "Password",
-    required: "Enter a valid email address and password.",
-    invalid: "The email or password is incorrect.",
-    submit: "Sign in",
-    submitting: "Signing in...",
-  },
-};
 
 export function LoginForm({ locale = "en" }: { locale?: string }) {
   const router = useRouter();

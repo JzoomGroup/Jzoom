@@ -1,3 +1,4 @@
+import { clientInvoiceDetailCopy as copy } from "../../i18n/dictionaries/client-portal";
 import Link from "next/link";
 import { clientInvoicePdfUrl } from "../../lib/client-portal-client";
 import type { ClientInvoice } from "../../lib/client-portal-types";
@@ -11,65 +12,6 @@ import {
   invoiceStatusLabel,
   localizedLineType,
 } from "./client-format";
-
-const copy = {
-  ar: {
-    additional: "إضافي",
-    allInvoices: "كل الفواتير",
-    beforeTax: "قبل الضريبة",
-    clientCode: "رمز العميل",
-    clientDetails: "بيانات العميل",
-    delivery: "التسليم",
-    description: (quoteNumber: string) =>
-      `تعرض هذه الفاتورة من النسخة المحفوظة المنشأة بعد تأكيد الموافقة والدفع خارج النظام للعرض ${quoteNumber}.`,
-    discount: "الخصم",
-    finalDue: "المستحق النهائي قبل الضريبة",
-    invoiceLines: "بنود الفاتورة",
-    invoiceSnapshot: "نسخة الفاتورة",
-    invoiceTerms: "شروط الفاتورة",
-    invoiceTotal: "إجمالي الفاتورة",
-    issued: "تاريخ الإصدار",
-    noValue: "غير محدد",
-    none: "لا يوجد",
-    payment: "الدفع",
-    quantity: "الكمية",
-    service: "الخدمة",
-    sourceQuote: "العرض المصدر",
-    terms: "الشروط",
-    total: "الإجمالي",
-    typePackage: "النوع / الباقة",
-    unit: "الوحدة",
-    viewPdf: "عرض PDF",
-  },
-  en: {
-    additional: "Additional",
-    allInvoices: "All invoices",
-    beforeTax: "Before tax",
-    clientCode: "Client code",
-    clientDetails: "Client details",
-    delivery: "Delivery",
-    description: (quoteNumber: string) =>
-      `This invoice is displayed from the stored snapshot created after external approval and payment confirmation for quote ${quoteNumber}.`,
-    discount: "Discount",
-    finalDue: "Final due before tax",
-    invoiceLines: "Invoice lines",
-    invoiceSnapshot: "Invoice snapshot",
-    invoiceTerms: "Invoice terms",
-    invoiceTotal: "Invoice total",
-    issued: "Issued",
-    noValue: "Not specified",
-    none: "None",
-    payment: "Payment",
-    quantity: "Quantity",
-    service: "Service",
-    sourceQuote: "Source quote",
-    terms: "Terms",
-    total: "Total",
-    typePackage: "Type / package",
-    unit: "Unit",
-    viewPdf: "View PDF",
-  },
-} as const;
 
 export function ClientInvoiceDetail({
   invoice,

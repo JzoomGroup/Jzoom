@@ -1,5 +1,7 @@
 "use client";
 
+import { shellCopy } from "../i18n/dictionaries/administration";
+
 import Link from "next/link";
 import {
   Bell,
@@ -389,69 +391,6 @@ const internalNavigation: NavItem[] = [
     sectionEn: "Account",
   },
 ];
-
-const shellCopy = {
-  admin: {
-    ar: {
-      brandSubtitle: "لوحة التحكم",
-      navigationLabel: "إدارة المنصة",
-      greeting: "مرحبًا،",
-      profile: "حسابي",
-      settings: "الإعدادات",
-      signOut: "تسجيل الخروج",
-      signingOut: "جاري تسجيل الخروج...",
-    },
-    en: {
-      brandSubtitle: "Admin Console",
-      navigationLabel: "Platform administration",
-      greeting: "Welcome,",
-      profile: "Profile",
-      settings: "Settings",
-      signOut: "Sign out",
-      signingOut: "Signing out...",
-    },
-  },
-  client: {
-    ar: {
-      brandSubtitle: "بوابة العميل",
-      navigationLabel: "تنقل بوابة العميل",
-      greeting: "مرحبًا،",
-      profile: "حسابي",
-      settings: "الإعدادات",
-      signOut: "تسجيل الخروج",
-      signingOut: "جاري تسجيل الخروج...",
-    },
-    en: {
-      brandSubtitle: "Client Portal",
-      navigationLabel: "Client portal navigation",
-      greeting: "Welcome,",
-      profile: "Profile",
-      settings: "Settings",
-      signOut: "Sign out",
-      signingOut: "Signing out...",
-    },
-  },
-  internal: {
-    ar: {
-      brandSubtitle: "منصة التشغيل",
-      navigationLabel: "تنقل منصة التشغيل",
-      greeting: "مرحبًا،",
-      profile: "حسابي",
-      settings: "الإعدادات",
-      signOut: "تسجيل الخروج",
-      signingOut: "جاري تسجيل الخروج...",
-    },
-    en: {
-      brandSubtitle: "Operating Platform",
-      navigationLabel: "Operating platform navigation",
-      greeting: "Welcome,",
-      profile: "Profile",
-      settings: "Settings",
-      signOut: "Sign out",
-      signingOut: "Signing out...",
-    },
-  },
-} as const;
 
 function isActivePath(activePath: string | undefined, href: string) {
   return activePath === href;

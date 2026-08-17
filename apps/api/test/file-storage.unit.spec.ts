@@ -74,6 +74,56 @@ describe("FileStorageService", () => {
     );
   });
 
+  it("isolates request and project files even when their original names match", async () => {
+    const service = new FileStorageService();
+    const first = Buffer.from("request");
+    const second = Buffer.from("project");
+
+    const requestFile = await service.storeRequestFile("request-3", "outputs", {
+      buffer: first,
+      mimetype: "text/plain",
+      originalname: "result.txt",
+      size: first.length,
+    });
+    const projectFile = await service.storeProjectFile("project-3", "outputs", {
+      buffer: second,
+      mimetype: "text/plain",
+      originalname: "result.txt",
+      size: second.length,
+    });
+
+    expect(requestFile.storageKey).toMatch(/^requests\/request-3\/outputs\//);
+    expect(projectFile.storageKey).toMatch(/^projects\/project-3\/outputs\//);
+    expect(requestFile.storageKey).not.toBe(projectFile.storageKey);
+    await expect(
+      streamToBuffer(await service.readableFile(requestFile.storageKey)),
+    ).resolves.toEqual(first);
+    await expect(
+      streamToBuffer(await service.readableFile(projectFile.storageKey)),
+    ).resolves.toEqual(second);
+  });
+
+  it("uses the actual buffer size instead of trusting multipart metadata", async () => {
+    const service = new FileStorageService();
+
+    await expect(
+      service.storeRequestFile("request-4", "attachments", {
+        buffer: Buffer.from("larger than limit"),
+        mimetype: "text/plain",
+        originalname: "misreported.txt",
+        size: 1,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    const stored = await service.storeRequestFile("request-4", "attachments", {
+      buffer: Buffer.from("content"),
+      mimetype: "text/plain",
+      originalname: "size.txt",
+      size: 1,
+    });
+    expect(stored.sizeBytes).toBe(Buffer.byteLength("content"));
+  });
+
   it("rejects empty, oversized, missing, and unsafe file reads", async () => {
     const service = new FileStorageService();
 

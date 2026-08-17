@@ -1,5 +1,7 @@
 "use client";
 
+import { notificationInboxCopy as copy } from "../../i18n/dictionaries/operations";
+
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -17,56 +19,6 @@ import {
   SectionCard,
   StatusChip,
 } from "../premium-os";
-
-const copy = {
-  ar: {
-    allRead: "تعيين الكل كمقروء",
-    createdAt: "وقت التنبيه",
-    description:
-      "إشعارات الطلبات والمخرجات والمستندات والتقارير والساعات في مكان واحد داخل المنصة.",
-    emptyBody: "ستظهر هنا تنبيهات الطلبات والمخرجات عند حدوثها.",
-    emptyTitle: "لا توجد تنبيهات",
-    event: "الحدث",
-    inbox: "سجل التنبيهات",
-    latestActivity: "آخر نشاط",
-    markRead: "تعيين كمقروء",
-    noActivity: "لا يوجد",
-    open: "فتح",
-    read: "مقروء",
-    stream: "مسار التنبيهات",
-    streamDescription: "كل تنبيه يحتفظ بالرابط العميق والسياق التشغيلي بدون إرسال خارجي.",
-    target: "الوجهة",
-    title: "التنبيهات",
-    total: "إجمالي التنبيهات",
-    totalDetail: "داخل النظام",
-    unread: "غير مقروء",
-    unreadDetail: "تحتاج متابعة",
-  },
-  en: {
-    allRead: "Mark all read",
-    createdAt: "Notification time",
-    description:
-      "Request, output, document, report, and hours notifications in one in-app workspace.",
-    emptyBody: "Request and output notifications will appear here as they happen.",
-    emptyTitle: "No notifications",
-    event: "Event",
-    inbox: "Notification log",
-    latestActivity: "Latest activity",
-    markRead: "Mark read",
-    noActivity: "None",
-    open: "Open",
-    read: "Read",
-    stream: "Notification stream",
-    streamDescription:
-      "Each notification keeps its deep link and operational context without external delivery.",
-    target: "Target",
-    title: "Notifications",
-    total: "Total notifications",
-    totalDetail: "In app",
-    unread: "Unread",
-    unreadDetail: "Needs attention",
-  },
-} as const;
 
 function displayDate(value: string, locale: SupportedLocale): string {
   return new Date(value).toLocaleString(locale === "ar" ? "ar-SA" : "en-SA", {

@@ -1,5 +1,7 @@
 "use client";
 
+import { categoryManagerCopy as copy } from "../../i18n/dictionaries/catalog";
+
 import { useState, type FormEvent } from "react";
 import { PencilLine } from "lucide-react";
 import type { CatalogCategory, CatalogSnapshot } from "../../lib/catalog-types";
@@ -15,68 +17,6 @@ import {
   StatusBadge,
   useCatalogMutation,
 } from "./catalog-shared";
-
-const copy = {
-  ar: {
-    active: "نشط",
-    addCategory: "إضافة تصنيف",
-    allCategories: "كل التصنيفات",
-    arabicName: "الاسم العربي",
-    categoryCreated: "تم إنشاء التصنيف.",
-    categoryUpdated: "تم تحديث التصنيف.",
-    code: "الرمز",
-    codesImmutable: "لا يمكن تغيير الرموز بعد الإنشاء.",
-    createCategory: "إنشاء تصنيف",
-    description: "الوصف",
-    displayOrder: "ترتيب العرض",
-    draft: "مسودة",
-    edit: "تعديل",
-    editCategory: (code: string) => `تعديل ${code}`,
-    englishName: "الاسم الإنجليزي",
-    initialStatus: "الحالة الأولية",
-    monthlyCatalog: "كتالوج الخدمات الشهرية",
-    newCategory: "تصنيف جديد",
-    noCategories: "لا توجد تصنيفات حتى الآن.",
-    noDescription: "لا يوجد وصف.",
-    records: (count: number) =>
-      `${new Intl.NumberFormat("ar-SA").format(count)} سجل مرتبط بقاعدة البيانات.`,
-    saveCategory: "حفظ التصنيف",
-    services: "الخدمات",
-    serviceCategories: "تصنيفات الخدمات",
-    serviceCategoriesDescription:
-      "تنظيم الخدمات الشهرية داخل تصنيفات محلية قابلة للتعديل بدون تغيير إصدارات الخدمات التاريخية.",
-    order: "الترتيب",
-  },
-  en: {
-    active: "Active",
-    addCategory: "Add category",
-    allCategories: "All categories",
-    arabicName: "Arabic name",
-    categoryCreated: "Category created.",
-    categoryUpdated: "Category updated.",
-    code: "Code",
-    codesImmutable: "Codes are immutable after creation.",
-    createCategory: "Create category",
-    description: "Description",
-    displayOrder: "Display order",
-    draft: "Draft",
-    edit: "Edit",
-    editCategory: (code: string) => `Edit ${code}`,
-    englishName: "English name",
-    initialStatus: "Initial status",
-    monthlyCatalog: "Monthly catalog",
-    newCategory: "New category",
-    noCategories: "No categories exist yet.",
-    noDescription: "No description provided.",
-    records: (count: number) => `${count} PostgreSQL-backed records.`,
-    saveCategory: "Save category",
-    services: "Services",
-    serviceCategories: "Service categories",
-    serviceCategoriesDescription:
-      "Organize monthly services into editable localized categories without changing historical service revisions.",
-    order: "Order",
-  },
-} as const;
 
 function categoryLocale(locale: string | undefined): SupportedLocale {
   return normalizeLocale(locale);

@@ -266,6 +266,8 @@ describe("AdminDashboard", () => {
       screen.getByText("Overdue work or returned outputs require urgent follow-up."),
     ).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Manage clients" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Administration shortcuts" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Administration shortcuts" }),
+    ).not.toBeInTheDocument();
   });
 });

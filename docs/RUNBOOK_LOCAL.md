@@ -135,12 +135,34 @@ pnpm --filter @jzoom/database seed
 pnpm --filter @jzoom/database seed
 ```
 
-Integration tests that require PostgreSQL use:
+Integration tests that require PostgreSQL must use a dedicated test database. The guarded runner
+does not inherit `DATABASE_URL`, and refuses database names that do not contain `test` or `ci`:
 
 ```powershell
-$env:DATABASE_INTEGRATION="true"
-pnpm --filter @jzoom/api test
-Remove-Item Env:\DATABASE_INTEGRATION
+$env:TEST_DATABASE_URL="postgresql://.../jzoom_test"
+pnpm --filter @jzoom/api test:integration
+Remove-Item Env:\TEST_DATABASE_URL
+```
+
+Browser smoke tests start the web app locally and cover Arabic RTL desktop/mobile behavior:
+
+```powershell
+pnpm --filter @jzoom/web test:e2e
+```
+
+Authenticated role routing can target UAT without storing credentials in the repository:
+
+```powershell
+$env:E2E_BASE_URL="https://uat-portal.jzoom.sa"
+$env:E2E_PASSWORD="<shared test password>"
+$env:E2E_ADMIN_EMAIL="<admin test account>"
+$env:E2E_CLIENT_EMAIL="<client test account>"
+$env:E2E_SPECIALIST_EMAIL="<specialist test account>"
+$env:E2E_PROJECT_SPECIALIST_EMAIL="<project specialist test account>"
+$env:E2E_SUPERVISOR_EMAIL="<supervisor test account>"
+$env:E2E_ACCOUNT_MANAGER_EMAIL="<account manager test account>"
+$env:E2E_MANAGEMENT_EMAIL="<management test account>"
+pnpm --filter @jzoom/web test:e2e:uat
 ```
 
 ## Stop or reset local services

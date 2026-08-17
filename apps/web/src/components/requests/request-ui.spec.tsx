@@ -745,7 +745,9 @@ describe("Request lifecycle UI", () => {
         "You can review submitted time entries while the assigned specialist records time.",
       ),
     ).toBeInTheDocument();
-    const hoursSection = screen.getByRole("heading", { name: "Basic time entries" }).closest("article");
+    const hoursSection = screen
+      .getByRole("heading", { name: "Basic time entries" })
+      .closest("article");
     expect(hoursSection).toHaveTextContent("Jun 22, 2026");
     expect(hoursSection).not.toHaveTextContent("3:00 AM");
     expect(

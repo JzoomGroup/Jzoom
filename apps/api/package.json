@@ -11,6 +11,7 @@
     "openapi:generate": "tsx scripts/generate-openapi.ts",
     "start": "node dist/main.js",
     "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.cjs --runInBand",
+    "test:integration": "node scripts/run-database-integration.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

@@ -1,3 +1,4 @@
+import { adminDashboardCopy as copy } from "../i18n/dictionaries/administration";
 import Link from "next/link";
 import type { ClientsSnapshot } from "../lib/clients-types";
 import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../lib/i18n";
@@ -20,139 +21,6 @@ import {
 } from "./premium-os";
 
 const completedStatuses = new Set(["COMPLETED", "CLOSED", "REJECTED"]);
-
-const copy = {
-  ar: {
-    eyebrow: "لوحة الإدارة",
-    title: "مركز تشغيل جزوم",
-    description:
-      "نظرة تنفيذية موحدة على العملاء، الطلبات، الساعات، التقارير، وصحة الحسابات باستخدام بيانات النظام الحالية.",
-    metrics: {
-      totalClients: "إجمالي العملاء",
-      activeClients: "عميل نشط",
-      openRequests: "طلبات مفتوحة",
-      completed: "مكتمل",
-      delayedRequests: "طلبات متأخرة",
-      fromQueues: "من قوائم العمل",
-      usedHours: "الساعات المستخدمة",
-      period: "الفترة",
-      clientAction: "بانتظار العميل",
-      waitingClient: "تحتاج إجراء من العميل",
-      portalUsers: "مستخدمو البوابة",
-      linkedClients: "مرتبطون بالعملاء",
-      clientHealth: "صحة العملاء",
-      watch: "تحت المتابعة",
-      monthlyReports: "التقارير الشهرية",
-      published: "منشور",
-    },
-    queues: {
-      title: "قوائم التشغيل",
-      description: "أحجام العمل الحالية للمختصين والمشرفين ومديري الحسابات.",
-      action: "فتح قوائم العمل",
-      specialist: "المختص",
-      supervisor: "المشرف",
-      accountManager: "مدير الحساب",
-      overdue: "متأخر",
-    },
-    hours: {
-      title: "استخدام الساعات",
-      description: "الساعات المعتمدة والمعلقة خلال فترة السجل الحالية.",
-      action: "عرض سجل الساعات",
-      approved: "معتمدة",
-      submitted: "مقدمة",
-      billable: "قابلة للفوترة",
-      clients: "عملاء",
-    },
-    health: {
-      title: "متابعة صحة العملاء",
-      description: "عملاء يحتاجون متابعة من مدير الحساب أو الإدارة.",
-      action: "المحفظة",
-      stableTitle: "المحفظة مستقرة",
-      stableBody: "لا يوجد عملاء عاليي المخاطر أو تحت المتابعة حاليًا.",
-      open: "مفتوحة",
-      overdue: "متأخرة",
-      waitingClient: "بانتظار العميل",
-      hours: "ساعات",
-    },
-    requests: {
-      title: "آخر الطلبات المحدثة",
-      description: "دخول سريع إلى العمل الجاري دون فتح شاشات العميل.",
-      action: "كل الطلبات",
-      empty: "لم يتم إنشاء طلبات خدمة بعد.",
-      request: "الطلب",
-      client: "العميل",
-      service: "الخدمة",
-      status: "الحالة",
-      priority: "الأولوية",
-      updated: "آخر تحديث",
-    },
-  },
-  en: {
-    eyebrow: "Admin Console",
-    title: "Operating dashboard",
-    description:
-      "A premium control room for clients, request queues, hours usage, reports, and client health using the current backend data contracts.",
-    metrics: {
-      totalClients: "Total clients",
-      activeClients: "active",
-      openRequests: "Open requests",
-      completed: "completed",
-      delayedRequests: "Delayed requests",
-      fromQueues: "From request queues",
-      usedHours: "Used hours",
-      period: "Period",
-      clientAction: "Client action",
-      waitingClient: "Waiting on client",
-      portalUsers: "Portal users",
-      linkedClients: "Linked to managed clients",
-      clientHealth: "Client health",
-      watch: "watch",
-      monthlyReports: "Monthly reports",
-      published: "published",
-    },
-    queues: {
-      title: "Operations queues",
-      description: "Backend-scoped request counts for internal execution.",
-      action: "Open queues",
-      specialist: "Specialist",
-      supervisor: "Supervisor",
-      accountManager: "Account manager",
-      overdue: "Overdue",
-    },
-    hours: {
-      title: "Hours usage",
-      description: "Approved and pending time for the current ledger period.",
-      action: "View ledger",
-      approved: "Approved",
-      submitted: "Submitted",
-      billable: "Billable",
-      clients: "Clients",
-    },
-    health: {
-      title: "Client health watchlist",
-      description: "Clients that need account-manager or management attention.",
-      action: "Portfolio",
-      stableTitle: "Portfolio is stable",
-      stableBody: "No high-risk or watch clients in the current portfolio.",
-      open: "Open",
-      overdue: "Overdue",
-      waitingClient: "Waiting client",
-      hours: "Hours",
-    },
-    requests: {
-      title: "Recently updated requests",
-      description: "Fast access to live work without exposing client-only screens.",
-      action: "All requests",
-      empty: "No service requests have been created yet.",
-      request: "Request",
-      client: "Client",
-      service: "Service",
-      status: "Status",
-      priority: "Priority",
-      updated: "Updated",
-    },
-  },
-} as const;
 
 function number(value: number, locale: SupportedLocale): string {
   return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA").format(value);
@@ -217,11 +85,7 @@ export function AdminDashboard({
 
   return (
     <>
-      <PageHeader
-        eyebrow={t.eyebrow}
-        title={t.title}
-        description={t.description}
-      />
+      <PageHeader eyebrow={t.eyebrow} title={t.title} description={t.description} />
 
       <BentoGrid>
         <MetricCard
@@ -425,7 +289,6 @@ export function AdminDashboard({
           </SmartTable>
         )}
       </SectionCard>
-
     </>
   );
 }

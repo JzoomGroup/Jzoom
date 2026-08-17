@@ -1,45 +1,13 @@
 "use client";
 
+import { sharedCopy } from "../../i18n/dictionaries/catalog";
+
 import { useState, type ReactNode } from "react";
 import { Archive, Power, PowerOff, Save } from "lucide-react";
 import { catalogErrorMessage, catalogRequest, refreshCatalog } from "../../lib/catalog-client";
 import type { CatalogSnapshot, CatalogStatus } from "../../lib/catalog-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
 import { EmptyState as PremiumEmptyState, PageHeader, StatusChip } from "../premium-os";
-
-const sharedCopy = {
-  ar: {
-    archive: "أرشفة",
-    archiveConfirm: "هل تريد أرشفة هذا السجل؟ ستبقى المراجع التاريخية محفوظة.",
-    archivePrompt: "ما سبب أرشفة هذا السجل؟",
-    cancel: "إلغاء",
-    disable: "تعطيل",
-    disablePrompt: "ما سبب تعطيل هذا السجل؟",
-    displayOrderSaved: "تم حفظ ترتيب العرض.",
-    enable: "تفعيل",
-    order: "الترتيب",
-    save: "حفظ",
-    saveOrder: "حفظ الترتيب",
-    saving: "جار الحفظ...",
-    statusChanged: (status: CatalogStatus) => `تم تحديث الحالة إلى ${statusLabel(status, "ar")}.`,
-  },
-  en: {
-    archive: "Archive",
-    archiveConfirm: "Archive this record? Historical references will remain unchanged.",
-    archivePrompt: "Why are you archiving this record?",
-    cancel: "Cancel",
-    disable: "Disable",
-    disablePrompt: "Why are you disabling this record?",
-    displayOrderSaved: "Display order saved.",
-    enable: "Enable",
-    order: "Order",
-    save: "Save",
-    saveOrder: "Save order",
-    saving: "Saving...",
-    statusChanged: (status: CatalogStatus) =>
-      `Status changed to ${status === "INACTIVE" ? "Inactive" : status.toLowerCase()}.`,
-  },
-} as const;
 
 const statusLabels = {
   ACTIVE: { ar: "نشط", en: "Active" },

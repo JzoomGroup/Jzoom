@@ -1,53 +1,9 @@
+import { catalogOverviewCopy as copy } from "../../i18n/dictionaries/catalog";
 import type { CatalogSnapshot } from "../../lib/catalog-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
 import { localizedCatalogLabel } from "../../lib/localized-content";
 import { MetricCard, SectionCard, SmartTable } from "../premium-os";
 import { SectionHeader, StatusBadge } from "./catalog-shared";
-
-const copy = {
-  ar: {
-    active: "نشطة",
-    adminConsole: "لوحة الأدمن",
-    categories: "التصنيفات",
-    category: "التصنيف",
-    catalogSummary: "ملخص الكتالوج",
-    items: "البنود",
-    monthlyCatalog: "كتالوج الخدمات الشهرية",
-    monthlyCatalogDescription:
-      "إدارة الكتالوج الشهري الحي المرتبط بقاعدة البيانات مع الحفاظ على كل إصدار تاريخي مثبت.",
-    monthlyGroups: "مجموعات شهرية",
-    monthlyServices: "الخدمات الشهرية",
-    packageLevels: "مستويات الباقات",
-    revision: "الإصدار",
-    seededCatalog: "رؤية الكتالوج المحمل",
-    seededCatalogDescription: "إصدارات الخدمات الحية الحالية المحملة من ملف الاستيراد المعتمد.",
-    service: "الخدمة",
-    serviceItems: "بنود الخدمة",
-    status: "الحالة",
-    subscriptionTiers: "شرائح الاشتراك",
-  },
-  en: {
-    active: "active",
-    adminConsole: "Admin Console",
-    categories: "Categories",
-    category: "Category",
-    catalogSummary: "Catalog summary",
-    items: "Items",
-    monthlyCatalog: "Monthly catalog",
-    monthlyCatalogDescription:
-      "Manage the live PostgreSQL-backed monthly catalog while preserving every pinned historical revision.",
-    monthlyGroups: "Monthly groups",
-    monthlyServices: "Monthly services",
-    packageLevels: "Package levels",
-    revision: "Revision",
-    seededCatalog: "Seeded catalog visibility",
-    seededCatalogDescription: "The current live service revisions loaded from Excel V3.",
-    service: "Service",
-    serviceItems: "Service items",
-    status: "Status",
-    subscriptionTiers: "Subscription tiers",
-  },
-} as const;
 
 function overviewLocale(locale: string | undefined): SupportedLocale {
   return normalizeLocale(locale);

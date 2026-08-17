@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { ChangePasswordForm } from "../../components/change-password-form";
 import { LanguageSwitcher } from "../../components/language-switcher";
 import { LocaleDocumentSync } from "../../components/locale-document-sync";
+import { authPageCopy } from "../../i18n/pages";
 import { getCurrentUser } from "../../lib/auth";
 import { directionForLocale, htmlLangForLocale, normalizeLocale } from "../../lib/i18n";
 import { getRequestLocale } from "../../lib/i18n-server";
@@ -17,18 +18,7 @@ export default async function ChangePasswordPage() {
   }
 
   const locale = normalizeLocale(user.preferredLocale ?? localeInput);
-  const copy =
-    locale === "ar"
-      ? {
-          eyebrow: "أمان الحساب",
-          title: "غيّر كلمة المرور",
-          lead: "تم تسجيل دخولك بكلمة مرور مؤقتة. اختر كلمة مرور جديدة وأكدها قبل دخول المنصة.",
-        }
-      : {
-          eyebrow: "Account security",
-          title: "Change your password",
-          lead: "You signed in with a temporary password. Choose and confirm a new password before entering the platform.",
-        };
+  const copy = authPageCopy.changePassword[locale];
 
   return (
     <main className="auth-shell" dir={directionForLocale(locale)} lang={htmlLangForLocale(locale)}>

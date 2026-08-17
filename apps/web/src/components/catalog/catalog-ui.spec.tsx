@@ -260,11 +260,7 @@ describe("Admin catalog UI", () => {
 
   it("keeps Arabic category cards localized and groups their controls in one footer", () => {
     const { container } = render(
-      <CategoryManager
-        locale="ar"
-        snapshot={catalogSnapshot()}
-        setSnapshot={jest.fn()}
-      />,
+      <CategoryManager locale="ar" snapshot={catalogSnapshot()} setSnapshot={jest.fn()} />,
     );
 
     expect(screen.getByRole("heading", { name: "الموارد البشرية" })).toBeInTheDocument();

@@ -1,0 +1,894 @@
+/* Compatibility for legacy class names still emitted by live components. Do not add new rules. */
+.catalog-form,
+.quote-create-form,
+.template-save-form,
+.pricing-selection-fields,
+.pricing-lines-form,
+.package-config-grid,
+.task-editor-row,
+.compact-filter,
+.order-control {
+  font-family: var(--font-sans);
+}
+
+.catalog-form label,
+.quote-create-form label,
+.pricing-selection-fields label,
+.pricing-quantity label,
+.compact-filter label,
+.order-control label,
+.package-config-grid label,
+.task-editor-row label,
+.checkbox-field,
+.checkbox-label,
+.inline-field {
+  color: var(--muted-strong);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.catalog-form input,
+.catalog-form textarea,
+.catalog-form select,
+.quote-create-form input,
+.quote-create-form textarea,
+.quote-create-form select,
+.pricing-selection-fields input,
+.pricing-selection-fields select,
+.pricing-quantity input,
+.compact-filter input,
+.compact-filter select,
+.order-control input,
+.package-config-grid input,
+.package-config-grid select,
+.task-editor-row input,
+.task-editor-row select {
+  min-height: 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  box-shadow: 0 1px 0 rgba(13, 19, 33, 0.03);
+}
+
+.catalog-form input:hover,
+.catalog-form textarea:hover,
+.catalog-form select:hover,
+.quote-create-form input:hover,
+.quote-create-form textarea:hover,
+.quote-create-form select:hover,
+.pricing-selection-fields input:hover,
+.pricing-selection-fields select:hover,
+.pricing-quantity input:hover,
+.compact-filter input:hover,
+.compact-filter select:hover,
+.order-control input:hover,
+.package-config-grid input:hover,
+.package-config-grid select:hover,
+.task-editor-row input:hover,
+.task-editor-row select:hover {
+  border-color: rgba(13, 19, 33, 0.22);
+  background: #ffffff;
+}
+
+.catalog-form input:focus,
+.catalog-form textarea:focus,
+.catalog-form select:focus,
+.quote-create-form input:focus,
+.quote-create-form textarea:focus,
+.quote-create-form select:focus,
+.pricing-selection-fields input:focus,
+.pricing-selection-fields select:focus,
+.pricing-quantity input:focus,
+.compact-filter input:focus,
+.compact-filter select:focus,
+.order-control input:focus,
+.package-config-grid input:focus,
+.package-config-grid select:focus,
+.task-editor-row input:focus,
+.task-editor-row select:focus {
+  border-color: rgba(255, 90, 77, 0.58);
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(255, 90, 77, 0.11);
+  outline: 0;
+}
+
+.catalog-form textarea,
+.quote-create-form textarea {
+  line-height: 1.65;
+}
+
+.full-span,
+.form-span {
+  grid-column: 1 / -1;
+}
+
+.form-actions,
+.row-actions,
+.entity-card-actions {
+  gap: 10px;
+  margin-block-start: 14px;
+}
+
+.checkbox-field,
+.checkbox-label,
+.inline-field {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.checkbox-field:has(input:checked),
+.checkbox-label:has(input:checked),
+.inline-field:has(input:checked),
+.inclusion-option:has(input:checked) {
+  border-color: rgba(255, 90, 77, 0.28);
+  background: rgba(255, 90, 77, 0.08);
+  color: var(--ink);
+}
+
+.option-fieldset,
+.package-editor,
+.template-fieldset,
+.template-builder-section,
+.template-option-row,
+.inclusion-option,
+.package-config-grid article {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(13, 19, 33, 0.035);
+}
+
+.template-builder-section,
+.template-fieldset,
+.template-option-row {
+  padding: 16px;
+}
+
+.template-builder-section > summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.template-fieldset legend {
+  padding-inline: 8px;
+  color: var(--jzoom-coral);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.template-options {
+  margin-block-start: 16px;
+  padding-block-start: 16px;
+  border-block-start: 1px solid var(--line);
+}
+
+.matrix-toggle {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--muted-strong);
+  font-weight: 850;
+}
+
+.matrix-toggle.included {
+  border-color: rgba(6, 118, 71, 0.2);
+  background: rgba(6, 118, 71, 0.08);
+  color: #067647;
+}
+
+.catalog-table th {
+  background: var(--jzoom-off-white);
+  color: var(--muted-strong);
+}
+
+.catalog-table td {
+  background: #ffffff;
+}
+
+.catalog-table tbody tr:hover td {
+  background: rgba(255, 90, 77, 0.035);
+}
+
+.compact-table-wrap,
+.matrix-wrap,
+.table-wrap {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: var(--shadow-card);
+}
+
+.button-link,
+.button-primary,
+.button-secondary,
+.button-quiet,
+.button-danger,
+.auth-form button,
+.secondary-button,
+.matrix-toggle {
+  min-height: 42px;
+  border-radius: 12px;
+  font-family: var(--font-sans);
+  font-weight: 850;
+  letter-spacing: 0 !important;
+}
+
+.button-link,
+.button-primary,
+.auth-form button {
+  border-color: var(--jzoom-coral);
+  background: var(--jzoom-coral);
+  color: #ffffff;
+  box-shadow: 0 14px 28px rgba(255, 90, 77, 0.2);
+}
+
+.secondary-button,
+.button-secondary,
+.button-quiet {
+  border-color: var(--line);
+  background: #ffffff;
+  color: var(--ink);
+  box-shadow: 0 8px 22px rgba(13, 19, 33, 0.045);
+}
+
+.button-danger {
+  border-color: rgba(180, 35, 24, 0.15);
+  background: rgba(180, 35, 24, 0.08);
+  color: #b42318;
+}
+
+.button-link:hover:not(:disabled),
+.button-primary:hover:not(:disabled),
+.auth-form button:hover:not(:disabled) {
+  border-color: #ff4637;
+  background: #ff4637;
+  box-shadow: 0 18px 36px rgba(255, 90, 77, 0.24);
+  transform: translateY(-1px);
+}
+
+.button-secondary:hover:not(:disabled),
+.button-quiet:hover:not(:disabled),
+.secondary-button:hover:not(:disabled),
+.matrix-toggle:hover:not(:disabled) {
+  border-color: rgba(255, 90, 77, 0.28);
+  background: #ffffff;
+  color: var(--jzoom-coral);
+  box-shadow: 0 12px 26px rgba(13, 19, 33, 0.07);
+  transform: translateY(-1px);
+}
+
+.button-danger:hover:not(:disabled) {
+  border-color: rgba(180, 35, 24, 0.28);
+  background: rgba(180, 35, 24, 0.1);
+  transform: translateY(-1px);
+}
+
+.catalog-empty,
+.os-empty-state {
+  border-color: rgba(13, 19, 33, 0.14);
+  background: var(--jzoom-off-white);
+  color: var(--muted);
+}
+
+.pricing-drafts,
+.quote-lifecycle,
+.quote-create-form,
+.pricing-service-card.selected,
+.pricing-draft-list a.active {
+  border-color: rgba(255, 90, 77, 0.24);
+  background: radial-gradient(circle at 92% 0%, rgba(255, 90, 77, 0.12), transparent 28%), #ffffff;
+  box-shadow: var(--shadow-card);
+}
+
+.pricing-draft-list a.active {
+  box-shadow:
+    inset 3px 0 var(--jzoom-coral),
+    var(--shadow-card);
+}
+
+[dir="rtl"] .pricing-draft-list a.active {
+  box-shadow:
+    inset -3px 0 var(--jzoom-coral),
+    var(--shadow-card);
+}
+
+.pricing-card-meta div,
+.hours-strip span,
+.rule-list span,
+.custom-chip {
+  border: 1px solid var(--line);
+  background: var(--jzoom-off-white);
+}
+
+.status-draft,
+.status-prepared,
+.status-pending,
+.status-watch,
+.status-new,
+.status-triage {
+  background: rgba(255, 90, 77, 0.1);
+  color: #c23b30;
+}
+
+.status-issued,
+.status-assigned,
+.status-in_progress,
+.status-waiting_client,
+.status-waiting_supervisor,
+.status-submitted,
+.status-shared_with_client,
+.status-internal_review {
+  background: rgba(13, 19, 33, 0.07);
+  color: var(--ink);
+}
+
+.status-active,
+.status-accepted,
+.status-approved,
+.status-completed,
+.status-closed,
+.status-published,
+.status-healthy,
+.status-internal_draft,
+.status-approved_internal,
+.status-accepted_by_client {
+  background: rgba(6, 118, 71, 0.09);
+  color: #067647;
+}
+
+.status-rejected,
+.status-cancelled,
+.status-voided,
+.status-archived,
+.status-attention,
+.status-overdue,
+.status-returned,
+.status-returned_by_client {
+  background: rgba(180, 35, 24, 0.09);
+  color: #b42318;
+}
+
+.pricing-journey {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.42fr);
+  gap: 12px;
+  margin-block-end: 14px;
+}
+
+.pricing-journey-main,
+.pricing-journey-summary {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 249, 251, 0.68)), #ffffff;
+  box-shadow: var(--shadow-card);
+}
+
+.pricing-journey-main {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.pricing-journey-main h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.pricing-journey-main p:not(.eyebrow) {
+  margin: 6px 0 0;
+  max-width: 76ch;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+.pricing-journey-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pricing-journey-steps li {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: #ffffff;
+}
+
+.pricing-journey-steps li.active {
+  border-color: rgba(255, 90, 77, 0.28);
+  background: linear-gradient(180deg, #ffffff, rgba(255, 90, 77, 0.06));
+}
+
+.pricing-journey-steps span {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 11px;
+  background: rgba(13, 19, 33, 0.06);
+  color: var(--muted-strong);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.pricing-journey-steps li.active span {
+  background: var(--jzoom-coral);
+  color: #ffffff;
+}
+
+.pricing-journey-steps strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.3;
+}
+
+.pricing-journey-steps small {
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.pricing-journey-summary {
+  display: grid;
+  gap: 9px;
+  align-content: start;
+  padding: 14px;
+  background: radial-gradient(circle at 92% 0%, rgba(255, 90, 77, 0.09), transparent 34%), #ffffff;
+}
+
+.pricing-journey-summary > div {
+  display: grid;
+  gap: 5px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--jzoom-off-white);
+}
+
+.pricing-journey-summary span {
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 900;
+}
+
+.pricing-journey-summary strong {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1.3;
+}
+
+.pricing-journey-summary small {
+  color: var(--muted-strong);
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+/* Final legacy-surface purge: old class names may remain for behavior/tests, but not old visuals. */
+.catalog-header,
+.catalog-panel,
+.entity-card,
+.quote-list-card,
+.auth-card,
+.pricing-service-card,
+.pricing-draft-list a,
+.pricing-drafts,
+.quote-lifecycle,
+.quote-create-form,
+.pricing-review,
+.editor-panel,
+.matrix-panel,
+.template-builder-section,
+.template-fieldset,
+.template-option-row,
+.package-editor,
+.package-config-grid article,
+.activity-list article,
+.request-detail-nav,
+.request-signal-card,
+.request-workflow-stepper,
+details,
+.compact-filter,
+.order-control {
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 249, 251, 0.72)), #ffffff;
+  color: var(--ink);
+  box-shadow: var(--shadow-card);
+}
+
+.catalog-header,
+.auth-card {
+  border-radius: 22px;
+  padding: clamp(20px, 2.4vw, 30px);
+}
+
+.catalog-panel,
+.entity-card,
+.quote-list-card,
+.pricing-service-card,
+.pricing-drafts,
+.quote-lifecycle,
+.quote-create-form,
+.pricing-review,
+.template-builder-section,
+.template-fieldset,
+.template-option-row,
+.package-editor,
+.activity-list article,
+.request-signal-card {
+  border-radius: var(--radius-card);
+}
+
+.catalog-header::before,
+.catalog-panel::before,
+.entity-card::before,
+.quote-list-card::before,
+.auth-card::before {
+  background: linear-gradient(90deg, transparent, rgba(255, 90, 77, 0.44), transparent);
+}
+
+.catalog-header h1,
+.catalog-panel h2,
+.entity-card h3,
+.quote-list-card h2,
+.auth-card h1,
+.auth-card h2 {
+  color: var(--ink);
+  letter-spacing: 0;
+}
+
+.catalog-header p,
+.catalog-panel p,
+.entity-card p,
+.quote-list-card p,
+.auth-card p,
+.pricing-muted,
+.quote-definition-list dt,
+.activity-list small,
+.quote-list-main small,
+.quote-list-meta small {
+  color: var(--muted);
+}
+
+.eyebrow,
+.os-eyebrow,
+.catalog-panel > .eyebrow,
+.entity-card-heading span:first-child {
+  color: var(--jzoom-coral);
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.entity-grid,
+.quote-list-grid,
+.activity-list {
+  gap: 12px;
+}
+
+.quote-list-main,
+.entity-card,
+.activity-list article {
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.quote-list-card:hover,
+.entity-card:hover,
+.activity-list article:hover,
+.pricing-service-card:hover,
+.pricing-draft-list a:hover {
+  border-color: rgba(255, 90, 77, 0.24);
+  box-shadow: 0 20px 48px rgba(13, 19, 33, 0.1);
+  transform: translateY(-1px);
+}
+
+.quote-list-main {
+  color: inherit;
+  text-decoration: none;
+}
+
+.quote-header-actions,
+.row-actions,
+.entity-card-actions,
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.quote-summary-grid,
+.pricing-total-grid,
+.request-signal-strip {
+  gap: 12px;
+}
+
+.quote-definition-list div,
+.pricing-total-grid div,
+.entity-meta,
+.hours-strip span,
+.pricing-card-meta div,
+.rule-list span,
+.custom-chip {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--jzoom-off-white);
+  color: var(--ink);
+}
+
+.quote-definition-list dt,
+.pricing-total-grid span,
+.entity-meta span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.pricing-total-grid .primary,
+.quote-definition-list div:hover,
+.entity-meta:hover {
+  border-color: rgba(255, 90, 77, 0.22);
+  background: rgba(255, 90, 77, 0.07);
+}
+
+.catalog-feedback,
+.form-error,
+.catalog-empty {
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--jzoom-off-white);
+  color: var(--ink);
+}
+
+.form-error,
+.catalog-feedback.error {
+  border-color: rgba(180, 35, 24, 0.18);
+  background: rgba(180, 35, 24, 0.08);
+  color: #b42318;
+}
+
+.catalog-feedback.success {
+  border-color: rgba(6, 118, 71, 0.16);
+  background: rgba(6, 118, 71, 0.08);
+  color: #067647;
+}
+
+.catalog-table,
+.matrix-table,
+.pricing-lines {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.catalog-table th,
+.matrix-table th,
+.pricing-lines th {
+  background: var(--jzoom-off-white);
+  color: var(--muted-strong);
+  font-weight: 900;
+}
+
+.catalog-table td,
+.matrix-table td,
+.pricing-lines td {
+  background: #ffffff;
+  color: var(--ink);
+}
+
+.catalog-table tbody tr:hover td,
+.matrix-table tbody tr:hover td,
+.pricing-lines tbody tr:hover td {
+  background: rgba(255, 90, 77, 0.035);
+}
+
+.status-badge,
+.status-pill {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--jzoom-off-white);
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.catalog-header,
+.catalog-panel,
+.entity-card,
+.quote-list-card,
+.auth-card,
+.catalog-form,
+.quote-create-form,
+.template-save-form,
+.pricing-lines-form,
+.pricing-selection-fields,
+.compact-filter,
+.order-control {
+  font-family: var(--font-sans);
+}
+
+.auth-shell {
+  background: linear-gradient(180deg, #ffffff 0%, #f8f9fb 100%), #ffffff !important;
+}
+
+.auth-card {
+  background: #ffffff !important;
+}
+
+.auth-card .brand-mark {
+  background: var(--jzoom-coral) !important;
+  color: #ffffff !important;
+  box-shadow: 0 18px 36px rgba(255, 90, 77, 0.22) !important;
+}
+
+.pricing-service-card {
+  display: grid;
+  gap: 12px;
+  background: #ffffff !important;
+}
+
+.pricing-service-card.selected {
+  border-color: rgba(255, 90, 77, 0.3) !important;
+  background:
+    radial-gradient(circle at 94% 0%, rgba(255, 90, 77, 0.1), transparent 30%), #ffffff !important;
+}
+
+.pricing-service-card > p {
+  min-height: 0;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.pricing-select-heading strong {
+  color: var(--ink);
+  font-size: 15.5px;
+  font-weight: 950;
+  line-height: 1.3;
+}
+
+.pricing-card-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.pricing-card-meta div {
+  padding: 10px;
+}
+
+.pricing-draft-list-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.commercial-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-end: 14px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--jzoom-off-white);
+}
+
+.commercial-filter-bar button {
+  min-height: 34px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--muted-strong);
+  font-size: 12.5px;
+  font-weight: 900;
+  padding-inline: 12px;
+}
+
+.commercial-filter-bar button.active {
+  border-color: rgba(255, 90, 77, 0.26);
+  background: rgba(255, 90, 77, 0.1);
+  color: var(--jzoom-coral);
+}
+
+.commercial-card-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0 0;
+}
+
+.commercial-card-meta div {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--jzoom-off-white);
+}
+
+.commercial-card-meta dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.commercial-card-meta dd {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 950;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  src: url("../fonts/IBMPlexSansArabic-Light.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 300;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  src: url("../fonts/IBMPlexSansArabic-Regular.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  src: url("../fonts/IBMPlexSansArabic-Medium.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 500;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  src: url("../fonts/IBMPlexSansArabic-SemiBold.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 600;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  src: url("../fonts/IBMPlexSansArabic-Bold.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 700;
+}

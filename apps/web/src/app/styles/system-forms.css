@@ -1,0 +1,115 @@
+/* Tables and forms */
+
+.os-table-wrap,
+.compact-table-wrap,
+.table-wrap,
+.item-admin-matrix-wrap {
+  border: 1px solid var(--polish-line);
+  border-radius: var(--polish-radius);
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.catalog-table,
+.matrix-table,
+.pricing-lines,
+.operations-ledger-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #ffffff;
+}
+
+.catalog-table th,
+.matrix-table th,
+.pricing-lines th,
+.operations-ledger-table th {
+  height: 38px;
+  padding-block: 9px;
+  border-color: var(--polish-line);
+  background: #f7f8fa;
+  color: #667085;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.catalog-table td,
+.matrix-table td,
+.pricing-lines td,
+.operations-ledger-table td {
+  height: 46px;
+  padding-block: 10px;
+  border-color: #eceef2;
+  color: #344054;
+  font-size: 12px;
+}
+
+.catalog-table tbody tr:hover td,
+.matrix-table tbody tr:hover td,
+.pricing-lines tbody tr:hover td,
+.operations-ledger-table tbody tr:hover td {
+  background: #fafbfc;
+}
+
+:where(
+    .catalog-form,
+    .quote-create-form,
+    .pricing-selection-fields,
+    .pricing-quantity,
+    .compact-filter,
+    .order-control,
+    .package-config-grid,
+    .task-editor-row,
+    .operating-user-grid,
+    .request-field-grid,
+    .request-filter-bar
+  )
+  label {
+  color: #475467;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+:where(
+    .catalog-form,
+    .quote-create-form,
+    .pricing-selection-fields,
+    .pricing-quantity,
+    .compact-filter,
+    .order-control,
+    .package-config-grid,
+    .task-editor-row,
+    .operating-user-grid,
+    .request-field-grid,
+    .request-filter-bar,
+    .auth-form
+  )
+  :is(input, textarea, select) {
+  min-height: 40px;
+  border-color: var(--polish-line-strong);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--polish-ink);
+  font-size: 12.5px;
+  font-weight: 400;
+  box-shadow: inset 0 1px 2px rgba(23, 32, 51, 0.025);
+}
+
+:where(
+    .catalog-form,
+    .quote-create-form,
+    .pricing-selection-fields,
+    .pricing-quantity,
+    .compact-filter,
+    .order-control,
+    .package-config-grid,
+    .task-editor-row,
+    .operating-user-grid,
+    .request-field-grid,
+    .request-filter-bar,
+    .auth-form
+  )
+  :is(input, textarea, select):focus {
+  border-color: rgba(241, 95, 85, 0.62);
+  outline: 3px solid rgba(241, 95, 85, 0.1);
+  box-shadow: none;
+}

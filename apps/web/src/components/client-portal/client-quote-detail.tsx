@@ -1,3 +1,4 @@
+import { clientQuoteDetailCopy as copy } from "../../i18n/dictionaries/client-portal";
 import Link from "next/link";
 import { clientQuotePdfUrl } from "../../lib/client-portal-client";
 import type { ClientQuote } from "../../lib/client-portal-types";
@@ -11,69 +12,6 @@ import {
   localizedLineType,
   quoteStatusLabel,
 } from "./client-format";
-
-const copy = {
-  ar: {
-    allQuotes: "كل العروض",
-    approver: "المعتمد",
-    base: "الأساس",
-    clientDetails: "بيانات العميل",
-    code: "الرمز",
-    commercialTerms: "الشروط التجارية",
-    delivery: "التسليم",
-    description:
-      "يعرض هذا العرض من النسخة المحفوظة للقراءة فقط. الموافقة والدفع تتم خارج النظام قبل إنشاء حساب العميل.",
-    discount: "الخصم",
-    estimatedTax: "الضريبة التقديرية",
-    finalTotal: "الإجمالي النهائي",
-    financialSnapshot: "الملخص المالي",
-    noValue: "غير محدد",
-    oneTime: "مرة واحدة",
-    payment: "الدفع",
-    quantity: "الكمية",
-    quoteLines: "بنود العرض",
-    quoteSnapshot: "نسخة العرض",
-    selectedServices: "الخدمات المختارة",
-    service: "الخدمة",
-    setup: "التأسيس",
-    setupFees: "رسوم التأسيس",
-    total: "الإجمالي",
-    totals: "الإجماليات",
-    typePackage: "النوع / الباقة",
-    validUntil: "صالح حتى",
-    viewPdf: "عرض PDF",
-  },
-  en: {
-    allQuotes: "All quotes",
-    approver: "Approver",
-    base: "Base",
-    clientDetails: "Client details",
-    code: "Code",
-    commercialTerms: "Commercial terms",
-    delivery: "Delivery",
-    description:
-      "This quote is displayed as a read-only stored snapshot. Approval and payment happen outside the portal before the client account is created.",
-    discount: "Discount",
-    estimatedTax: "Estimated tax",
-    finalTotal: "Final total",
-    financialSnapshot: "Financial snapshot",
-    noValue: "Not specified",
-    oneTime: "One-time",
-    payment: "Payment",
-    quantity: "Quantity",
-    quoteLines: "Quote lines",
-    quoteSnapshot: "Quote snapshot",
-    selectedServices: "Selected services",
-    service: "Service",
-    setup: "Setup",
-    setupFees: "Setup fees",
-    total: "Total",
-    totals: "Totals",
-    typePackage: "Type / package",
-    validUntil: "Valid until",
-    viewPdf: "View PDF",
-  },
-} as const;
 
 export function ClientQuoteDetail({
   locale: localeInput = "en",
