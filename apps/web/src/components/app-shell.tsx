@@ -396,9 +396,6 @@ const shellCopy = {
     ar: {
       brandSubtitle: "لوحة التحكم",
       navigationLabel: "إدارة المنصة",
-      workspace: "وحدة الإدارة",
-      workspaceTitle: "نظام تشغيلي موحد",
-      workspaceLead: "تجربة موحدة لكل الأدوار.",
       signedInAs: "مسجل باسم",
       profile: "الملف الشخصي",
       settings: "الإعدادات",
@@ -408,9 +405,6 @@ const shellCopy = {
     en: {
       brandSubtitle: "Admin Console",
       navigationLabel: "Platform administration",
-      workspace: "Administration",
-      workspaceTitle: "Premium Modular OS",
-      workspaceLead: "Unified experience for every role.",
       signedInAs: "Signed in as",
       profile: "Profile",
       settings: "Settings",
@@ -422,9 +416,6 @@ const shellCopy = {
     ar: {
       brandSubtitle: "بوابة العميل",
       navigationLabel: "تنقل بوابة العميل",
-      workspace: "مركز الخدمة",
-      workspaceTitle: "منصة خدمة موحدة",
-      workspaceLead: "كل الطلبات والمخرجات في مكان واحد.",
       signedInAs: "حساب العميل",
       profile: "الملف الشخصي",
       settings: "الإعدادات",
@@ -434,9 +425,6 @@ const shellCopy = {
     en: {
       brandSubtitle: "Client Portal",
       navigationLabel: "Client portal navigation",
-      workspace: "Service Center",
-      workspaceTitle: "Premium Modular OS",
-      workspaceLead: "Unified experience for every role.",
       signedInAs: "Client account",
       profile: "Profile",
       settings: "Settings",
@@ -448,9 +436,6 @@ const shellCopy = {
     ar: {
       brandSubtitle: "منصة التشغيل",
       navigationLabel: "تنقل منصة التشغيل",
-      workspace: "مركز العمليات",
-      workspaceTitle: "نظام تشغيلي موحد",
-      workspaceLead: "مسار واضح من الطلب إلى الاعتماد.",
       signedInAs: "مسجل باسم",
       profile: "الملف الشخصي",
       settings: "الإعدادات",
@@ -460,9 +445,6 @@ const shellCopy = {
     en: {
       brandSubtitle: "Operating Platform",
       navigationLabel: "Operating platform navigation",
-      workspace: "Operations",
-      workspaceTitle: "Premium Modular OS",
-      workspaceLead: "Unified experience for every role.",
       signedInAs: "Signed in as",
       profile: "Profile",
       settings: "Settings",
@@ -673,11 +655,6 @@ export function AppShell({
           })}
         </nav>
 
-        <div className="premium-sidebar-card" aria-label={copy.workspace}>
-          <span>{copy.workspace}</span>
-          <strong>{copy.workspaceTitle}</strong>
-          <p>{copy.workspaceLead}</p>
-        </div>
       </aside>
 
       <div className="premium-workspace">

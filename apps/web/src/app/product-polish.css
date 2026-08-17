@@ -149,35 +149,6 @@ body {
   stroke-width: 2;
 }
 
-.premium-sidebar-card {
-  padding: 13px;
-  border-color: var(--polish-line);
-  border-radius: var(--polish-radius);
-  background: var(--polish-surface-soft) !important;
-}
-
-.premium-sidebar-card span,
-.premium-sidebar-card p {
-  color: var(--polish-muted);
-}
-
-.premium-sidebar-card span {
-  font-size: 10px;
-  font-weight: 500;
-}
-
-.premium-sidebar-card strong {
-  margin-block: 4px;
-  color: var(--polish-ink);
-  font-size: 12.5px;
-  font-weight: 600;
-}
-
-.premium-sidebar-card p {
-  font-size: 11px;
-  line-height: 1.55;
-}
-
 .premium-workspace {
   background: var(--polish-canvas);
 }
@@ -339,6 +310,16 @@ body {
 .metric-grid,
 .pricing-total-grid {
   gap: 10px;
+}
+
+.premium-main > :is(
+    .os-bento-grid,
+    .metric-grid,
+    .pricing-total-grid,
+    .request-signal-strip,
+    .request-ops-metrics
+  ) + * {
+  margin-block-start: 14px;
 }
 
 .os-metric-card,
@@ -929,10 +910,6 @@ body {
 
   .premium-nav {
     margin-block: 0 14px;
-  }
-
-  .premium-sidebar-card {
-    margin-block-start: 12px;
   }
 
   .premium-topbar {
