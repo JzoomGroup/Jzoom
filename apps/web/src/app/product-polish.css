@@ -161,7 +161,7 @@ body {
   padding-block: 10px;
   padding-inline: clamp(20px, 2.5vw, 36px);
   border-bottom-color: rgba(23, 32, 51, 0.18);
-  background: var(--jzoom-coral);
+  background: linear-gradient(135deg, var(--jzoom-coral), #ff766b);
   color: var(--polish-ink);
   box-shadow: 0 3px 12px rgba(23, 32, 51, 0.09);
 }
