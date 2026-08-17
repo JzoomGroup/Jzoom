@@ -287,7 +287,6 @@ const internalNavigation: NavItem[] = [
       roles.includes("ROLE-MGMT") ||
       roles.includes("ROLE-AM") ||
       roles.includes("ROLE-SUPERVISOR") ||
-      roles.includes("ROLE-SPECIALIST") ||
       roles.includes("ROLE-PROJECT-SPECIALIST"),
   },
   {
@@ -654,7 +653,6 @@ export function AppShell({
             );
           })}
         </nav>
-
       </aside>
 
       <div className="premium-workspace">

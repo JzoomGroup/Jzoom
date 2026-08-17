@@ -2,6 +2,7 @@
 
 import type { ApiErrorBody } from "./catalog-types";
 import type { AdminUsersSnapshot } from "./admin-access-types";
+import { interfaceIsArabic, localizedApiErrorMessage } from "./api-error-i18n";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
 
@@ -61,8 +62,14 @@ export async function adminAccessRequest<T>(path: string, options: RequestInit =
 
 export function adminAccessErrorMessage(error: unknown): string {
   if (error instanceof AdminAccessApiError) {
-    const fields = error.body.fieldErrors?.map((field) => field.message).join(" ");
-    return fields || error.message;
+    return localizedApiErrorMessage(
+      error.body,
+      error.message,
+      "تعذر حفظ بيانات المستخدم أو صلاحياته. راجع الحقول وحاول مرة أخرى.",
+    );
+  }
+  if (interfaceIsArabic()) {
+    return "تعذر حفظ بيانات المستخدم أو صلاحياته. حاول مرة أخرى.";
   }
   return error instanceof Error ? error.message : "The access change could not be saved.";
 }

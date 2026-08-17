@@ -77,6 +77,6 @@ describe("ClientManager", () => {
     expect(
       screen.getByText("This user receives client access only within this client scope."),
     ).toBeInTheDocument();
-    expect(screen.getByDisplayValue("acme@client.jzoom.local")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Email" })).toHaveValue("");
   });
 });

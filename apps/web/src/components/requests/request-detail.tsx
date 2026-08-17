@@ -73,11 +73,7 @@ type RequestOutputStatus = ServiceRequest["outputs"][number]["status"];
 type RequestTimeEntryStatus = ServiceRequest["timeEntries"][number]["status"];
 
 const openTaskStatuses: RequestTaskStatus[] = ["PENDING", "TODO", "IN_PROGRESS", "BLOCKED"];
-const submittableOutputStatuses: RequestOutputStatus[] = [
-  "DRAFT",
-  "REVISION_REQUESTED",
-  "RETURNED_BY_CLIENT",
-];
+const submittableOutputStatuses: RequestOutputStatus[] = ["DRAFT"];
 const closableOutputStatuses: RequestOutputStatus[] = [
   "SHARED_WITH_CLIENT",
   "ACCEPTED_BY_CLIENT",
@@ -192,6 +188,7 @@ const copy = {
     requestSections: "أقسام تفاصيل الطلب",
     returnChanges: "إرجاع للتعديل",
     reviewNote: "ملاحظة المراجعة",
+    reviewNoteRequired: "اكتب ملاحظة واضحة قبل الإرجاع أو الرفض.",
     reviewReason: "سبب مراجعة المشرف",
     reviewedBy: "تمت المراجعة بواسطة",
     saveAssignment: "حفظ الإسناد",
@@ -204,21 +201,26 @@ const copy = {
     start: "بدء",
     startWork: "بدء العمل",
     status: "الحالة",
-    statusUnavailable: "تغيير الحالة متاح للمشرف المسند أو الإدارة أو الأدمن.",
+    statusUnavailable: "تجاوز الحالة اليدوي متاح للأدمن فقط.",
     submit: "إرسال",
     submittedHours: "ساعات مقدمة",
     supervisor: "المشرف",
     supervisorReview: "مراجعة المشرف",
     taskTitle: "عنوان المهمة",
     templateAnswers: "إجابات النموذج",
-    timeUnavailable: "تسجيل الوقت متاح للمستخدمين التنفيذيين المسندين والأدوار العامة.",
+    timeUnavailable: "تسجيل الوقت متاح للمختص المسند فقط.",
     title: "العنوان",
     totalChecklistItems: "إجمالي بنود القائمة",
     updateStatus: "تحديث الحالة",
     uploaded: "مرفوعة",
     uploadedByClient: "مرفوعة من العميل",
     uploadedFile: "ملف مرفوع",
-    uuidOrClear: "معرف المستخدم أو clear",
+    completeRequiredFields: "أكمل الحقول المطلوبة قبل الحفظ.",
+    revisionFileRequired: "اختر ملف النسخة الجديدة قبل المتابعة.",
+    uploadRevision: "رفع نسخة جديدة",
+    quarterHourRequired: "أدخل الساعات بأرباع الساعة، مثل 1 أو 1.25 أو 2.5.",
+    assignmentOptionsUnavailable:
+      "تعذر تحميل قوائم الإسناد حاليًا. حدّث الصفحة قبل محاولة تغيير الفريق.",
     originalName: "اسم الملف",
     visibleToClient: "ظاهر للعميل",
     workDate: "تاريخ العمل",
@@ -368,6 +370,7 @@ const copy = {
     requestSections: "Request detail sections",
     returnChanges: "Return changes",
     reviewNote: "Review note",
+    reviewNoteRequired: "Enter a clear review note before returning or rejecting.",
     reviewReason: "Supervisor review reason",
     reviewedBy: "reviewed by",
     saveAssignment: "Save assignment",
@@ -380,22 +383,26 @@ const copy = {
     start: "Start",
     startWork: "Start work",
     status: "Status",
-    statusUnavailable:
-      "Status changes are handled by the assigned supervisor, management, or admin.",
+    statusUnavailable: "Manual lifecycle overrides are restricted to administrators.",
     submit: "Submit",
     submittedHours: "Submitted hours",
     supervisor: "Supervisor",
     supervisorReview: "Supervisor review",
     taskTitle: "Task title",
     templateAnswers: "Template answers",
-    timeUnavailable: "Time registration is available to assigned execution users and global roles.",
+    timeUnavailable: "Time registration is available to the assigned specialist only.",
     title: "Title",
     totalChecklistItems: "total checklist items",
     updateStatus: "Update status",
     uploaded: "uploaded",
     uploadedByClient: "uploaded by client",
     uploadedFile: "Uploaded",
-    uuidOrClear: "UUID or clear",
+    completeRequiredFields: "Complete the required fields before saving.",
+    revisionFileRequired: "Choose the new revision file before continuing.",
+    uploadRevision: "Upload new revision",
+    quarterHourRequired: "Enter time in quarter-hour increments, such as 1, 1.25, or 2.5.",
+    assignmentOptionsUnavailable:
+      "Assignment options are unavailable. Refresh the page before changing the team.",
     originalName: "Original name",
     visibleToClient: "Visible to client",
     workDate: "Work date",
@@ -534,10 +541,6 @@ function hasRole(user: CurrentUser, role: string): boolean {
   return user.roles.includes(role);
 }
 
-function userMatches(user: CurrentUser, assigned: ServiceRequest["assignments"]["specialist"]) {
-  return assigned?.id === user.id;
-}
-
 function hours(entries: ServiceRequest["timeEntries"], locale: SupportedLocale): string {
   const total = entries.reduce((sum, entry) => sum + Number(entry.hours), 0);
   const value = total.toFixed(total % 1 === 0 ? 0 : 2);
@@ -614,6 +617,27 @@ function activityActorLabel(
     typeof metadata.actorDisplayName === "string" ? metadata.actorDisplayName : null;
   const actorRole = codeLabel(event.actorRole.replace(/^ROLE-/, ""), locale);
   return actorDisplayName ? `${actorDisplayName} - ${actorRole}` : actorRole;
+}
+
+function activityReasonLabel(
+  event: ServiceRequest["activity"][number],
+  locale: SupportedLocale,
+): string | null {
+  const reason = event.reason?.trim();
+  if (!reason || locale === "en" || /[\u0600-\u06ff]/.test(reason)) return reason ?? null;
+  const knownReasons: Array<[RegExp, string]> = [
+    [/request created/i, "تم إنشاء الطلب."],
+    [/started work/i, "بدأ المختص العمل على الطلب."],
+    [/document requested/i, "طلب الفريق مستندًا من العميل."],
+    [/client uploaded/i, "رفع العميل المستند المطلوب."],
+    [/submitted for supervisor/i, "أُرسل الطلب إلى المشرف للمراجعة."],
+    [/internal output submitted/i, "أُرسل المخرج للمراجعة الداخلية."],
+    [/output shared with client/i, "تمت مشاركة المخرج مع العميل."],
+    [/client accepted/i, "اعتمد العميل المخرج."],
+    [/client returned/i, "أعاد العميل المخرج للتعديل."],
+    [/time entry created/i, "تم تسجيل ساعات عمل على الطلب."],
+  ];
+  return knownReasons.find(([pattern]) => pattern.test(reason))?.[1] ?? "تم تسجيل إجراء على الطلب.";
 }
 
 function roleWorkspace(
@@ -760,6 +784,7 @@ export function RequestDetail({
     title: "",
   });
   const [selectedOutputFile, setSelectedOutputFile] = useState<File | null>(null);
+  const [revisionFiles, setRevisionFiles] = useState<Record<string, File | null>>({});
   const [documentForm, setDocumentForm] = useState({
     dueAt: "",
     instructions: "",
@@ -772,6 +797,7 @@ export function RequestDetail({
     workDate: "",
   });
   const [reviewReason, setReviewReason] = useState("");
+  const [timeReviewNotes, setTimeReviewNotes] = useState<Record<string, string>>({});
   const [fileForm, setFileForm] = useState({
     originalName: "",
     mimeType: "",
@@ -788,40 +814,19 @@ export function RequestDetail({
     );
   }, []);
 
-  const hasGlobalOperations =
-    hasRole(currentUser, "ROLE-ADMIN") || hasRole(currentUser, "ROLE-MGMT");
+  const isAdmin = hasRole(currentUser, "ROLE-ADMIN");
   const isSupervisor = hasRole(currentUser, "ROLE-SUPERVISOR");
   const isSpecialist = hasRole(currentUser, "ROLE-SPECIALIST");
-  const isAccountManager = hasRole(currentUser, "ROLE-AM");
-  const assignedAsSpecialist = userMatches(currentUser, request.assignments.specialist);
-  const assignedAsSupervisor = userMatches(currentUser, request.assignments.supervisor);
-  const assignedAsAccountManager = userMatches(currentUser, request.assignments.accountManager);
-  const assignedTask = request.tasks.some((task) => task.assignee?.id === currentUser.id);
-  const canAssign = hasGlobalOperations || isSupervisor;
-  const canExecute =
-    hasGlobalOperations || (isSpecialist && (assignedAsSpecialist || assignedTask)) || assignedTask;
-  const canSupervise = hasGlobalOperations || (isSupervisor && assignedAsSupervisor);
-  const canManageLifecycle = hasGlobalOperations || canSupervise || canExecute;
-  const canAddOperationalContext =
-    hasGlobalOperations ||
-    canExecute ||
-    canSupervise ||
-    (isAccountManager && assignedAsAccountManager);
+  const canAssign = isAdmin || isSupervisor;
+  const canExecute = isAdmin || isSpecialist;
+  const canSupervise = isAdmin || isSupervisor;
+  const canManageLifecycle = isAdmin;
+  const canAddOperationalContext = isAdmin || canExecute || canSupervise;
   const canRequestDocuments = canAddOperationalContext;
   const canAttachMetadata = canAddOperationalContext;
   const canStartWork = canExecute && startableStatuses.includes(request.status);
   const workspace = roleWorkspace(currentUser, locale);
-  const taskAssignmentCandidates = assignmentCandidates
-    ? [
-        ...new Map(
-          [
-            ...assignmentCandidates.specialists,
-            ...assignmentCandidates.supervisors,
-            ...assignmentCandidates.accountManagers,
-          ].map((candidate) => [candidate.id, candidate]),
-        ).values(),
-      ]
-    : [];
+  const taskAssignmentCandidates = assignmentCandidates?.specialists ?? [];
   const openTasks = request.tasks.filter((task) => openTaskStatuses.includes(task.status));
   const reviewOutputs = request.outputs.filter((output) => output.status === "INTERNAL_REVIEW");
   const readyOutputs = request.outputs.filter((output) => output.status === "APPROVED_INTERNAL");
@@ -924,6 +929,10 @@ export function RequestDetail({
   }
 
   function supervisorAction(action: "APPROVE" | "RETURN" | "REJECT" | "ESCALATE") {
+    if (action !== "APPROVE" && !reviewReason.trim()) {
+      setError(t.reviewNoteRequired);
+      return;
+    }
     if (!window.confirm(t.confirmSupervisorAction)) {
       return;
     }
@@ -947,6 +956,10 @@ export function RequestDetail({
 
   function submitComment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!commentForm.body.trim()) {
+      setError(t.completeRequiredFields);
+      return;
+    }
     void run("comment", async () => {
       const updated = await addRequestComment(
         request.id,
@@ -960,6 +973,10 @@ export function RequestDetail({
 
   function submitNote(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!noteBody.trim()) {
+      setError(t.completeRequiredFields);
+      return;
+    }
     void run("note", async () => {
       const updated = await addInternalNote(request.id, noteBody);
       setNoteBody("");
@@ -1021,6 +1038,19 @@ export function RequestDetail({
     setSelectedOutputFile(event.target.files?.[0] ?? null);
   }
 
+  function uploadOutputRevision(outputId: string) {
+    const file = revisionFiles[outputId];
+    if (!file) {
+      setError(t.revisionFileRequired);
+      return;
+    }
+    void run(`${outputId}-revision`, async () => {
+      const updated = await uploadRequestOutputFile(request.id, outputId, file);
+      setRevisionFiles((current) => ({ ...current, [outputId]: null }));
+      return updated;
+    });
+  }
+
   function archiveAttachment(fileId: string) {
     if (!window.confirm(t.archiveAttachmentConfirm)) {
       return;
@@ -1030,6 +1060,10 @@ export function RequestDetail({
 
   function submitTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!taskForm.title.trim()) {
+      setError(t.completeRequiredFields);
+      return;
+    }
     const payload: Parameters<typeof createRequestTask>[1] = {
       title: taskForm.title,
       priority: taskForm.priority,
@@ -1059,6 +1093,14 @@ export function RequestDetail({
 
   function submitOutput(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!outputForm.code.trim() || !outputForm.title.trim()) {
+      setError(t.completeRequiredFields);
+      return;
+    }
+    if (!selectedOutputFile) {
+      setError(t.fileUploadHint);
+      return;
+    }
     void run("output", async () => {
       const outputCode = outputForm.code.trim().toUpperCase();
       const updated = await createRequestOutput(request.id, {
@@ -1085,6 +1127,10 @@ export function RequestDetail({
   }
 
   function reviewOutput(outputId: string, action: "APPROVE" | "RETURN" | "REJECT") {
+    if (action !== "APPROVE" && !reviewReason.trim()) {
+      setError(t.reviewNoteRequired);
+      return;
+    }
     const confirmMessage =
       action === "APPROVE"
         ? t.confirmOutputApprove
@@ -1119,6 +1165,10 @@ export function RequestDetail({
 
   function submitDocumentRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!documentForm.title.trim()) {
+      setError(t.completeRequiredFields);
+      return;
+    }
     void run("document-request", async () => {
       const updated = await requestClientDocument(request.id, {
         title: documentForm.title,
@@ -1143,10 +1193,15 @@ export function RequestDetail({
 
   function submitTimeEntry(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const hours = Number(timeForm.hours);
+    if (!timeForm.workDate || !Number.isFinite(hours) || hours < 0.25 || hours % 0.25 !== 0) {
+      setError(t.quarterHourRequired);
+      return;
+    }
     void run("time-entry", async () => {
       const updated = await createRequestTimeEntry(request.id, {
         billable: timeForm.billable,
-        hours: Number(timeForm.hours),
+        hours,
         workDate: new Date(timeForm.workDate).toISOString(),
         ...(timeForm.notes ? { notes: timeForm.notes } : {}),
       });
@@ -1165,8 +1220,13 @@ export function RequestDetail({
   }
 
   function reviewTimeEntry(timeEntryId: string, action: "APPROVE" | "REJECT") {
+    const reason = timeReviewNotes[timeEntryId]?.trim();
+    if (action === "REJECT" && !reason) {
+      setError(t.reviewNoteRequired);
+      return;
+    }
     void run("time-entry-review", () =>
-      reviewRequestTimeEntry(request.id, timeEntryId, action, reviewReason || undefined),
+      reviewRequestTimeEntry(request.id, timeEntryId, action, reason || undefined),
     );
   }
 
@@ -1193,7 +1253,9 @@ export function RequestDetail({
     ...(canRequestDocuments
       ? [{ href: "#request-documents", label: t.requestDocument, detail: t.clientDocuments }]
       : []),
-    { href: "#request-comments", label: t.addComment, detail: t.comments },
+    ...(canAddOperationalContext
+      ? [{ href: "#request-comments", label: t.addComment, detail: t.comments }]
+      : []),
   ].slice(0, 6);
 
   return (
@@ -1327,7 +1389,7 @@ export function RequestDetail({
             </div>
           </dl>
           {canAssign ? (
-            <form className="catalog-form" onSubmit={submitAssignment}>
+            <form className="catalog-form" noValidate onSubmit={submitAssignment}>
               {assignmentCandidates ? (
                 <>
                   <label>
@@ -1342,7 +1404,7 @@ export function RequestDetail({
                       }
                     >
                       <option value="">{t.keepSpecialist}</option>
-                      <option value="clear">{t.noAssignee}</option>
+                      {isAdmin ? <option value="clear">{t.noAssignee}</option> : null}
                       {assignmentCandidates.specialists.map((candidate) => (
                         <option key={candidate.id} value={candidate.id}>
                           {assignmentCandidateLabel(candidate)}
@@ -1350,89 +1412,55 @@ export function RequestDetail({
                       ))}
                     </select>
                   </label>
-                  <label>
-                    {t.supervisor}
-                    <select
-                      value={assignmentForm.assignedSupervisorId}
-                      onChange={(event) =>
-                        setAssignmentForm({
-                          ...assignmentForm,
-                          assignedSupervisorId: event.target.value,
-                        })
-                      }
-                    >
-                      <option value="">{t.keepSupervisor}</option>
-                      <option value="clear">{t.noAssignee}</option>
-                      {assignmentCandidates.supervisors.map((candidate) => (
-                        <option key={candidate.id} value={candidate.id}>
-                          {assignmentCandidateLabel(candidate)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    {t.accountManager}
-                    <select
-                      value={assignmentForm.accountManagerId}
-                      onChange={(event) =>
-                        setAssignmentForm({
-                          ...assignmentForm,
-                          accountManagerId: event.target.value,
-                        })
-                      }
-                    >
-                      <option value="">{t.keepAccountManager}</option>
-                      <option value="clear">{t.noAssignee}</option>
-                      {assignmentCandidates.accountManagers.map((candidate) => (
-                        <option key={candidate.id} value={candidate.id}>
-                          {assignmentCandidateLabel(candidate)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  {isAdmin ? (
+                    <>
+                      <label>
+                        {t.supervisor}
+                        <select
+                          value={assignmentForm.assignedSupervisorId}
+                          onChange={(event) =>
+                            setAssignmentForm({
+                              ...assignmentForm,
+                              assignedSupervisorId: event.target.value,
+                            })
+                          }
+                        >
+                          <option value="">{t.keepSupervisor}</option>
+                          <option value="clear">{t.noAssignee}</option>
+                          {assignmentCandidates.supervisors.map((candidate) => (
+                            <option key={candidate.id} value={candidate.id}>
+                              {assignmentCandidateLabel(candidate)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        {t.accountManager}
+                        <select
+                          value={assignmentForm.accountManagerId}
+                          onChange={(event) =>
+                            setAssignmentForm({
+                              ...assignmentForm,
+                              accountManagerId: event.target.value,
+                            })
+                          }
+                        >
+                          <option value="">{t.keepAccountManager}</option>
+                          <option value="clear">{t.noAssignee}</option>
+                          {assignmentCandidates.accountManagers.map((candidate) => (
+                            <option key={candidate.id} value={candidate.id}>
+                              {assignmentCandidateLabel(candidate)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </>
+                  ) : null}
                 </>
               ) : (
-                <>
-                  <label>
-                    {t.specialist}
-                    <input
-                      placeholder={t.uuidOrClear}
-                      value={assignmentForm.assignedSpecialistId}
-                      onChange={(event) =>
-                        setAssignmentForm({
-                          ...assignmentForm,
-                          assignedSpecialistId: event.target.value,
-                        })
-                      }
-                    />
-                  </label>
-                  <label>
-                    {t.supervisor}
-                    <input
-                      placeholder={t.uuidOrClear}
-                      value={assignmentForm.assignedSupervisorId}
-                      onChange={(event) =>
-                        setAssignmentForm({
-                          ...assignmentForm,
-                          assignedSupervisorId: event.target.value,
-                        })
-                      }
-                    />
-                  </label>
-                  <label>
-                    {t.accountManager}
-                    <input
-                      placeholder={t.uuidOrClear}
-                      value={assignmentForm.accountManagerId}
-                      onChange={(event) =>
-                        setAssignmentForm({
-                          ...assignmentForm,
-                          accountManagerId: event.target.value,
-                        })
-                      }
-                    />
-                  </label>
-                </>
+                <p className="form-feedback error" role="alert">
+                  {t.assignmentOptionsUnavailable}
+                </p>
               )}
               <label>
                 {t.reason}
@@ -1446,7 +1474,7 @@ export function RequestDetail({
               <button
                 className="os-button os-button-primary"
                 type="submit"
-                disabled={saving === "assignment"}
+                disabled={saving === "assignment" || !assignmentCandidates}
               >
                 {t.saveAssignment}
               </button>
@@ -1460,7 +1488,7 @@ export function RequestDetail({
       <section className="catalog-panel" id="request-lifecycle">
         <h2>{t.lifecycle}</h2>
         {canManageLifecycle ? (
-          <form className="catalog-form" onSubmit={submitStatus}>
+          <form className="catalog-form" noValidate onSubmit={submitStatus}>
             <label>
               {t.status}
               <select
@@ -1505,44 +1533,46 @@ export function RequestDetail({
               {t.startWork}
             </button>
           )}
-          {canSupervise && (
-            <>
-              <input
-                aria-label={t.reviewReason}
-                placeholder={t.reviewReason}
-                value={reviewReason}
-                onChange={(event) => setReviewReason(event.target.value)}
-              />
-              <button
-                className="os-button os-button-secondary"
-                type="button"
-                onClick={() => supervisorAction("APPROVE")}
-              >
-                {t.approveRequest}
-              </button>
-              <button
-                className="os-button os-button-secondary"
-                type="button"
-                onClick={() => supervisorAction("RETURN")}
-              >
-                {t.returnChanges}
-              </button>
-              <button
-                className="os-button os-button-danger"
-                type="button"
-                onClick={() => supervisorAction("REJECT")}
-              >
-                {t.reject}
-              </button>
-              <button
-                className="os-button os-button-secondary"
-                type="button"
-                onClick={() => supervisorAction("ESCALATE")}
-              >
-                {t.escalate}
-              </button>
-            </>
-          )}
+          {canSupervise &&
+            request.status === "WAITING_SUPERVISOR" &&
+            reviewOutputs.length === 0 && (
+              <>
+                <input
+                  aria-label={t.reviewReason}
+                  placeholder={t.reviewReason}
+                  value={reviewReason}
+                  onChange={(event) => setReviewReason(event.target.value)}
+                />
+                <button
+                  className="os-button os-button-secondary"
+                  type="button"
+                  onClick={() => supervisorAction("APPROVE")}
+                >
+                  {t.approveRequest}
+                </button>
+                <button
+                  className="os-button os-button-secondary"
+                  type="button"
+                  onClick={() => supervisorAction("RETURN")}
+                >
+                  {t.returnChanges}
+                </button>
+                <button
+                  className="os-button os-button-danger"
+                  type="button"
+                  onClick={() => supervisorAction("REJECT")}
+                >
+                  {t.reject}
+                </button>
+                <button
+                  className="os-button os-button-secondary"
+                  type="button"
+                  onClick={() => supervisorAction("ESCALATE")}
+                >
+                  {t.escalate}
+                </button>
+              </>
+            )}
         </div>
       </section>
 
@@ -1584,8 +1614,8 @@ export function RequestDetail({
       <section className="quote-summary-grid">
         <article className="catalog-panel" id="request-checklist">
           <h2>{t.internalChecklist}</h2>
-          {canAddOperationalContext ? (
-            <form className="catalog-form" onSubmit={submitTask}>
+          {canExecute ? (
+            <form className="catalog-form" noValidate onSubmit={submitTask}>
               <label>
                 {t.taskTitle}
                 <input
@@ -1682,7 +1712,7 @@ export function RequestDetail({
                     {task.assignee?.displayName ?? t.noAssignee}
                   </small>
                   {task.description && <p>{task.description}</p>}
-                  {canAddOperationalContext && (
+                  {canExecute && (
                     <div className="row-actions">
                       <button
                         className="os-button os-button-secondary"
@@ -1730,7 +1760,7 @@ export function RequestDetail({
         <article className="catalog-panel" id="request-outputs">
           <h2>{t.internalOutputs}</h2>
           {canExecute ? (
-            <form className="catalog-form" onSubmit={submitOutput}>
+            <form className="catalog-form" noValidate onSubmit={submitOutput}>
               <label>
                 {t.outputCode}
                 <input
@@ -1824,6 +1854,42 @@ export function RequestDetail({
                       ))}
                     </div>
                   )}
+                  {canExecute &&
+                    ["REVISION_REQUESTED", "RETURNED_BY_CLIENT"].includes(output.status) && (
+                      <div className="client-file-drop output-revision-upload">
+                        <label>
+                          <input
+                            type="file"
+                            onChange={(event) =>
+                              setRevisionFiles((current) => ({
+                                ...current,
+                                [output.id]: event.target.files?.[0] ?? null,
+                              }))
+                            }
+                          />
+                          <span>{revisionFiles[output.id]?.name ?? t.revisionFileRequired}</span>
+                        </label>
+                        <button
+                          className="os-button os-button-primary"
+                          type="button"
+                          disabled={saving === `${output.id}-revision`}
+                          onClick={() => uploadOutputRevision(output.id)}
+                        >
+                          {t.uploadRevision}
+                        </button>
+                      </div>
+                    )}
+                  {canSupervise && output.status === "INTERNAL_REVIEW" && (
+                    <label className="field output-review-note">
+                      <span>{t.reviewReason}</span>
+                      <textarea
+                        aria-label={`${t.reviewReason} - ${output.title}`}
+                        placeholder={t.reviewReason}
+                        value={reviewReason}
+                        onChange={(event) => setReviewReason(event.target.value)}
+                      />
+                    </label>
+                  )}
                   <div className="row-actions">
                     {canExecute && submittableOutputStatuses.includes(output.status) && (
                       <button
@@ -1889,7 +1955,7 @@ export function RequestDetail({
         <article className="catalog-panel" id="request-documents">
           <h2>{t.clientDocumentRequests}</h2>
           {canRequestDocuments ? (
-            <form className="catalog-form" onSubmit={submitDocumentRequest}>
+            <form className="catalog-form" noValidate onSubmit={submitDocumentRequest}>
               <label>
                 {t.documentTitle}
                 <input
@@ -1978,7 +2044,7 @@ export function RequestDetail({
         <article className="catalog-panel" id="request-hours">
           <h2>{t.basicTimeEntries}</h2>
           {canExecute ? (
-            <form className="catalog-form" onSubmit={submitTimeEntry}>
+            <form className="catalog-form" noValidate onSubmit={submitTimeEntry}>
               <label>
                 {t.workDate}
                 <input
@@ -1993,7 +2059,7 @@ export function RequestDetail({
                 <input
                   required
                   max="24"
-                  min="0.01"
+                  min="0.25"
                   step="0.25"
                   type="number"
                   value={timeForm.hours}
@@ -2047,7 +2113,7 @@ export function RequestDetail({
                     </p>
                   )}
                   <div className="row-actions">
-                    {(hasGlobalOperations || entry.user.id === currentUser.id) &&
+                    {(isAdmin || entry.user.id === currentUser.id) &&
                       submittableTimeEntryStatuses.includes(entry.status) && (
                         <button
                           className="os-button os-button-secondary"
@@ -2059,6 +2125,17 @@ export function RequestDetail({
                       )}
                     {canSupervise && entry.status === "SUBMITTED" && (
                       <>
+                        <input
+                          aria-label={`${t.reviewReason} - ${entry.user.displayName}`}
+                          placeholder={t.reviewReason}
+                          value={timeReviewNotes[entry.id] ?? ""}
+                          onChange={(event) =>
+                            setTimeReviewNotes((current) => ({
+                              ...current,
+                              [entry.id]: event.target.value,
+                            }))
+                          }
+                        />
                         <button
                           className="os-button os-button-secondary"
                           type="button"
@@ -2086,33 +2163,35 @@ export function RequestDetail({
       <section className="quote-summary-grid">
         <article className="catalog-panel" id="request-comments">
           <h2>{t.comments}</h2>
-          <form className="catalog-form" onSubmit={submitComment}>
-            <label className="form-span">
-              {t.comment}
-              <textarea
-                required
-                value={commentForm.body}
-                onChange={(event) => setCommentForm({ ...commentForm, body: event.target.value })}
-              />
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={commentForm.isClientVisible}
-                onChange={(event) =>
-                  setCommentForm({ ...commentForm, isClientVisible: event.target.checked })
-                }
-              />
-              {t.visibleToClient}
-            </label>
-            <button
-              className="os-button os-button-primary"
-              type="submit"
-              disabled={saving === "comment"}
-            >
-              {t.addComment}
-            </button>
-          </form>
+          {canAddOperationalContext ? (
+            <form className="catalog-form" noValidate onSubmit={submitComment}>
+              <label className="form-span">
+                {t.comment}
+                <textarea
+                  required
+                  value={commentForm.body}
+                  onChange={(event) => setCommentForm({ ...commentForm, body: event.target.value })}
+                />
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={commentForm.isClientVisible}
+                  onChange={(event) =>
+                    setCommentForm({ ...commentForm, isClientVisible: event.target.checked })
+                  }
+                />
+                {t.visibleToClient}
+              </label>
+              <button
+                className="os-button os-button-primary"
+                type="submit"
+                disabled={saving === "comment"}
+              >
+                {t.addComment}
+              </button>
+            </form>
+          ) : null}
           <div className="activity-list">
             {request.comments.length === 0 ? (
               <EmptyActivity message={t.noComments} />
@@ -2133,23 +2212,25 @@ export function RequestDetail({
 
         <article className="catalog-panel" id="request-notes">
           <h2>{t.internalNotes}</h2>
-          <form className="catalog-form" onSubmit={submitNote}>
-            <label className="form-span">
-              {t.note}
-              <textarea
-                required
-                value={noteBody}
-                onChange={(event) => setNoteBody(event.target.value)}
-              />
-            </label>
-            <button
-              className="os-button os-button-primary"
-              type="submit"
-              disabled={saving === "note"}
-            >
-              {t.addInternalNote}
-            </button>
-          </form>
+          {canAddOperationalContext ? (
+            <form className="catalog-form" noValidate onSubmit={submitNote}>
+              <label className="form-span">
+                {t.note}
+                <textarea
+                  required
+                  value={noteBody}
+                  onChange={(event) => setNoteBody(event.target.value)}
+                />
+              </label>
+              <button
+                className="os-button os-button-primary"
+                type="submit"
+                disabled={saving === "note"}
+              >
+                {t.addInternalNote}
+              </button>
+            </form>
+          ) : null}
           <div className="activity-list">
             {request.internalNotes.length === 0 ? (
               <EmptyActivity message={t.noInternalNotes} />
@@ -2170,7 +2251,7 @@ export function RequestDetail({
         <article className="catalog-panel" id="request-attachments">
           <h2>{t.attachmentMetadata}</h2>
           {canAttachMetadata ? (
-            <form className="catalog-form" onSubmit={submitAttachment}>
+            <form className="catalog-form" noValidate onSubmit={submitAttachment}>
               <label className="client-file-drop form-span">
                 <input type="file" onChange={(event) => void selectAttachmentFile(event)} />
                 <span>{t.chooseFile}</span>
@@ -2301,7 +2382,9 @@ export function RequestDetail({
                   <small>
                     {dateTime(event.occurredAt, locale)} - {activityActorLabel(event, locale)}
                   </small>
-                  {event.reason && <p>{event.reason}</p>}
+                  {activityReasonLabel(event, locale) ? (
+                    <p>{activityReasonLabel(event, locale)}</p>
+                  ) : null}
                 </article>
               ))
             )}

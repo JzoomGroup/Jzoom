@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { clientsErrorMessage, clientsRequest, refreshClients } from "../../lib/clients-client";
 import type { ClientStatus, ClientsSnapshot, ManagedClient } from "../../lib/clients-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
@@ -111,6 +111,9 @@ const copy = {
     transactionVolume: "حجم المعاملات",
     urgency: "الأولوية الزمنية",
     users: "المستخدمون",
+    requiredFields: "أكمل الحقول المطلوبة: رمز العميل، اسم العميل، القطاع، والمعتمد.",
+    invalidEmail: "أدخل بريدًا إلكترونيًا صحيحًا.",
+    displayNameRequired: "أدخل الاسم الظاهر لمستخدم البوابة.",
   },
   en: {
     active: "active",
@@ -192,6 +195,9 @@ const copy = {
     transactionVolume: "Transaction volume",
     urgency: "Urgency",
     users: "Users",
+    requiredFields: "Complete the required client fields.",
+    invalidEmail: "Enter a valid email address.",
+    displayNameRequired: "Enter the portal user's display name.",
   },
 } as const;
 
@@ -249,8 +255,8 @@ function initials(name: string): string {
     .join("");
 }
 
-function defaultPortalEmail(client: ManagedClient): string {
-  return `${client.code.toLowerCase()}@client.jzoom.local`;
+function defaultPortalEmail(): string {
+  return "";
 }
 
 function ClientForm({
@@ -266,22 +272,36 @@ function ClientForm({
   submitting: boolean;
   t: ClientCopy;
 }) {
+  const [formError, setFormError] = useState<string>();
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await onSubmit(new FormData(event.currentTarget));
+    const form = new FormData(event.currentTarget);
+    const requiredValues = [
+      ...(client ? [] : [text(form, "code")]),
+      text(form, "name"),
+      text(form, "sector"),
+      text(form, "authorizedApprover"),
+    ];
+    if (requiredValues.some((value) => !value)) {
+      setFormError(t.requiredFields);
+      return;
+    }
+    setFormError(undefined);
+    await onSubmit(form);
   }
 
   return (
-    <form className="catalog-form wide-form client-admin-form" onSubmit={submit}>
+    <form className="catalog-form wide-form client-admin-form" noValidate onSubmit={submit}>
       {!client ? (
         <label>
           {t.clientCode}
-          <input name="code" required defaultValue="" placeholder="0001" />
+          <input name="code" defaultValue="" placeholder="0001" />
         </label>
       ) : null}
       <label>
         {t.clientName}
-        <input name="name" required defaultValue={client?.name ?? ""} />
+        <input name="name" defaultValue={client?.name ?? ""} />
       </label>
       <label>
         {t.legalName}
@@ -293,7 +313,7 @@ function ClientForm({
       </label>
       <label>
         {t.sector}
-        <input name="sector" required defaultValue={client?.sector ?? ""} />
+        <input name="sector" defaultValue={client?.sector ?? ""} />
       </label>
       <label>
         {t.city}
@@ -301,7 +321,7 @@ function ClientForm({
       </label>
       <label>
         {t.authorizedApprover}
-        <input name="authorizedApprover" required defaultValue={client?.authorizedApprover ?? ""} />
+        <input name="authorizedApprover" defaultValue={client?.authorizedApprover ?? ""} />
       </label>
       <label>
         {t.billingContact}
@@ -341,6 +361,11 @@ function ClientForm({
         {t.urgency}
         <input name="urgency" defaultValue={client?.urgency ?? ""} />
       </label>
+      {formError ? (
+        <p className="quote-action-feedback error form-span" role="alert">
+          {formError}
+        </p>
+      ) : null}
       <div className="form-actions">
         <button type="button" className="os-button os-button-secondary" onClick={onCancel}>
           {t.cancel}
@@ -359,20 +384,45 @@ function PortalUserForm({
   onSubmit,
   submitting,
   t,
+  externalError,
 }: {
   client: ManagedClient;
   onCancel: () => void;
   onSubmit: (form: FormData) => Promise<void>;
   submitting: boolean;
   t: ClientCopy;
+  externalError?: string;
 }) {
+  const [email, setEmail] = useState(() => defaultPortalEmail());
+  const [displayName, setDisplayName] = useState(client.authorizedApprover || client.name);
+  const [formError, setFormError] = useState<string>();
+
+  useEffect(() => {
+    setEmail(defaultPortalEmail());
+    setDisplayName(client.authorizedApprover || client.name);
+    setFormError(undefined);
+  }, [client]);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await onSubmit(new FormData(event.currentTarget));
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+      setFormError(t.invalidEmail);
+      return;
+    }
+    if (!displayName.trim()) {
+      setFormError(t.displayNameRequired);
+      return;
+    }
+    const form = new FormData(event.currentTarget);
+    form.set("email", normalizedEmail);
+    form.set("displayName", displayName.trim());
+    setFormError(undefined);
+    await onSubmit(form);
   }
 
   return (
-    <form className="catalog-form wide-form client-admin-form" onSubmit={submit}>
+    <form className="catalog-form wide-form client-admin-form" noValidate onSubmit={submit}>
       <section className="client-portal-user-guardrails form-span">
         <strong>{t.portalUserChecklist}</strong>
         <span>{t.portalUserGuardA}</span>
@@ -381,16 +431,28 @@ function PortalUserForm({
       </section>
       <label>
         {t.email}
-        <input name="email" type="email" required defaultValue={defaultPortalEmail(client)} />
+        <input
+          autoComplete="email"
+          name="email"
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+        />
       </label>
       <label>
         {t.displayName}
         <input
           name="displayName"
-          required
-          defaultValue={client.authorizedApprover || client.name}
+          autoComplete="name"
+          value={displayName}
+          onChange={(event) => setDisplayName(event.target.value)}
         />
       </label>
+      {formError || externalError ? (
+        <p className="quote-action-feedback error form-span" role="alert">
+          {formError ?? externalError}
+        </p>
+      ) : null}
       <label>
         {t.language}
         <select name="preferredLocale" defaultValue="ar">
@@ -719,6 +781,7 @@ export function ClientManager({
             onSubmit={createPortalUser}
             submitting={submitting}
             t={t}
+            {...(error ? { externalError: error } : {})}
           />
         </section>
       ) : null}

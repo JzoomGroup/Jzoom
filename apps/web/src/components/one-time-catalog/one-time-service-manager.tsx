@@ -630,7 +630,11 @@ export function OneTimeServiceManager({
                 : t.createRevisionDescription((current?.version ?? 0) + 1)}
             </p>
           </div>
-          <form className="catalog-form wide-form one-time-service-form" onSubmit={submit}>
+          <form
+            className="catalog-form wide-form one-time-service-form"
+            noValidate
+            onSubmit={submit}
+          >
             {creating ? (
               <label>
                 {t.code}

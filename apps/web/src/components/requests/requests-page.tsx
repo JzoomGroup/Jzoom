@@ -22,7 +22,11 @@ function canUseRequests(
 }
 
 function canUseAssignmentCandidates(user: NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>) {
-  return user.roles.some((role) => ["ROLE-ADMIN", "ROLE-MGMT", "ROLE-SUPERVISOR"].includes(role));
+  return user.roles.some((role) => ["ROLE-ADMIN", "ROLE-SUPERVISOR"].includes(role));
+}
+
+function canCreateRequests(user: NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>) {
+  return user.roles.some((role) => ["ROLE-ADMIN", "ROLE-SPECIALIST"].includes(role));
 }
 
 export async function RequestsPage({ requestId }: { requestId?: string }) {
@@ -40,7 +44,9 @@ export async function RequestsPage({ requestId }: { requestId?: string }) {
     requestId && !Array.isArray(content) && canUseAssignmentCandidates(user)
       ? await requireRequestAssignmentCandidates()
       : null;
-  const intakeOptions = Array.isArray(content) ? await requireRequestIntakeOptions() : null;
+  const canCreate = canCreateRequests(user);
+  const intakeOptions =
+    Array.isArray(content) && canCreate ? await requireRequestIntakeOptions() : null;
 
   return (
     <QuoteShell
@@ -53,6 +59,7 @@ export async function RequestsPage({ requestId }: { requestId?: string }) {
     >
       {Array.isArray(content) ? (
         <RequestList
+          canCreate={canCreate}
           intakeOptions={intakeOptions}
           locale={user.preferredLocale}
           requests={content}

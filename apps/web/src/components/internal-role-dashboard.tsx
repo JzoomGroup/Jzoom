@@ -6,6 +6,7 @@ import type {
   MonthlyUsageResponse,
 } from "../lib/operations-types";
 import type { RequestQueueResponse } from "../lib/request-types";
+import { healthReasonText, healthStatusText } from "./operations/health-i18n";
 import {
   ActionCard,
   BentoGrid,
@@ -379,13 +380,13 @@ export function InternalRoleDashboard({
                   <div className="entity-card-heading">
                     <div>
                       <span className={`status-pill status-${entry.health.code.toLowerCase()}`}>
-                        {entry.health.label}
+                        {healthStatusText(entry.health.code, language)}
                       </span>
                       <h3>{entry.client.name}</h3>
                     </div>
                     <span>{entry.client.code}</span>
                   </div>
-                  <p>{entry.health.reason}</p>
+                  <p>{healthReasonText(entry.health.code, language)}</p>
                   <dl className="entity-meta four-up">
                     <div>
                       <dt>{t.health.open}</dt>

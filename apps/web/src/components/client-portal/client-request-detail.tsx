@@ -763,7 +763,7 @@ export function ClientRequestDetail({
           {requestedDocuments.length === 0 ? (
             <p>{t.noDocumentUpload}</p>
           ) : (
-            <form className="catalog-form client-upload-form" onSubmit={submitUpload}>
+            <form className="catalog-form client-upload-form" noValidate onSubmit={submitUpload}>
               <div className="client-upload-steps form-span">
                 <span>{t.uploadStepChoose}</span>
                 <span>{t.uploadStepReview}</span>
@@ -1021,7 +1021,7 @@ export function ClientRequestDetail({
 
       <section className="client-context-panel client-comments-panel" id="client-comments">
         <h2>{t.comments}</h2>
-        <form className="catalog-form" onSubmit={submit}>
+        <form className="catalog-form" noValidate onSubmit={submit}>
           <label className="form-span">
             {t.addCommentLabel}
             <textarea required value={body} onChange={(event) => setBody(event.target.value)} />

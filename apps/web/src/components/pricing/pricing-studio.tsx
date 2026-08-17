@@ -251,6 +251,7 @@ const pricingCopy = {
     employees: "الموظفون",
     newClient: "عميل جديد",
     savingClient: "جاري إنشاء العميل...",
+    clientRequiredFields: "أكمل الحقول المطلوبة: رمز العميل، اسم العميل، القطاع، والمعتمد.",
   },
   en: {
     ...copy.en,
@@ -268,6 +269,7 @@ const pricingCopy = {
     employees: "Employees",
     newClient: "New client",
     savingClient: "Creating client...",
+    clientRequiredFields: "Complete the required client fields.",
   },
 } as const;
 
@@ -528,11 +530,17 @@ export function PricingStudio({
   async function createClient(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearFeedback();
+    const form = new FormData(event.currentTarget);
+    const requiredKeys = ["code", "name", "sector", "authorizedApprover"];
+    if (requiredKeys.some((key) => !formText(form, key))) {
+      setError(t.clientRequiredFields);
+      return;
+    }
     setClientSubmitting(true);
     try {
       const created = await pricingRequest<PricingClient>("admin/clients", {
         method: "POST",
-        body: JSON.stringify(createClientPayload(new FormData(event.currentTarget))),
+        body: JSON.stringify(createClientPayload(form)),
       });
       setCatalog((current) => ({
         ...current,
@@ -826,6 +834,7 @@ export function PricingStudio({
             {showClientCreator && isAdmin ? (
               <form
                 className="catalog-form wide-form pricing-client-create-form"
+                noValidate
                 onSubmit={createClient}
               >
                 <div className="form-span">
@@ -834,11 +843,11 @@ export function PricingStudio({
                 </div>
                 <label>
                   {t.clientCode}
-                  <input name="code" required placeholder="CLIENT-001" />
+                  <input name="code" placeholder="CLIENT-001" />
                 </label>
                 <label>
                   {t.clientName}
-                  <input name="name" required />
+                  <input name="name" />
                 </label>
                 <label>
                   {t.legalName}
@@ -850,7 +859,7 @@ export function PricingStudio({
                 </label>
                 <label>
                   {t.sector}
-                  <input name="sector" required />
+                  <input name="sector" />
                 </label>
                 <label>
                   {t.city}
@@ -858,7 +867,7 @@ export function PricingStudio({
                 </label>
                 <label>
                   {t.approver}
-                  <input name="authorizedApprover" required />
+                  <input name="authorizedApprover" />
                 </label>
                 <label>
                   {t.billingContact}
@@ -872,6 +881,11 @@ export function PricingStudio({
                   {t.branches}
                   <input min="0" name="branchesCount" type="number" />
                 </label>
+                {error ? (
+                  <p className="quote-action-feedback error form-span" role="alert">
+                    {error}
+                  </p>
+                ) : null}
                 <div className="form-actions form-span">
                   <button
                     className="os-button os-button-secondary"
@@ -1331,7 +1345,7 @@ function QuoteCreationForm({
   }
 
   return (
-    <form className="quote-create-form" onSubmit={submit}>
+    <form className="quote-create-form" noValidate onSubmit={submit}>
       <div>
         <h3>{t.createImmutableQuote}</h3>
         <p>{t.termsSnapshot}</p>

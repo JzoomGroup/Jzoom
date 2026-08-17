@@ -56,6 +56,11 @@ export interface ProjectSummary {
   outputs: ProjectOutput[];
   activity: ProjectActivity[];
   serviceSnapshot: unknown;
+  capabilities: {
+    canDeliver: boolean;
+    canSupervise: boolean;
+    canClientDecide: boolean;
+  };
 }
 
 export interface ProjectPhase {
@@ -106,6 +111,20 @@ export interface ProjectOutput {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  decisionReason: string | null;
+  files: ProjectFile[];
+}
+
+export interface ProjectFile {
+  id: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  visibility: "INTERNAL" | "CLIENT_VISIBLE";
+  version: number;
+  downloadUrl: string | null;
+  createdAt: string;
+  uploadedBy: RequestUser | null;
 }
 
 export interface ProjectActivity {

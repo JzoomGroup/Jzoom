@@ -301,7 +301,7 @@ export function PricingRuleManager({
               </p>
             </div>
           </div>
-          <form className="catalog-form wide-form" onSubmit={submit}>
+          <form className="catalog-form wide-form" noValidate onSubmit={submit}>
             {creating && (
               <label>
                 {t.code}

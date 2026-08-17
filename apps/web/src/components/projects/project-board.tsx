@@ -9,6 +9,7 @@ import {
   createProjectOutput,
   projectErrorMessage,
   updateProjectTaskStatus,
+  uploadProjectOutputFile,
 } from "../../lib/project-client";
 import type {
   ProjectOutputStatus,
@@ -93,12 +94,29 @@ const fallbackPhaseNames: Record<string, Record<SupportedLocale, string>> = {
   DRAFTING: { ar: "إعداد المسودة", en: "Drafting" },
   REVIEW: { ar: "المراجعة", en: "Review" },
   DELIVERY: { ar: "التسليم", en: "Delivery" },
+  SITEMAP: { ar: "هيكلة المحتوى", en: "Sitemap" },
+  WIREFRAME: { ar: "المخططات الأولية", en: "Wireframe" },
+  DESIGN: { ar: "تصميم الواجهات", en: "Design" },
+  UI: { ar: "تصميم الواجهات", en: "UI design" },
+  CONTENT: { ar: "إعداد المحتوى", en: "Content" },
+  DEVELOPMENT: { ar: "التطوير", en: "Development" },
+  TESTING: { ar: "الاختبار وضمان الجودة", en: "Testing" },
+  LAUNCH: { ar: "الإطلاق", en: "Launch" },
+  "GO-LIVE": { ar: "الإطلاق", en: "Go-live" },
+  HANDOVER: { ar: "التسليم ونقل المعرفة", en: "Handover" },
 };
 
 const fallbackDeliverableNames: Record<string, Record<SupportedLocale, string>> = {
   VISION: { ar: "الرؤية", en: "Vision" },
   MISSION: { ar: "الرسالة", en: "Mission" },
   "VALUES-DOCUMENT": { ar: "وثيقة القيم", en: "Values document" },
+  SITEMAP: { ar: "خريطة الموقع", en: "Sitemap" },
+  WIREFRAMES: { ar: "المخططات الأولية", en: "Wireframes" },
+  DESIGN: { ar: "تصميم الواجهات", en: "Design" },
+  CONTENT: { ar: "المحتوى المعتمد", en: "Content" },
+  WEBSITE: { ar: "الموقع الإلكتروني", en: "Website" },
+  TESTING: { ar: "تقرير الاختبار", en: "Testing report" },
+  HANDOVER: { ar: "حزمة التسليم", en: "Handover package" },
 };
 
 const copy = {
@@ -150,6 +168,18 @@ const copy = {
     outputCode: "رمز اختياري",
     outputReference: "مخرج",
     outputs: "المخرجات",
+    outputFile: "ملف المخرج",
+    fileRequired: "اختر ملف المخرج قبل الحفظ.",
+    uploadFile: "رفع نسخة جديدة",
+    files: "الملفات",
+    downloadFile: "تنزيل الملف",
+    submitForReview: "إرسال للمراجعة",
+    approveInternally: "اعتماد داخلي",
+    returnToSpecialist: "إعادة للمختص",
+    reviewNote: "ملاحظة المراجعة",
+    returnReason: "سبب طلب التعديل",
+    returnReasonRequired: "اكتب سببًا واضحًا قبل طلب التعديل.",
+    fileSaved: "تم رفع الملف وربطه بالمخرج.",
     overview: "ملخص المشروع",
     phasePlan: "خطة المراحل",
     phaseReference: "مرحلة",
@@ -230,6 +260,18 @@ const copy = {
     outputCode: "Optional code",
     outputReference: "Output",
     outputs: "Outputs",
+    outputFile: "Output file",
+    fileRequired: "Choose the output file before saving.",
+    uploadFile: "Upload new version",
+    files: "Files",
+    downloadFile: "Download file",
+    submitForReview: "Send for review",
+    approveInternally: "Approve internally",
+    returnToSpecialist: "Return to specialist",
+    reviewNote: "Review note",
+    returnReason: "Revision reason",
+    returnReasonRequired: "Enter a clear reason before requesting a revision.",
+    fileSaved: "The file was uploaded and linked to the output.",
     overview: "Project overview",
     phasePlan: "Phase plan",
     phaseReference: "Phase",
@@ -285,8 +327,10 @@ function localizedPhaseName(
 ) {
   const fallback =
     fallbackPhaseNames[lookupKey(phase.code)] ?? fallbackPhaseNames[lookupKey(null, phase.nameEn)];
-  if (locale === "ar" && !phase.nameAr && fallback) {
-    return fallback.ar;
+  if (locale === "ar") {
+    if (fallback) return fallback.ar;
+    if (phase.nameAr && /[\u0600-\u06ff]/.test(phase.nameAr)) return phase.nameAr;
+    return "مرحلة المشروع";
   }
   return localizedName(phase, locale) || fallback?.[locale] || phase.code;
 }
@@ -298,8 +342,12 @@ function localizedDeliverableName(
   const fallback =
     fallbackDeliverableNames[lookupKey(deliverable.code)] ??
     fallbackDeliverableNames[lookupKey(null, deliverable.nameEn)];
-  if (locale === "ar" && !deliverable.nameAr && fallback) {
-    return fallback.ar;
+  if (locale === "ar") {
+    if (fallback) return fallback.ar;
+    if (deliverable.nameAr && /[\u0600-\u06ff]/.test(deliverable.nameAr)) {
+      return deliverable.nameAr;
+    }
+    return "مخرج المشروع";
   }
   return localizedName(deliverable, locale) || fallback?.[locale] || deliverable.code;
 }
@@ -322,6 +370,9 @@ function activityReason(
     if (/project created from accepted one-time quote item/i.test(reason)) {
       return createdFromQuote;
     }
+    if (locale === "ar" && !/[\u0600-\u06ff]/.test(reason)) {
+      return "تم تحديث المشروع وتسجيل الإجراء في سجل النشاط.";
+    }
     return reason;
   }
   const normalizedRole = event.actorRole.replace(/-/g, "_");
@@ -333,6 +384,21 @@ function activityReason(
     ROLE_SUPERVISOR: { ar: "المشرف", en: "Supervisor" },
   };
   return actorLabels[normalizedRole]?.[locale] ?? event.actorRole;
+}
+
+function localizedProjectDescription(
+  service: { description: string; nameAr: string; nameEn: string },
+  locale: SupportedLocale,
+) {
+  if (locale === "en") return service.description;
+  if (/[\u0600-\u06ff]/.test(service.description)) return service.description;
+  return `تنفيذ خدمة ${service.nameAr || service.nameEn} ومتابعة مراحلها ومخرجاتها حتى الاعتماد.`;
+}
+
+function localizedOptionalDescription(value: string | null, locale: SupportedLocale) {
+  if (!value) return null;
+  if (locale === "en" || /[\u0600-\u06ff]/.test(value)) return value;
+  return null;
 }
 
 function formatDate(value: string | null, locale: SupportedLocale, fallback: string) {
@@ -480,6 +546,9 @@ export function ProjectDetail({
   const [outputTitle, setOutputTitle] = useState("");
   const [outputCode, setOutputCode] = useState("");
   const [outputDescription, setOutputDescription] = useState("");
+  const [outputFile, setOutputFile] = useState<File | null>(null);
+  const [outputFiles, setOutputFiles] = useState<Record<string, File | null>>({});
+  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const visibleOutputs = useMemo(
     () =>
       clientMode
@@ -542,17 +611,70 @@ export function ProjectDetail({
       setError(t.titleRequired);
       return;
     }
-    const saved = await runAction("output", () =>
-      createProjectOutput(project.id, {
+    if (!outputFile) {
+      setError(t.fileRequired);
+      return;
+    }
+    setSaving("output");
+    setError(null);
+    setNotice(null);
+    try {
+      const existingIds = new Set(project.outputs.map((output) => output.id));
+      const created = await createProjectOutput(project.id, {
         title: outputTitle,
         ...(outputCode.trim() ? { code: outputCode.trim() } : {}),
         ...(outputDescription.trim() ? { description: outputDescription.trim() } : {}),
-      }),
-    );
-    if (saved) {
+      });
+      setProject(created);
+      const createdOutput = created.outputs.find((output) => !existingIds.has(output.id));
+      if (!createdOutput) {
+        throw new Error(t.fileRequired);
+      }
+      setProject(await uploadProjectOutputFile(project.id, createdOutput.id, outputFile));
+      setNotice(t.fileSaved);
       setOutputTitle("");
       setOutputCode("");
       setOutputDescription("");
+      setOutputFile(null);
+    } catch (actionError) {
+      setError(projectErrorMessage(actionError));
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function uploadExistingOutput(outputId: string) {
+    const file = outputFiles[outputId];
+    if (!file) {
+      setError(t.fileRequired);
+      return;
+    }
+    const saved = await runAction(`${outputId}-file`, () =>
+      uploadProjectOutputFile(project.id, outputId, file),
+    );
+    if (saved) {
+      setOutputFiles((current) => ({ ...current, [outputId]: null }));
+    }
+  }
+
+  function noteFor(outputId: string) {
+    return reviewNotes[outputId]?.trim() ?? "";
+  }
+
+  async function returnOutput(outputId: string, target: "DRAFT" | "RETURNED_BY_CLIENT") {
+    const reason = noteFor(outputId);
+    if (!reason) {
+      setError(t.returnReasonRequired);
+      return;
+    }
+    const key = `${outputId}-return`;
+    const action =
+      target === "DRAFT"
+        ? () => changeProjectOutputStatus(project.id, outputId, target, reason)
+        : () => changeClientProjectOutputStatus(project.id, outputId, target, reason);
+    const saved = await runAction(key, action);
+    if (saved) {
+      setReviewNotes((current) => ({ ...current, [outputId]: "" }));
     }
   }
 
@@ -643,7 +765,7 @@ export function ProjectDetail({
         <MetricCard accent label={t.due} value={formatDate(project.dueAt, locale, t.notSet)} />
       </section>
 
-      {!clientMode ? (
+      {project.capabilities.canSupervise ? (
         <section className="project-room-actions row-actions" aria-label={t.internalControls}>
           <button
             className="os-button os-button-secondary"
@@ -692,7 +814,7 @@ export function ProjectDetail({
           </div>
           <div>
             <dt>{t.description}</dt>
-            <dd>{project.service.description}</dd>
+            <dd>{localizedProjectDescription(project.service, locale)}</dd>
           </div>
         </dl>
       </SectionCard>
@@ -718,7 +840,9 @@ export function ProjectDetail({
                       {t.phaseReference} {phase.sortOrder + 1}
                     </small>
                     <h3>{localizedPhaseName(phase, locale)}</h3>
-                    {phase.description ? <p>{phase.description}</p> : null}
+                    {localizedOptionalDescription(phase.description, locale) ? (
+                      <p>{localizedOptionalDescription(phase.description, locale)}</p>
+                    ) : null}
                     <ul>
                       {phaseDeliverables.map((deliverable) => (
                         <li key={deliverable.id}>
@@ -749,7 +873,7 @@ export function ProjectDetail({
                   <StatusChip status={task.status} label={taskStatusLabel(task.status, locale)} />
                 </div>
                 {task.description ? <p>{task.description}</p> : null}
-                {!clientMode ? (
+                {project.capabilities.canDeliver ? (
                   <div className="row-actions">
                     <button
                       className="os-button os-button-secondary"
@@ -788,16 +912,22 @@ export function ProjectDetail({
         eyebrow={t.deliverables}
         description={clientMode ? t.outputDecisionHint : t.noOutputsDescription}
       >
-        {!clientMode ? (
-          <form className="operating-user-form" onSubmit={submitOutput}>
+        {!clientMode && project.capabilities.canDeliver ? (
+          <form className="operating-user-form" noValidate onSubmit={submitOutput}>
             <div className="operating-user-grid">
               <label>
                 <span>{t.name}</span>
                 <input
-                  required
                   placeholder={t.name}
                   value={outputTitle}
                   onChange={(event) => setOutputTitle(event.target.value)}
+                />
+              </label>
+              <label>
+                <span>{t.outputFile}</span>
+                <input
+                  type="file"
+                  onChange={(event) => setOutputFile(event.target.files?.[0] ?? null)}
                 />
               </label>
               <label>
@@ -849,6 +979,11 @@ export function ProjectDetail({
                   />
                 </div>
                 {output.description ? <p>{output.description}</p> : null}
+                {output.decisionReason ? (
+                  <p className="project-output-callout">
+                    {t.reviewNote}: {output.decisionReason}
+                  </p>
+                ) : null}
                 <dl className="entity-meta project-output-meta">
                   <div>
                     <dt>{t.outputRevision}</dt>
@@ -867,10 +1002,27 @@ export function ProjectDetail({
                     <dd>{formatDate(output.updatedAt, locale, t.notSet)}</dd>
                   </div>
                 </dl>
+                {output.files.length > 0 ? (
+                  <div className="project-output-files" aria-label={t.files}>
+                    {output.files.map((file) => (
+                      <div key={file.id}>
+                        <span>{file.originalName}</span>
+                        <small>
+                          {t.outputRevision} {file.version}
+                        </small>
+                        {file.downloadUrl ? (
+                          <a className="os-button os-button-secondary" href={file.downloadUrl}>
+                            {t.downloadFile}
+                          </a>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
                 {clientMode && output.status === "SHARED_WITH_CLIENT" ? (
                   <p className="project-output-callout">{t.outputDecisionHint}</p>
                 ) : null}
-                {!clientMode && shareableOutputStatuses.has(output.status) ? (
+                {project.capabilities.canDeliver && output.status === "DRAFT" ? (
                   <div className="row-actions">
                     <button
                       className="os-button os-button-secondary"
@@ -878,47 +1030,138 @@ export function ProjectDetail({
                       disabled={saving === output.id}
                       onClick={() =>
                         runAction(output.id, () =>
-                          changeProjectOutputStatus(project.id, output.id, "SHARED_WITH_CLIENT"),
+                          changeProjectOutputStatus(project.id, output.id, "INTERNAL_REVIEW"),
                         )
                       }
                     >
-                      {buttonLabel(output.id, t.shareOutput)}
+                      {buttonLabel(output.id, t.submitForReview)}
                     </button>
                   </div>
-                ) : output.status === "SHARED_WITH_CLIENT" ? (
+                ) : null}
+                {project.capabilities.canDeliver &&
+                ["DRAFT", "RETURNED_BY_CLIENT"].includes(output.status) ? (
+                  <div className="project-output-upload">
+                    <label>
+                      <span>{t.outputFile}</span>
+                      <input
+                        type="file"
+                        onChange={(event) =>
+                          setOutputFiles((current) => ({
+                            ...current,
+                            [output.id]: event.target.files?.[0] ?? null,
+                          }))
+                        }
+                      />
+                    </label>
+                    <button
+                      className="os-button os-button-secondary"
+                      type="button"
+                      disabled={saving === `${output.id}-file`}
+                      onClick={() => uploadExistingOutput(output.id)}
+                    >
+                      {buttonLabel(`${output.id}-file`, t.uploadFile)}
+                    </button>
+                  </div>
+                ) : null}
+                {project.capabilities.canSupervise && output.status === "INTERNAL_REVIEW" ? (
+                  <div className="project-review-controls">
+                    <label>
+                      <span>{t.reviewNote}</span>
+                      <textarea
+                        value={reviewNotes[output.id] ?? ""}
+                        onChange={(event) =>
+                          setReviewNotes((current) => ({
+                            ...current,
+                            [output.id]: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                    <div className="row-actions">
+                      <button
+                        className="os-button os-button-primary"
+                        type="button"
+                        disabled={saving === `${output.id}-approve`}
+                        onClick={() =>
+                          runAction(`${output.id}-approve`, () =>
+                            changeProjectOutputStatus(
+                              project.id,
+                              output.id,
+                              "APPROVED_INTERNAL",
+                              noteFor(output.id),
+                            ),
+                          )
+                        }
+                      >
+                        {buttonLabel(`${output.id}-approve`, t.approveInternally)}
+                      </button>
+                      <button
+                        className="os-button os-button-secondary"
+                        type="button"
+                        disabled={saving === `${output.id}-return`}
+                        onClick={() => returnOutput(output.id, "DRAFT")}
+                      >
+                        {buttonLabel(`${output.id}-return`, t.returnToSpecialist)}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                {project.capabilities.canSupervise && output.status === "APPROVED_INTERNAL" ? (
                   <div className="row-actions">
                     <button
                       className="os-button os-button-primary"
                       type="button"
-                      disabled={saving === `${output.id}-accept`}
+                      disabled={saving === `${output.id}-share`}
                       onClick={() =>
-                        runAction(`${output.id}-accept`, () =>
-                          changeClientProjectOutputStatus(
-                            project.id,
-                            output.id,
-                            "ACCEPTED_BY_CLIENT",
-                          ),
+                        runAction(`${output.id}-share`, () =>
+                          changeProjectOutputStatus(project.id, output.id, "SHARED_WITH_CLIENT"),
                         )
                       }
                     >
-                      {buttonLabel(`${output.id}-accept`, t.acceptOutput)}
+                      {buttonLabel(`${output.id}-share`, t.shareOutput)}
                     </button>
-                    <button
-                      className="os-button os-button-secondary"
-                      type="button"
-                      disabled={saving === `${output.id}-return`}
-                      onClick={() =>
-                        runAction(`${output.id}-return`, () =>
-                          changeClientProjectOutputStatus(
-                            project.id,
-                            output.id,
-                            "RETURNED_BY_CLIENT",
-                          ),
-                        )
-                      }
-                    >
-                      {buttonLabel(`${output.id}-return`, t.returnOutput)}
-                    </button>
+                  </div>
+                ) : null}
+                {clientMode && output.status === "SHARED_WITH_CLIENT" ? (
+                  <div className="project-review-controls">
+                    <label>
+                      <span>{t.returnReason}</span>
+                      <textarea
+                        value={reviewNotes[output.id] ?? ""}
+                        onChange={(event) =>
+                          setReviewNotes((current) => ({
+                            ...current,
+                            [output.id]: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                    <div className="row-actions">
+                      <button
+                        className="os-button os-button-primary"
+                        type="button"
+                        disabled={saving === `${output.id}-accept`}
+                        onClick={() =>
+                          runAction(`${output.id}-accept`, () =>
+                            changeClientProjectOutputStatus(
+                              project.id,
+                              output.id,
+                              "ACCEPTED_BY_CLIENT",
+                            ),
+                          )
+                        }
+                      >
+                        {buttonLabel(`${output.id}-accept`, t.acceptOutput)}
+                      </button>
+                      <button
+                        className="os-button os-button-secondary"
+                        type="button"
+                        disabled={saving === `${output.id}-return`}
+                        onClick={() => returnOutput(output.id, "RETURNED_BY_CLIENT")}
+                      >
+                        {buttonLabel(`${output.id}-return`, t.returnOutput)}
+                      </button>
+                    </div>
                   </div>
                 ) : null}
               </article>

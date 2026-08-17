@@ -262,7 +262,9 @@ describe("AdminDashboard", () => {
     expect(screen.getAllByText("7.50h")).toHaveLength(3);
     expect(screen.getAllByText("Waiting on client").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("heading", { name: "Client health watchlist" })).toBeInTheDocument();
-    expect(screen.getByText("Overdue work exists.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Overdue work or returned outputs require urgent follow-up."),
+    ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Client management/ })).toHaveAttribute(
       "href",
       "/admin/clients",

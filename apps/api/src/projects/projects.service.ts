@@ -1,9 +1,18 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import type { ReadStream } from "node:fs";
 import type { Prisma } from "@jzoom/database";
 import { ADMIN_ROLE_CODE, MANAGEMENT_ROLE_CODE } from "../auth/auth.constants.js";
 import { AuthAuditService } from "../auth/audit.service.js";
 import type { AuthenticatedPrincipal, RequestMetadata } from "../auth/auth.types.js";
 import { DatabaseService } from "../database/database.service.js";
+import { FileStorageService, type UploadedRequestFile } from "../requests/file-storage.service.js";
 import type {
   ClientProjectOutputDecisionDto,
   CreateProjectOutputDto,
@@ -87,7 +96,25 @@ const projectInclude = {
       },
     },
   },
-  outputs: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
+  outputs: {
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    include: {
+      files: {
+        where: { archivedAt: null },
+        orderBy: { createdAt: "asc" },
+        include: {
+          uploadedBy: {
+            select: {
+              id: true,
+              email: true,
+              displayName: true,
+              roles: { select: { role: { select: { code: true, nameAr: true, nameEn: true } } } },
+            },
+          },
+        },
+      },
+    },
+  },
   workflowEvents: {
     orderBy: { occurredAt: "desc" },
     take: 20,
@@ -116,6 +143,7 @@ export class ProjectsService {
   constructor(
     @Inject(DatabaseService) private readonly database: DatabaseService,
     @Inject(AuthAuditService) private readonly audit: AuthAuditService,
+    @Inject(FileStorageService) private readonly fileStorage: FileStorageService,
   ) {}
 
   async list(principal: AuthenticatedPrincipal) {
@@ -125,7 +153,7 @@ export class ProjectsService {
       orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }],
       include: projectInclude,
     });
-    return projects.map((project) => this.projectView(project, false));
+    return projects.map((project) => this.projectView(project, false, principal));
   }
 
   async listClientProjects(principal: AuthenticatedPrincipal) {
@@ -143,7 +171,7 @@ export class ProjectsService {
 
   async get(id: string, principal: AuthenticatedPrincipal) {
     const project = await this.requireAccessibleProject(id, principal);
-    return this.projectView(project, false);
+    return this.projectView(project, false, principal);
   }
 
   async getClientProject(id: string, principal: AuthenticatedPrincipal, metadata: RequestMetadata) {
@@ -182,6 +210,7 @@ export class ProjectsService {
     metadata: RequestMetadata,
   ) {
     const project = await this.requireAccessibleProject(id, principal);
+    await this.assertCanSuperviseProject(project, principal);
     const workflow = await this.ensureProjectWorkflow();
     const now = new Date();
     const updated = await this.database.prisma.project.update({
@@ -203,7 +232,9 @@ export class ProjectsService {
         toStateId: workflow.states[input.status],
         actorId: principal.userId,
         actorRole: this.primaryRole(principal),
-        reason: input.reason ?? "Project status changed",
+        reason:
+          input.reason?.trim() ??
+          `تم تحديث حالة المشروع إلى ${projectStatusLabels[input.status].ar}`,
         metadata: json({ fromStatus: project.status, toStatus: input.status }),
       },
     });
@@ -220,7 +251,7 @@ export class ProjectsService {
       },
       metadata,
     );
-    return this.projectView(updated, false);
+    return this.projectView(updated, false, principal);
   }
 
   async updateTask(
@@ -230,7 +261,8 @@ export class ProjectsService {
     principal: AuthenticatedPrincipal,
     metadata: RequestMetadata,
   ) {
-    await this.requireAccessibleProject(id, principal);
+    const project = await this.requireAccessibleProject(id, principal);
+    this.assertCanDeliverProject(project, principal);
     const task = await this.database.prisma.task.findFirst({
       where: { id: taskId, projectId: id },
     });
@@ -267,6 +299,7 @@ export class ProjectsService {
     metadata: RequestMetadata,
   ) {
     const project = await this.requireAccessibleProject(id, principal);
+    this.assertCanDeliverProject(project, principal);
     const code = input.code?.trim() || `OUT-${String(project.outputs.length + 1).padStart(2, "0")}`;
     const output = await this.database.prisma.projectOutput.create({
       data: {
@@ -299,14 +332,44 @@ export class ProjectsService {
     principal: AuthenticatedPrincipal,
     metadata: RequestMetadata,
   ) {
-    await this.requireAccessibleProject(id, principal);
+    const project = await this.requireAccessibleProject(id, principal);
     const output = await this.database.prisma.projectOutput.findFirst({
       where: { id: outputId, projectId: id },
+      include: { files: { where: { archivedAt: null } } },
     });
     if (!output) {
       throw new NotFoundException({
         code: "PROJECT_OUTPUT_NOT_FOUND",
         message: "The project output could not be found",
+      });
+    }
+    const transition = `${output.status}->${input.status}`;
+    const specialistTransitions = new Set(["DRAFT->INTERNAL_REVIEW"]);
+    const supervisorTransitions = new Set([
+      "INTERNAL_REVIEW->APPROVED_INTERNAL",
+      "INTERNAL_REVIEW->DRAFT",
+      "APPROVED_INTERNAL->SHARED_WITH_CLIENT",
+    ]);
+    if (specialistTransitions.has(transition)) {
+      this.assertCanDeliverProject(project, principal);
+      if (output.files.length === 0) {
+        throw new ConflictException({
+          code: "PROJECT_OUTPUT_FILE_REQUIRED",
+          message: "Attach at least one file before sending the output for review",
+        });
+      }
+    } else if (supervisorTransitions.has(transition)) {
+      await this.assertCanSuperviseProject(project, principal);
+      if (input.status === "DRAFT" && !input.reason?.trim()) {
+        throw new BadRequestException({
+          code: "PROJECT_OUTPUT_REVIEW_REASON_REQUIRED",
+          message: "A review note is required when returning an output",
+        });
+      }
+    } else {
+      throw new ConflictException({
+        code: "PROJECT_OUTPUT_TRANSITION_NOT_ALLOWED",
+        message: `Project output cannot move from ${output.status} to ${input.status}`,
       });
     }
     const now = new Date();
@@ -319,6 +382,22 @@ export class ProjectsService {
         ...(input.status === "CLOSED" ? { lockedAt: now } : {}),
       },
     });
+    await this.recordOutputWorkflowEvent(
+      project,
+      outputId,
+      output.status,
+      input.status,
+      input.reason?.trim() || this.outputTransitionReason(input.status),
+      principal,
+    );
+    if (input.status === "SHARED_WITH_CLIENT") {
+      await this.updateProjectLifecycle(
+        project,
+        "CLIENT_REVIEW",
+        "تم إرسال مخرج للعميل",
+        principal,
+      );
+    }
     await this.audit.record(
       {
         actorId: principal.userId,
@@ -333,6 +412,125 @@ export class ProjectsService {
       metadata,
     );
     return this.get(id, principal);
+  }
+
+  async uploadOutputFile(
+    id: string,
+    outputId: string,
+    file: UploadedRequestFile | undefined,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const project = await this.requireAccessibleProject(id, principal);
+    this.assertCanDeliverProject(project, principal);
+    const output = project.outputs.find((entry) => entry.id === outputId);
+    if (!output) {
+      throw new NotFoundException({
+        code: "PROJECT_OUTPUT_NOT_FOUND",
+        message: "The project output could not be found",
+      });
+    }
+    if (!["DRAFT", "RETURNED_BY_CLIENT"].includes(output.status)) {
+      throw new ConflictException({
+        code: "PROJECT_OUTPUT_FILE_LOCKED",
+        message: "Files can only be added while the output is a draft or returned for revision",
+      });
+    }
+    if (!file) {
+      throw new BadRequestException({ code: "FILE_REQUIRED", message: "A file is required" });
+    }
+    const stored = await this.fileStorage.storeProjectFile(id, "outputs", file);
+    const existingFiles = output.files.filter((entry) => !entry.archivedAt);
+    const savedFile = await this.database.prisma.$transaction(async (transaction) => {
+      const saved = await transaction.fileMetadata.create({
+        data: {
+          projectId: id,
+          outputId,
+          uploadedById: principal.userId,
+          storageProvider: stored.storageProvider,
+          storageKey: stored.storageKey,
+          originalName: stored.originalName,
+          mimeType: stored.mimeType,
+          sizeBytes: BigInt(stored.sizeBytes),
+          sha256: stored.sha256,
+          visibility: "CLIENT_VISIBLE",
+          version: existingFiles.length + 1,
+        },
+      });
+      if (output.status === "RETURNED_BY_CLIENT") {
+        await transaction.projectOutput.update({
+          where: { id: outputId },
+          data: {
+            status: "DRAFT",
+            revision: { increment: 1 },
+            sharedAt: null,
+            approvedAt: null,
+            lockedAt: null,
+          },
+        });
+      }
+      return saved;
+    });
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: PROJECT_EVENT.outputFileUploaded,
+        entityType: "FileMetadata",
+        entityId: savedFile.id,
+        after: {
+          projectId: id,
+          outputId,
+          originalName: savedFile.originalName,
+          sizeBytes: stored.sizeBytes,
+        },
+        severity: "MEDIUM",
+      },
+      metadata,
+    );
+    return this.get(id, principal);
+  }
+
+  async downloadFile(
+    id: string,
+    fileId: string,
+    principal: AuthenticatedPrincipal,
+    clientSafe: boolean,
+  ): Promise<{ originalName: string; mimeType: string; stream: ReadStream }> {
+    if (clientSafe) {
+      await this.getClientProject(id, principal, {});
+    } else {
+      await this.requireAccessibleProject(id, principal);
+    }
+    const file = await this.database.prisma.fileMetadata.findFirst({
+      where: {
+        id: fileId,
+        projectId: id,
+        archivedAt: null,
+        ...(clientSafe
+          ? {
+              visibility: "CLIENT_VISIBLE" as const,
+              output: { status: { in: [...PROJECT_CLIENT_VISIBLE_OUTPUT_STATUSES] } },
+            }
+          : {}),
+      },
+    });
+    if (!file) {
+      throw new NotFoundException({
+        code: "FILE_NOT_FOUND",
+        message: "The file could not be found",
+      });
+    }
+    if (file.storageProvider !== "local") {
+      throw new NotFoundException({
+        code: "FILE_CONTENT_UNAVAILABLE",
+        message: "This file does not have downloadable stored content",
+      });
+    }
+    return {
+      originalName: file.originalName,
+      mimeType: file.mimeType,
+      stream: await this.fileStorage.readableFile(file.storageKey),
+    };
   }
 
   async changeClientOutputStatus(
@@ -358,15 +556,16 @@ export class ProjectsService {
       });
     }
     const output = project.outputs.find((entry) => entry.id === outputId);
-    if (
-      !output ||
-      !PROJECT_CLIENT_VISIBLE_OUTPUT_STATUSES.includes(
-        output.status as (typeof PROJECT_CLIENT_VISIBLE_OUTPUT_STATUSES)[number],
-      )
-    ) {
+    if (!output || output.status !== "SHARED_WITH_CLIENT") {
       throw new NotFoundException({
         code: "PROJECT_OUTPUT_NOT_FOUND",
         message: "The project output could not be found",
+      });
+    }
+    if (input.status === "RETURNED_BY_CLIENT" && !input.reason?.trim()) {
+      throw new BadRequestException({
+        code: "PROJECT_OUTPUT_RETURN_REASON_REQUIRED",
+        message: "A reason is required when requesting a revision",
       });
     }
     const now = new Date();
@@ -377,6 +576,14 @@ export class ProjectsService {
         ...(input.status === "ACCEPTED_BY_CLIENT" ? { approvedAt: now } : {}),
       },
     });
+    await this.recordOutputWorkflowEvent(
+      project,
+      outputId,
+      output.status,
+      input.status,
+      input.reason?.trim() || this.outputTransitionReason(input.status),
+      principal,
+    );
     await this.audit.record(
       {
         actorId: principal.userId,
@@ -389,6 +596,22 @@ export class ProjectsService {
         severity: "MEDIUM",
       },
       metadata,
+    );
+    const statusesAfterDecision = project.outputs.map((entry) =>
+      entry.id === outputId ? input.status : entry.status,
+    );
+    const allAccepted =
+      statusesAfterDecision.length > 0 &&
+      statusesAfterDecision.every((status) => ["ACCEPTED_BY_CLIENT", "CLOSED"].includes(status));
+    await this.updateProjectLifecycle(
+      project,
+      input.status === "RETURNED_BY_CLIENT"
+        ? "ACTIVE"
+        : allAccepted
+          ? "COMPLETED"
+          : "CLIENT_REVIEW",
+      input.reason?.trim() || this.outputTransitionReason(input.status),
+      principal,
     );
     const refreshed = await this.database.prisma.project.findUniqueOrThrow({
       where: { id },
@@ -478,7 +701,7 @@ export class ProjectsService {
           projectId: project.id,
           toStateId: workflow.states.ACTIVE,
           actorRole: "SYSTEM",
-          reason: "Project created from accepted one-time quote item",
+          reason: "تم إنشاء المشروع من خدمة المرة الواحدة المعتمدة",
           metadata: json({
             quoteId: quote.id,
             quoteNumber: quote.quoteNumber,
@@ -521,6 +744,7 @@ export class ProjectsService {
     const scopes = await this.database.prisma.specialistServiceScope.findMany({
       where: {
         userId: principal.userId,
+        clientId: { not: null },
         status: "ACTIVE",
         oneTimeServiceId: { not: null },
         startsAt: { lte: new Date() },
@@ -534,6 +758,54 @@ export class ProjectsService {
         ...(scope.clientId ? { clientId: scope.clientId } : {}),
         oneTimeServiceRevision: { oneTimeServiceId: scope.oneTimeServiceId },
       });
+    }
+    if (principal.roles.includes("ROLE-SUPERVISOR")) {
+      const now = new Date();
+      const assignments = await this.database.prisma.supervisorSpecialistAssignment.findMany({
+        where: {
+          supervisorId: principal.userId,
+          status: "ACTIVE",
+          startsAt: { lte: now },
+          OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+        },
+        select: { specialistId: true, clientId: true },
+      });
+      for (const assignment of assignments) {
+        access.push({
+          ...(assignment.clientId ? { clientId: assignment.clientId } : {}),
+          tasks: { some: { assigneeId: assignment.specialistId } },
+        });
+      }
+      const supervisedIds = [...new Set(assignments.map((assignment) => assignment.specialistId))];
+      if (supervisedIds.length > 0) {
+        const supervisedScopes = await this.database.prisma.specialistServiceScope.findMany({
+          where: {
+            userId: { in: supervisedIds },
+            clientId: { not: null },
+            status: "ACTIVE",
+            oneTimeServiceId: { not: null },
+            startsAt: { lte: now },
+            OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+          },
+          select: { userId: true, clientId: true, oneTimeServiceId: true },
+        });
+        for (const scope of supervisedScopes) {
+          if (!scope.oneTimeServiceId) continue;
+          const assignmentsForSpecialist = assignments.filter(
+            (assignment) => assignment.specialistId === scope.userId,
+          );
+          for (const assignment of assignmentsForSpecialist) {
+            const clientId = assignment.clientId ?? scope.clientId;
+            if (assignment.clientId && scope.clientId && assignment.clientId !== scope.clientId) {
+              continue;
+            }
+            access.push({
+              ...(clientId ? { clientId } : {}),
+              oneTimeServiceRevision: { oneTimeServiceId: scope.oneTimeServiceId },
+            });
+          }
+        }
+      }
     }
     return {
       archivedAt: null,
@@ -550,9 +822,148 @@ export class ProjectsService {
     );
   }
 
+  private assertCanDeliverProject(
+    _project: Prisma.ProjectGetPayload<{ include: typeof projectInclude }>,
+    principal: AuthenticatedPrincipal,
+  ): void {
+    if (
+      principal.roles.includes(ADMIN_ROLE_CODE) ||
+      principal.roles.some((role) => PROJECT_SPECIALIST_ROLE_CODES.includes(role as never))
+    ) {
+      return;
+    }
+    throw new ForbiddenException({
+      code: "PROJECT_DELIVERY_ROLE_REQUIRED",
+      message: "This action requires an assigned project specialist",
+    });
+  }
+
+  private async assertCanSuperviseProject(
+    project: Prisma.ProjectGetPayload<{ include: typeof projectInclude }>,
+    principal: AuthenticatedPrincipal,
+  ): Promise<void> {
+    if (principal.roles.includes(ADMIN_ROLE_CODE)) {
+      return;
+    }
+    if (!principal.roles.includes("ROLE-SUPERVISOR")) {
+      throw new ForbiddenException({
+        code: "PROJECT_SUPERVISOR_REQUIRED",
+        message: "This action requires project supervisor access",
+      });
+    }
+    const taskSpecialistIds = project.tasks.flatMap((task) =>
+      task.assigneeId ? [task.assigneeId] : [],
+    );
+    const scopedSpecialists = await this.database.prisma.specialistServiceScope.findMany({
+      where: {
+        clientId: project.clientId,
+        oneTimeServiceId: project.oneTimeServiceRevision.oneTimeService.id,
+        status: "ACTIVE",
+        startsAt: { lte: new Date() },
+        OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }],
+      },
+      select: { userId: true },
+    });
+    const specialistIds = [
+      ...new Set([...taskSpecialistIds, ...scopedSpecialists.map((scope) => scope.userId)]),
+    ];
+    if (specialistIds.length > 0) {
+      const now = new Date();
+      const assignment = await this.database.prisma.supervisorSpecialistAssignment.findFirst({
+        where: {
+          supervisorId: principal.userId,
+          specialistId: { in: specialistIds },
+          status: "ACTIVE",
+          startsAt: { lte: now },
+          AND: [
+            { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+            { OR: [{ clientId: project.clientId }, { clientId: null }] },
+          ],
+        },
+        select: { id: true },
+      });
+      if (assignment) return;
+    }
+    throw new ForbiddenException({
+      code: "PROJECT_SUPERVISOR_SCOPE_REQUIRED",
+      message: "The project is outside this supervisor's assigned team",
+    });
+  }
+
+  private outputTransitionReason(status: string): string {
+    const reasons: Record<string, string> = {
+      INTERNAL_REVIEW: "أُرسل المخرج للمراجعة الداخلية",
+      APPROVED_INTERNAL: "اعتمد المشرف المخرج داخليًا",
+      DRAFT: "أعاد المشرف المخرج للمختص",
+      SHARED_WITH_CLIENT: "تمت مشاركة المخرج مع العميل",
+      ACCEPTED_BY_CLIENT: "اعتمد العميل المخرج",
+      RETURNED_BY_CLIENT: "أعاد العميل المخرج للتعديل",
+    };
+    return reasons[status] ?? "تم تحديث حالة المخرج";
+  }
+
+  private async recordOutputWorkflowEvent(
+    project: Prisma.ProjectGetPayload<{ include: typeof projectInclude }>,
+    outputId: string,
+    fromStatus: string,
+    toStatus: string,
+    reason: string,
+    principal: AuthenticatedPrincipal,
+  ): Promise<void> {
+    await this.database.prisma.workflowEvent.create({
+      data: {
+        workflowVersionId: project.workflowVersionId,
+        projectId: project.id,
+        fromStateId: project.currentStateId,
+        toStateId: project.currentStateId,
+        actorId: principal.userId,
+        actorRole: this.primaryRole(principal),
+        reason,
+        metadata: json({
+          eventCode: PROJECT_EVENT.outputStatusChanged,
+          outputId,
+          fromStatus,
+          toStatus,
+        }),
+      },
+    });
+  }
+
+  private async updateProjectLifecycle(
+    project: Prisma.ProjectGetPayload<{ include: typeof projectInclude }>,
+    status: ProjectLifecycleStatus,
+    reason: string,
+    principal: AuthenticatedPrincipal,
+  ): Promise<void> {
+    if (project.status === status) return;
+    const workflow = await this.ensureProjectWorkflow();
+    const now = new Date();
+    await this.database.prisma.project.update({
+      where: { id: project.id },
+      data: {
+        status,
+        currentStateId: workflow.states[status],
+        ...(status === "COMPLETED" ? { completedAt: now } : { completedAt: null }),
+      },
+    });
+    await this.database.prisma.workflowEvent.create({
+      data: {
+        workflowVersionId: workflow.versionId,
+        projectId: project.id,
+        fromStateId: project.currentStateId,
+        toStateId: workflow.states[status],
+        actorId: principal.userId,
+        actorRole: this.primaryRole(principal),
+        reason,
+        metadata: json({ fromStatus: project.status, toStatus: status }),
+      },
+    });
+  }
+
   private projectView(
     project: Prisma.ProjectGetPayload<{ include: typeof projectInclude }>,
     clientSafe: boolean,
+    principal?: AuthenticatedPrincipal,
   ) {
     const tasks = project.tasks.map((task) => ({
       id: task.id,
@@ -571,6 +982,16 @@ export class ProjectsService {
           }
         : null,
     }));
+    const latestOutputEvents = new Map<string, { reason: string | null; occurredAt: Date }>();
+    for (const event of project.workflowEvents) {
+      if (!event.metadata || typeof event.metadata !== "object" || Array.isArray(event.metadata)) {
+        continue;
+      }
+      const outputId = (event.metadata as Record<string, unknown>).outputId;
+      if (typeof outputId === "string" && !latestOutputEvents.has(outputId)) {
+        latestOutputEvents.set(outputId, { reason: event.reason, occurredAt: event.occurredAt });
+      }
+    }
     const outputs = project.outputs
       .filter(
         (output) =>
@@ -593,6 +1014,35 @@ export class ProjectsService {
         sortOrder: output.sortOrder,
         createdAt: output.createdAt.toISOString(),
         updatedAt: output.updatedAt.toISOString(),
+        decisionReason: latestOutputEvents.get(output.id)?.reason ?? null,
+        files: output.files
+          .filter(
+            (file) =>
+              !clientSafe ||
+              (file.visibility === "CLIENT_VISIBLE" &&
+                PROJECT_CLIENT_VISIBLE_OUTPUT_STATUSES.includes(
+                  output.status as (typeof PROJECT_CLIENT_VISIBLE_OUTPUT_STATUSES)[number],
+                )),
+          )
+          .map((file) => ({
+            id: file.id,
+            originalName: file.originalName,
+            mimeType: file.mimeType,
+            sizeBytes: Number(file.sizeBytes),
+            visibility: file.visibility,
+            version: file.version,
+            downloadUrl:
+              file.storageProvider === "local"
+                ? this.projectFileDownloadUrl(project.id, file.id, clientSafe)
+                : null,
+            createdAt: file.createdAt.toISOString(),
+            uploadedBy: {
+              id: file.uploadedBy.id,
+              email: file.uploadedBy.email,
+              displayName: file.uploadedBy.displayName,
+              roles: file.uploadedBy.roles,
+            },
+          })),
       }));
     return {
       id: project.id,
@@ -667,6 +1117,25 @@ export class ProjectsService {
             metadata: event.metadata,
           })),
       serviceSnapshot: project.serviceSnapshot,
+      capabilities: {
+        canDeliver:
+          !clientSafe &&
+          Boolean(
+            principal &&
+            (principal.roles.includes(ADMIN_ROLE_CODE) ||
+              principal.roles.some((role) =>
+                PROJECT_SPECIALIST_ROLE_CODES.includes(role as never),
+              )),
+          ),
+        canSupervise:
+          !clientSafe &&
+          Boolean(
+            principal &&
+            (principal.roles.includes(ADMIN_ROLE_CODE) ||
+              principal.roles.includes("ROLE-SUPERVISOR")),
+          ),
+        canClientDecide: clientSafe,
+      },
     };
   }
 
@@ -718,6 +1187,14 @@ export class ProjectsService {
       .filter((event): event is NonNullable<typeof event> => event !== null)
       .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt))
       .slice(0, 20);
+  }
+
+  private projectFileDownloadUrl(projectId: string, fileId: string, clientSafe: boolean): string {
+    const prefix = clientSafe ? "client-portal/projects" : "projects";
+    const path = `${prefix}/${projectId}/files/${fileId}/download`;
+    const configuredBase =
+      process.env.JZOOM_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL;
+    return configuredBase ? `${configuredBase.replace(/\/$/, "")}/${path}` : `/api/v1/${path}`;
   }
 
   private async ensureProjectWorkflow() {
@@ -892,7 +1369,7 @@ export class ProjectsService {
         data: {
           projectId,
           title: revision.nameAr,
-          description: "Kickoff one-time project delivery.",
+          description: "بدء تنفيذ مشروع خدمة المرة الواحدة.",
           status: "TODO",
           priority: "NORMAL",
           assigneeId: assigneeId ?? null,

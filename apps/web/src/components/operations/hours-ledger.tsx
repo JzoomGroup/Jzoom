@@ -336,7 +336,7 @@ export function HoursLedger({
           title={t.filterUsage}
           description={t.filterDescription}
         >
-          <form className="catalog-form" onSubmit={refresh}>
+          <form className="catalog-form" noValidate onSubmit={refresh}>
             <label>
               {t.period}
               <input
@@ -444,7 +444,7 @@ export function HoursLedger({
           title={t.prepareClosing}
           description={t.prepareClosingDescription}
         >
-          <form className="catalog-form" onSubmit={prepare}>
+          <form className="catalog-form" noValidate onSubmit={prepare}>
             <label>
               {t.clientId}
               <select

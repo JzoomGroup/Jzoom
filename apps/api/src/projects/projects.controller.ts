@@ -1,15 +1,36 @@
-import { Body, Controller, Get, HttpCode, Inject, Param, Patch, Post, Req } from "@nestjs/common";
-import { ApiCookieAuth, ApiExtraModels, ApiOperation, ApiTags } from "@nestjs/swagger";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Req,
+  Res,
+  StreamableFile,
+  UploadedFile,
+  UseInterceptors,
+} from "@nestjs/common";
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiCookieAuth,
+  ApiExtraModels,
+  ApiOperation,
+  ApiTags,
+} from "@nestjs/swagger";
+import { FileInterceptor } from "@nestjs/platform-express";
+import type { Response } from "express";
 import { ADMIN_ROLE_CODE, MANAGEMENT_ROLE_CODE } from "../auth/auth.constants.js";
 import { RequireRoles } from "../auth/auth.decorators.js";
 import { CLIENT_ROLE_CODE } from "../client-portal/client-portal.constants.js";
 import type { RequestMetadata } from "../auth/auth.types.js";
 import type { RequestWithId } from "../request-context/request-with-id.js";
-import {
-  ACCOUNT_MANAGER_ROLE_CODE,
-  SPECIALIST_ROLE_CODE,
-  SUPERVISOR_ROLE_CODE,
-} from "../requests/requests.constants.js";
+import type { UploadedRequestFile } from "../requests/file-storage.service.js";
+import { requestUploadMaxBytes } from "../requests/file-storage.service.js";
+import { ACCOUNT_MANAGER_ROLE_CODE, SUPERVISOR_ROLE_CODE } from "../requests/requests.constants.js";
 import {
   ClientProjectOutputDecisionDto,
   CreateProjectOutputDto,
@@ -29,6 +50,23 @@ function metadata(request: RequestWithId): RequestMetadata {
   };
 }
 
+function setFileDownloadHeaders(
+  response: Response,
+  file: { originalName: string; mimeType: string },
+) {
+  const headerFileName = file.originalName.replace(/["\r\n]/g, "_");
+  const asciiFallback = headerFileName.replace(/[^\x20-\x7E]/g, "_") || "download";
+  response.setHeader("Content-Type", file.mimeType || "application/octet-stream");
+  response.setHeader(
+    "Content-Disposition",
+    `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(headerFileName)}`,
+  );
+}
+
+const uploadInterceptor = FileInterceptor("file", {
+  limits: { fileSize: requestUploadMaxBytes() },
+});
+
 @ApiTags("projects")
 @ApiCookieAuth()
 @ApiExtraModels(
@@ -42,7 +80,6 @@ function metadata(request: RequestWithId): RequestMetadata {
   ADMIN_ROLE_CODE,
   MANAGEMENT_ROLE_CODE,
   ACCOUNT_MANAGER_ROLE_CODE,
-  SPECIALIST_ROLE_CODE,
   PROJECT_SPECIALIST_ROLE_CODE,
   SUPERVISOR_ROLE_CODE,
 )
@@ -104,6 +141,40 @@ export class ProjectsController {
   ) {
     return this.projects.changeOutputStatus(id, outputId, input, request.auth!, metadata(request));
   }
+
+  @Post(":id/outputs/:outputId/files/upload")
+  @HttpCode(200)
+  @UseInterceptors(uploadInterceptor)
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: { file: { type: "string", format: "binary" } },
+      required: ["file"],
+    },
+  })
+  @ApiOperation({ summary: "Upload a project output file" })
+  uploadOutputFile(
+    @Param("id") id: string,
+    @Param("outputId") outputId: string,
+    @UploadedFile() file: UploadedRequestFile | undefined,
+    @Req() request: RequestWithId,
+  ) {
+    return this.projects.uploadOutputFile(id, outputId, file, request.auth!, metadata(request));
+  }
+
+  @Get(":id/files/:fileId/download")
+  @ApiOperation({ summary: "Download a project file after internal access validation" })
+  async downloadFile(
+    @Param("id") id: string,
+    @Param("fileId") fileId: string,
+    @Req() request: RequestWithId,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const file = await this.projects.downloadFile(id, fileId, request.auth!, false);
+    setFileDownloadHeaders(response, file);
+    return new StreamableFile(file.stream);
+  }
 }
 
 @ApiTags("client-portal")
@@ -140,5 +211,18 @@ export class ClientProjectsController {
       request.auth!,
       metadata(request),
     );
+  }
+
+  @Get(":id/files/:fileId/download")
+  @ApiOperation({ summary: "Download a client-visible project output file" })
+  async downloadFile(
+    @Param("id") id: string,
+    @Param("fileId") fileId: string,
+    @Req() request: RequestWithId,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const file = await this.projects.downloadFile(id, fileId, request.auth!, true);
+    setFileDownloadHeaders(response, file);
+    return new StreamableFile(file.stream);
   }
 }

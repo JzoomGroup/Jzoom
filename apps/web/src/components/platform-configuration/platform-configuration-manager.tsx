@@ -628,7 +628,7 @@ function SettingCard({
       />
       <p className="platform-muted">{setting.key}</p>
       {setting.current?.masked ? <p className="platform-muted">{t.maskedValue}</p> : null}
-      <form className="catalog-form platform-card-form" onSubmit={submit}>
+      <form className="catalog-form platform-card-form" noValidate onSubmit={submit}>
         <label className="full-span">
           {t.value}
           <textarea
@@ -696,7 +696,7 @@ function NotificationCard({
         status={template.status}
         title={template.code}
       />
-      <form className="catalog-form platform-card-form" onSubmit={submit}>
+      <form className="catalog-form platform-card-form" noValidate onSubmit={submit}>
         <label className="full-span">
           {t.arabicMessage}
           <textarea name="messageAr" rows={3} defaultValue={current?.messageAr ?? ""} />
@@ -779,7 +779,7 @@ function PdfCard({
         title={template.name}
       />
       <p className="platform-muted">{t.snapshotRule}</p>
-      <form className="catalog-form platform-card-form" onSubmit={submit}>
+      <form className="catalog-form platform-card-form" noValidate onSubmit={submit}>
         <label>
           {t.name}
           <input name="name" defaultValue={template.name} />
@@ -855,7 +855,7 @@ function WorkflowCard({
           workflow.current?.transitions.length ?? 0,
         )}
       </p>
-      <form className="catalog-form platform-card-form" onSubmit={submit}>
+      <form className="catalog-form platform-card-form" noValidate onSubmit={submit}>
         <label>
           {t.name}
           <input name="name" defaultValue={workflow.name} />
@@ -1076,7 +1076,11 @@ export function PlatformConfigurationManager({
       </SectionCard>
 
       <SectionCard id="platform-settings" eyebrow={t.settingsRegistry} title={t.createSetting}>
-        <form className="catalog-form wide-form platform-create-form" onSubmit={createSetting}>
+        <form
+          className="catalog-form wide-form platform-create-form"
+          noValidate
+          onSubmit={createSetting}
+        >
           <label>
             {t.key}
             <input name="key" required placeholder="business_text.new_template" />
@@ -1169,7 +1173,11 @@ export function PlatformConfigurationManager({
         title={t.localizationLabels}
         description={t.labelsDescription}
       >
-        <form className="catalog-form wide-form platform-create-form" onSubmit={publishLabel}>
+        <form
+          className="catalog-form wide-form platform-create-form"
+          noValidate
+          onSubmit={publishLabel}
+        >
           <label>
             {t.key}
             <input name="key" required placeholder="common.save" />

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ApiErrorBody } from "./catalog-types";
+import { localizedApiErrorMessage } from "./api-error-i18n";
 import type {
   ProjectOutputStatus,
   ProjectStatus,
@@ -35,7 +36,8 @@ export async function projectRequest<T>(path: string, options: RequestInit = {})
   const csrf = cookieValue(csrfCookieName);
   const headers = new Headers(options.headers);
 
-  if (options.body && !headers.has("Content-Type")) {
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  if (options.body && !isFormData && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
   if (!["GET", "HEAD", "OPTIONS"].includes(method) && csrf) {
@@ -61,10 +63,20 @@ export async function projectRequest<T>(path: string, options: RequestInit = {})
 
 export function projectErrorMessage(error: unknown): string {
   if (error instanceof ProjectApiError) {
-    const fields = error.body.fieldErrors?.map((field) => field.message).join(" ");
-    return fields || error.message;
+    return localizedApiErrorMessage(
+      error.body,
+      error.message,
+      "تعذر حفظ إجراء المشروع. راجع البيانات وحاول مرة أخرى.",
+    );
   }
-  return error instanceof Error ? error.message : "The project action could not be saved.";
+  if (error instanceof Error) {
+    return localizedApiErrorMessage({}, error.message, "تعذر حفظ إجراء المشروع.");
+  }
+  return localizedApiErrorMessage(
+    {},
+    "The project action could not be saved.",
+    "تعذر حفظ إجراء المشروع.",
+  );
 }
 
 export function changeProjectStatus(id: string, status: ProjectStatus): Promise<ProjectSummary> {
@@ -99,10 +111,24 @@ export function changeProjectOutputStatus(
   id: string,
   outputId: string,
   status: ProjectOutputStatus,
+  reason?: string,
 ): Promise<ProjectSummary> {
   return projectRequest<ProjectSummary>(`projects/${id}/outputs/${outputId}/status`, {
     method: "PATCH",
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, ...(reason?.trim() ? { reason: reason.trim() } : {}) }),
+  });
+}
+
+export function uploadProjectOutputFile(
+  id: string,
+  outputId: string,
+  file: File,
+): Promise<ProjectSummary> {
+  const body = new FormData();
+  body.set("file", file);
+  return projectRequest<ProjectSummary>(`projects/${id}/outputs/${outputId}/files/upload`, {
+    method: "POST",
+    body,
   });
 }
 
@@ -110,9 +136,10 @@ export function changeClientProjectOutputStatus(
   id: string,
   outputId: string,
   status: "ACCEPTED_BY_CLIENT" | "RETURNED_BY_CLIENT",
+  reason?: string,
 ): Promise<ProjectSummary> {
   return projectRequest<ProjectSummary>(`client-portal/projects/${id}/outputs/${outputId}/status`, {
     method: "PATCH",
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, ...(reason?.trim() ? { reason: reason.trim() } : {}) }),
   });
 }

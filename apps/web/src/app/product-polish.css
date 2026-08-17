@@ -110,7 +110,10 @@ body {
   color: #596477;
   font-size: 12.5px;
   font-weight: 500;
-  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
 }
 
 .premium-nav a svg {
@@ -312,13 +315,15 @@ body {
   gap: 10px;
 }
 
-.premium-main > :is(
+.premium-main
+  > :is(
     .os-bento-grid,
     .metric-grid,
     .pricing-total-grid,
     .request-signal-strip,
     .request-ops-metrics
-  ) + * {
+  )
+  + * {
   margin-block-start: 14px;
 }
 
@@ -443,7 +448,10 @@ body {
   border-radius: var(--polish-radius);
   background: #ffffff !important;
   box-shadow: 0 1px 2px rgba(23, 32, 51, 0.035);
-  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
 }
 
 .entity-card::before {
@@ -563,37 +571,39 @@ body {
 }
 
 :where(
-  .catalog-form,
-  .quote-create-form,
-  .pricing-selection-fields,
-  .pricing-quantity,
-  .compact-filter,
-  .order-control,
-  .package-config-grid,
-  .task-editor-row,
-  .operating-user-grid,
-  .request-field-grid,
-  .request-filter-bar
-) label {
+    .catalog-form,
+    .quote-create-form,
+    .pricing-selection-fields,
+    .pricing-quantity,
+    .compact-filter,
+    .order-control,
+    .package-config-grid,
+    .task-editor-row,
+    .operating-user-grid,
+    .request-field-grid,
+    .request-filter-bar
+  )
+  label {
   color: #475467;
   font-size: 11.5px;
   font-weight: 500;
 }
 
 :where(
-  .catalog-form,
-  .quote-create-form,
-  .pricing-selection-fields,
-  .pricing-quantity,
-  .compact-filter,
-  .order-control,
-  .package-config-grid,
-  .task-editor-row,
-  .operating-user-grid,
-  .request-field-grid,
-  .request-filter-bar,
-  .auth-form
-) :is(input, textarea, select) {
+    .catalog-form,
+    .quote-create-form,
+    .pricing-selection-fields,
+    .pricing-quantity,
+    .compact-filter,
+    .order-control,
+    .package-config-grid,
+    .task-editor-row,
+    .operating-user-grid,
+    .request-field-grid,
+    .request-filter-bar,
+    .auth-form
+  )
+  :is(input, textarea, select) {
   min-height: 40px;
   border-color: var(--polish-line-strong);
   border-radius: 7px;
@@ -605,19 +615,20 @@ body {
 }
 
 :where(
-  .catalog-form,
-  .quote-create-form,
-  .pricing-selection-fields,
-  .pricing-quantity,
-  .compact-filter,
-  .order-control,
-  .package-config-grid,
-  .task-editor-row,
-  .operating-user-grid,
-  .request-field-grid,
-  .request-filter-bar,
-  .auth-form
-) :is(input, textarea, select):focus {
+    .catalog-form,
+    .quote-create-form,
+    .pricing-selection-fields,
+    .pricing-quantity,
+    .compact-filter,
+    .order-control,
+    .package-config-grid,
+    .task-editor-row,
+    .operating-user-grid,
+    .request-field-grid,
+    .request-filter-bar,
+    .auth-form
+  )
+  :is(input, textarea, select):focus {
   border-color: rgba(241, 95, 85, 0.62);
   outline: 3px solid rgba(241, 95, 85, 0.1);
   box-shadow: none;
@@ -717,7 +728,9 @@ body {
   border: 1px dashed #cfd6df;
   border-radius: var(--polish-radius);
   background: #fafbfc;
-  transition: border-color 150ms ease, background 150ms ease;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease;
 }
 
 .client-file-drop:hover,
@@ -767,6 +780,121 @@ body {
 .project-room-next {
   border-color: #ffd9d5;
   background: var(--polish-coral-soft);
+}
+
+.project-output-files {
+  display: grid;
+  gap: 6px;
+  margin-block: 12px;
+  padding-block: 8px;
+  border-block: 1px solid var(--polish-line);
+}
+
+.project-output-files > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+}
+
+.project-output-files span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--polish-ink);
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-output-files small {
+  color: var(--polish-muted);
+  font-size: 10.5px;
+}
+
+.project-output-upload,
+.project-review-controls,
+.output-revision-upload {
+  display: grid;
+  gap: 10px;
+  margin-block-start: 12px;
+  padding-block-start: 12px;
+  border-block-start: 1px solid var(--polish-line);
+}
+
+.project-output-upload {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.project-output-upload label,
+.project-review-controls label {
+  display: grid;
+  gap: 5px;
+  color: var(--polish-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.project-output-upload input,
+.project-review-controls textarea {
+  min-height: 40px;
+  padding: 9px 10px;
+  border: 1px solid var(--polish-line-strong);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--polish-ink);
+  font: inherit;
+}
+
+.project-review-controls textarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
+.quote-onboarding-service {
+  align-items: center;
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+.quote-onboarding-specialists label {
+  min-height: 32px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.quote-onboarding-specialists label:has(input:checked) {
+  border-color: #ffc9c4;
+  background: var(--polish-coral-soft);
+  color: var(--polish-ink);
+}
+
+.client-admin-editor .quote-action-feedback,
+.pricing-client-create-form .quote-action-feedback {
+  margin: 0;
+}
+
+.output-revision-upload {
+  min-height: 0;
+  padding: 12px;
+  border: 1px dashed var(--polish-line-strong);
+  border-radius: 7px;
+  background: var(--polish-surface-soft);
+}
+
+@media (max-width: 640px) {
+  .project-output-files > div,
+  .project-output-upload {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .project-output-files .os-button,
+  .project-output-upload .os-button {
+    width: 100%;
+  }
 }
 
 .progress-track {
@@ -881,7 +1009,9 @@ body {
     padding: 14px 12px;
     opacity: 0;
     pointer-events: none;
-    transition: transform 180ms ease, opacity 180ms ease;
+    transition:
+      transform 180ms ease,
+      opacity 180ms ease;
   }
 
   .premium-shell[dir="rtl"] .premium-sidebar {

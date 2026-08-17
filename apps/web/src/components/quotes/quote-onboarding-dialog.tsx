@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { completeQuoteOnboarding, quoteErrorMessage } from "../../lib/quote-client";
 import type {
   QuoteOnboardingInput,
@@ -35,6 +35,12 @@ const copy = {
     completed: "تم تفعيل خدمات العميل وحفظ الإسناد.",
     createdServices: "خدمات مفعلة جديدة",
     reusedServices: "خدمات كانت مفعلة مسبقًا",
+    createdProjects: "مشاريع جديدة",
+    reusedProjects: "مشاريع مفعلة مسبقًا",
+    invalidEmail: "أدخل بريدًا إلكترونيًا صحيحًا لمستخدم البوابة.",
+    displayNameRequired: "أدخل الاسم الظاهر لمستخدم البوابة.",
+    eligibleSpecialists: "المختصون المؤهلون لهذه الخدمة",
+    assignmentRequired: "اختر مختصًا واحدًا على الأقل لكل خدمة قبل التفعيل.",
   },
   en: {
     title: "Activate client services after payment",
@@ -60,6 +66,12 @@ const copy = {
     completed: "Client services and assignments were activated.",
     createdServices: "Newly activated services",
     reusedServices: "Already active services",
+    createdProjects: "New projects",
+    reusedProjects: "Existing projects",
+    invalidEmail: "Enter a valid email address for the portal user.",
+    displayNameRequired: "Enter the portal user's display name.",
+    eligibleSpecialists: "Specialists eligible for this service",
+    assignmentRequired: "Select at least one eligible specialist for every service.",
   },
 } as const;
 
@@ -101,6 +113,12 @@ export function QuoteOnboardingDialog({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<QuoteOnboardingResult | null>(null);
 
+  useEffect(() => {
+    setPortalEmail(options.client.defaultPortalEmail);
+    setPortalDisplayName(options.client.legalName ?? options.client.name);
+    setAssignments(initialAssignments(options));
+  }, [options]);
+
   const assignmentPayload = useMemo(
     () =>
       options.services.map((service) => ({
@@ -124,16 +142,31 @@ export function QuoteOnboardingDialog({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSaving(true);
     setError(null);
     setResult(null);
+    if (createPortalUser) {
+      const normalizedEmail = portalEmail.trim().toLowerCase();
+      if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+        setError(t.invalidEmail);
+        return;
+      }
+      if (!portalDisplayName.trim()) {
+        setError(t.displayNameRequired);
+        return;
+      }
+    }
+    if (assignmentPayload.some((assignment) => assignment.specialistIds.length === 0)) {
+      setError(t.assignmentRequired);
+      return;
+    }
+    setSaving(true);
     const payload: QuoteOnboardingInput = {
       serviceAssignments: assignmentPayload,
     };
     if (createPortalUser) {
       payload.portalUser = {
-        email: portalEmail,
-        displayName: portalDisplayName,
+        email: portalEmail.trim().toLowerCase(),
+        displayName: portalDisplayName.trim(),
         preferredLocale,
       };
     }
@@ -168,7 +201,7 @@ export function QuoteOnboardingDialog({
           </button>
         </header>
 
-        <form className="quote-onboarding-form" onSubmit={submit}>
+        <form className="quote-onboarding-form" noValidate onSubmit={submit}>
           <section className="quote-onboarding-panel">
             <div className="quote-onboarding-panel-heading">
               <h3>{t.portalUser}</h3>
@@ -197,8 +230,9 @@ export function QuoteOnboardingDialog({
               <label>
                 {t.email}
                 <input
+                  autoComplete="email"
                   disabled={!createPortalUser}
-                  required={createPortalUser}
+                  name="portalEmail"
                   type="email"
                   value={portalEmail}
                   onChange={(event) => setPortalEmail(event.target.value)}
@@ -207,8 +241,9 @@ export function QuoteOnboardingDialog({
               <label>
                 {t.displayName}
                 <input
+                  autoComplete="name"
                   disabled={!createPortalUser}
-                  required={createPortalUser}
+                  name="portalDisplayName"
                   value={portalDisplayName}
                   onChange={(event) => setPortalDisplayName(event.target.value)}
                 />
@@ -251,22 +286,31 @@ export function QuoteOnboardingDialog({
                           : ""}
                       </small>
                     </div>
-                    <div className="quote-onboarding-specialists" aria-label={t.specialists}>
-                      {options.specialists.length === 0 ? (
+                    <div
+                      className="quote-onboarding-specialists"
+                      aria-label={t.eligibleSpecialists}
+                    >
+                      {(service.eligibleSpecialistIds ?? []).length === 0 ? (
                         <span>{t.noSpecialists}</span>
                       ) : (
-                        options.specialists.map((specialist) => (
-                          <label key={specialist.id}>
-                            <input
-                              checked={
-                                assignments[service.quoteItemId]?.includes(specialist.id) ?? false
-                              }
-                              type="checkbox"
-                              onChange={() => toggleSpecialist(service.quoteItemId, specialist.id)}
-                            />
-                            {specialist.displayName}
-                          </label>
-                        ))
+                        options.specialists
+                          .filter((specialist) =>
+                            (service.eligibleSpecialistIds ?? []).includes(specialist.id),
+                          )
+                          .map((specialist) => (
+                            <label key={specialist.id}>
+                              <input
+                                checked={
+                                  assignments[service.quoteItemId]?.includes(specialist.id) ?? false
+                                }
+                                type="checkbox"
+                                onChange={() =>
+                                  toggleSpecialist(service.quoteItemId, specialist.id)
+                                }
+                              />
+                              {specialist.displayName}
+                            </label>
+                          ))
                       )}
                     </div>
                   </article>
@@ -280,7 +324,9 @@ export function QuoteOnboardingDialog({
             <p className="quote-action-feedback success">
               {t.completed} {t.createdServices}:{" "}
               {countText(result.subscription.createdServiceIds.length, locale)} · {t.reusedServices}
-              : {countText(result.subscription.reusedServiceIds.length, locale)}
+              : {countText(result.subscription.reusedServiceIds.length, locale)} ·{" "}
+              {t.createdProjects}: {countText(result.projects.createdProjectIds.length, locale)} ·{" "}
+              {t.reusedProjects}: {countText(result.projects.reusedProjectIds.length, locale)}
             </p>
           ) : null}
 

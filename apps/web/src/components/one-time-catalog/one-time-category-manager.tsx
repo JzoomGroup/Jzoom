@@ -213,7 +213,11 @@ export function OneTimeCategoryManager({
             <h2>{creating ? t.newCategory : t.editCategory(editing!.code)}</h2>
             <p>{t.codesImmutable}</p>
           </div>
-          <form className="catalog-form wide-form one-time-category-form" onSubmit={submit}>
+          <form
+            className="catalog-form wide-form one-time-category-form"
+            noValidate
+            onSubmit={submit}
+          >
             {creating ? (
               <label>
                 {t.code}

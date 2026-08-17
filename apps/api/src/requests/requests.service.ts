@@ -339,8 +339,9 @@ export class RequestsService {
   ) {}
 
   async list(principal: AuthenticatedPrincipal) {
+    const accessWhere = await this.internalAccessWhere(principal);
     const requests = await this.database.prisma.request.findMany({
-      where: this.internalAccessWhere(principal),
+      where: accessWhere,
       orderBy: [{ createdAt: "desc" }],
       include: requestSummaryInclude,
     });
@@ -380,6 +381,28 @@ export class RequestsService {
     const candidates = users.map((user) => this.assignmentCandidateView(user));
     const byRole = (roleCode: string) =>
       candidates.filter((candidate) => candidate.roleCodes.includes(roleCode));
+
+    if (
+      principal.roles.includes(SUPERVISOR_ROLE_CODE) &&
+      !principal.roles.includes(ADMIN_ROLE_CODE)
+    ) {
+      const now = new Date();
+      const teamAssignments = await this.database.prisma.supervisorSpecialistAssignment.findMany({
+        where: {
+          supervisorId: principal.userId,
+          status: "ACTIVE",
+          startsAt: { lte: now },
+          OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+        },
+        select: { specialistId: true },
+      });
+      const teamIds = new Set(teamAssignments.map((assignment) => assignment.specialistId));
+      return {
+        specialists: byRole(SPECIALIST_ROLE_CODE).filter((candidate) => teamIds.has(candidate.id)),
+        supervisors: candidates.filter((candidate) => candidate.id === principal.userId),
+        accountManagers: [],
+      };
+    }
 
     return {
       specialists: byRole(SPECIALIST_ROLE_CODE),
@@ -645,7 +668,7 @@ export class RequestsService {
 
   async queue(input: RequestQueueQueryDto, principal: AuthenticatedPrincipal) {
     const queue = input.queue ?? "all";
-    const where = this.queueAccessWhere(queue, input, principal);
+    const where = await this.queueAccessWhere(queue, input, principal);
     const requests = await this.database.prisma.request.findMany({
       where,
       orderBy: [{ dueAt: "asc" }, { priority: "desc" }, { createdAt: "desc" }],
@@ -664,6 +687,16 @@ export class RequestsService {
     principal: AuthenticatedPrincipal,
     metadata: RequestMetadata,
   ) {
+    if (
+      principal.userType === "INTERNAL" &&
+      !principal.roles.includes(ADMIN_ROLE_CODE) &&
+      !principal.roles.includes(SPECIALIST_ROLE_CODE)
+    ) {
+      throw new ForbiddenException({
+        code: "REQUEST_CREATION_ROLE_REQUIRED",
+        message: "Only administrators and assigned specialists can create internal requests",
+      });
+    }
     const hasDirectClientAccess = this.canAccessClient(input.clientId, principal);
     if (!hasDirectClientAccess && !principal.roles.includes(SPECIALIST_ROLE_CODE)) {
       this.throwClientScopeDenied();
@@ -780,7 +813,7 @@ export class RequestsService {
         toStateId: workflow.states.NEW,
         actorId: principal.userId,
         actorRole: primaryRole(principal),
-        reason: "Request created",
+        reason: "تم إنشاء الطلب",
         metadata: json({ status: "NEW", requestNumber }),
       },
     });
@@ -835,6 +868,8 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     const request = await this.requireAccessibleRequest(id, principal);
+    this.assertCanAssignRequest(principal);
+    await this.assertAssignmentChangeAllowed(request, input, principal);
     const before = this.auditSnapshot(request);
     const assignedSpecialistId = await this.assignmentUserId(input.assignedSpecialistId, [
       SPECIALIST_ROLE_CODE,
@@ -888,13 +923,20 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     const request = await this.requireAccessibleRequest(id, principal);
+    this.assertAdminMutation(principal);
     return this.transitionRequest(request, status, reason, principal, metadata);
   }
 
   async startWork(id: string, principal: AuthenticatedPrincipal, metadata: RequestMetadata) {
     const request = await this.requireAccessibleRequest(id, principal);
-    this.assertAssignedWork(request, principal);
-    return this.transitionRequest(request, "IN_PROGRESS", "Work started", principal, metadata);
+    await this.assertAssignedWork(request, principal);
+    return this.transitionRequest(
+      request,
+      "IN_PROGRESS",
+      "بدأ المختص العمل على الطلب",
+      principal,
+      metadata,
+    );
   }
 
   async supervisorReview(
@@ -904,7 +946,28 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     const request = await this.requireAccessibleRequest(id, principal);
-    this.assertSupervisorAccess(request, principal);
+    await this.assertSupervisorAccess(request, principal);
+    if (request.status !== "WAITING_SUPERVISOR") {
+      throw new ConflictException({
+        code: "REQUEST_NOT_WAITING_SUPERVISOR",
+        message: "The request is not waiting for supervisor review",
+      });
+    }
+    if (
+      input.action === "APPROVE" &&
+      request.outputs.some((output) => output.status === "INTERNAL_REVIEW")
+    ) {
+      throw new ConflictException({
+        code: "REQUEST_OUTPUT_REVIEW_REQUIRED",
+        message: "Review the submitted output before approving the request",
+      });
+    }
+    if (input.action !== "APPROVE" && !input.reason?.trim()) {
+      throw new BadRequestException({
+        code: "REQUEST_REVIEW_REASON_REQUIRED",
+        message: "A review note is required when returning, rejecting, or escalating a request",
+      });
+    }
     const targetStatus: Record<SupervisorRequestReviewDto["action"], RequestLifecycleStatus> = {
       APPROVE: "COMPLETED",
       ESCALATE: "WAITING_SUPERVISOR",
@@ -914,7 +977,7 @@ export class RequestsService {
     return this.transitionRequest(
       request,
       targetStatus[input.action],
-      input.reason ?? input.action.toLowerCase().replaceAll("_", " "),
+      input.reason?.trim() ?? "اعتمد المشرف الطلب",
       principal,
       metadata,
     );
@@ -927,6 +990,7 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     await this.requireAccessibleRequest(id, principal);
+    this.assertCanAddOperationalContext(principal);
     const comment = await this.database.prisma.comment.create({
       data: {
         requestId: id,
@@ -958,6 +1022,7 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     await this.requireAccessibleRequest(id, principal);
+    this.assertCanAddOperationalContext(principal);
     const note = await this.database.prisma.internalNote.create({
       data: {
         requestId: id,
@@ -985,6 +1050,7 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     await this.requireAccessibleRequest(id, principal);
+    this.assertCanAddOperationalContext(principal);
     const file = await this.database.prisma.fileMetadata.create({
       data: {
         requestId: id,
@@ -1023,6 +1089,7 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     await this.requireAccessibleRequest(id, principal);
+    this.assertCanAddOperationalContext(principal);
     if (!file) {
       throw new BadRequestException({
         code: "FILE_REQUIRED",
@@ -1072,7 +1139,7 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     const request = await this.requireAccessibleRequest(id, principal);
-    this.assertAssignedWork(request, principal);
+    await this.assertAssignedWork(request, principal);
     const output = await this.requireRequestOutput(id, outputId);
     if (["SHARED_WITH_CLIENT", "ACCEPTED_BY_CLIENT", "CLOSED"].includes(output.status)) {
       throw new ConflictException({
@@ -1089,19 +1156,43 @@ export class RequestsService {
 
     const stored = await this.fileStorage.storeRequestFile(id, "outputs", file);
     const visibility = this.normalizeFileVisibility(input.visibility ?? "CLIENT_VISIBLE");
-    const created = await this.database.prisma.fileMetadata.create({
-      data: {
-        requestId: id,
-        requestOutputId: output.id,
-        uploadedById: principal.userId,
-        storageProvider: stored.storageProvider,
-        storageKey: stored.storageKey,
-        originalName: stored.originalName,
-        mimeType: stored.mimeType,
-        sizeBytes: BigInt(stored.sizeBytes),
-        sha256: stored.sha256,
-        visibility,
-      },
+    const fileVersion =
+      (await this.database.prisma.fileMetadata.count({
+        where: { requestOutputId: output.id, archivedAt: null },
+      })) + 1;
+    const created = await this.database.prisma.$transaction(async (transaction) => {
+      const saved = await transaction.fileMetadata.create({
+        data: {
+          requestId: id,
+          requestOutputId: output.id,
+          uploadedById: principal.userId,
+          storageProvider: stored.storageProvider,
+          storageKey: stored.storageKey,
+          originalName: stored.originalName,
+          mimeType: stored.mimeType,
+          sizeBytes: BigInt(stored.sizeBytes),
+          sha256: stored.sha256,
+          visibility,
+          version: fileVersion,
+        },
+      });
+      if (["REVISION_REQUESTED", "RETURNED_BY_CLIENT"].includes(output.status)) {
+        await transaction.requestOutput.update({
+          where: { id: output.id },
+          data: {
+            status: "DRAFT",
+            revision: { increment: 1 },
+            submittedAt: null,
+            reviewedAt: null,
+            reviewedById: null,
+            sharedAt: null,
+            sharedById: null,
+            clientDecidedAt: null,
+            clientDecisionById: null,
+          },
+        });
+      }
+      return saved;
     });
     await this.audit.record(
       {
@@ -1129,12 +1220,9 @@ export class RequestsService {
     principal: AuthenticatedPrincipal,
     metadata: RequestMetadata,
   ) {
-    await this.requireAccessibleRequest(id, principal);
-    const assigneeId = await this.assignmentUserId(input.assigneeId, [
-      ACCOUNT_MANAGER_ROLE_CODE,
-      SPECIALIST_ROLE_CODE,
-      SUPERVISOR_ROLE_CODE,
-    ]);
+    const request = await this.requireAccessibleRequest(id, principal);
+    await this.assertAssignedWork(request, principal);
+    const assigneeId = await this.assignmentUserId(input.assigneeId, [SPECIALIST_ROLE_CODE]);
     const task = await this.database.prisma.task.create({
       data: {
         requestId: id,
@@ -1172,13 +1260,10 @@ export class RequestsService {
     principal: AuthenticatedPrincipal,
     metadata: RequestMetadata,
   ) {
-    await this.requireAccessibleRequest(id, principal);
+    const request = await this.requireAccessibleRequest(id, principal);
+    await this.assertAssignedWork(request, principal);
     const task = await this.requireRequestTask(id, taskId);
-    const assigneeId = await this.assignmentUserId(input.assigneeId, [
-      ACCOUNT_MANAGER_ROLE_CODE,
-      SPECIALIST_ROLE_CODE,
-      SUPERVISOR_ROLE_CODE,
-    ]);
+    const assigneeId = await this.assignmentUserId(input.assigneeId, [SPECIALIST_ROLE_CODE]);
     const data: Prisma.TaskUpdateInput = {};
     if (input.title !== undefined) data.title = input.title.trim();
     if (input.description !== undefined) data.description = input.description?.trim() ?? null;
@@ -1224,7 +1309,7 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     const request = await this.requireAccessibleRequest(id, principal);
-    this.assertAssignedWork(request, principal);
+    await this.assertAssignedWork(request, principal);
     const output = await this.database.prisma.requestOutput.create({
       data: {
         requestId: id,
@@ -1263,9 +1348,9 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     const request = await this.requireAccessibleRequest(id, principal);
-    this.assertAssignedWork(request, principal);
+    await this.assertAssignedWork(request, principal);
     const output = await this.requireRequestOutput(id, outputId);
-    if (!["DRAFT", "REVISION_REQUESTED", "RETURNED_BY_CLIENT"].includes(output.status)) {
+    if (output.status !== "DRAFT") {
       throw new ConflictException({
         code: "REQUEST_OUTPUT_LOCKED_FOR_REVIEW",
         message: "Only draft, returned internal, or client-returned outputs can be edited",
@@ -1306,13 +1391,21 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     const request = await this.requireAccessibleRequest(id, principal);
-    this.assertAssignedWork(request, principal);
+    await this.assertAssignedWork(request, principal);
     const output = await this.requireRequestOutput(id, outputId);
     if (!["DRAFT", "REVISION_REQUESTED", "RETURNED_BY_CLIENT"].includes(output.status)) {
       throw new ConflictException({
         code: "REQUEST_OUTPUT_NOT_SUBMITTABLE",
-        message:
-          "Only draft, returned internal, or client-returned outputs can be submitted for review",
+        message: "Only a draft output with a new revision can be submitted for review",
+      });
+    }
+    const attachedFiles = await this.database.prisma.fileMetadata.count({
+      where: { requestOutputId: output.id, archivedAt: null },
+    });
+    if (attachedFiles === 0) {
+      throw new ConflictException({
+        code: "REQUEST_OUTPUT_FILE_REQUIRED",
+        message: "Attach at least one output file before submitting for review",
       });
     }
     const updated = await this.database.prisma.requestOutput.update({
@@ -1341,12 +1434,14 @@ export class RequestsService {
       REQUEST_EVENT.outputSubmitted,
       `Output "${updated.title}" is ready for internal review.`,
       { outputId: updated.id, status: updated.status },
+      [],
+      `المخرج "${updated.title}" جاهز للمراجعة الداخلية.`,
     );
     if (request.status === "IN_PROGRESS") {
       await this.transitionRequest(
         request,
         "WAITING_SUPERVISOR",
-        "Internal output submitted for supervisor review",
+        "أُرسل المخرج للمشرف للمراجعة الداخلية",
         principal,
         metadata,
       );
@@ -1362,12 +1457,18 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     const request = await this.requireAccessibleRequest(id, principal);
-    this.assertSupervisorAccess(request, principal);
+    await this.assertSupervisorAccess(request, principal);
     const output = await this.requireRequestOutput(id, outputId);
     if (output.status !== "INTERNAL_REVIEW") {
       throw new ConflictException({
         code: "REQUEST_OUTPUT_NOT_IN_REVIEW",
         message: "Only outputs submitted for internal review can be reviewed",
+      });
+    }
+    if (input.action !== "APPROVE" && !input.reason?.trim()) {
+      throw new BadRequestException({
+        code: "REQUEST_OUTPUT_REVIEW_REASON_REQUIRED",
+        message: "A review note is required when returning or rejecting an output",
       });
     }
     const approved = input.action === "APPROVE";
@@ -1377,7 +1478,13 @@ export class RequestsService {
         status: approved ? "APPROVED_INTERNAL" : "REVISION_REQUESTED",
         reviewedById: principal.userId,
         reviewedAt: new Date(),
-        reviewReason: input.reason ?? input.action.toLowerCase(),
+        reviewReason:
+          input.reason?.trim() ||
+          (input.action === "APPROVE"
+            ? "اعتمد المشرف المخرج"
+            : input.action === "RETURN"
+              ? "أعاد المشرف المخرج للمختص"
+              : "رفض المشرف المخرج"),
       },
     });
     await this.audit.record(
@@ -1399,6 +1506,9 @@ export class RequestsService {
       `Output "${updated.title}" was ${updated.status.toLowerCase().replaceAll("_", " ")}.`,
       { outputId: updated.id, status: updated.status },
       [output.createdById],
+      approved
+        ? `اعتمد المشرف المخرج "${updated.title}".`
+        : `أعاد المشرف المخرج "${updated.title}" للمختص مع ملاحظة.`,
     );
     return this.get(id, principal);
   }
@@ -1411,7 +1521,7 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     const request = await this.requireAccessibleRequest(id, principal);
-    this.assertSupervisorAccess(request, principal);
+    await this.assertSupervisorAccess(request, principal);
     const output = await this.requireRequestOutput(id, outputId);
     if (output.status !== "APPROVED_INTERNAL") {
       throw new ConflictException({
@@ -1443,13 +1553,13 @@ export class RequestsService {
       request,
       principal,
       REQUEST_EVENT.outputShared,
-      input.reason ?? "Output shared with client",
+      input.reason ?? "تمت مشاركة المخرج مع العميل",
       { outputId: updated.id, status: updated.status },
     );
     await this.transitionRequest(
       request,
       "WAITING_CLIENT",
-      input.reason ?? "Output shared with client",
+      input.reason ?? "تمت مشاركة المخرج مع العميل",
       principal,
       metadata,
     );
@@ -1473,7 +1583,7 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     const request = await this.requireAccessibleRequest(id, principal);
-    this.assertSupervisorAccess(request, principal);
+    await this.assertSupervisorAccess(request, principal);
     const output = await this.requireRequestOutput(id, outputId);
     if (
       !["ACCEPTED_BY_CLIENT", "RETURNED_BY_CLIENT", "SHARED_WITH_CLIENT"].includes(output.status)
@@ -1506,7 +1616,7 @@ export class RequestsService {
       request,
       principal,
       REQUEST_EVENT.outputClosed,
-      input.reason ?? "Output closed",
+      input.reason?.trim() ?? "تم إغلاق المخرج",
       { outputId: updated.id, status: updated.status },
     );
     await this.notifyInternalRequestStakeholders(
@@ -1515,6 +1625,8 @@ export class RequestsService {
       REQUEST_EVENT.outputClosed,
       `Output "${updated.title}" was closed.`,
       { outputId: updated.id, status: updated.status },
+      [],
+      `تم إغلاق المخرج "${updated.title}".`,
     );
     return this.get(id, principal);
   }
@@ -1641,7 +1753,7 @@ export class RequestsService {
       request,
       principal,
       REQUEST_EVENT.outputClientAccepted,
-      "Client accepted shared output",
+      "اعتمد العميل المخرج المشارك",
       { outputId: updated.id, status: updated.status },
     );
     await this.notifyInternalRequestStakeholders(
@@ -1650,11 +1762,13 @@ export class RequestsService {
       REQUEST_EVENT.outputClientAccepted,
       `Client accepted output "${updated.title}".`,
       { outputId: updated.id, status: updated.status },
+      [],
+      `اعتمد العميل المخرج "${updated.title}".`,
     );
     await this.transitionRequest(
       request,
       "COMPLETED",
-      "Client accepted shared output",
+      "اعتمد العميل المخرج المشارك",
       principal,
       metadata,
     );
@@ -1705,6 +1819,8 @@ export class RequestsService {
       REQUEST_EVENT.outputClientReturned,
       `Client returned output "${updated.title}".`,
       { outputId: updated.id, status: updated.status },
+      [],
+      `أعاد العميل المخرج "${updated.title}" للتعديل.`,
     );
     await this.transitionRequest(request, "IN_PROGRESS", input.reason.trim(), principal, metadata);
     const refreshed = await this.requireClientRequest(id, principal);
@@ -1718,6 +1834,7 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     const request = await this.requireAccessibleRequest(id, principal);
+    this.assertCanAddOperationalContext(principal);
     const documentRequest = await this.database.prisma.clientDocumentRequest.create({
       data: {
         requestId: id,
@@ -1741,7 +1858,7 @@ export class RequestsService {
       request,
       principal,
       REQUEST_EVENT.documentRequested,
-      "Client document requested",
+      "طُلب مستند من العميل",
       { documentRequestId: documentRequest.id, status: documentRequest.status },
     );
     await this.notifyClientRequestUsers(
@@ -1753,6 +1870,15 @@ export class RequestsService {
       { documentRequestId: documentRequest.id, status: documentRequest.status },
       `/client/requests/${request.id}`,
     );
+    if (!["CLOSED", "REJECTED", "COMPLETED"].includes(request.status)) {
+      await this.transitionRequest(
+        request,
+        "WAITING_CLIENT",
+        `بانتظار المستند المطلوب: ${documentRequest.title}`,
+        principal,
+        metadata,
+      );
+    }
     return this.get(id, principal);
   }
 
@@ -1764,6 +1890,7 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     const request = await this.requireAccessibleRequest(id, principal);
+    this.assertCanAddOperationalContext(principal);
     const documentRequest = await this.requireClientDocumentRequest(id, documentRequestId);
     if (!["CANCELLED", "CLOSED"].includes(input.status)) {
       throw new BadRequestException({
@@ -1797,11 +1924,12 @@ export class RequestsService {
       },
       metadata,
     );
+    const statusAr = input.status === "CLOSED" ? "مغلقًا" : "ملغيًا";
     await this.recordRequestActivity(
       request,
       principal,
       REQUEST_EVENT.documentRequestCancelled,
-      input.reason ?? `Document request ${input.status.toLowerCase()}`,
+      input.reason?.trim() ?? `أصبح طلب المستند ${statusAr}`,
       { documentRequestId: updated.id, status: updated.status },
     );
     await this.notifyClientRequestUsers(
@@ -1809,7 +1937,7 @@ export class RequestsService {
       principal,
       REQUEST_EVENT.documentRequestCancelled,
       `Document request "${updated.title}" is ${updated.status.toLowerCase()}.`,
-      `طلب المستند "${updated.title}" أصبح ${updated.status.toLowerCase()}.`,
+      `أصبح طلب المستند "${updated.title}" ${statusAr}.`,
       { documentRequestId: updated.id, status: updated.status },
       `/client/requests/${request.id}`,
     );
@@ -1884,6 +2012,18 @@ export class RequestsService {
       [],
       `رفع العميل المستند المطلوب "${updated.title}".`,
     );
+    const remainingOpenDocuments = await this.database.prisma.clientDocumentRequest.count({
+      where: { requestId: id, status: "REQUESTED" },
+    });
+    if (request.status === "WAITING_CLIENT" && remainingOpenDocuments === 0) {
+      await this.transitionRequest(
+        request,
+        "IN_PROGRESS",
+        "اكتمل استلام المستندات المطلوبة من العميل",
+        principal,
+        metadata,
+      );
+    }
     const refreshed = await this.requireClientRequest(id, principal);
     return this.detailView(refreshed, true);
   }
@@ -1954,6 +2094,9 @@ export class RequestsService {
     const request = clientSafe
       ? await this.requireClientRequest(id, principal)
       : await this.requireAccessibleRequest(id, principal);
+    if (!clientSafe) {
+      this.assertCanAddOperationalContext(principal);
+    }
     const file = await this.database.prisma.fileMetadata.findFirst({
       where: {
         id: fileId,
@@ -2054,7 +2197,7 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     const request = await this.requireAccessibleRequest(id, principal);
-    this.assertAssignedWork(request, principal);
+    await this.assertAssignedWork(request, principal);
     const entry = await this.database.prisma.timeEntry.create({
       data: {
         requestId: id,
@@ -2095,7 +2238,7 @@ export class RequestsService {
   ) {
     await this.requireAccessibleRequest(id, principal);
     const entry = await this.requireRequestTimeEntry(id, timeEntryId);
-    this.assertTimeEntryOwnerOrManager(entry, principal);
+    this.assertTimeEntryOwnerOrAdmin(entry, principal);
     if (!["DRAFT", "REJECTED"].includes(entry.status)) {
       throw new ConflictException({
         code: "TIME_ENTRY_LOCKED",
@@ -2146,7 +2289,7 @@ export class RequestsService {
   ) {
     const request = await this.requireAccessibleRequest(id, principal);
     const entry = await this.requireRequestTimeEntry(id, timeEntryId);
-    this.assertTimeEntryOwnerOrManager(entry, principal);
+    this.assertTimeEntryOwnerOrAdmin(entry, principal);
     if (!["DRAFT", "REJECTED"].includes(entry.status)) {
       throw new ConflictException({
         code: "TIME_ENTRY_NOT_SUBMITTABLE",
@@ -2178,7 +2321,7 @@ export class RequestsService {
       request,
       principal,
       REQUEST_EVENT.timeEntrySubmitted,
-      "Time entry submitted",
+      "أُرسل سجل الساعات للاعتماد",
       { timeEntryId: updated.id, status: updated.status },
     );
     await this.notifyInternalRequestStakeholders(
@@ -2187,6 +2330,8 @@ export class RequestsService {
       REQUEST_EVENT.timeEntrySubmitted,
       `Time entry submitted for request ${request.requestNumber}.`,
       { timeEntryId: updated.id, status: updated.status },
+      [],
+      `أُرسل سجل ساعات الطلب ${request.requestNumber} للاعتماد.`,
     );
     return this.get(id, principal);
   }
@@ -2199,12 +2344,18 @@ export class RequestsService {
     metadata: RequestMetadata,
   ) {
     const request = await this.requireAccessibleRequest(id, principal);
-    this.assertSupervisorAccess(request, principal);
+    await this.assertSupervisorAccess(request, principal);
     const entry = await this.requireRequestTimeEntry(id, timeEntryId);
     if (entry.status !== "SUBMITTED") {
       throw new ConflictException({
         code: "TIME_ENTRY_NOT_SUBMITTED",
         message: "Only submitted time entries can be reviewed",
+      });
+    }
+    if (input.action === "REJECT" && !input.reason?.trim()) {
+      throw new BadRequestException({
+        code: "TIME_ENTRY_REVIEW_REASON_REQUIRED",
+        message: "A review note is required when rejecting a time entry",
       });
     }
     const approved = input.action === "APPROVE";
@@ -2214,7 +2365,8 @@ export class RequestsService {
         status: approved ? "APPROVED" : "REJECTED",
         decidedById: principal.userId,
         decidedAt: new Date(),
-        decisionReason: input.reason ?? input.action.toLowerCase(),
+        decisionReason:
+          input.reason?.trim() ?? (input.action === "APPROVE" ? "اعتمد المشرف الساعات" : null),
       },
     });
     await this.audit.record(
@@ -2233,7 +2385,7 @@ export class RequestsService {
       request,
       principal,
       REQUEST_EVENT.timeEntryReviewed,
-      input.reason ?? `Time entry ${updated.status.toLowerCase()}`,
+      input.reason?.trim() ?? "اعتمد المشرف سجل الساعات",
       { timeEntryId: updated.id, status: updated.status },
     );
     await this.notifyInternalRequestStakeholders(
@@ -2243,16 +2395,17 @@ export class RequestsService {
       `Time entry was ${updated.status.toLowerCase()}.`,
       { timeEntryId: updated.id, status: updated.status },
       [entry.userId],
+      approved ? "اعتمد المشرف سجل الساعات." : "رفض المشرف سجل الساعات مع ملاحظة.",
     );
     return this.get(id, principal);
   }
 
-  private queueAccessWhere(
+  private async queueAccessWhere(
     queue: NonNullable<RequestQueueQueryDto["queue"]>,
     input: RequestQueueQueryDto,
     principal: AuthenticatedPrincipal,
-  ): Prisma.RequestWhereInput {
-    const filters: Prisma.RequestWhereInput[] = [this.internalAccessWhere(principal)];
+  ): Promise<Prisma.RequestWhereInput> {
+    const filters: Prisma.RequestWhereInput[] = [await this.internalAccessWhere(principal)];
     const queueWhere = this.queueWhere(queue, input.assigneeId, principal);
     if (queueWhere) filters.push(queueWhere);
     if (input.status) filters.push({ status: input.status });
@@ -2301,6 +2454,9 @@ export class RequestsService {
     }
     const openStatusFilter = { status: { in: openRequestStatuses } };
     if (queue === "specialist") {
+      if (!assigneeId && principal.roles.includes(SPECIALIST_ROLE_CODE)) {
+        return openStatusFilter;
+      }
       const targetUserId =
         assigneeId ??
         (principal.roles.includes(SPECIALIST_ROLE_CODE) ? principal.userId : undefined);
@@ -2318,6 +2474,9 @@ export class RequestsService {
       };
     }
     if (queue === "supervisor") {
+      if (!assigneeId && principal.roles.includes(SUPERVISOR_ROLE_CODE)) {
+        return openStatusFilter;
+      }
       const targetUserId =
         assigneeId ??
         (principal.roles.includes(SUPERVISOR_ROLE_CODE) ? principal.userId : undefined);
@@ -2342,7 +2501,7 @@ export class RequestsService {
   }
 
   private async queueCounters(principal: AuthenticatedPrincipal) {
-    const accessWhere = this.internalAccessWhere(principal);
+    const accessWhere = await this.internalAccessWhere(principal);
     const now = new Date();
     const [open, overdue, specialist, supervisor, accountManager] = await Promise.all([
       this.database.prisma.request.count({
@@ -2359,10 +2518,14 @@ export class RequestsService {
             accessWhere,
             {
               status: { in: openRequestStatuses },
-              OR: [
-                { assignedSpecialistId: principal.userId },
-                { tasks: { some: { assigneeId: principal.userId } } },
-              ],
+              ...(principal.roles.includes(SPECIALIST_ROLE_CODE)
+                ? {}
+                : {
+                    OR: [
+                      { assignedSpecialistId: principal.userId },
+                      { tasks: { some: { assigneeId: principal.userId } } },
+                    ],
+                  }),
             },
           ],
         },
@@ -2373,11 +2536,15 @@ export class RequestsService {
             accessWhere,
             {
               status: { in: openRequestStatuses },
-              OR: [
-                { assignedSupervisorId: principal.userId },
-                { status: "WAITING_SUPERVISOR" },
-                { outputs: { some: { status: "INTERNAL_REVIEW" } } },
-              ],
+              ...(principal.roles.includes(SUPERVISOR_ROLE_CODE)
+                ? {}
+                : {
+                    OR: [
+                      { assignedSupervisorId: principal.userId },
+                      { status: "WAITING_SUPERVISOR" },
+                      { outputs: { some: { status: "INTERNAL_REVIEW" } } },
+                    ],
+                  }),
             },
           ],
         },
@@ -2474,21 +2641,33 @@ export class RequestsService {
     return this.detailView(updated, false);
   }
 
-  private assertAssignedWork(
+  private async assertAssignedWork(
     request: RequestDetailRecord,
     principal: AuthenticatedPrincipal,
-  ): void {
-    if (hasGlobalAccess(principal)) {
+  ): Promise<void> {
+    if (principal.roles.includes(ADMIN_ROLE_CODE)) {
       return;
     }
+    if (!principal.roles.includes(SPECIALIST_ROLE_CODE)) {
+      throw new ForbiddenException({
+        code: "REQUEST_SPECIALIST_ROLE_REQUIRED",
+        message: "This action requires specialist delivery access",
+      });
+    }
     const taskAssigned = request.tasks.some((task) => task.assigneeId === principal.userId);
-    if (
-      request.assignedSpecialistId === principal.userId ||
-      request.assignedSupervisorId === principal.userId ||
-      request.accountManagerId === principal.userId ||
-      taskAssigned
-    ) {
+    if (request.assignedSpecialistId === principal.userId || taskAssigned) {
       return;
+    }
+    if (principal.roles.includes(SPECIALIST_ROLE_CODE)) {
+      const clauses = await this.specialistRequestAccessClauses(principal.userId);
+      if (
+        clauses.length > 0 &&
+        (await this.database.prisma.request.count({
+          where: { id: request.id, OR: clauses },
+        })) > 0
+      ) {
+        return;
+      }
     }
     throw new ForbiddenException({
       code: "REQUEST_ASSIGNMENT_REQUIRED",
@@ -2496,16 +2675,149 @@ export class RequestsService {
     });
   }
 
-  private assertSupervisorAccess(
+  private async assertSupervisorAccess(
     request: RequestDetailRecord,
     principal: AuthenticatedPrincipal,
-  ): void {
-    if (hasGlobalAccess(principal) || request.assignedSupervisorId === principal.userId) {
+  ): Promise<void> {
+    if (principal.roles.includes(ADMIN_ROLE_CODE)) {
+      return;
+    }
+    if (!principal.roles.includes(SUPERVISOR_ROLE_CODE)) {
+      throw new ForbiddenException({
+        code: "REQUEST_SUPERVISOR_ROLE_REQUIRED",
+        message: "This action requires supervisor review access",
+      });
+    }
+    if (request.assignedSupervisorId === principal.userId) {
+      return;
+    }
+    const clauses = await this.supervisorRequestAccessClauses(principal.userId);
+    if (
+      clauses.length > 0 &&
+      (await this.database.prisma.request.count({
+        where: { id: request.id, OR: clauses },
+      })) > 0
+    ) {
       return;
     }
     throw new ForbiddenException({
       code: "REQUEST_SUPERVISOR_REQUIRED",
-      message: "This action requires the assigned supervisor or management access",
+      message: "This action requires the assigned supervisor or administrator",
+    });
+  }
+
+  private assertCanAssignRequest(principal: AuthenticatedPrincipal): void {
+    if (
+      principal.roles.includes(ADMIN_ROLE_CODE) ||
+      principal.roles.includes(SUPERVISOR_ROLE_CODE)
+    ) {
+      return;
+    }
+    throw new ForbiddenException({
+      code: "REQUEST_ASSIGNMENT_ROLE_REQUIRED",
+      message: "Only administrators and supervisors can change request assignments",
+    });
+  }
+
+  private async assertAssignmentChangeAllowed(
+    request: RequestDetailRecord,
+    input: AssignRequestDto,
+    principal: AuthenticatedPrincipal,
+  ): Promise<void> {
+    if (input.assignedSpecialistId) {
+      const now = new Date();
+      const serviceId = request.subscriptionService.monthlyServiceRevision.monthlyServiceId;
+      const serviceScope = await this.database.prisma.specialistServiceScope.findFirst({
+        where: {
+          userId: input.assignedSpecialistId,
+          status: "ACTIVE",
+          monthlyServiceId: serviceId,
+          startsAt: { lte: now },
+          AND: [
+            { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+            { OR: [{ clientId: request.clientId }, { clientId: null }] },
+          ],
+        },
+        select: { id: true },
+      });
+      if (!serviceScope) {
+        throw new BadRequestException({
+          code: "SPECIALIST_SERVICE_SCOPE_MISMATCH",
+          message: "The selected specialist is not qualified for this request service",
+        });
+      }
+    }
+
+    if (
+      principal.roles.includes(ADMIN_ROLE_CODE) ||
+      !principal.roles.includes(SUPERVISOR_ROLE_CODE)
+    ) {
+      return;
+    }
+    if (input.accountManagerId !== undefined) {
+      throw new ForbiddenException({
+        code: "SUPERVISOR_ACCOUNT_MANAGER_ASSIGNMENT_FORBIDDEN",
+        message: "Supervisors cannot change the account manager assignment",
+      });
+    }
+    if (input.assignedSpecialistId === null) {
+      throw new ForbiddenException({
+        code: "SUPERVISOR_SPECIALIST_CLEAR_FORBIDDEN",
+        message: "Supervisors cannot remove the request specialist assignment",
+      });
+    }
+    if (
+      input.assignedSupervisorId !== undefined &&
+      input.assignedSupervisorId !== principal.userId
+    ) {
+      throw new ForbiddenException({
+        code: "SUPERVISOR_SELF_ASSIGNMENT_REQUIRED",
+        message: "A supervisor can only keep or assign themselves as request supervisor",
+      });
+    }
+    if (input.assignedSpecialistId) {
+      const now = new Date();
+      const teamAssignment = await this.database.prisma.supervisorSpecialistAssignment.findFirst({
+        where: {
+          supervisorId: principal.userId,
+          specialistId: input.assignedSpecialistId,
+          status: "ACTIVE",
+          startsAt: { lte: now },
+          AND: [
+            { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+            { OR: [{ clientId: request.clientId }, { clientId: null }] },
+          ],
+        },
+        select: { id: true },
+      });
+      if (!teamAssignment) {
+        throw new ForbiddenException({
+          code: "SUPERVISOR_TEAM_ASSIGNMENT_REQUIRED",
+          message: "The selected specialist is outside this supervisor's assigned team",
+        });
+      }
+    }
+  }
+
+  private assertAdminMutation(principal: AuthenticatedPrincipal): void {
+    if (principal.roles.includes(ADMIN_ROLE_CODE)) return;
+    throw new ForbiddenException({
+      code: "REQUEST_ADMIN_MUTATION_REQUIRED",
+      message: "This lifecycle override is restricted to administrators",
+    });
+  }
+
+  private assertCanAddOperationalContext(principal: AuthenticatedPrincipal): void {
+    if (
+      principal.roles.includes(ADMIN_ROLE_CODE) ||
+      principal.roles.includes(SPECIALIST_ROLE_CODE) ||
+      principal.roles.includes(SUPERVISOR_ROLE_CODE)
+    ) {
+      return;
+    }
+    throw new ForbiddenException({
+      code: "REQUEST_OPERATIONAL_ROLE_REQUIRED",
+      message: "This action requires an administrator, specialist, or supervisor role",
     });
   }
 
@@ -2584,16 +2896,16 @@ export class RequestsService {
     return entry;
   }
 
-  private assertTimeEntryOwnerOrManager(
+  private assertTimeEntryOwnerOrAdmin(
     entry: { userId: string },
     principal: AuthenticatedPrincipal,
   ): void {
-    if (hasGlobalAccess(principal) || entry.userId === principal.userId) {
+    if (principal.roles.includes(ADMIN_ROLE_CODE) || entry.userId === principal.userId) {
       return;
     }
     throw new ForbiddenException({
       code: "TIME_ENTRY_OWNER_REQUIRED",
-      message: "Only the time entry owner or management can change this entry",
+      message: "Only the time entry owner or an administrator can change this entry",
     });
   }
 
@@ -2703,7 +3015,9 @@ export class RequestsService {
     return users.map((user) => user.id);
   }
 
-  private internalAccessWhere(principal: AuthenticatedPrincipal): Prisma.RequestWhereInput {
+  private async internalAccessWhere(
+    principal: AuthenticatedPrincipal,
+  ): Promise<Prisma.RequestWhereInput> {
     if (hasGlobalAccess(principal)) {
       return {};
     }
@@ -2723,9 +3037,11 @@ export class RequestsService {
           { tasks: { some: { assigneeId: principal.userId } } },
         ],
       });
+      clauses.push(...(await this.specialistRequestAccessClauses(principal.userId)));
     }
     if (principal.roles.includes(SUPERVISOR_ROLE_CODE)) {
       clauses.push({ assignedSupervisorId: principal.userId });
+      clauses.push(...(await this.supervisorRequestAccessClauses(principal.userId)));
     }
 
     if (clauses.length === 0) {
@@ -2737,11 +3053,65 @@ export class RequestsService {
     return { OR: clauses };
   }
 
+  private async specialistRequestAccessClauses(
+    userId: string,
+  ): Promise<Prisma.RequestWhereInput[]> {
+    const now = new Date();
+    const scopes = await this.database.prisma.specialistServiceScope.findMany({
+      where: {
+        userId,
+        clientId: { not: null },
+        status: "ACTIVE",
+        startsAt: { lte: now },
+        OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+        monthlyServiceId: { not: null },
+      },
+      select: { clientId: true, monthlyServiceId: true, serviceItemId: true },
+    });
+    return scopes.flatMap((scope) => {
+      if (!scope.monthlyServiceId) return [];
+      return [
+        {
+          ...(scope.clientId ? { clientId: scope.clientId } : {}),
+          subscriptionService: {
+            monthlyServiceRevision: { monthlyServiceId: scope.monthlyServiceId },
+          },
+          ...(scope.serviceItemId
+            ? { serviceItemRevision: { serviceItemId: scope.serviceItemId } }
+            : {}),
+        },
+      ];
+    });
+  }
+
+  private async supervisorRequestAccessClauses(
+    supervisorId: string,
+  ): Promise<Prisma.RequestWhereInput[]> {
+    const now = new Date();
+    const assignments = await this.database.prisma.supervisorSpecialistAssignment.findMany({
+      where: {
+        supervisorId,
+        status: "ACTIVE",
+        startsAt: { lte: now },
+        OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+      },
+      select: { specialistId: true, clientId: true },
+    });
+    return assignments.map((assignment) => ({
+      ...(assignment.clientId ? { clientId: assignment.clientId } : {}),
+      OR: [
+        { assignedSpecialistId: assignment.specialistId },
+        { tasks: { some: { assigneeId: assignment.specialistId } } },
+      ],
+    }));
+  }
+
   private async requireAccessibleRequest(id: string, principal: AuthenticatedPrincipal) {
+    const accessWhere = await this.internalAccessWhere(principal);
     const request = await this.database.prisma.request.findFirst({
       where: {
         id,
-        ...this.internalAccessWhere(principal),
+        ...accessWhere,
       },
       include: requestDetailInclude,
     });
@@ -2889,7 +3259,8 @@ export class RequestsService {
         status: "ACTIVE",
         startsAt: { lte: now },
         OR: [{ endsAt: null }, { endsAt: { gt: now } }],
-        AND: [{ OR: [{ clientId: input.clientId }, { clientId: null }] }, { OR: serviceTargets }],
+        clientId: input.clientId,
+        AND: [{ OR: serviceTargets }],
         user: {
           status: "ACTIVE",
           userType: "INTERNAL",
@@ -3118,6 +3489,7 @@ export class RequestsService {
     return this.database.prisma.specialistServiceScope.findMany({
       where: {
         userId: principal.userId,
+        clientId: { not: null },
         status: "ACTIVE",
         startsAt: { lte: now },
         OR: [{ endsAt: null }, { endsAt: { gt: now } }],
@@ -3136,7 +3508,7 @@ export class RequestsService {
   }
 
   private specialistScopeMatchesClient(scope: SpecialistIntakeScope, clientId: string): boolean {
-    return scope.clientId === null || scope.clientId === clientId;
+    return scope.clientId === clientId;
   }
 
   private specialistScopeAllowsService(

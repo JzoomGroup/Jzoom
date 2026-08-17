@@ -650,7 +650,7 @@ describe("Request lifecycle UI", () => {
     expect(screen.getByRole("button", { name: "Create internal output" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add time" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Approve request" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Update status" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Update status" })).not.toBeInTheDocument();
   });
 
   it("shows assigned supervisors review controls without execution forms", () => {
@@ -695,7 +695,7 @@ describe("Request lifecycle UI", () => {
       "href",
       "#request-hours",
     );
-    expect(screen.getByRole("button", { name: "Approve request" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Approve request" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Approve" }).length).toBeGreaterThanOrEqual(2);
     expect(
       screen.queryByRole("button", { name: "Create internal output" }),
@@ -722,11 +722,8 @@ describe("Request lifecycle UI", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Account manager follow-up" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Request document/ })).toHaveAttribute(
-      "href",
-      "#request-documents",
-    );
-    expect(screen.getByRole("button", { name: "Add comment" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Request document/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add comment" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Share with client" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Approve request" })).not.toBeInTheDocument();
   });

@@ -141,6 +141,8 @@ const copy = {
     visibleRequests: "الطلبات الظاهرة",
     waitingForYou: "بانتظارك",
     workUnderway: "فريق جزوم يعمل على الطلب.",
+    completeRequiredFields: "اختر الخدمة، ثم اكتب عنوان الطلب ووصفه.",
+    invalidDueAt: "تحقق من الموعد المدخل.",
   },
   en: {
     activeSubscribedEmpty: "No active subscribed services are available for request creation yet.",
@@ -232,6 +234,8 @@ const copy = {
     visibleRequests: "Visible requests",
     waitingForYou: "Waiting for you",
     workUnderway: "Jzoom is working on the request.",
+    completeRequiredFields: "Select the service, then enter a title and description.",
+    invalidDueAt: "Check the entered due date.",
   },
 } as const;
 
@@ -293,8 +297,6 @@ export function ClientRequestList({
     clientId: defaultService?.clientId ?? account.clients[0]?.id ?? "",
     subscriptionServiceId: defaultService?.id ?? "",
     serviceItemRevisionId: "",
-    sourceQuoteId: "",
-    sourceInvoiceId: "",
     title: "",
     description: "",
     priority: "NORMAL" as (typeof priorities)[number],
@@ -446,8 +448,22 @@ export function ClientRequestList({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSaving(true);
     setError(null);
+    if (
+      !form.clientId ||
+      !form.subscriptionServiceId ||
+      !form.title.trim() ||
+      !form.description.trim()
+    ) {
+      setError(t.completeRequiredFields);
+      return;
+    }
+    const dueAt = form.dueAt ? new Date(form.dueAt) : null;
+    if (dueAt && Number.isNaN(dueAt.getTime())) {
+      setError(t.invalidDueAt);
+      return;
+    }
+    setSaving(true);
     try {
       const payload: Parameters<typeof createClientServiceRequest>[0] = {
         clientId: form.clientId,
@@ -457,12 +473,8 @@ export function ClientRequestList({
         priority: form.priority,
       };
       const serviceItemRevisionId = optional(form.serviceItemRevisionId);
-      const sourceQuoteId = optional(form.sourceQuoteId);
-      const sourceInvoiceId = optional(form.sourceInvoiceId);
       if (serviceItemRevisionId) payload.serviceItemRevisionId = serviceItemRevisionId;
-      if (sourceQuoteId) payload.sourceQuoteId = sourceQuoteId;
-      if (sourceInvoiceId) payload.sourceInvoiceId = sourceInvoiceId;
-      if (form.dueAt) payload.dueAt = new Date(form.dueAt).toISOString();
+      if (dueAt) payload.dueAt = dueAt.toISOString();
       if (activeTemplate) {
         payload.requestTemplateVersionId = activeTemplate.id;
         payload.templateAnswers = answersForTemplate(activeTemplate, templateAnswers);
@@ -514,7 +526,7 @@ export function ClientRequestList({
         {services.length === 0 ? (
           <EmptyState title={t.noSubscribedServices}>{t.activeSubscribedEmpty}</EmptyState>
         ) : (
-          <form className="catalog-form wide-form client-request-form" onSubmit={submit}>
+          <form className="catalog-form wide-form client-request-form" noValidate onSubmit={submit}>
             <div className="request-intake-steps form-span" aria-label={t.requestSetup}>
               <div className="active">
                 <span>1</span>
@@ -660,7 +672,7 @@ export function ClientRequestList({
                     </div>
                     <div className="hours-strip">
                       <span>{clientName(selectedService.service.category, locale)}</span>
-                      <span>{selectedService.service.domain}</span>
+                      <span>{clientName(selectedService.service.category, locale)}</span>
                     </div>
                   </>
                 )}
@@ -716,27 +728,6 @@ export function ClientRequestList({
                   onChange={(event) => setForm({ ...form, description: event.target.value })}
                 />
               </label>
-              <details>
-                <summary>{t.optionalReference}</summary>
-                <div className="request-field-grid">
-                  <label>
-                    {t.quoteReferenceId}
-                    <input
-                      value={form.sourceQuoteId}
-                      onChange={(event) => setForm({ ...form, sourceQuoteId: event.target.value })}
-                    />
-                  </label>
-                  <label>
-                    {t.invoiceReferenceId}
-                    <input
-                      value={form.sourceInvoiceId}
-                      onChange={(event) =>
-                        setForm({ ...form, sourceInvoiceId: event.target.value })
-                      }
-                    />
-                  </label>
-                </div>
-              </details>
             </section>
 
             {(loadingTemplate || templateNotice || activeTemplate) && (

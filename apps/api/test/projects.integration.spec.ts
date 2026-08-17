@@ -275,10 +275,11 @@ describeWithDatabase("Project delivery access and client review flows", () => {
   beforeAll(async () => {
     database = createDatabaseClient(environment.databaseUrl);
     const passwordHash = await new PasswordHasherService().hash(password);
-    const [clientRole, specialistRole, projectSpecialistRole] = await Promise.all([
+    const [clientRole, specialistRole, projectSpecialistRole, supervisorRole] = await Promise.all([
       role("ROLE-CLIENT", "Client", "EXTERNAL"),
       role("ROLE-SPECIALIST", "Specialist"),
       role("ROLE-PROJECT-SPECIALIST", "Project Specialist"),
+      role("ROLE-SUPERVISOR", "Supervisor"),
     ]);
     await createWorkflow();
     const oneTimeServiceRevisionId = await createOneTimeService();
@@ -304,64 +305,84 @@ describeWithDatabase("Project delivery access and client review flows", () => {
     ]);
     clientId = client.id;
     otherClientId = otherClient.id;
-    const [clientUser, otherClientUser, projectSpecialist, unscopedSpecialist] = await Promise.all([
-      database.user.create({
-        data: {
-          email: `client-${runId}@projects.test`,
-          passwordHash,
-          displayName: "Project Client",
-          userType: "EXTERNAL",
-          status: "ACTIVE",
-          passwordChangedAt: new Date(),
-          roles: { create: { roleId: clientRole.id } },
-          clientAssignments: { create: { clientId, roleCode: "ROLE-CLIENT" } },
-        },
-      }),
-      database.user.create({
-        data: {
-          email: `other-client-${runId}@projects.test`,
-          passwordHash,
-          displayName: "Other Project Client",
-          userType: "EXTERNAL",
-          status: "ACTIVE",
-          passwordChangedAt: new Date(),
-          roles: { create: { roleId: clientRole.id } },
-          clientAssignments: { create: { clientId: otherClientId, roleCode: "ROLE-CLIENT" } },
-        },
-      }),
-      database.user.create({
-        data: {
-          email: `project-specialist-${runId}@projects.test`,
-          passwordHash,
-          displayName: "Project Specialist",
-          userType: "INTERNAL",
-          status: "ACTIVE",
-          passwordChangedAt: new Date(),
-          roles: { create: { roleId: projectSpecialistRole.id } },
-          specialistServiceScopes: {
-            create: {
-              clientId,
-              oneTimeServiceId,
-              status: "ACTIVE",
+    const [clientUser, otherClientUser, projectSpecialist, unscopedSpecialist, supervisor] =
+      await Promise.all([
+        database.user.create({
+          data: {
+            email: `client-${runId}@projects.test`,
+            passwordHash,
+            displayName: "Project Client",
+            userType: "EXTERNAL",
+            status: "ACTIVE",
+            passwordChangedAt: new Date(),
+            roles: { create: { roleId: clientRole.id } },
+            clientAssignments: { create: { clientId, roleCode: "ROLE-CLIENT" } },
+          },
+        }),
+        database.user.create({
+          data: {
+            email: `other-client-${runId}@projects.test`,
+            passwordHash,
+            displayName: "Other Project Client",
+            userType: "EXTERNAL",
+            status: "ACTIVE",
+            passwordChangedAt: new Date(),
+            roles: { create: { roleId: clientRole.id } },
+            clientAssignments: { create: { clientId: otherClientId, roleCode: "ROLE-CLIENT" } },
+          },
+        }),
+        database.user.create({
+          data: {
+            email: `project-specialist-${runId}@projects.test`,
+            passwordHash,
+            displayName: "Project Specialist",
+            userType: "INTERNAL",
+            status: "ACTIVE",
+            passwordChangedAt: new Date(),
+            roles: { create: { roleId: projectSpecialistRole.id } },
+            specialistServiceScopes: {
+              create: {
+                clientId,
+                oneTimeServiceId,
+                status: "ACTIVE",
+              },
             },
           },
-        },
-      }),
-      database.user.create({
-        data: {
-          email: `unscoped-${runId}@projects.test`,
-          passwordHash,
-          displayName: "Unscoped Specialist",
-          userType: "INTERNAL",
-          status: "ACTIVE",
-          passwordChangedAt: new Date(),
-          roles: { create: { roleId: specialistRole.id } },
-        },
-      }),
-    ]);
+        }),
+        database.user.create({
+          data: {
+            email: `unscoped-${runId}@projects.test`,
+            passwordHash,
+            displayName: "Unscoped Specialist",
+            userType: "INTERNAL",
+            status: "ACTIVE",
+            passwordChangedAt: new Date(),
+            roles: { create: { roleId: specialistRole.id } },
+          },
+        }),
+        database.user.create({
+          data: {
+            email: `supervisor-${runId}@projects.test`,
+            passwordHash,
+            displayName: "Project Supervisor",
+            userType: "INTERNAL",
+            status: "ACTIVE",
+            passwordChangedAt: new Date(),
+            roles: { create: { roleId: supervisorRole.id } },
+          },
+        }),
+      ]);
     expect(clientUser.id).toBeDefined();
     expect(otherClientUser.id).toBeDefined();
     expect(unscopedSpecialist.id).toBeDefined();
+    await database.supervisorSpecialistAssignment.create({
+      data: {
+        supervisorId: supervisor.id,
+        specialistId: projectSpecialist.id,
+        clientId,
+        status: "ACTIVE",
+      },
+    });
     const main = await createProject(
       "MAIN",
       clientId,
@@ -404,7 +425,7 @@ describeWithDatabase("Project delivery access and client review flows", () => {
     );
   });
 
-  it("lets project specialists advance tasks and share outputs within their scope", async () => {
+  it("runs project output delivery through specialist and supervisor roles", async () => {
     const { agent, csrf } = await login(`project-specialist-${runId}@projects.test`);
 
     await agent
@@ -419,16 +440,46 @@ describeWithDatabase("Project delivery access and client review flows", () => {
       });
 
     await agent
+      .post(`/api/v1/projects/${projectId}/outputs/${draftOutputId}/files/upload`)
+      .set("X-CSRF-Token", csrf)
+      .attach("file", Buffer.from("project output"), {
+        filename: "project-output.txt",
+        contentType: "text/plain",
+      })
+      .expect(200);
+
+    await agent
       .patch(`/api/v1/projects/${projectId}/outputs/${draftOutputId}/status`)
       .set("X-CSRF-Token", csrf)
-      .send({ status: "SHARED_WITH_CLIENT", reason: "Ready for client review" })
+      .send({ status: "INTERNAL_REVIEW", reason: "Ready for supervisor review" })
       .expect(200)
       .expect(({ body }) => {
         expect(
           body.outputs.find((output: { id: string }) => output.id === draftOutputId),
         ).toMatchObject({
-          status: "SHARED_WITH_CLIENT",
+          status: "INTERNAL_REVIEW",
         });
+      });
+
+    const supervisorSession = await login(`supervisor-${runId}@projects.test`);
+    const supervisorProjects = await supervisorSession.agent.get("/api/v1/projects").expect(200);
+    expect(supervisorProjects.body.map((project: { id: string }) => project.id)).toContain(
+      projectId,
+    );
+    await supervisorSession.agent
+      .patch(`/api/v1/projects/${projectId}/outputs/${draftOutputId}/status`)
+      .set("X-CSRF-Token", supervisorSession.csrf)
+      .send({ status: "APPROVED_INTERNAL", reason: "Approved by supervisor" })
+      .expect(200);
+    await supervisorSession.agent
+      .patch(`/api/v1/projects/${projectId}/outputs/${draftOutputId}/status`)
+      .set("X-CSRF-Token", supervisorSession.csrf)
+      .send({ status: "SHARED_WITH_CLIENT" })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(
+          body.outputs.find((output: { id: string }) => output.id === draftOutputId),
+        ).toMatchObject({ status: "SHARED_WITH_CLIENT" });
       });
   });
 

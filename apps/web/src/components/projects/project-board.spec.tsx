@@ -3,8 +3,6 @@ import { ProjectDetail, ProjectList } from "./project-board";
 import {
   changeClientProjectOutputStatus,
   changeProjectOutputStatus,
-  changeProjectStatus,
-  createProjectOutput,
   updateProjectTaskStatus,
 } from "../../lib/project-client";
 import type { ProjectSummary } from "../../lib/project-types";
@@ -16,12 +14,11 @@ jest.mock("../../lib/project-client", () => ({
   createProjectOutput: jest.fn(),
   projectErrorMessage: () => "تعذر حفظ الإجراء. حاول مرة أخرى.",
   updateProjectTaskStatus: jest.fn(),
+  uploadProjectOutputFile: jest.fn(),
 }));
 
 const mockedChangeClientProjectOutputStatus = jest.mocked(changeClientProjectOutputStatus);
 const mockedChangeProjectOutputStatus = jest.mocked(changeProjectOutputStatus);
-const mockedChangeProjectStatus = jest.mocked(changeProjectStatus);
-const mockedCreateProjectOutput = jest.mocked(createProjectOutput);
 const mockedUpdateProjectTaskStatus = jest.mocked(updateProjectTaskStatus);
 
 function project(overrides: Partial<ProjectSummary> = {}): ProjectSummary {
@@ -117,6 +114,8 @@ function project(overrides: Partial<ProjectSummary> = {}): ProjectSummary {
         sortOrder: 1,
         createdAt: "2026-06-30T00:00:00.000Z",
         updatedAt: "2026-06-30T00:00:00.000Z",
+        decisionReason: null,
+        files: [],
       },
       {
         id: "output-draft",
@@ -132,6 +131,20 @@ function project(overrides: Partial<ProjectSummary> = {}): ProjectSummary {
         sortOrder: 2,
         createdAt: "2026-06-30T00:00:00.000Z",
         updatedAt: "2026-06-30T00:00:00.000Z",
+        decisionReason: null,
+        files: [
+          {
+            id: "file-1",
+            originalName: "draft.pdf",
+            mimeType: "application/pdf",
+            sizeBytes: 1024,
+            visibility: "CLIENT_VISIBLE",
+            version: 1,
+            downloadUrl: "/api/v1/projects/project-1/files/file-1/download",
+            createdAt: "2026-06-30T00:00:00.000Z",
+            uploadedBy: null,
+          },
+        ],
       },
     ],
     activity: [
@@ -144,6 +157,11 @@ function project(overrides: Partial<ProjectSummary> = {}): ProjectSummary {
       },
     ],
     serviceSnapshot: {},
+    capabilities: {
+      canDeliver: true,
+      canSupervise: false,
+      canClientDecide: false,
+    },
     ...overrides,
   };
 }
@@ -177,17 +195,18 @@ describe("project delivery UI", () => {
     expect(screen.getByText("النشاط")).toBeInTheDocument();
   });
 
-  it("lets project specialists update tasks, outputs, and project state from one room", async () => {
+  it("lets project specialists update assigned work without exposing client decisions", async () => {
     const updatedProject = project({
       status: "CLIENT_REVIEW",
       tasks: [{ ...project().tasks[0]!, status: "IN_PROGRESS" }],
     });
     mockedUpdateProjectTaskStatus.mockResolvedValue(updatedProject);
     mockedChangeProjectOutputStatus.mockResolvedValue(updatedProject);
-    mockedChangeProjectStatus.mockResolvedValue(updatedProject);
-    mockedCreateProjectOutput.mockResolvedValue(updatedProject);
-
     render(<ProjectDetail locale="ar" project={project()} />);
+
+    expect(screen.queryByRole("button", { name: "اعتماد المخرج" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "طلب تعديل" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "إرسال للعميل" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "بدء المهمة" }));
     await waitFor(() =>
@@ -198,29 +217,35 @@ describe("project delivery UI", () => {
       ),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "مشاركة المخرج" }));
+    fireEvent.click(screen.getByRole("button", { name: "إرسال للمراجعة" }));
     await waitFor(() =>
       expect(mockedChangeProjectOutputStatus).toHaveBeenCalledWith(
         "project-1",
         "output-draft",
-        "SHARED_WITH_CLIENT",
+        "INTERNAL_REVIEW",
       ),
     );
+  });
 
-    fireEvent.change(screen.getByLabelText("اسم المخرج"), {
-      target: { value: "نسخة تنفيذية" },
+  it("shows internal review controls only to project supervisors", async () => {
+    const supervisorProject = project({
+      capabilities: { canDeliver: false, canSupervise: true, canClientDecide: false },
+      outputs: [{ ...project().outputs[1]!, status: "INTERNAL_REVIEW" }],
     });
-    fireEvent.click(screen.getByRole("button", { name: "حفظ المخرج" }));
-    await waitFor(() =>
-      expect(mockedCreateProjectOutput).toHaveBeenCalledWith("project-1", {
-        title: "نسخة تنفيذية",
-      }),
-    );
+    mockedChangeProjectOutputStatus.mockResolvedValue(supervisorProject);
 
-    fireEvent.click(screen.getByRole("button", { name: "إرسال للعميل" }));
+    render(<ProjectDetail locale="ar" project={supervisorProject} />);
+    fireEvent.click(screen.getByRole("button", { name: "اعتماد داخلي" }));
+
     await waitFor(() =>
-      expect(mockedChangeProjectStatus).toHaveBeenCalledWith("project-1", "CLIENT_REVIEW"),
+      expect(mockedChangeProjectOutputStatus).toHaveBeenCalledWith(
+        "project-1",
+        "output-draft",
+        "APPROVED_INTERNAL",
+        "",
+      ),
     );
+    expect(screen.queryByRole("button", { name: "اعتماد المخرج" })).not.toBeInTheDocument();
   });
 
   it("lets clients accept shared outputs through the client-safe endpoint", async () => {

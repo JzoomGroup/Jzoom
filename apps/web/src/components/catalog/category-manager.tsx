@@ -160,7 +160,7 @@ export function CategoryManager({
               <p>{t.codesImmutable}</p>
             </div>
           </div>
-          <form className="catalog-form" onSubmit={submit}>
+          <form className="catalog-form" noValidate onSubmit={submit}>
             {creating && (
               <label>
                 {t.code}

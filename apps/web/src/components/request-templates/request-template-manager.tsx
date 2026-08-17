@@ -917,7 +917,7 @@ function FieldLibraryPanel({
     <article className="catalog-panel">
       <h2>مكتبة الحقول القابلة لإعادة الاستخدام</h2>
       <p>أنشئ الحقول المشتركة مرة واحدة، ثم استخدمها داخل أي قالب طلب مرتبط ببند خدمة.</p>
-      <form className="catalog-form" onSubmit={submit}>
+      <form className="catalog-form" noValidate onSubmit={submit}>
         <label>
           الرمز
           <input
@@ -1930,7 +1930,7 @@ export function RequestTemplateManager({
           title="إنشاء نسخة قالب"
           description="أضف الأقسام والحقول والخيارات ومتطلبات المستندات. احفظ كمسودة للمراجعة أو كنشط لنشره مباشرة في إنشاء طلبات العميل."
         >
-          <form className="template-save-form" onSubmit={submitRevision}>
+          <form className="template-save-form" noValidate onSubmit={submitRevision}>
             <section className="template-preset-studio">
               <div className="entity-card-heading">
                 <div>

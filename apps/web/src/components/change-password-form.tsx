@@ -10,6 +10,7 @@ const copy: Record<
   SupportedLocale,
   {
     confirmPassword: string;
+    invalidPolicy: string;
     mismatch: string;
     newPassword: string;
     policy: string;
@@ -20,6 +21,7 @@ const copy: Record<
 > = {
   ar: {
     confirmPassword: "تأكيد كلمة المرور",
+    invalidPolicy: "استخدم 8 أحرف على الأقل، مع حرف كبير وحرف صغير ورقم.",
     mismatch: "تأكيد كلمة المرور غير مطابق.",
     newPassword: "كلمة المرور الجديدة",
     policy: "استخدم 8 أحرف على الأقل، مع حرف كبير وحرف صغير ورقم.",
@@ -29,6 +31,7 @@ const copy: Record<
   },
   en: {
     confirmPassword: "Confirm password",
+    invalidPolicy: "Use at least 8 characters with uppercase, lowercase, and a number.",
     mismatch: "Password confirmation does not match.",
     newPassword: "New password",
     policy: "Use at least 8 characters with uppercase, lowercase, and a number.",
@@ -53,6 +56,11 @@ export function ChangePasswordForm({ locale = "en" }: { locale?: string }) {
     const form = new FormData(event.currentTarget);
     const newPassword = String(form.get("newPassword") ?? "");
     const confirmPassword = String(form.get("confirmPassword") ?? "");
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(newPassword)) {
+      setError(t.invalidPolicy);
+      setSubmitting(false);
+      return;
+    }
     if (newPassword !== confirmPassword) {
       setError(t.mismatch);
       setSubmitting(false);
@@ -65,8 +73,7 @@ export function ChangePasswordForm({ locale = "en" }: { locale?: string }) {
       router.refresh();
     } catch (err) {
       if (err instanceof AuthApiError) {
-        const fields = err.body.fieldErrors?.map((field) => field.message).join(" ");
-        setError(fields || err.body.message || t.genericError);
+        setError(lang === "ar" ? t.genericError : err.body.message || t.genericError);
       } else {
         setError(t.genericError);
       }
@@ -75,7 +82,7 @@ export function ChangePasswordForm({ locale = "en" }: { locale?: string }) {
   }
 
   return (
-    <form className="auth-form" method="post" onSubmit={submit}>
+    <form className="auth-form" method="post" noValidate onSubmit={submit}>
       <label>
         {t.newPassword}
         <input

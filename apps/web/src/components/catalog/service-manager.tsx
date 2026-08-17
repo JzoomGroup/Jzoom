@@ -403,7 +403,7 @@ export function ServiceManager({
                 : t.createRevisionDescription((current?.version ?? 0) + 1)}
             </p>
           </div>
-          <form className="catalog-form wide-form service-admin-form" onSubmit={submit}>
+          <form className="catalog-form wide-form service-admin-form" noValidate onSubmit={submit}>
             {creating ? (
               <label>
                 {t.code}

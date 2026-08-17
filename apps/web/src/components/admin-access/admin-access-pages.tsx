@@ -949,7 +949,7 @@ export function AdminUsersPageContent({
           }
           eyebrow={lang === "ar" ? "نطاق العمل" : "Operating scope"}
         >
-          <form className="operating-user-form" onSubmit={handleCreateUser}>
+          <form className="operating-user-form" noValidate onSubmit={handleCreateUser}>
             <div className="operating-user-grid">
               <label>
                 <span>{lang === "ar" ? "الاسم" : "Name"}</span>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   advanceQuoteLifecycle,
   getQuoteOnboardingOptions,
@@ -34,6 +35,7 @@ export function QuoteLifecycleActions({
   quoteId: string;
   status: QuoteStatus;
 }) {
+  const router = useRouter();
   const locale = commercialLocale(localeInput);
   const t = commercialCopy[locale];
   const [submitting, setSubmitting] = useState<LifecycleTarget>();
@@ -140,6 +142,7 @@ export function QuoteLifecycleActions({
           locale={locale}
           options={onboardingOptions}
           onClose={() => setOnboardingOptions(null)}
+          onCompleted={() => router.refresh()}
         />
       ) : null}
     </>
@@ -155,6 +158,7 @@ export function QuoteOnboardingLauncher({
   locale?: string;
   quoteId: string;
 }) {
+  const router = useRouter();
   const locale = commercialLocale(localeInput);
   const t = commercialCopy[locale];
   const [loading, setLoading] = useState(false);
@@ -195,6 +199,7 @@ export function QuoteOnboardingLauncher({
           locale={locale}
           options={onboardingOptions}
           onClose={() => setOnboardingOptions(null)}
+          onCompleted={() => router.refresh()}
         />
       ) : null}
     </>

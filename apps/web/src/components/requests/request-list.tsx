@@ -98,6 +98,8 @@ const copy = {
     templateFor: "لـ",
     templateFirst: "اختر بند الخدمة أولا حتى يظهر النموذج المناسب.",
     title: "العنوان",
+    completeRequiredFields: "اختر العميل والخدمة، ثم اكتب عنوان الطلب ووصفه.",
+    invalidDueAt: "تحقق من الموعد المدخل.",
   },
   en: {
     accountManagerId: "Account manager",
@@ -167,6 +169,8 @@ const copy = {
     templateFor: "for",
     templateFirst: "Select a service item first so the right template can load.",
     title: "Title",
+    completeRequiredFields: "Select the client and service, then enter a title and description.",
+    invalidDueAt: "Check the entered due date.",
   },
 } as const;
 
@@ -261,10 +265,12 @@ function isRequestOverdue(request: RequestSummary): boolean {
 }
 
 export function RequestList({
+  canCreate = true,
   intakeOptions = emptyIntakeOptions,
   locale: localeInput = "en",
   requests,
 }: {
+  canCreate?: boolean;
   intakeOptions?: RequestIntakeOptions | null;
   locale?: string;
   requests: RequestSummary[];
@@ -405,8 +411,22 @@ export function RequestList({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setCreating(true);
     setError(null);
+    if (
+      !form.clientId ||
+      !form.subscriptionServiceId ||
+      !form.title.trim() ||
+      !form.description.trim()
+    ) {
+      setError(t.completeRequiredFields);
+      return;
+    }
+    const dueAt = form.dueAt ? new Date(form.dueAt) : null;
+    if (dueAt && Number.isNaN(dueAt.getTime())) {
+      setError(t.invalidDueAt);
+      return;
+    }
+    setCreating(true);
     try {
       const payload: Parameters<typeof createServiceRequest>[0] = {
         clientId: form.clientId,
@@ -427,7 +447,7 @@ export function RequestList({
       if (assignedSpecialistId) payload.assignedSpecialistId = assignedSpecialistId;
       if (assignedSupervisorId) payload.assignedSupervisorId = assignedSupervisorId;
       if (accountManagerId) payload.accountManagerId = accountManagerId;
-      if (form.dueAt) payload.dueAt = new Date(form.dueAt).toISOString();
+      if (dueAt) payload.dueAt = dueAt.toISOString();
       if (activeTemplate) {
         payload.requestTemplateVersionId = activeTemplate.id;
         payload.templateAnswers = answersForTemplate(activeTemplate, templateAnswers);
@@ -449,7 +469,15 @@ export function RequestList({
         title={t.pageTitle}
         description={t.pageDescription}
         actions={[
-          { label: t.createRequest, onClick: () => setShowCreateModal(true), variant: "primary" },
+          ...(canCreate
+            ? [
+                {
+                  label: t.createRequest,
+                  onClick: () => setShowCreateModal(true),
+                  variant: "primary" as const,
+                },
+              ]
+            : []),
           { href: "/requests/queues", label: t.openQueues, variant: "secondary" },
         ]}
       />
@@ -484,7 +512,7 @@ export function RequestList({
         </div>
       </section>
 
-      {showCreateModal ? (
+      {showCreateModal && canCreate ? (
         <div className="request-create-backdrop">
           <section
             aria-label={t.createRequest}
@@ -506,7 +534,11 @@ export function RequestList({
                   {locale === "ar" ? "إغلاق" : "Close"}
                 </button>
               </div>
-              <form className="catalog-form wide-form request-list-intake-form" onSubmit={submit}>
+              <form
+                className="catalog-form wide-form request-list-intake-form"
+                noValidate
+                onSubmit={submit}
+              >
                 <div className="request-intake-steps form-span">
                   <div className="active">
                     <span>01</span>

@@ -9,7 +9,6 @@ const projectRoles = [
   "ROLE-MGMT",
   "ROLE-AM",
   "ROLE-SUPERVISOR",
-  "ROLE-SPECIALIST",
   "ROLE-PROJECT-SPECIALIST",
 ] as const;
 

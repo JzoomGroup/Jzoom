@@ -238,7 +238,7 @@ export function MonthlyReports({
           title={t.prepareReport}
           description={t.reportBuilderDescription}
         >
-          <form className="catalog-form" onSubmit={submit}>
+          <form className="catalog-form" noValidate onSubmit={submit}>
             <label>
               {t.clientId}
               <select

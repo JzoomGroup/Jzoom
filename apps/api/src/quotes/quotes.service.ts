@@ -77,6 +77,7 @@ export interface OnboardingServiceTarget {
   oneTimeServiceRevisionId: string | null;
   serviceLevelId: string | null;
   existingSpecialistIds: string[];
+  eligibleSpecialistIds?: string[];
 }
 
 const transitions: Record<PublicQuoteStatus, PublicQuoteStatus[]> = {
@@ -198,8 +199,8 @@ export class QuotesService {
     const clientId = quote.clientId!;
     const client = this.clientSummary(quote.clientSnapshot);
     const now = new Date();
-    const [services, specialists, portalUsers] = await Promise.all([
-      this.onboardingTargetsForQuote(quote),
+    const services = await this.onboardingTargetsForQuote(quote);
+    const [specialists, portalUsers] = await Promise.all([
       this.database.prisma.user.findMany({
         where: {
           status: "ACTIVE",
@@ -215,6 +216,15 @@ export class QuotesService {
           id: true,
           email: true,
           displayName: true,
+          roles: { select: { role: { select: { code: true } } } },
+          specialistServiceScopes: {
+            where: {
+              status: "ACTIVE",
+              startsAt: { lte: now },
+              OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+            },
+            select: { monthlyServiceId: true, oneTimeServiceId: true },
+          },
         },
       }),
       this.database.prisma.clientAssignment.findMany({
@@ -240,6 +250,13 @@ export class QuotesService {
       }),
     ]);
 
+    const servicesWithEligibility = services.map((service) => ({
+      ...service,
+      eligibleSpecialistIds: specialists
+        .filter((specialist) => this.specialistCanDeliverService(specialist, service))
+        .map((specialist) => specialist.id),
+    }));
+
     return {
       quote: {
         id: quote.id,
@@ -248,11 +265,11 @@ export class QuotesService {
       },
       client: {
         ...client,
-        defaultPortalEmail: `${client.code.toLowerCase()}@client.jzoom.local`,
+        defaultPortalEmail: "",
       },
       portalUsers: portalUsers.map(({ user }) => user),
-      specialists,
-      services,
+      specialists: specialists.map(({ id, email, displayName }) => ({ id, email, displayName })),
+      services: servicesWithEligibility,
     };
   }
 
@@ -281,11 +298,39 @@ export class QuotesService {
         quoteItemIds: unknownQuoteItemIds,
       });
     }
+    const missingAssignmentServices = services.filter((service) => {
+      const assignment = requestedAssignments.find(
+        (candidate) => candidate.quoteItemId === service.quoteItemId,
+      );
+      return !assignment || this.uniqueIds(assignment.specialistIds ?? []).length === 0;
+    });
+    if (missingAssignmentServices.length > 0) {
+      throw new BadRequestException({
+        code: "QUOTE_SERVICE_SPECIALIST_REQUIRED",
+        message: "Every activated service must be assigned to at least one eligible specialist",
+        quoteItemIds: missingAssignmentServices.map((service) => service.quoteItemId),
+      });
+    }
 
     const specialistIds = this.uniqueIds(
       requestedAssignments.flatMap((assignment) => assignment.specialistIds ?? []),
     );
-    await this.assertActiveSpecialists(specialistIds);
+    const activeSpecialists = await this.assertActiveSpecialists(specialistIds);
+    for (const assignment of requestedAssignments) {
+      const service = servicesByQuoteItemId.get(assignment.quoteItemId)!;
+      const invalidIds = this.uniqueIds(assignment.specialistIds ?? []).filter((specialistId) => {
+        const specialist = activeSpecialists.get(specialistId);
+        return !specialist || !this.specialistCanDeliverService(specialist, service);
+      });
+      if (invalidIds.length > 0) {
+        throw new BadRequestException({
+          code: "SPECIALIST_SERVICE_SCOPE_MISMATCH",
+          message: "One or more selected specialists are not assigned to this service",
+          specialistIds: invalidIds,
+          quoteItemId: assignment.quoteItemId,
+        });
+      }
+    }
 
     const temporaryPasswordHash = input.portalUser
       ? await this.passwords.hash(DEFAULT_TEMPORARY_PASSWORD)
@@ -902,10 +947,21 @@ export class QuotesService {
     return scopes.map((scope) => scope.userId);
   }
 
-  private async assertActiveSpecialists(ids: string[]): Promise<void> {
+  private async assertActiveSpecialists(ids: string[]) {
     if (ids.length === 0) {
-      return;
+      return new Map<
+        string,
+        {
+          id: string;
+          roles: Array<{ role: { code: string } }>;
+          specialistServiceScopes: Array<{
+            monthlyServiceId: string | null;
+            oneTimeServiceId: string | null;
+          }>;
+        }
+      >();
     }
+    const now = new Date();
     const specialists = await this.database.prisma.user.findMany({
       where: {
         id: { in: ids },
@@ -913,7 +969,18 @@ export class QuotesService {
         userType: "INTERNAL",
         roles: { some: { role: { code: { in: [...specialistRoleCodes] }, status: "ACTIVE" } } },
       },
-      select: { id: true },
+      select: {
+        id: true,
+        roles: { select: { role: { select: { code: true } } } },
+        specialistServiceScopes: {
+          where: {
+            status: "ACTIVE",
+            startsAt: { lte: now },
+            OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+          },
+          select: { monthlyServiceId: true, oneTimeServiceId: true },
+        },
+      },
     });
     const found = new Set(specialists.map((specialist) => specialist.id));
     const missingIds = ids.filter((id) => !found.has(id));
@@ -924,6 +991,31 @@ export class QuotesService {
         missingIds,
       });
     }
+    return new Map(specialists.map((specialist) => [specialist.id, specialist]));
+  }
+
+  private specialistCanDeliverService(
+    specialist: {
+      roles: Array<{ role: { code: string } }>;
+      specialistServiceScopes: Array<{
+        monthlyServiceId: string | null;
+        oneTimeServiceId: string | null;
+      }>;
+    },
+    service: OnboardingServiceTarget,
+  ): boolean {
+    const roleCodes = new Set(specialist.roles.map(({ role }) => role.code));
+    if (service.lineType === "MONTHLY" && !roleCodes.has(SPECIALIST_ROLE_CODE)) {
+      return false;
+    }
+    if (service.lineType === "ONE_TIME" && !roleCodes.has(PROJECT_SPECIALIST_ROLE_CODE)) {
+      return false;
+    }
+    return specialist.specialistServiceScopes.some((scope) =>
+      service.lineType === "MONTHLY"
+        ? scope.monthlyServiceId === service.monthlyServiceId
+        : scope.oneTimeServiceId === service.oneTimeServiceId,
+    );
   }
 
   private async createOrLinkPortalUserInTransaction(
@@ -1199,7 +1291,57 @@ export class QuotesService {
           },
         });
       }
+      await this.ensureClientSupervisorAssignmentInTransaction(
+        transaction,
+        specialistId,
+        clientId,
+        now,
+      );
     }
+  }
+
+  private async ensureClientSupervisorAssignmentInTransaction(
+    transaction: Prisma.TransactionClient,
+    specialistId: string,
+    clientId: string,
+    now: Date,
+  ): Promise<void> {
+    const activeAssignments = await transaction.supervisorSpecialistAssignment.findMany({
+      where: {
+        specialistId,
+        status: "ACTIVE",
+        startsAt: { lte: now },
+        OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+        supervisor: {
+          status: "ACTIVE",
+          userType: "INTERNAL",
+          roles: { some: { role: { code: "ROLE-SUPERVISOR", status: "ACTIVE" } } },
+        },
+      },
+      select: { supervisorId: true, clientId: true },
+    });
+    if (activeAssignments.some((assignment) => assignment.clientId === clientId)) {
+      return;
+    }
+    const globalAssignment = activeAssignments.find((assignment) => assignment.clientId === null);
+    if (globalAssignment) {
+      return;
+    }
+    const supervisorIds = this.uniqueIds(
+      activeAssignments.map((assignment) => assignment.supervisorId),
+    );
+    if (supervisorIds.length !== 1) {
+      return;
+    }
+    await transaction.supervisorSpecialistAssignment.create({
+      data: {
+        supervisorId: supervisorIds[0]!,
+        specialistId,
+        clientId,
+        startsAt: now,
+        status: "ACTIVE",
+      },
+    });
   }
 
   private async snapshotLine(

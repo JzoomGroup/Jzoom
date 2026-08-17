@@ -16,11 +16,19 @@ interface LoginResponse {
 
 const copy: Record<
   SupportedLocale,
-  { email: string; password: string; invalid: string; submit: string; submitting: string }
+  {
+    email: string;
+    password: string;
+    required: string;
+    invalid: string;
+    submit: string;
+    submitting: string;
+  }
 > = {
   ar: {
     email: "البريد الإلكتروني",
     password: "كلمة المرور",
+    required: "أدخل بريداً إلكترونياً صحيحاً وكلمة المرور.",
     invalid: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
     submit: "تسجيل الدخول",
     submitting: "جاري تسجيل الدخول...",
@@ -28,6 +36,7 @@ const copy: Record<
   en: {
     email: "Email",
     password: "Password",
+    required: "Enter a valid email address and password.",
     invalid: "The email or password is incorrect.",
     submit: "Sign in",
     submitting: "Signing in...",
@@ -47,6 +56,13 @@ export function LoginForm({ locale = "en" }: { locale?: string }) {
     setError(undefined);
 
     const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") ?? "").trim();
+    const password = String(form.get("password") ?? "");
+    if (!/^\S+@\S+\.\S+$/.test(email) || !password) {
+      setError(labels.required);
+      setSubmitting(false);
+      return;
+    }
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1"}/auth/login`,
       {
@@ -54,8 +70,8 @@ export function LoginForm({ locale = "en" }: { locale?: string }) {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: form.get("email"),
-          password: form.get("password"),
+          email,
+          password,
         }),
       },
     ).catch(() => null);
@@ -75,7 +91,7 @@ export function LoginForm({ locale = "en" }: { locale?: string }) {
   }
 
   return (
-    <form className="auth-form" method="post" onSubmit={submit}>
+    <form className="auth-form" method="post" noValidate onSubmit={submit}>
       <label>
         {labels.email}
         <input name="email" type="email" autoComplete="email" required />

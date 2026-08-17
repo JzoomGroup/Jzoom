@@ -3,6 +3,7 @@ import {
   IsArray,
   IsBoolean,
   IsDateString,
+  IsDivisibleBy,
   IsIn,
   IsInt,
   IsNumber,
@@ -466,10 +467,11 @@ export class CreateTimeEntryDto {
   @IsDateString()
   workDate!: string;
 
-  @ApiProperty({ type: Number, minimum: 0.01, maximum: 24 })
+  @ApiProperty({ type: Number, minimum: 0.25, maximum: 24, multipleOf: 0.25 })
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0.01)
+  @Min(0.25)
+  @IsDivisibleBy(0.25)
   @Max(24)
   hours!: number;
 
@@ -491,11 +493,12 @@ export class UpdateTimeEntryDto {
   @IsDateString()
   workDate?: string;
 
-  @ApiPropertyOptional({ type: Number, minimum: 0.01, maximum: 24 })
+  @ApiPropertyOptional({ type: Number, minimum: 0.25, maximum: 24, multipleOf: 0.25 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0.01)
+  @Min(0.25)
+  @IsDivisibleBy(0.25)
   @Max(24)
   hours?: number;
 

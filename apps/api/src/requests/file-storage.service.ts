@@ -67,6 +67,21 @@ export class FileStorageService {
     scope: "attachments" | "client-documents" | "outputs",
     file: UploadedRequestFile,
   ): Promise<StoredRequestFile> {
+    return this.storeFile(`requests/${requestId}/${scope}`, file);
+  }
+
+  async storeProjectFile(
+    projectId: string,
+    scope: "outputs",
+    file: UploadedRequestFile,
+  ): Promise<StoredRequestFile> {
+    return this.storeFile(`projects/${projectId}/${scope}`, file);
+  }
+
+  private async storeFile(
+    directory: string,
+    file: UploadedRequestFile,
+  ): Promise<StoredRequestFile> {
     if (!file.buffer || file.size < 1) {
       throw new BadRequestException({
         code: "FILE_REQUIRED",
@@ -81,7 +96,7 @@ export class FileStorageService {
     }
 
     const originalName = safeOriginalName(file.originalname);
-    const storageKey = `requests/${requestId}/${scope}/${randomUUID()}/${originalName}`;
+    const storageKey = `${directory}/${randomUUID()}/${originalName}`;
     const absolutePath = safeStoragePath(this.root, storageKey);
     await mkdir(dirname(absolutePath), { recursive: true });
     await writeFile(absolutePath, file.buffer);

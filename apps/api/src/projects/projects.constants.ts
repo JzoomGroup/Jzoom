@@ -1,9 +1,5 @@
 import { PROJECT_SPECIALIST_ROLE_CODE } from "../auth/auth.constants.js";
-import {
-  ACCOUNT_MANAGER_ROLE_CODE,
-  SPECIALIST_ROLE_CODE,
-  SUPERVISOR_ROLE_CODE,
-} from "../requests/requests.constants.js";
+import { ACCOUNT_MANAGER_ROLE_CODE, SUPERVISOR_ROLE_CODE } from "../requests/requests.constants.js";
 
 export { PROJECT_SPECIALIST_ROLE_CODE };
 
@@ -48,16 +44,12 @@ export const PROJECT_CLIENT_OUTPUT_DECISION_STATUSES = [
   "RETURNED_BY_CLIENT",
 ] as const;
 
-export const PROJECT_SPECIALIST_ROLE_CODES = [
-  SPECIALIST_ROLE_CODE,
-  PROJECT_SPECIALIST_ROLE_CODE,
-] as const;
+export const PROJECT_SPECIALIST_ROLE_CODES = [PROJECT_SPECIALIST_ROLE_CODE] as const;
 
 export const PROJECT_INTERNAL_ROLE_CODES = [
   "ROLE-ADMIN",
   "ROLE-MGMT",
   ACCOUNT_MANAGER_ROLE_CODE,
-  SPECIALIST_ROLE_CODE,
   PROJECT_SPECIALIST_ROLE_CODE,
   SUPERVISOR_ROLE_CODE,
 ] as const;
@@ -65,6 +57,7 @@ export const PROJECT_INTERNAL_ROLE_CODES = [
 export const PROJECT_EVENT = {
   createdFromQuote: "PROJECT_CREATED_FROM_QUOTE",
   outputCreated: "PROJECT_OUTPUT_CREATED",
+  outputFileUploaded: "PROJECT_OUTPUT_FILE_UPLOADED",
   outputStatusChanged: "PROJECT_OUTPUT_STATUS_CHANGED",
   statusChanged: "PROJECT_STATUS_CHANGED",
   taskUpdated: "PROJECT_TASK_UPDATED",

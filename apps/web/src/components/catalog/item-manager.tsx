@@ -469,7 +469,7 @@ export function ItemManager({
                 : t.saveRevisionDescription((current?.version ?? 0) + 1)}
             </p>
           </div>
-          <form className="catalog-form wide-form item-admin-form" onSubmit={submit}>
+          <form className="catalog-form wide-form item-admin-form" noValidate onSubmit={submit}>
             {creating ? (
               <>
                 <label>

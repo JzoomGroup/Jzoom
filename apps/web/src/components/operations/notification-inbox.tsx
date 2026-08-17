@@ -74,7 +74,7 @@ function displayDate(value: string, locale: SupportedLocale): string {
 
 function notificationMessage(notification: AppNotification, locale: SupportedLocale): string {
   if (locale === "ar") {
-    return notification.messageAr ?? notification.messageEn ?? notification.event;
+    return notification.messageAr?.trim() || "يوجد تحديث جديد يحتاج إلى مراجعتك داخل المنصة.";
   }
   return notification.messageEn ?? notification.messageAr ?? notification.event;
 }

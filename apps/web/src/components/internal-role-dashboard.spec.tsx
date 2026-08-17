@@ -153,7 +153,9 @@ describe("InternalRoleDashboard", () => {
       screen.getByRole("heading", { name: "Executive operating dashboard" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Client health watch" })).toBeInTheDocument();
-    expect(screen.getByText("Delayed work exists.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Overdue work or returned outputs require urgent follow-up."),
+    ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Reports/ })).toHaveAttribute("href", "/reports");
   });
 });

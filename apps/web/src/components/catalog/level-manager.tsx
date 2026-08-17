@@ -256,7 +256,7 @@ export function LevelManager({
             <h2>{creating ? t.newServiceLevel : t.editLevel(editing!.code)}</h2>
             <p>{t.packageCodesImmutable}</p>
           </div>
-          <form className="catalog-form wide-form package-admin-form" onSubmit={submit}>
+          <form className="catalog-form wide-form package-admin-form" noValidate onSubmit={submit}>
             {creating ? (
               <label>
                 {t.code}

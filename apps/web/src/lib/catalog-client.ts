@@ -1,6 +1,7 @@
 "use client";
 
 import type { ApiErrorBody, CatalogSnapshot } from "./catalog-types";
+import { localizedApiErrorMessage } from "./api-error-i18n";
 
 export const catalogApiBaseUrl =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
@@ -66,8 +67,10 @@ export function refreshCatalog(): Promise<CatalogSnapshot> {
 
 export function catalogErrorMessage(error: unknown): string {
   if (error instanceof CatalogApiError) {
-    const fields = error.body.fieldErrors?.map((field) => field.message).join(" ");
-    return fields || error.message;
+    return localizedApiErrorMessage(error.body, error.message);
   }
-  return error instanceof Error ? error.message : "The catalog change could not be saved.";
+  if (error instanceof Error) {
+    return localizedApiErrorMessage({}, error.message);
+  }
+  return localizedApiErrorMessage({}, "The catalog change could not be saved.");
 }

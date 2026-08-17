@@ -342,7 +342,11 @@ export function RequestQueue({
             </button>
           ))}
         </div>
-        <form className="catalog-form wide-form request-queue-filter-form" onSubmit={submit}>
+        <form
+          className="catalog-form wide-form request-queue-filter-form"
+          noValidate
+          onSubmit={submit}
+        >
           <label>
             {t.status}
             <select

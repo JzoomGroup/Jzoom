@@ -197,6 +197,7 @@ function onboardingOptions() {
         oneTimeServiceRevisionId: null,
         serviceLevelId: "service-level-1",
         existingSpecialistIds: [],
+        eligibleSpecialistIds: ["specialist-1"],
       },
     ],
   };

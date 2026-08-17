@@ -149,6 +149,7 @@ export interface QuoteOnboardingOptions {
     oneTimeServiceRevisionId: string | null;
     serviceLevelId: string | null;
     existingSpecialistIds: string[];
+    eligibleSpecialistIds: string[];
   }>;
 }
 
@@ -184,4 +185,8 @@ export interface QuoteOnboardingResult {
     serviceCode: string;
     specialistIds: string[];
   }>;
+  projects: {
+    createdProjectIds: string[];
+    reusedProjectIds: string[];
+  };
 }
