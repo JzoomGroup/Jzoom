@@ -938,6 +938,7 @@ body {
   .premium-topbar {
     position: static;
     display: grid;
+    align-items: stretch;
     min-height: auto;
     gap: 9px;
     padding: 10px 13px;
@@ -1032,10 +1033,6 @@ body {
     font-size: 16px;
   }
 
-  .os-bento-grid,
-  .os-bento-grid.compact,
-  .metric-grid,
-  .pricing-total-grid,
   .entity-meta.four-up,
   .project-room-progress-grid {
     grid-template-columns: minmax(0, 1fr);
