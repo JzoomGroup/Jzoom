@@ -434,7 +434,7 @@ describe("Client portal UI", () => {
     expect(screen.getByText("مرحبًا، Faisal")).toBeInTheDocument();
     expect(screen.getByText("بوابة العميل")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "الطلبات" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "الملف الشخصي" })).toHaveAttribute("href", "/profile");
+    expect(screen.getByRole("link", { name: "حسابي" })).toHaveAttribute("href", "/profile");
     expect(screen.getByRole("button", { name: "تسجيل الخروج" })).toBeInTheDocument();
   });
 
