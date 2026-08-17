@@ -741,6 +741,14 @@ describe("Request lifecycle UI", () => {
     expect(screen.queryByRole("button", { name: "Approve request" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Approve" }).length).toBeGreaterThanOrEqual(2);
     expect(
+      screen.getByText(
+        "You can review submitted time entries while the assigned specialist records time.",
+      ),
+    ).toBeInTheDocument();
+    const hoursSection = screen.getByRole("heading", { name: "Basic time entries" }).closest("article");
+    expect(hoursSection).toHaveTextContent("Jun 22, 2026");
+    expect(hoursSection).not.toHaveTextContent("3:00 AM");
+    expect(
       screen.queryByRole("button", { name: "Create internal output" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add time" })).not.toBeInTheDocument();

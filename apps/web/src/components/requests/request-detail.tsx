@@ -211,6 +211,8 @@ const copy = {
     taskTitle: "عنوان المهمة",
     templateAnswers: "إجابات النموذج",
     timeUnavailable: "تسجيل الوقت متاح للمختص المسند فقط.",
+    timeSupervisorReview:
+      "يمكنك مراجعة قيود الوقت المرسلة من المختص، بينما يتولى المختص تسجيل الوقت.",
     title: "العنوان",
     totalChecklistItems: "إجمالي بنود القائمة",
     updateStatus: "تحديث الحالة",
@@ -395,6 +397,8 @@ const copy = {
     taskTitle: "Task title",
     templateAnswers: "Template answers",
     timeUnavailable: "Time registration is available to the assigned specialist only.",
+    timeSupervisorReview:
+      "You can review submitted time entries while the assigned specialist records time.",
     title: "Title",
     totalChecklistItems: "total checklist items",
     updateStatus: "Update status",
@@ -519,6 +523,14 @@ function dateTime(value: string | null, locale: SupportedLocale): string {
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: platformTimeZone,
+  }).format(new Date(value));
+}
+
+function dateOnly(value: string | null, locale: SupportedLocale): string {
+  if (!value) return copy[locale].notSet;
+  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
+    dateStyle: "medium",
     timeZone: platformTimeZone,
   }).format(new Date(value));
 }
@@ -2106,7 +2118,13 @@ export function RequestDetail({
               </button>
             </form>
           ) : (
-            <p>{requestIsLocked ? t.completedReadOnly : t.timeUnavailable}</p>
+            <p>
+              {requestIsLocked
+                ? t.completedReadOnly
+                : canSupervise
+                  ? t.timeSupervisorReview
+                  : t.timeUnavailable}
+            </p>
           )}
           <div className="activity-list">
             {request.timeEntries.length === 0 ? (
@@ -2119,7 +2137,7 @@ export function RequestDetail({
                     {entry.user.displayName}
                   </strong>
                   <small>
-                    {codeLabel(entry.status, locale)} - {dateTime(entry.workDate, locale)} -{" "}
+                    {codeLabel(entry.status, locale)} - {dateOnly(entry.workDate, locale)} -{" "}
                     {entry.billable ? t.billable : t.nonBillable}
                   </small>
                   {entry.notes && <p>{entry.notes}</p>}
