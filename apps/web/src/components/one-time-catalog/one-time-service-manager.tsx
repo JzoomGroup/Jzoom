@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import { PencilLine } from "lucide-react";
 import { refreshOneTimeCatalog } from "../../lib/one-time-catalog-client";
 import type {
   OneTimeCatalogSnapshot,
@@ -1258,33 +1259,36 @@ export function OneTimeServiceManager({
                     </span>
                   </div>
 
-                  <div className="one-time-service-order">
-                    <OrderControl
-                      locale={locale}
-                      path={`services/one-time/${service.id}`}
-                      current={service.sortOrder}
-                      disabled={mutation.submitting || service.status === "ARCHIVED"}
-                      mutate={mutation.mutate}
-                    />
-                  </div>
+                  <footer className="catalog-card-footer">
+                    <div className="one-time-service-order">
+                      <OrderControl
+                        locale={locale}
+                        path={`services/one-time/${service.id}`}
+                        current={service.sortOrder}
+                        disabled={mutation.submitting || service.status === "ARCHIVED"}
+                        mutate={mutation.mutate}
+                      />
+                    </div>
 
-                  <div className="one-time-service-actions">
-                    <button
-                      className="os-button os-button-secondary"
-                      type="button"
-                      disabled={service.status === "ARCHIVED"}
-                      onClick={() => openEdit(service)}
-                    >
-                      {t.editTemplate}
-                    </button>
-                    <LifecycleActions
-                      locale={locale}
-                      path={`services/one-time/${service.id}`}
-                      status={service.status}
-                      disabled={mutation.submitting}
-                      mutate={mutation.mutate}
-                    />
-                  </div>
+                    <div className="one-time-service-actions">
+                      <button
+                        className="os-button os-button-secondary"
+                        type="button"
+                        disabled={service.status === "ARCHIVED"}
+                        onClick={() => openEdit(service)}
+                      >
+                        <PencilLine aria-hidden="true" size={14} />
+                        {t.editTemplate}
+                      </button>
+                      <LifecycleActions
+                        locale={locale}
+                        path={`services/one-time/${service.id}`}
+                        status={service.status}
+                        disabled={mutation.submitting}
+                        mutate={mutation.mutate}
+                      />
+                    </div>
+                  </footer>
                 </article>
               );
             })}

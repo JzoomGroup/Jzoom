@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import { PencilLine } from "lucide-react";
 import type {
   CatalogSnapshot,
   CatalogStatus,
@@ -723,33 +724,36 @@ export function ServiceManager({
                     {enabledConfigs.length === 0 ? <span className="disabled">{t.off}</span> : null}
                   </div>
 
-                  <div className="service-admin-order">
-                    <OrderControl
-                      locale={locale}
-                      path={`services/monthly/${service.id}`}
-                      current={service.sortOrder}
-                      disabled={mutation.submitting || service.status === "ARCHIVED"}
-                      mutate={mutation.mutate}
-                    />
-                  </div>
+                  <footer className="catalog-card-footer">
+                    <div className="service-admin-order">
+                      <OrderControl
+                        locale={locale}
+                        path={`services/monthly/${service.id}`}
+                        current={service.sortOrder}
+                        disabled={mutation.submitting || service.status === "ARCHIVED"}
+                        mutate={mutation.mutate}
+                      />
+                    </div>
 
-                  <div className="service-admin-actions">
-                    <button
-                      className="os-button os-button-secondary"
-                      type="button"
-                      disabled={service.status === "ARCHIVED"}
-                      onClick={() => openEdit(service)}
-                    >
-                      {t.editHoursRates}
-                    </button>
-                    <LifecycleActions
-                      locale={locale}
-                      path={`services/monthly/${service.id}`}
-                      status={service.status}
-                      disabled={mutation.submitting}
-                      mutate={mutation.mutate}
-                    />
-                  </div>
+                    <div className="service-admin-actions">
+                      <button
+                        className="os-button os-button-secondary"
+                        type="button"
+                        disabled={service.status === "ARCHIVED"}
+                        onClick={() => openEdit(service)}
+                      >
+                        <PencilLine aria-hidden="true" size={14} />
+                        {t.editHoursRates}
+                      </button>
+                      <LifecycleActions
+                        locale={locale}
+                        path={`services/monthly/${service.id}`}
+                        status={service.status}
+                        disabled={mutation.submitting}
+                        mutate={mutation.mutate}
+                      />
+                    </div>
+                  </footer>
                 </article>
               );
             })}

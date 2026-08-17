@@ -256,6 +256,22 @@ describe("Admin catalog UI", () => {
     expect(setSnapshot).toHaveBeenCalledWith(catalogSnapshot());
   });
 
+  it("keeps Arabic category cards localized and groups their controls in one footer", () => {
+    const { container } = render(
+      <CategoryManager
+        locale="ar"
+        snapshot={catalogSnapshot()}
+        setSnapshot={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "الموارد البشرية" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Human Resources" })).not.toBeInTheDocument();
+    expect(container.querySelector(".catalog-category-card .catalog-card-footer")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "تعديل" }).querySelector("svg")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "أرشفة" }).querySelector("svg")).not.toBeNull();
+  });
+
   it("updates package inclusion through the revision-safe matrix API", async () => {
     const fetchMock = jest.mocked(fetch);
     fetchMock

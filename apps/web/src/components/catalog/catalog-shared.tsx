@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { Archive, Power, PowerOff, Save } from "lucide-react";
 import { catalogErrorMessage, catalogRequest, refreshCatalog } from "../../lib/catalog-client";
 import type { CatalogSnapshot, CatalogStatus } from "../../lib/catalog-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
@@ -214,6 +215,7 @@ export function LifecycleActions({
           disabled={disabled}
           onClick={() => void change("ACTIVE")}
         >
+          <Power aria-hidden="true" size={14} />
           {t.enable}
         </button>
       ) : (
@@ -223,6 +225,7 @@ export function LifecycleActions({
           disabled={disabled}
           onClick={() => void change("INACTIVE")}
         >
+          <PowerOff aria-hidden="true" size={14} />
           {t.disable}
         </button>
       )}
@@ -232,6 +235,7 @@ export function LifecycleActions({
         disabled={disabled}
         onClick={() => void change("ARCHIVED")}
       >
+        <Archive aria-hidden="true" size={14} />
         {t.archive}
       </button>
     </div>
@@ -283,6 +287,7 @@ export function OrderControl({
           )
         }
       >
+        <Save aria-hidden="true" size={14} />
         {t.saveOrder}
       </button>
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { PencilLine } from "lucide-react";
 import type { CatalogCategory, CatalogSnapshot } from "../../lib/catalog-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
 import { localizedDescription } from "../../lib/localized-content";
@@ -222,12 +223,12 @@ export function CategoryManager({
         ) : (
           <div className="entity-grid">
             {snapshot.categories.map((category) => (
-              <article className="entity-card" key={category.id}>
+              <article className="entity-card catalog-category-card" key={category.id}>
                 <div className="entity-card-top">
                   <div>
                     <small>{category.code}</small>
-                    <h3>{category.nameEn}</h3>
-                    <p dir="rtl">{category.nameAr}</p>
+                    <h3>{locale === "ar" ? category.nameAr : category.nameEn}</h3>
+                    {locale === "en" ? <p dir="rtl">{category.nameAr}</p> : null}
                   </div>
                   <StatusBadge locale={locale} status={category.status} />
                 </div>
@@ -244,34 +245,37 @@ export function CategoryManager({
                     <dd>{category.sortOrder}</dd>
                   </div>
                 </dl>
-                <OrderControl
-                  locale={locale}
-                  path={`admin/catalog/categories/${category.id}`}
-                  current={category.sortOrder}
-                  disabled={mutation.submitting || category.status === "ARCHIVED"}
-                  mutate={mutation.mutate}
-                />
-                <div className="entity-card-actions">
-                  <button
-                    className="os-button os-button-secondary"
-                    type="button"
-                    disabled={category.status === "ARCHIVED"}
-                    onClick={() => {
-                      mutation.clearFeedback();
-                      setCreating(false);
-                      setEditing(category);
-                    }}
-                  >
-                    {t.edit}
-                  </button>
-                  <LifecycleActions
+                <footer className="catalog-card-footer">
+                  <OrderControl
                     locale={locale}
                     path={`admin/catalog/categories/${category.id}`}
-                    status={category.status}
-                    disabled={mutation.submitting}
+                    current={category.sortOrder}
+                    disabled={mutation.submitting || category.status === "ARCHIVED"}
                     mutate={mutation.mutate}
                   />
-                </div>
+                  <div className="entity-card-actions">
+                    <button
+                      className="os-button os-button-secondary"
+                      type="button"
+                      disabled={category.status === "ARCHIVED"}
+                      onClick={() => {
+                        mutation.clearFeedback();
+                        setCreating(false);
+                        setEditing(category);
+                      }}
+                    >
+                      <PencilLine aria-hidden="true" size={14} />
+                      {t.edit}
+                    </button>
+                    <LifecycleActions
+                      locale={locale}
+                      path={`admin/catalog/categories/${category.id}`}
+                      status={category.status}
+                      disabled={mutation.submitting}
+                      mutate={mutation.mutate}
+                    />
+                  </div>
+                </footer>
               </article>
             ))}
           </div>

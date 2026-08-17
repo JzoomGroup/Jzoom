@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import { PencilLine } from "lucide-react";
 import type {
   CatalogSnapshot,
   CatalogStatus,
@@ -650,33 +651,36 @@ export function ItemManager({
                     {revision?.deductHours ? <span>{t.deductHours}</span> : null}
                   </div>
 
-                  <div className="item-admin-order">
-                    <OrderControl
-                      locale={locale}
-                      path={`service-items/${item.id}`}
-                      current={item.sortOrder}
-                      disabled={mutation.submitting || item.status === "ARCHIVED"}
-                      mutate={mutation.mutate}
-                    />
-                  </div>
+                  <footer className="catalog-card-footer">
+                    <div className="item-admin-order">
+                      <OrderControl
+                        locale={locale}
+                        path={`service-items/${item.id}`}
+                        current={item.sortOrder}
+                        disabled={mutation.submitting || item.status === "ARCHIVED"}
+                        mutate={mutation.mutate}
+                      />
+                    </div>
 
-                  <div className="item-admin-actions">
-                    <button
-                      className="os-button os-button-secondary"
-                      type="button"
-                      disabled={item.status === "ARCHIVED"}
-                      onClick={() => openEdit(item)}
-                    >
-                      {t.editItem}
-                    </button>
-                    <LifecycleActions
-                      locale={locale}
-                      path={`service-items/${item.id}`}
-                      status={item.status}
-                      disabled={mutation.submitting}
-                      mutate={mutation.mutate}
-                    />
-                  </div>
+                    <div className="item-admin-actions">
+                      <button
+                        className="os-button os-button-secondary"
+                        type="button"
+                        disabled={item.status === "ARCHIVED"}
+                        onClick={() => openEdit(item)}
+                      >
+                        <PencilLine aria-hidden="true" size={14} />
+                        {t.editItem}
+                      </button>
+                      <LifecycleActions
+                        locale={locale}
+                        path={`service-items/${item.id}`}
+                        status={item.status}
+                        disabled={mutation.submitting}
+                        mutate={mutation.mutate}
+                      />
+                    </div>
+                  </footer>
                 </article>
               );
             })}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { PencilLine } from "lucide-react";
 import { refreshOneTimeCatalog } from "../../lib/one-time-catalog-client";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
 import { localizedDescription } from "../../lib/localized-content";
@@ -301,36 +302,39 @@ export function OneTimeCategoryManager({
                     <dd>{number(category.sortOrder, locale)}</dd>
                   </div>
                 </dl>
-                <div className="one-time-category-order">
-                  <OrderControl
-                    locale={locale}
-                    path={`admin/catalog/one-time/categories/${category.id}`}
-                    current={category.sortOrder}
-                    disabled={mutation.submitting || category.status === "ARCHIVED"}
-                    mutate={mutation.mutate}
-                  />
-                </div>
-                <div className="one-time-category-actions">
-                  <button
-                    className="os-button os-button-secondary"
-                    type="button"
-                    disabled={category.status === "ARCHIVED"}
-                    onClick={() => {
-                      mutation.clearFeedback();
-                      setCreating(false);
-                      setEditing(category);
-                    }}
-                  >
-                    {t.edit}
-                  </button>
-                  <LifecycleActions
-                    locale={locale}
-                    path={`admin/catalog/one-time/categories/${category.id}`}
-                    status={category.status}
-                    disabled={mutation.submitting}
-                    mutate={mutation.mutate}
-                  />
-                </div>
+                <footer className="catalog-card-footer">
+                  <div className="one-time-category-order">
+                    <OrderControl
+                      locale={locale}
+                      path={`admin/catalog/one-time/categories/${category.id}`}
+                      current={category.sortOrder}
+                      disabled={mutation.submitting || category.status === "ARCHIVED"}
+                      mutate={mutation.mutate}
+                    />
+                  </div>
+                  <div className="one-time-category-actions">
+                    <button
+                      className="os-button os-button-secondary"
+                      type="button"
+                      disabled={category.status === "ARCHIVED"}
+                      onClick={() => {
+                        mutation.clearFeedback();
+                        setCreating(false);
+                        setEditing(category);
+                      }}
+                    >
+                      <PencilLine aria-hidden="true" size={14} />
+                      {t.edit}
+                    </button>
+                    <LifecycleActions
+                      locale={locale}
+                      path={`admin/catalog/one-time/categories/${category.id}`}
+                      status={category.status}
+                      disabled={mutation.submitting}
+                      mutate={mutation.mutate}
+                    />
+                  </div>
+                </footer>
               </article>
             ))}
           </div>
