@@ -395,7 +395,7 @@ const shellCopy = {
     ar: {
       brandSubtitle: "لوحة التحكم",
       navigationLabel: "إدارة المنصة",
-      signedInAs: "مسجل باسم",
+      greeting: "مرحبًا،",
       profile: "الملف الشخصي",
       settings: "الإعدادات",
       signOut: "تسجيل الخروج",
@@ -404,7 +404,7 @@ const shellCopy = {
     en: {
       brandSubtitle: "Admin Console",
       navigationLabel: "Platform administration",
-      signedInAs: "Signed in as",
+      greeting: "Welcome,",
       profile: "Profile",
       settings: "Settings",
       signOut: "Sign out",
@@ -415,7 +415,7 @@ const shellCopy = {
     ar: {
       brandSubtitle: "بوابة العميل",
       navigationLabel: "تنقل بوابة العميل",
-      signedInAs: "حساب العميل",
+      greeting: "مرحبًا،",
       profile: "الملف الشخصي",
       settings: "الإعدادات",
       signOut: "تسجيل الخروج",
@@ -424,7 +424,7 @@ const shellCopy = {
     en: {
       brandSubtitle: "Client Portal",
       navigationLabel: "Client portal navigation",
-      signedInAs: "Client account",
+      greeting: "Welcome,",
       profile: "Profile",
       settings: "Settings",
       signOut: "Sign out",
@@ -435,7 +435,7 @@ const shellCopy = {
     ar: {
       brandSubtitle: "منصة التشغيل",
       navigationLabel: "تنقل منصة التشغيل",
-      signedInAs: "مسجل باسم",
+      greeting: "مرحبًا،",
       profile: "الملف الشخصي",
       settings: "الإعدادات",
       signOut: "تسجيل الخروج",
@@ -444,7 +444,7 @@ const shellCopy = {
     en: {
       brandSubtitle: "Operating Platform",
       navigationLabel: "Operating platform navigation",
-      signedInAs: "Signed in as",
+      greeting: "Welcome,",
       profile: "Profile",
       settings: "Settings",
       signOut: "Sign out",
@@ -657,9 +657,8 @@ export function AppShell({
 
       <div className="premium-workspace">
         <header className="premium-topbar">
-          <div>
-            <span>{copy.signedInAs}</span>
-            <strong>{displayName}</strong>
+          <div className="premium-topbar-identity">
+            <strong>{`${copy.greeting} ${displayName}`}</strong>
           </div>
           <div className="premium-topbar-actions">
             <Link href="/profile">

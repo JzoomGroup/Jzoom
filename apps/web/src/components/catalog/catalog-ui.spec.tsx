@@ -205,6 +205,7 @@ describe("Admin catalog UI", () => {
     expect(container.firstElementChild).toHaveAttribute("dir", "rtl");
     expect(container.firstElementChild).toHaveAttribute("lang", "ar");
     expect(screen.getByRole("navigation", { name: "إدارة المنصة" })).toBeInTheDocument();
+    expect(screen.getByText("مرحبًا، Faisal")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "لوحة التحكم" })).toHaveAttribute("href", "/admin");
     expect(screen.getByRole("link", { name: "العملاء" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "الإعدادات" })).toHaveAttribute("href", "/settings");
