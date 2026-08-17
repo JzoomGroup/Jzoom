@@ -160,9 +160,10 @@ body {
   min-height: 66px;
   padding-block: 10px;
   padding-inline: clamp(20px, 2.5vw, 36px);
-  border-color: var(--polish-line);
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 1px 0 rgba(23, 32, 51, 0.02);
+  border-bottom-color: rgba(23, 32, 51, 0.18);
+  background: var(--jzoom-coral);
+  color: var(--polish-ink);
+  box-shadow: 0 3px 12px rgba(23, 32, 51, 0.09);
 }
 
 .premium-topbar > div:first-child {
@@ -170,15 +171,15 @@ body {
 }
 
 .premium-topbar span {
-  color: var(--polish-muted);
+  color: var(--polish-ink);
   font-size: 10.5px;
-  font-weight: 400;
+  font-weight: 500;
 }
 
 .premium-topbar strong {
-  color: var(--polish-ink);
+  color: #101827;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .premium-topbar-actions {
@@ -187,22 +188,30 @@ body {
 
 .premium-topbar-actions a,
 .premium-topbar-actions button,
-.language-switcher-button {
+.premium-topbar .language-switcher-button,
+.premium-topbar-actions .secondary-button {
   gap: 6px;
   min-height: 34px;
   padding-block: 7px;
   padding-inline: 10px;
-  border-color: var(--polish-line);
+  border-color: rgba(23, 32, 51, 0.2);
   border-radius: 7px;
-  color: #3c4759;
+  background: #fff8f6;
+  color: var(--polish-ink);
   font-size: 11.5px;
   font-weight: 500;
-  box-shadow: none;
+  box-shadow: 0 1px 3px rgba(23, 32, 51, 0.08);
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
 }
 
 .premium-topbar-actions a svg,
 .premium-topbar-actions button svg {
-  color: #7b8595;
+  color: #334158;
 }
 
 .premium-topbar-actions > a > span,
@@ -210,6 +219,28 @@ body {
   color: inherit;
   font-size: inherit;
   font-weight: inherit;
+}
+
+.premium-topbar-actions a:hover,
+.premium-topbar-actions button:hover:not(:disabled),
+.premium-topbar .language-switcher-button:hover:not(:disabled) {
+  border-color: rgba(23, 32, 51, 0.34);
+  background: #ffffff;
+  color: #101827;
+  box-shadow: 0 4px 10px rgba(23, 32, 51, 0.12);
+  transform: translateY(-1px);
+}
+
+.premium-topbar-actions a:hover svg,
+.premium-topbar-actions button:hover:not(:disabled) svg {
+  color: #101827;
+}
+
+.premium-topbar-actions a:focus-visible,
+.premium-topbar-actions button:focus-visible,
+.premium-topbar .language-switcher-button:focus-visible {
+  outline: 2px solid var(--polish-ink);
+  outline-offset: 2px;
 }
 
 .premium-main {
