@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { LogOut } from "lucide-react";
 
 function readCookie(name: string): string | undefined {
   return document.cookie
@@ -44,7 +45,8 @@ export function LogoutButton({
       onClick={logout}
       disabled={submitting}
     >
-      {submitting ? submittingLabel : label}
+      <LogOut aria-hidden="true" size={15} />
+      <span>{submitting ? submittingLabel : label}</span>
     </button>
   );
 }

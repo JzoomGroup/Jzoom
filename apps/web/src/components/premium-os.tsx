@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowUpLeft, Inbox } from "lucide-react";
 import type { ReactNode } from "react";
 
 type Action = {
@@ -270,7 +271,10 @@ export function ActionCard({
   return (
     <Link className="os-action-card" href={href}>
       <span>{index}</span>
-      <strong>{title}</strong>
+      <strong>
+        {title}
+        <ArrowUpLeft aria-hidden="true" size={15} strokeWidth={1.8} />
+      </strong>
       <p>{description}</p>
     </Link>
   );
@@ -321,6 +325,9 @@ export function EmptyState({
 }) {
   return (
     <div className="os-empty-state">
+      <span className="os-empty-state-icon" aria-hidden="true">
+        <Inbox size={20} strokeWidth={1.6} />
+      </span>
       <strong>{title}</strong>
       {children ? <p>{children}</p> : null}
       {action}

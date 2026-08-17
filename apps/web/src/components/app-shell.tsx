@@ -1,7 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  Bell,
+  Blocks,
+  BriefcaseBusiness,
+  Building2,
+  Calculator,
+  ChartNoAxesColumn,
+  ClipboardCheck,
+  ClipboardList,
+  Clock3,
+  FileInput,
+  FileText,
+  FolderKanban,
+  Gauge,
+  KeyRound,
+  LayoutDashboard,
+  Library,
+  ListChecks,
+  ListTodo,
+  Menu,
+  ReceiptText,
+  ScrollText,
+  Settings2,
+  ShieldCheck,
+  SlidersHorizontal,
+  UserCircle,
+  UserRoundCheck,
+  Users,
+  X,
+  type LucideIcon,
+} from "lucide-react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { directionForLocale, htmlLangForLocale, normalizeLocale } from "../lib/i18n";
 import { LanguageSwitcher } from "./language-switcher";
 import { LocaleDocumentSync } from "./locale-document-sync";
@@ -11,6 +42,7 @@ type ShellMode = "admin" | "client" | "internal";
 
 type NavItem = {
   href: string;
+  icon: LucideIcon;
   labelAr: string;
   labelEn: string;
   sectionAr?: string;
@@ -27,6 +59,7 @@ type ShellContext = {
 const adminNavigation: NavItem[] = [
   {
     href: "/admin",
+    icon: LayoutDashboard,
     labelAr: "لوحة التحكم",
     labelEn: "Dashboard",
     sectionAr: "نظرة عامة",
@@ -34,49 +67,86 @@ const adminNavigation: NavItem[] = [
   },
   {
     href: "/admin/clients",
+    icon: Building2,
     labelAr: "العملاء",
     labelEn: "Clients",
     sectionAr: "العملاء والوصول",
     sectionEn: "Clients & access",
   },
-  { href: "/admin/users", labelAr: "المستخدمون", labelEn: "Users" },
-  { href: "/admin/roles", labelAr: "الأدوار", labelEn: "Roles" },
-  { href: "/admin/permissions", labelAr: "الصلاحيات", labelEn: "Permissions" },
+  { href: "/admin/users", icon: Users, labelAr: "المستخدمون", labelEn: "Users" },
+  {
+    href: "/admin/roles",
+    icon: UserRoundCheck,
+    labelAr: "الأدوار",
+    labelEn: "Roles",
+  },
+  {
+    href: "/admin/permissions",
+    icon: KeyRound,
+    labelAr: "الصلاحيات",
+    labelEn: "Permissions",
+  },
   {
     href: "/admin/catalog",
+    icon: Library,
     labelAr: "كتالوج الخدمات",
     labelEn: "Catalog",
     sectionAr: "الخدمات والباقات",
     sectionEn: "Services & packages",
   },
-  { href: "/admin/catalog/categories", labelAr: "تصنيفات شهرية", labelEn: "Monthly categories" },
+  {
+    href: "/admin/catalog/categories",
+    icon: Blocks,
+    labelAr: "تصنيفات شهرية",
+    labelEn: "Monthly categories",
+  },
   {
     href: "/admin/catalog/monthly-services",
+    icon: BriefcaseBusiness,
     labelAr: "الخدمات الشهرية",
     labelEn: "Monthly services",
   },
-  { href: "/admin/catalog/service-items", labelAr: "بنود الخدمات", labelEn: "Service items" },
-  { href: "/admin/catalog/service-levels", labelAr: "الباقات", labelEn: "Packages" },
+  {
+    href: "/admin/catalog/service-items",
+    icon: ListChecks,
+    labelAr: "بنود الخدمات",
+    labelEn: "Service items",
+  },
+  {
+    href: "/admin/catalog/service-levels",
+    icon: ClipboardCheck,
+    labelAr: "الباقات",
+    labelEn: "Packages",
+  },
   {
     href: "/admin/catalog/one-time-categories",
+    icon: Blocks,
     labelAr: "تصنيفات لمرة واحدة",
     labelEn: "One-time categories",
   },
   {
     href: "/admin/catalog/one-time-services",
+    icon: FolderKanban,
     labelAr: "خدمات لمرة واحدة",
     labelEn: "One-time services",
   },
   {
     href: "/admin/request-templates",
+    icon: FileInput,
     labelAr: "نماذج الطلبات",
     labelEn: "Request templates",
     sectionAr: "النماذج والتسعير",
     sectionEn: "Forms & pricing",
   },
-  { href: "/admin/pricing-rules", labelAr: "قواعد التسعير", labelEn: "Pricing rules" },
+  {
+    href: "/admin/pricing-rules",
+    icon: SlidersHorizontal,
+    labelAr: "قواعد التسعير",
+    labelEn: "Pricing rules",
+  },
   {
     href: "/admin/audit-logs",
+    icon: ScrollText,
     labelAr: "سجل التدقيق",
     labelEn: "Audit logs",
     sectionAr: "الحوكمة",
@@ -84,11 +154,13 @@ const adminNavigation: NavItem[] = [
   },
   {
     href: "/admin/platform-configuration",
+    icon: Settings2,
     labelAr: "إعدادات المنصة",
     labelEn: "Platform configuration",
   },
   {
     href: "/pricing",
+    icon: Calculator,
     labelAr: "استوديو التسعير",
     labelEn: "Pricing Studio",
     sectionAr: "التشغيل التجاري",
@@ -97,47 +169,119 @@ const adminNavigation: NavItem[] = [
 ];
 
 const clientNavigation: NavItem[] = [
-  { href: "/client", labelAr: "مركز الخدمة", labelEn: "Overview" },
-  { href: "/client/requests", labelAr: "الطلبات", labelEn: "Requests" },
-  { href: "/client/projects", labelAr: "المشاريع", labelEn: "Projects" },
-  { href: "/client/quotes", labelAr: "العروض", labelEn: "Quotes" },
-  { href: "/client/invoices", labelAr: "الفواتير", labelEn: "Invoices" },
-  { href: "/client/reports", labelAr: "التقارير", labelEn: "Reports" },
-  { href: "/notifications", labelAr: "الإشعارات", labelEn: "Notifications" },
+  {
+    href: "/client",
+    icon: Gauge,
+    labelAr: "مركز الخدمة",
+    labelEn: "Overview",
+    sectionAr: "مساحة العميل",
+    sectionEn: "Client workspace",
+  },
+  {
+    href: "/client/requests",
+    icon: ClipboardList,
+    labelAr: "الطلبات",
+    labelEn: "Requests",
+    sectionAr: "مساحة العميل",
+    sectionEn: "Client workspace",
+  },
+  {
+    href: "/client/projects",
+    icon: FolderKanban,
+    labelAr: "المشاريع",
+    labelEn: "Projects",
+    sectionAr: "مساحة العميل",
+    sectionEn: "Client workspace",
+  },
+  {
+    href: "/client/quotes",
+    icon: FileText,
+    labelAr: "العروض",
+    labelEn: "Quotes",
+    sectionAr: "المالية والتقارير",
+    sectionEn: "Finance & reports",
+  },
+  {
+    href: "/client/invoices",
+    icon: ReceiptText,
+    labelAr: "الفواتير",
+    labelEn: "Invoices",
+    sectionAr: "المالية والتقارير",
+    sectionEn: "Finance & reports",
+  },
+  {
+    href: "/client/reports",
+    icon: ChartNoAxesColumn,
+    labelAr: "التقارير",
+    labelEn: "Reports",
+    sectionAr: "المالية والتقارير",
+    sectionEn: "Finance & reports",
+  },
+  {
+    href: "/notifications",
+    icon: Bell,
+    labelAr: "الإشعارات",
+    labelEn: "Notifications",
+    sectionAr: "الحساب",
+    sectionEn: "Account",
+  },
 ];
 
 const internalNavigation: NavItem[] = [
-  { href: "/admin", labelAr: "الأدمن", labelEn: "Admin", visible: ({ isAdmin }) => isAdmin },
+  {
+    href: "/admin",
+    icon: ShieldCheck,
+    labelAr: "الأدمن",
+    labelEn: "Admin",
+    sectionAr: "مساحة العمل",
+    sectionEn: "Workspace",
+    visible: ({ isAdmin }) => isAdmin,
+  },
   {
     href: "/management",
+    icon: Gauge,
     labelAr: "الإدارة",
     labelEn: "Management",
+    sectionAr: "مساحة العمل",
+    sectionEn: "Workspace",
     visible: ({ isAdmin, roles }) => isAdmin || roles.includes("ROLE-MGMT"),
   },
   {
     href: "/account-manager",
+    icon: UserRoundCheck,
     labelAr: "مدير الحساب",
     labelEn: "Account Manager",
+    sectionAr: "مساحة العمل",
+    sectionEn: "Workspace",
     visible: ({ isAdmin, roles }) =>
       isAdmin || roles.includes("ROLE-MGMT") || roles.includes("ROLE-AM"),
   },
   {
     href: "/supervisor",
+    icon: ClipboardCheck,
     labelAr: "المشرف",
     labelEn: "Supervisor",
+    sectionAr: "مساحة العمل",
+    sectionEn: "Workspace",
     visible: ({ isAdmin, roles }) =>
       isAdmin || roles.includes("ROLE-MGMT") || roles.includes("ROLE-SUPERVISOR"),
   },
   {
     href: "/specialist",
+    icon: BriefcaseBusiness,
     labelAr: "المختص",
     labelEn: "Specialist",
+    sectionAr: "مساحة العمل",
+    sectionEn: "Workspace",
     visible: ({ isAdmin, roles }) => isAdmin || roles.includes("ROLE-SPECIALIST"),
   },
   {
     href: "/projects",
+    icon: FolderKanban,
     labelAr: "المشاريع",
     labelEn: "Projects",
+    sectionAr: "مساحة العمل",
+    sectionEn: "Workspace",
     visible: ({ isAdmin, roles }) =>
       isAdmin ||
       roles.includes("ROLE-MGMT") ||
@@ -148,29 +292,41 @@ const internalNavigation: NavItem[] = [
   },
   {
     href: "/pricing",
+    icon: Calculator,
     labelAr: "مسودات التسعير",
     labelEn: "Pricing drafts",
+    sectionAr: "التشغيل التجاري",
+    sectionEn: "Commercial operations",
     visible: ({ isAdmin, permissions, roles }) =>
       (isAdmin || roles.includes("ROLE-AM")) && permissions.includes("PERM-USE-PRICING-STUDIO"),
   },
   {
     href: "/pricing/quotes",
+    icon: FileText,
     labelAr: "العروض",
     labelEn: "Quotes",
+    sectionAr: "التشغيل التجاري",
+    sectionEn: "Commercial operations",
     visible: ({ isAdmin, permissions, roles }) =>
       (isAdmin || roles.includes("ROLE-AM")) && permissions.includes("PERM-MANAGE-QUOTES"),
   },
   {
     href: "/pricing/invoices",
+    icon: ReceiptText,
     labelAr: "الفواتير",
     labelEn: "Invoices",
+    sectionAr: "التشغيل التجاري",
+    sectionEn: "Commercial operations",
     visible: ({ isAdmin, permissions, roles }) =>
       (isAdmin || roles.includes("ROLE-AM")) && permissions.includes("PERM-MANAGE-INVOICES"),
   },
   {
     href: "/requests",
+    icon: ClipboardList,
     labelAr: "الطلبات",
     labelEn: "Requests",
+    sectionAr: "التشغيل والمتابعة",
+    sectionEn: "Operations & follow-up",
     visible: ({ isAdmin, roles }) =>
       isAdmin ||
       roles.includes("ROLE-MGMT") ||
@@ -180,8 +336,11 @@ const internalNavigation: NavItem[] = [
   },
   {
     href: "/requests/queues",
+    icon: ListTodo,
     labelAr: "قوائم العمل",
     labelEn: "Work queues",
+    sectionAr: "التشغيل والمتابعة",
+    sectionEn: "Operations & follow-up",
     visible: ({ isAdmin, roles }) =>
       isAdmin ||
       roles.includes("ROLE-MGMT") ||
@@ -189,22 +348,47 @@ const internalNavigation: NavItem[] = [
       roles.includes("ROLE-SUPERVISOR") ||
       roles.includes("ROLE-SPECIALIST"),
   },
-  { href: "/hours-ledger", labelAr: "سجل الساعات", labelEn: "Hours Ledger" },
+  {
+    href: "/hours-ledger",
+    icon: Clock3,
+    labelAr: "سجل الساعات",
+    labelEn: "Hours Ledger",
+    sectionAr: "التشغيل والمتابعة",
+    sectionEn: "Operations & follow-up",
+  },
   {
     href: "/reports",
+    icon: ChartNoAxesColumn,
     labelAr: "التقارير",
     labelEn: "Reports",
+    sectionAr: "التشغيل والمتابعة",
+    sectionEn: "Operations & follow-up",
     visible: ({ isAdmin, roles }) =>
       isAdmin || roles.includes("ROLE-MGMT") || roles.includes("ROLE-AM"),
   },
-  { href: "/notifications", labelAr: "الإشعارات", labelEn: "Notifications" },
+  {
+    href: "/notifications",
+    icon: Bell,
+    labelAr: "الإشعارات",
+    labelEn: "Notifications",
+    sectionAr: "التشغيل والمتابعة",
+    sectionEn: "Operations & follow-up",
+  },
   {
     href: "/admin/pricing-rules",
+    icon: SlidersHorizontal,
     labelAr: "قواعد التسعير",
     labelEn: "Pricing rules",
     visible: ({ isAdmin }) => isAdmin,
   },
-  { href: "/profile", labelAr: "الملف الشخصي", labelEn: "Profile" },
+  {
+    href: "/profile",
+    icon: UserCircle,
+    labelAr: "الملف الشخصي",
+    labelEn: "Profile",
+    sectionAr: "الحساب",
+    sectionEn: "Account",
+  },
 ];
 
 const shellCopy = {
@@ -309,12 +493,6 @@ const adminOnlyAdminPaths = new Set([
   "/admin/audit-logs",
   "/admin/platform-configuration",
 ]);
-
-const mobileNavigationOpenStyle: CSSProperties = {
-  opacity: 1,
-  pointerEvents: "auto",
-  transform: "translateY(0)",
-};
 
 function visibleNavigation(items: NavItem[], context: ShellContext) {
   return items.filter((item) => {
@@ -429,11 +607,11 @@ export function AppShell({
           onClick={() => setIsMobileNavigationOpen((current) => !current)}
         >
           <span>{menuLabel}</span>
-          <span className="premium-mobile-menu-icon" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </span>
+          {isMobileNavigationOpen ? (
+            <X aria-hidden="true" size={17} />
+          ) : (
+            <Menu aria-hidden="true" size={17} />
+          )}
         </button>
       </div>
 
@@ -449,7 +627,6 @@ export function AppShell({
       <aside
         id={navigationId}
         className={`premium-sidebar${isMobileNavigationOpen ? " is-open" : ""}`}
-        style={isMobileNavigationOpen ? mobileNavigationOpenStyle : undefined}
       >
         <Link
           className="premium-brand"
@@ -467,6 +644,7 @@ export function AppShell({
 
         <nav className="premium-nav" aria-label={copy.navigationLabel}>
           {items.map((item, index) => {
+            const Icon = item.icon;
             const active = isActivePath(activePath, item.href);
             const sectionLabel = language === "ar" ? item.sectionAr : item.sectionEn;
             const previousItem = items[index - 1];
@@ -485,7 +663,10 @@ export function AppShell({
                   className={active ? "active" : undefined}
                   onClick={closeMobileNavigation}
                 >
-                  {language === "ar" ? item.labelAr : item.labelEn}
+                  <Icon aria-hidden="true" size={16} strokeWidth={1.8} />
+                  <span className="premium-nav-label">
+                    {language === "ar" ? item.labelAr : item.labelEn}
+                  </span>
                 </Link>
               </Fragment>
             );
@@ -506,8 +687,16 @@ export function AppShell({
             <strong>{displayName}</strong>
           </div>
           <div className="premium-topbar-actions">
-            <Link href="/profile">{copy.profile}</Link>
-            {isAdmin && <Link href="/settings">{copy.settings}</Link>}
+            <Link href="/profile">
+              <UserCircle aria-hidden="true" size={15} />
+              <span>{copy.profile}</span>
+            </Link>
+            {isAdmin && (
+              <Link href="/settings">
+                <Settings2 aria-hidden="true" size={15} />
+                <span>{copy.settings}</span>
+              </Link>
+            )}
             <LanguageSwitcher locale={normalizedLocale} />
             <LogoutButton label={copy.signOut} submittingLabel={copy.signingOut} />
           </div>

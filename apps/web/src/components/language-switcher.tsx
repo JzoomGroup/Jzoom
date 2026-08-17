@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Languages } from "lucide-react";
 import {
   localeSwitchAriaLabel,
   localeSwitchLabel,
@@ -80,7 +81,8 @@ export function LanguageSwitcher({
         disabled={pending}
         aria-label={localeSwitchAriaLabel(currentLocale)}
       >
-        {pending ? "..." : localeSwitchLabel(currentLocale)}
+        <Languages aria-hidden="true" size={15} />
+        <span>{pending ? "..." : localeSwitchLabel(currentLocale)}</span>
       </button>
       {error ? (
         <span className="language-switcher-error" role="alert">
