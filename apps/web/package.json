@@ -9,7 +9,7 @@
     "dev": "next dev",
     "i18n:check": "node scripts/check-i18n-architecture.mjs",
     "lint": "eslint src next.config.ts && node scripts/check-css-architecture.mjs && node scripts/check-i18n-architecture.mjs",
-    "start": "node .next/standalone/apps/web/server.js",
+    "start": "node scripts/start-standalone.mjs",
     "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",
     "test:e2e": "playwright test",
     "test:e2e:uat": "playwright test --project=desktop",
