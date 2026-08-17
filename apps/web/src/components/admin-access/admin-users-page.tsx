@@ -1,7 +1,12 @@
 "use client";
 
 import { adminAccessCopy } from "../../i18n/admin-access";
-import type { AdminAccessSetup, AdminAccessUser } from "../../lib/admin-access-types";
+import type {
+  AdminAccessPermission,
+  AdminAccessRole,
+  AdminAccessSetup,
+  AdminAccessUser,
+} from "../../lib/admin-access-types";
 import {
   BentoGrid,
   EmptyState,
@@ -29,25 +34,35 @@ import {
   isSpecialistScopeRole,
   operatingRoleLabel,
   operatingScopeLabels,
-  primaryOperatingRoleCode,
   serviceLabel,
   toggleValue,
 } from "./operating-user-scope";
 import { useOperatingUsers } from "./use-operating-users";
+import { UserAccessEditor } from "./user-access-editor";
 
 export function AdminUsersPageContent({
+  canModifyPermissions = false,
+  currentUserId,
   locale,
+  permissions = [],
+  roles = [],
   setup = emptySetup,
   users,
 }: {
+  canModifyPermissions?: boolean;
+  currentUserId?: string;
   locale: string;
+  permissions?: AdminAccessPermission[];
+  roles?: AdminAccessRole[];
   setup?: AdminAccessSetup;
   users: AdminAccessUser[];
 }) {
   const lang = language(locale);
   const t = adminAccessCopy[lang];
   const {
+    applySnapshot,
     closeOperatingForm,
+    closeUserManager,
     currentSetup,
     currentUsers,
     feedback,
@@ -56,16 +71,18 @@ export function AdminUsersPageContent({
     metrics,
     openCreateForm,
     openScopeEditor,
+    openUserManager,
     resetPassword,
     resettingUserId,
     saving,
+    selectedUser,
     setForm,
     showCreator,
     specialists,
     submitOperatingUser,
     supervisors,
     visibleServiceItems,
-  } = useOperatingUsers({ initialSetup: setup, initialUsers: users, locale: lang });
+  } = useOperatingUsers({ currentUserId, initialSetup: setup, initialUsers: users, locale: lang });
   const { activeUsers, disabledUsers, lockedUsers, usersWithOverrides } = metrics;
 
   return (
@@ -101,6 +118,26 @@ export function AdminUsersPageContent({
         <div className={`access-feedback ${feedback.type}`} role="status">
           {feedback.text}
         </div>
+      ) : null}
+
+      {selectedUser ? (
+        <UserAccessEditor
+          key={selectedUser.id}
+          canModifyPermissions={canModifyPermissions}
+          isCurrentUser={selectedUser.id === currentUserId}
+          locale={lang}
+          onClose={closeUserManager}
+          onEditScope={(user) => {
+            closeUserManager();
+            openScopeEditor(user);
+          }}
+          onResetPassword={resetPassword}
+          onSnapshot={applySnapshot}
+          permissions={permissions}
+          resettingPassword={resettingUserId === selectedUser.id}
+          roles={roles}
+          user={selectedUser}
+        />
       ) : null}
 
       {showCreator ? (
@@ -425,22 +462,12 @@ export function AdminUsersPageContent({
                   )}
                 </details>
                 <div className="operating-user-actions">
-                  {primaryOperatingRoleCode(user) ? (
-                    <button
-                      className="button-secondary"
-                      type="button"
-                      onClick={() => openScopeEditor(user)}
-                    >
-                      {t.editScope}
-                    </button>
-                  ) : null}
                   <button
-                    className="button-secondary"
+                    className="button-primary"
                     type="button"
-                    disabled={resettingUserId === user.id}
-                    onClick={() => void resetPassword(user)}
+                    onClick={() => openUserManager(user)}
                   >
-                    {resettingUserId === user.id ? t.resetting : t.resetDefaultPassword}
+                    {t.manageUser}
                   </button>
                 </div>
               </article>

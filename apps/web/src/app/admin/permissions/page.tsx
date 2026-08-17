@@ -2,10 +2,10 @@ import { redirect } from "next/navigation";
 import { AdminPermissionsPageContent } from "../../../components/admin-access/admin-access-pages";
 import { AdminShell } from "../../../components/admin-shell";
 import { getCurrentUser } from "../../../lib/auth";
-import { requireAdminPermissions } from "../../../lib/admin-access-server";
+import { requireAdminRoles } from "../../../lib/admin-access-server";
 
 export default async function AdminPermissionsPage() {
-  const [user, snapshot] = await Promise.all([getCurrentUser(), requireAdminPermissions()]);
+  const [user, snapshot] = await Promise.all([getCurrentUser(), requireAdminRoles()]);
 
   if (!user) {
     redirect("/login");
@@ -26,8 +26,10 @@ export default async function AdminPermissionsPage() {
       roles={user.roles}
     >
       <AdminPermissionsPageContent
+        currentUserRoleCodes={user.roles}
         locale={user.preferredLocale}
         permissions={snapshot.permissions}
+        roles={snapshot.roles}
       />
     </AdminShell>
   );

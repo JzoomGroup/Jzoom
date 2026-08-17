@@ -155,9 +155,14 @@ export function severityLabel(
 export function eventLabel(eventCode: string, locale: SupportedLocale): string {
   const labels: Record<string, Record<SupportedLocale, string>> = {
     AUTH_INVITATION_ACCEPTED: { ar: "قبول دعوة مستخدم", en: "Invitation accepted" },
+    AUTH_INVITATION_CREATED: { ar: "إنشاء دعوة مستخدم", en: "User invitation created" },
     AUTH_LOGIN_FAILED: { ar: "محاولة دخول فاشلة", en: "Failed login attempt" },
     AUTH_LOGIN_SUCCEEDED: { ar: "تسجيل دخول ناجح", en: "Successful login" },
     AUTH_LOGOUT: { ar: "تسجيل خروج", en: "Sign out" },
+    AUTH_OPERATING_USER_CREATED: {
+      ar: "إنشاء مستخدم تشغيلي",
+      en: "Operating user created",
+    },
     AUTH_PASSWORD_CHANGED: { ar: "تغيير كلمة المرور", en: "Password changed" },
     AUTH_PASSWORD_RESET_COMPLETED: {
       ar: "إتمام إعادة تعيين كلمة المرور",
@@ -177,8 +182,23 @@ export function eventLabel(eventCode: string, locale: SupportedLocale): string {
       en: "Profile preferences updated",
     },
     AUTH_ROLE_DENIED: { ar: "منع وصول بسبب الدور", en: "Role denied" },
+    AUTH_ROLE_PERMISSIONS_CHANGED: {
+      ar: "تعديل صلاحيات دور",
+      en: "Role permissions changed",
+    },
     AUTH_SCOPE_DENIED: { ar: "منع وصول بسبب النطاق", en: "Scope denied" },
     AUTH_SESSIONS_INVALIDATED: { ar: "إبطال جلسات المستخدم", en: "User sessions invalidated" },
+    AUTH_USER_OPERATING_SCOPE_CHANGED: {
+      ar: "تعديل نطاق عمل المستخدم",
+      en: "User operating scope changed",
+    },
+    AUTH_USER_PERMISSION_OVERRIDES_CHANGED: {
+      ar: "تعديل استثناءات صلاحيات المستخدم",
+      en: "User permission exceptions changed",
+    },
+    AUTH_USER_PROFILE_CHANGED: { ar: "تعديل بيانات المستخدم", en: "User profile changed" },
+    AUTH_USER_ROLES_CHANGED: { ar: "تعديل أدوار المستخدم", en: "User roles changed" },
+    AUTH_USER_STATUS_CHANGED: { ar: "تعديل حالة المستخدم", en: "User status changed" },
     ACCOUNT_MANAGER_PORTFOLIO_VIEWED: {
       ar: "عرض محفظة مدير الحساب",
       en: "Account manager portfolio viewed",

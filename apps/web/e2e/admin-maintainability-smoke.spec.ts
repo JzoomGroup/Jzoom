@@ -20,7 +20,7 @@ test("keeps the refactored Admin access and catalog screens intact", async ({ pa
   const screens = [
     { path: "/admin/users", heading: "مستخدمو البوابة" },
     { path: "/admin/roles", heading: "الأدوار" },
-    { path: "/admin/permissions", heading: "الصلاحيات" },
+    { path: "/admin/permissions", heading: "مركز إدارة الصلاحيات" },
     { path: "/admin/audit-logs", heading: "سجل التدقيق" },
     { path: "/admin/catalog/categories", heading: "تصنيفات الخدمات" },
   ] as const;
@@ -38,6 +38,18 @@ test("keeps the refactored Admin access and catalog screens intact", async ({ pa
     }));
     expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
   }
+
+  await page.goto("/admin/users");
+  await page.getByRole("button", { name: "إدارة المستخدم" }).first().click();
+  await expect(page.getByRole("region", { name: "ملف المستخدم" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "الدور والوصول" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "أمان الحساب" })).toBeVisible();
+
+  await page.goto("/admin/permissions");
+  await expect(page.getByLabel("اختر الدور")).toBeVisible();
+  await expect(
+    page.locator(".permission-matrix-list input[type='checkbox']").first(),
+  ).toBeVisible();
 });
 
 test("opens and dismisses the Admin navigation on mobile", async ({ page }, testInfo) => {

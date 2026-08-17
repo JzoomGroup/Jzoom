@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import {
   AdminAuditLogsPageContent,
   AdminPermissionsPageContent,
@@ -90,7 +90,15 @@ const auditLog: AdminAuditLog = {
 
 describe("Admin access pages", () => {
   it("renders portal users as access cards with roles and overrides", () => {
-    render(<AdminUsersPageContent locale="en" users={[user]} />);
+    render(
+      <AdminUsersPageContent
+        canModifyPermissions
+        locale="en"
+        permissions={[permission]}
+        roles={[role]}
+        users={[user]}
+      />,
+    );
 
     expect(screen.getByRole("heading", { level: 1, name: "Portal users" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add operating user" })).toBeInTheDocument();
@@ -100,6 +108,12 @@ describe("Admin access pages", () => {
     expect(screen.getByText("ada@example.com")).toBeInTheDocument();
     expect(screen.getAllByText("Platform Admin")).not.toHaveLength(0);
     expect(screen.getByText("Temporary QA access")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Manage user" }));
+    expect(screen.getByRole("region", { name: "User record" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Profile" })).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Ada Admin")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("ada@example.com")).toBeInTheDocument();
   });
 
   it("renders role profiles with capabilities and permission chips", () => {
@@ -113,19 +127,24 @@ describe("Admin access pages", () => {
   });
 
   it("renders permissions grouped by module", () => {
-    render(<AdminPermissionsPageContent locale="en" permissions={[permission]} />);
+    render(<AdminPermissionsPageContent locale="en" permissions={[permission]} roles={[role]} />);
 
-    expect(screen.getByRole("heading", { level: 1, name: "Permissions" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Permission management center" }),
+    ).toBeInTheDocument();
     expect(screen.getAllByText("Access")).not.toHaveLength(0);
     expect(screen.getByText("PERM-MANAGE-USERS")).toBeInTheDocument();
     expect(screen.getByText("Admin Only")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /Manage users/ })).toBeChecked();
     expect(screen.queryByText("Security notes")).not.toBeInTheDocument();
   });
 
   it("renders permissions in Arabic without exposing internal English labels", () => {
-    render(<AdminPermissionsPageContent locale="ar" permissions={[permission]} />);
+    render(<AdminPermissionsPageContent locale="ar" permissions={[permission]} roles={[role]} />);
 
-    expect(screen.getByRole("heading", { level: 1, name: "الصلاحيات" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "مركز إدارة الصلاحيات" }),
+    ).toBeInTheDocument();
     expect(screen.getAllByText("الوصول")).not.toHaveLength(0);
     expect(screen.getByText("إدارة المستخدمين")).toBeInTheDocument();
     expect(screen.getByText("الأدمن فقط")).toBeInTheDocument();

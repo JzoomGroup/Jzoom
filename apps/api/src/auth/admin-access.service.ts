@@ -15,7 +15,9 @@ import type {
   CreateOperatingUserDto,
   InviteUserDto,
   OperatingUserScopeDto,
+  UpdateAdminUserProfileDto,
   UpdateOperatingUserScopeDto,
+  UserPermissionOverrideDto,
 } from "./auth.dto.js";
 
 const ACCOUNT_MANAGER_ROLE_CODE = "ROLE-AM";
@@ -632,6 +634,74 @@ export class AdminAccessService {
     );
   }
 
+  async updateUserProfile(
+    userId: string,
+    input: UpdateAdminUserProfileDto,
+    actorId: string,
+    actorSessionId: string,
+    metadata: RequestMetadata,
+  ): Promise<void> {
+    const user = await this.database.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || user.status === "ARCHIVED") {
+      throw new BadRequestException({
+        code: "USER_NOT_FOUND",
+        message: "The user could not be found or is archived",
+      });
+    }
+
+    const email = input.email.trim().toLowerCase();
+    const displayName = input.displayName.trim();
+    const emailOwner = await this.database.prisma.user.findUnique({ where: { email } });
+    if (emailOwner && emailOwner.id !== userId) {
+      throw new ConflictException({
+        code: "USER_EMAIL_ALREADY_EXISTS",
+        message: "The email is already assigned to another user",
+      });
+    }
+
+    const emailChanged = email !== user.email;
+    const editingOwnProfile = userId === actorId;
+    const now = new Date();
+    await this.database.prisma.$transaction(async (transaction) => {
+      await transaction.user.update({
+        where: { id: userId },
+        data: {
+          displayName,
+          email,
+          preferredLocale: input.preferredLocale,
+          ...(emailChanged && !editingOwnProfile ? { sessionVersion: { increment: 1 } } : {}),
+        },
+      });
+      if (emailChanged) {
+        await transaction.authSession.updateMany({
+          where: {
+            userId,
+            revokedAt: null,
+            ...(editingOwnProfile ? { id: { not: actorSessionId } } : {}),
+          },
+          data: { revokedAt: now, revokeReason: "email_changed_by_admin" },
+        });
+      }
+    });
+
+    await this.audit.record(
+      {
+        actorId,
+        eventCode: "AUTH_USER_PROFILE_CHANGED",
+        entityType: "User",
+        entityId: userId,
+        before: {
+          displayName: user.displayName,
+          email: user.email,
+          preferredLocale: user.preferredLocale,
+        },
+        after: { displayName, email, preferredLocale: input.preferredLocale },
+        severity: emailChanged ? "HIGH" : "MEDIUM",
+      },
+      metadata,
+    );
+  }
+
   async replaceOperatingScope(
     userId: string,
     input: UpdateOperatingUserScopeDto,
@@ -768,6 +838,12 @@ export class AdminAccessService {
         message: "One or more selected roles are unavailable",
       });
     }
+    if (roles.some((role) => role.userType !== user.userType)) {
+      throw new BadRequestException({
+        code: "ROLE_USER_TYPE_MISMATCH",
+        message: "Selected roles must match the user's internal or external account type",
+      });
+    }
 
     const oldRoleCodes = user.roles.map(({ role }) => role.code);
     if (
@@ -800,6 +876,127 @@ export class AdminAccessService {
         entityId: userId,
         before: { roleCodes: oldRoleCodes },
         after: { roleCodes },
+        severity: "CRITICAL",
+      },
+      metadata,
+    );
+  }
+
+  async replaceUserPermissionOverrides(
+    userId: string,
+    overrides: UserPermissionOverrideDto[],
+    actorId: string,
+    metadata: RequestMetadata,
+  ): Promise<void> {
+    const permissionCodes = overrides.map((override) => override.permissionCode.trim());
+    if (permissionCodes.length !== new Set(permissionCodes).size) {
+      throw new BadRequestException({
+        code: "DUPLICATE_PERMISSION_OVERRIDE",
+        message: "A permission may only have one override per user",
+      });
+    }
+
+    const [user, permissions, existingOverrides] = await Promise.all([
+      this.database.prisma.user.findUnique({
+        where: { id: userId },
+        include: { roles: { include: { role: true } } },
+      }),
+      this.database.prisma.permission.findMany({
+        where: { code: { in: permissionCodes }, status: "ACTIVE" },
+        select: { id: true, code: true },
+      }),
+      this.database.prisma.userPermissionOverride.findMany({
+        where: { userId },
+        select: {
+          effect: true,
+          expiresAt: true,
+          reason: true,
+          permission: { select: { code: true } },
+        },
+      }),
+    ]);
+    if (!user || user.status === "ARCHIVED") {
+      throw new BadRequestException({
+        code: "USER_NOT_FOUND",
+        message: "The user could not be found or is archived",
+      });
+    }
+    if (permissions.length !== permissionCodes.length) {
+      throw new BadRequestException({
+        code: "INVALID_PERMISSION_SELECTION",
+        message: "One or more selected permissions are unavailable",
+      });
+    }
+
+    const now = new Date();
+    const normalizedOverrides = overrides.map((override) => ({
+      permissionCode: override.permissionCode.trim(),
+      effect: override.effect,
+      reason: override.reason.trim(),
+      expiresAt: override.expiresAt ? new Date(override.expiresAt) : null,
+    }));
+    if (normalizedOverrides.some((override) => override.expiresAt && override.expiresAt <= now)) {
+      throw new BadRequestException({
+        code: "INVALID_PERMISSION_OVERRIDE_EXPIRY",
+        message: "Permission override expiry must be in the future",
+      });
+    }
+
+    const isActiveAdmin =
+      user.status === "ACTIVE" &&
+      user.roles.some(({ role }) => role.code === ADMIN_ROLE_CODE && role.status === "ACTIVE");
+    const deniesCriticalPermission = normalizedOverrides.some(
+      (override) =>
+        override.effect === "DENY" &&
+        CRITICAL_ADMIN_PERMISSIONS.some(
+          (permissionCode) => permissionCode === override.permissionCode,
+        ),
+    );
+    if (isActiveAdmin && deniesCriticalPermission) {
+      await this.assertAnotherActiveAdmin(userId);
+    }
+
+    const permissionIds = new Map(
+      permissions.map((permission) => [permission.code, permission.id]),
+    );
+    await this.database.prisma.$transaction(async (transaction) => {
+      await transaction.userPermissionOverride.deleteMany({ where: { userId } });
+      if (normalizedOverrides.length > 0) {
+        await transaction.userPermissionOverride.createMany({
+          data: normalizedOverrides.map((override) => ({
+            userId,
+            permissionId: permissionIds.get(override.permissionCode)!,
+            effect: override.effect,
+            reason: override.reason,
+            expiresAt: override.expiresAt,
+          })),
+        });
+      }
+      await transaction.user.update({
+        where: { id: userId },
+        data: { sessionVersion: { increment: 1 } },
+      });
+      await transaction.authSession.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: now, revokeReason: "permission_overrides_changed" },
+      });
+    });
+
+    await this.audit.record(
+      {
+        actorId,
+        eventCode: "AUTH_USER_PERMISSION_OVERRIDES_CHANGED",
+        entityType: "User",
+        entityId: userId,
+        before: {
+          overrides: existingOverrides.map((override) => ({
+            permissionCode: override.permission.code,
+            effect: override.effect,
+            reason: override.reason,
+            expiresAt: override.expiresAt,
+          })),
+        },
+        after: { overrides: normalizedOverrides },
         severity: "CRITICAL",
       },
       metadata,
@@ -1092,6 +1289,7 @@ export class AdminAccessService {
   }
 
   private async assertAnotherActiveAdmin(excludedUserId: string): Promise<void> {
+    const now = new Date();
     const count = await this.database.prisma.user.count({
       where: {
         id: { not: excludedUserId },
@@ -1102,6 +1300,13 @@ export class AdminAccessService {
               code: ADMIN_ROLE_CODE,
               status: "ACTIVE",
             },
+          },
+        },
+        permissionOverrides: {
+          none: {
+            effect: "DENY",
+            permission: { code: { in: [...CRITICAL_ADMIN_PERMISSIONS] } },
+            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
           },
         },
       },

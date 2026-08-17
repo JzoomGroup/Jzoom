@@ -1,8 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { Type } from "class-transformer";
 import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsDateString,
   IsEmail,
   IsIn,
   IsOptional,
@@ -11,6 +13,7 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  ValidateNested,
 } from "class-validator";
 
 const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
@@ -167,6 +170,22 @@ export class UpdateUserStatusDto {
   status!: "ACTIVE" | "DISABLED" | "ARCHIVED";
 }
 
+export class UpdateAdminUserProfileDto {
+  @ApiProperty({ type: String })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  displayName!: string;
+
+  @ApiProperty({ type: String, example: "person@example.com" })
+  @IsEmail()
+  email!: string;
+
+  @ApiProperty({ type: String, enum: ["ar", "en"] })
+  @IsIn(["ar", "en"])
+  preferredLocale!: "ar" | "en";
+}
+
 export class UpdateProfilePreferencesDto {
   @ApiProperty({ type: String, enum: ["ar", "en"] })
   @IsIn(["ar", "en"])
@@ -201,10 +220,39 @@ export class ReplaceUserRolesDto {
 export class ReplaceRolePermissionsDto {
   @ApiProperty({ type: [String] })
   @IsArray()
-  @ArrayMinSize(1)
   @ArrayMaxSize(200)
   @IsString({ each: true })
   permissionCodes!: string[];
+}
+
+export class UserPermissionOverrideDto {
+  @ApiProperty({ type: String })
+  @IsString()
+  permissionCode!: string;
+
+  @ApiProperty({ type: String, enum: ["ALLOW", "DENY"] })
+  @IsIn(["ALLOW", "DENY"])
+  effect!: "ALLOW" | "DENY";
+
+  @ApiProperty({ type: String })
+  @IsString()
+  @MinLength(3)
+  @MaxLength(500)
+  reason!: string;
+
+  @ApiPropertyOptional({ type: String, format: "date-time" })
+  @IsOptional()
+  @IsDateString()
+  expiresAt?: string;
+}
+
+export class ReplaceUserPermissionOverridesDto {
+  @ApiProperty({ type: [UserPermissionOverrideDto] })
+  @IsArray()
+  @ArrayMaxSize(200)
+  @ValidateNested({ each: true })
+  @Type(() => UserPermissionOverrideDto)
+  overrides!: UserPermissionOverrideDto[];
 }
 
 export class UserIdParamDto {

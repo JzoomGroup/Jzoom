@@ -11,6 +11,7 @@ import {
   type CreateOperatingUserPayload,
 } from "../../lib/admin-access-client";
 import type { AdminAccessSetup, AdminAccessUser } from "../../lib/admin-access-types";
+import type { AdminUsersSnapshot } from "../../lib/admin-access-types";
 import type { SupportedLocale } from "../../lib/i18n";
 import { isLocked } from "./admin-access-formatters";
 import {
@@ -28,12 +29,18 @@ export interface AdminAccessFeedback {
 }
 
 interface UseOperatingUsersInput {
+  currentUserId?: string | undefined;
   initialSetup: AdminAccessSetup;
   initialUsers: AdminAccessUser[];
   locale: SupportedLocale;
 }
 
-export function useOperatingUsers({ initialSetup, initialUsers, locale }: UseOperatingUsersInput) {
+export function useOperatingUsers({
+  currentUserId,
+  initialSetup,
+  initialUsers,
+  locale,
+}: UseOperatingUsersInput) {
   const t = adminAccessCopy[locale];
   const [currentUsers, setCurrentUsers] = useState(initialUsers);
   const [currentSetup, setCurrentSetup] = useState(initialSetup);
@@ -43,6 +50,7 @@ export function useOperatingUsers({ initialSetup, initialUsers, locale }: UseOpe
   const [saving, setSaving] = useState(false);
   const [resettingUserId, setResettingUserId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<AdminAccessFeedback | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const specialists = useMemo(
     () =>
@@ -74,6 +82,12 @@ export function useOperatingUsers({ initialSetup, initialUsers, locale }: UseOpe
     [currentUsers],
   );
   const isEditingScope = editingUserId !== null;
+  const selectedUser = currentUsers.find((user) => user.id === selectedUserId) ?? null;
+
+  function applySnapshot(snapshot: AdminUsersSnapshot) {
+    setCurrentUsers(snapshot.users);
+    setCurrentSetup(snapshot.setup);
+  }
 
   function closeOperatingForm() {
     setShowCreator(false);
@@ -96,6 +110,15 @@ export function useOperatingUsers({ initialSetup, initialUsers, locale }: UseOpe
     setFeedback(null);
   }
 
+  function openUserManager(user: AdminAccessUser) {
+    setSelectedUserId(user.id);
+    setFeedback(null);
+  }
+
+  function closeUserManager() {
+    setSelectedUserId(null);
+  }
+
   async function submitOperatingUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
@@ -104,8 +127,7 @@ export function useOperatingUsers({ initialSetup, initialUsers, locale }: UseOpe
       if (editingUserId) {
         await updateOperatingUserScope(editingUserId, scopePayloadFromForm(form, form.roleCode));
         const snapshot = await fetchAdminUsersSnapshot();
-        setCurrentUsers(snapshot.users);
-        setCurrentSetup(snapshot.setup);
+        applySnapshot(snapshot);
         closeOperatingForm();
         setFeedback({ type: "success", text: t.userScopeUpdated });
         return;
@@ -140,6 +162,10 @@ export function useOperatingUsers({ initialSetup, initialUsers, locale }: UseOpe
     setFeedback(null);
     try {
       await resetOperatingUserPassword(user.id);
+      if (user.id === currentUserId) {
+        window.location.assign("/login");
+        return;
+      }
       setCurrentUsers((users) =>
         users.map((currentUser) =>
           currentUser.id === user.id
@@ -162,7 +188,9 @@ export function useOperatingUsers({ initialSetup, initialUsers, locale }: UseOpe
   }
 
   return {
+    applySnapshot,
     closeOperatingForm,
+    closeUserManager,
     currentSetup,
     currentUsers,
     feedback,
@@ -171,9 +199,11 @@ export function useOperatingUsers({ initialSetup, initialUsers, locale }: UseOpe
     metrics,
     openCreateForm,
     openScopeEditor,
+    openUserManager,
     resetPassword,
     resettingUserId,
     saving,
+    selectedUser,
     setForm,
     showCreator,
     specialists,

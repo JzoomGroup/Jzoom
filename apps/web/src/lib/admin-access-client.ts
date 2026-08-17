@@ -1,7 +1,7 @@
 "use client";
 
 import type { ApiErrorBody } from "./catalog-types";
-import type { AdminUsersSnapshot } from "./admin-access-types";
+import type { AdminRolesSnapshot, AdminUsersSnapshot } from "./admin-access-types";
 import { interfaceIsArabic, localizedApiErrorMessage } from "./api-error-i18n";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
@@ -96,6 +96,19 @@ export interface CreateOperatingUserResponse {
   temporaryPasswordAssigned?: boolean;
 }
 
+export interface UpdateAdminUserProfilePayload {
+  displayName: string;
+  email: string;
+  preferredLocale: "ar" | "en";
+}
+
+export interface UserPermissionOverridePayload {
+  permissionCode: string;
+  effect: "ALLOW" | "DENY";
+  reason: string;
+  expiresAt?: string;
+}
+
 export function createOperatingUser(
   payload: CreateOperatingUserPayload,
 ): Promise<CreateOperatingUserResponse> {
@@ -111,6 +124,66 @@ export function resetOperatingUserPassword(userId: string): Promise<{ reset: boo
   });
 }
 
+export function updateAdminUserProfile(
+  userId: string,
+  payload: UpdateAdminUserProfilePayload,
+): Promise<{ updated: boolean }> {
+  return adminAccessRequest<{ updated: boolean }>(`auth/admin/users/${userId}/profile`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateAdminUserStatus(
+  userId: string,
+  status: "ACTIVE" | "DISABLED" | "ARCHIVED",
+): Promise<{ updated: boolean }> {
+  return adminAccessRequest<{ updated: boolean }>(`auth/admin/users/${userId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function replaceAdminUserRoles(
+  userId: string,
+  roleCodes: string[],
+): Promise<{ updated: boolean }> {
+  return adminAccessRequest<{ updated: boolean }>(`auth/admin/users/${userId}/roles`, {
+    method: "PUT",
+    body: JSON.stringify({ roleCodes }),
+  });
+}
+
+export function replaceAdminUserPermissionOverrides(
+  userId: string,
+  overrides: UserPermissionOverridePayload[],
+): Promise<{ updated: boolean }> {
+  return adminAccessRequest<{ updated: boolean }>(
+    `auth/admin/users/${userId}/permission-overrides`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ overrides }),
+    },
+  );
+}
+
+export function invalidateAdminUserSessions(userId: string): Promise<{ invalidated: boolean }> {
+  return adminAccessRequest<{ invalidated: boolean }>(
+    `auth/admin/users/${userId}/invalidate-sessions`,
+    { method: "POST" },
+  );
+}
+
+export function replaceAdminRolePermissions(
+  roleCode: string,
+  permissionCodes: string[],
+): Promise<{ updated: boolean }> {
+  return adminAccessRequest<{ updated: boolean }>(`auth/admin/roles/${roleCode}/permissions`, {
+    method: "PUT",
+    body: JSON.stringify({ permissionCodes }),
+  });
+}
+
 export function updateOperatingUserScope(
   userId: string,
   payload: OperatingUserScopePayload,
@@ -123,4 +196,8 @@ export function updateOperatingUserScope(
 
 export function fetchAdminUsersSnapshot(): Promise<AdminUsersSnapshot> {
   return adminAccessRequest<AdminUsersSnapshot>("auth/admin/users");
+}
+
+export function fetchAdminRolesSnapshot(): Promise<AdminRolesSnapshot> {
+  return adminAccessRequest<AdminRolesSnapshot>("auth/admin/roles");
 }

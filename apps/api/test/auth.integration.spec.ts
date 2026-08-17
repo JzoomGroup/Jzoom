@@ -367,4 +367,81 @@ describeWithDatabase("PR 3 PostgreSQL authentication and RBAC", () => {
       .expect(200);
     await client.agent.get("/api/v1/auth/me").expect(401);
   });
+
+  it("lets Admins update a user profile and revokes sessions when the email changes", async () => {
+    const client = await login("client@pr3.test");
+    const admin = await login("admin@pr3.test");
+
+    await admin.agent
+      .patch(`/api/v1/auth/admin/users/${clientId}/profile`)
+      .set("X-CSRF-Token", admin.csrf)
+      .send({
+        displayName: "Updated Client",
+        email: "client.updated@pr3.test",
+        preferredLocale: "ar",
+      })
+      .expect(200);
+
+    await client.agent.get("/api/v1/auth/me").expect(401);
+    const updated = await login("client.updated@pr3.test");
+    const profile = await updated.agent.get("/api/v1/auth/me").expect(200);
+    expect(profile.body.user).toMatchObject({
+      displayName: "Updated Client",
+      email: "client.updated@pr3.test",
+      preferredLocale: "ar",
+    });
+  });
+
+  it("keeps the acting Admin session while revoking other sessions after a self email change", async () => {
+    const admin = await login("admin@pr3.test");
+
+    await admin.agent
+      .patch(`/api/v1/auth/admin/users/${adminId}/profile`)
+      .set("X-CSRF-Token", admin.csrf)
+      .send({
+        displayName: "Updated Admin",
+        email: "admin.updated@pr3.test",
+        preferredLocale: "en",
+      })
+      .expect(200);
+
+    const profile = await admin.agent.get("/api/v1/auth/me").expect(200);
+    expect(profile.body.user).toMatchObject({
+      displayName: "Updated Admin",
+      email: "admin.updated@pr3.test",
+    });
+  });
+
+  it("applies and clears explicit user permission exceptions", async () => {
+    const admin = await login("admin@pr3.test");
+
+    await admin.agent
+      .put(`/api/v1/auth/admin/users/${clientId}/permission-overrides`)
+      .set("X-CSRF-Token", admin.csrf)
+      .send({
+        overrides: [
+          {
+            permissionCode: "PERM-MANAGE-USERS",
+            effect: "ALLOW",
+            reason: "Integration coverage",
+          },
+        ],
+      })
+      .expect(200);
+
+    const client = await login("client@pr3.test");
+    const profile = await client.agent.get("/api/v1/auth/me").expect(200);
+    expect(profile.body.user.permissions).toContain("PERM-MANAGE-USERS");
+
+    await admin.agent
+      .put(`/api/v1/auth/admin/users/${clientId}/permission-overrides`)
+      .set("X-CSRF-Token", admin.csrf)
+      .send({ overrides: [] })
+      .expect(200);
+
+    await client.agent.get("/api/v1/auth/me").expect(401);
+    const refreshed = await login("client@pr3.test");
+    const refreshedProfile = await refreshed.agent.get("/api/v1/auth/me").expect(200);
+    expect(refreshedProfile.body.user.permissions).not.toContain("PERM-MANAGE-USERS");
+  });
 });

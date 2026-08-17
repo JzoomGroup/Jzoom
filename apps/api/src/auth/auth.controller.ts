@@ -42,7 +42,9 @@ import {
   PasswordResetConfirmDto,
   PasswordResetRequestDto,
   ReplaceRolePermissionsDto,
+  ReplaceUserPermissionOverridesDto,
   ReplaceUserRolesDto,
+  UpdateAdminUserProfileDto,
   UpdateOperatingUserScopeDto,
   UpdateProfilePreferencesDto,
   UpdateUserStatusDto,
@@ -85,7 +87,9 @@ function publicPrincipal(principal: NonNullable<RequestWithId["auth"]>) {
   PasswordResetConfirmDto,
   PasswordResetRequestDto,
   ReplaceRolePermissionsDto,
+  ReplaceUserPermissionOverridesDto,
   ReplaceUserRolesDto,
+  UpdateAdminUserProfileDto,
   UpdateOperatingUserScopeDto,
   UpdateProfilePreferencesDto,
   UpdateUserStatusDto,
@@ -254,6 +258,26 @@ export class AuthController {
     return this.admin.createOperatingUser(input, request.auth!.userId, metadata(request));
   }
 
+  @Patch("admin/users/:userId/profile")
+  @RequireRoles(ADMIN_ROLE_CODE)
+  @RequirePermissions(MANAGE_USERS_PERMISSION)
+  @ApiCookieAuth()
+  @ApiOperation({ summary: "Update a portal user's name, email, and interface language" })
+  async updateAdminUserProfile(
+    @Param("userId") userId: string,
+    @Body() input: UpdateAdminUserProfileDto,
+    @Req() request: RequestWithId,
+  ) {
+    await this.admin.updateUserProfile(
+      userId,
+      input,
+      request.auth!.userId,
+      request.auth!.sessionId,
+      metadata(request),
+    );
+    return { updated: true };
+  }
+
   @Get("admin/roles")
   @RequireRoles(ADMIN_ROLE_CODE)
   @RequirePermissions(MODIFY_PERMISSIONS_PERMISSION)
@@ -328,6 +352,25 @@ export class AuthController {
     await this.admin.replaceUserRoles(
       userId,
       input.roleCodes,
+      request.auth!.userId,
+      metadata(request),
+    );
+    return { updated: true };
+  }
+
+  @Put("admin/users/:userId/permission-overrides")
+  @RequireRoles(ADMIN_ROLE_CODE)
+  @RequirePermissions(MODIFY_PERMISSIONS_PERMISSION)
+  @ApiCookieAuth()
+  @ApiOperation({ summary: "Replace explicit permission exceptions for a portal user" })
+  async replaceUserPermissionOverrides(
+    @Param("userId") userId: string,
+    @Body() input: ReplaceUserPermissionOverridesDto,
+    @Req() request: RequestWithId,
+  ) {
+    await this.admin.replaceUserPermissionOverrides(
+      userId,
+      input.overrides,
       request.auth!.userId,
       metadata(request),
     );
