@@ -8,6 +8,7 @@ import type {
   ServiceLevel,
 } from "../../lib/catalog-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { localizedDescription } from "../../lib/localized-content";
 import {
   CatalogFeedback,
   EmptyState,
@@ -673,7 +674,7 @@ export function ServiceManager({
                   </div>
 
                   <p className="service-admin-description">
-                    {revision?.description || t.noDescription}
+                    {localizedDescription(revision?.description, locale, t.noDescription)}
                   </p>
 
                   <dl className="service-admin-metrics">

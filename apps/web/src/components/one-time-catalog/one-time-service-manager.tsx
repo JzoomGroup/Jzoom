@@ -11,6 +11,7 @@ import type {
 } from "../../lib/one-time-catalog-types";
 import type { CatalogStatus } from "../../lib/catalog-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { localizedDescription } from "../../lib/localized-content";
 import {
   CatalogFeedback,
   EmptyState,
@@ -1213,7 +1214,7 @@ export function OneTimeServiceManager({
                   </div>
 
                   <p className="one-time-service-description">
-                    {revision?.description || t.noDescription}
+                    {localizedDescription(revision?.description, locale, t.noDescription)}
                   </p>
 
                   <dl className="one-time-service-metrics">

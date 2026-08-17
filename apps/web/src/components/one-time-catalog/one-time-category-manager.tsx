@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { refreshOneTimeCatalog } from "../../lib/one-time-catalog-client";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { localizedDescription } from "../../lib/localized-content";
 import type { OneTimeCatalogSnapshot, OneTimeCategory } from "../../lib/one-time-catalog-types";
 import {
   CatalogFeedback,
@@ -288,7 +289,7 @@ export function OneTimeCategoryManager({
                   <StatusBadge locale={locale} status={category.status} />
                 </div>
                 <p className="one-time-category-description">
-                  {category.description || t.noDescription}
+                  {localizedDescription(category.description, locale, t.noDescription)}
                 </p>
                 <dl className="one-time-category-metrics">
                   <div>

@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import type { CatalogCategory, CatalogSnapshot } from "../../lib/catalog-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { localizedDescription } from "../../lib/localized-content";
 import {
   CatalogFeedback,
   EmptyState,
@@ -230,7 +231,9 @@ export function CategoryManager({
                   </div>
                   <StatusBadge locale={locale} status={category.status} />
                 </div>
-                <p className="entity-description">{category.description || t.noDescription}</p>
+                <p className="entity-description">
+                  {localizedDescription(category.description, locale, t.noDescription)}
+                </p>
                 <dl className="entity-meta">
                   <div>
                     <dt>{t.services}</dt>
