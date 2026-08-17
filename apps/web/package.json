@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "build": "next build",
+    "postbuild": "node scripts/prepare-standalone.mjs",
     "css:check": "node scripts/check-css-architecture.mjs",
     "dev": "next dev",
     "i18n:check": "node scripts/check-i18n-architecture.mjs",
     "lint": "eslint src next.config.ts && node scripts/check-css-architecture.mjs && node scripts/check-i18n-architecture.mjs",
-    "start": "next start -p 3000",
+    "start": "node .next/standalone/apps/web/server.js",
     "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",
     "test:e2e": "playwright test",
     "test:e2e:uat": "playwright test --project=desktop",
