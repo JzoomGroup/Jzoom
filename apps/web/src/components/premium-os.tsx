@@ -317,7 +317,7 @@ export function PriorityChip({
 export function EmptyState({
   action,
   children,
-  title = "No records yet",
+  title,
 }: {
   action?: ReactNode;
   children?: ReactNode;
@@ -328,8 +328,8 @@ export function EmptyState({
       <span className="os-empty-state-icon" aria-hidden="true">
         <Inbox size={20} strokeWidth={1.6} />
       </span>
-      <strong>{title}</strong>
-      {children ? <p>{children}</p> : null}
+      {title ? <strong>{title}</strong> : children ? <strong>{children}</strong> : null}
+      {title && children ? <p>{children}</p> : null}
       {action}
     </div>
   );

@@ -19,8 +19,7 @@
 }
 
 html {
-  scrollbar-color: rgba(23, 32, 51, 0.22) transparent;
-  scrollbar-width: thin;
+  scrollbar-width: none;
 }
 
 body {
@@ -30,29 +29,12 @@ body {
 }
 
 * {
-  scrollbar-color: rgba(23, 32, 51, 0.18) transparent;
-  scrollbar-width: thin;
+  scrollbar-width: none;
 }
 
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-*::-webkit-scrollbar-thumb {
-  border: 2px solid transparent;
-  border-radius: 999px;
-  background: rgba(23, 32, 51, 0.2);
-  background-clip: content-box;
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background: rgba(23, 32, 51, 0.34);
-  background-clip: content-box;
+  width: 0;
+  height: 0;
 }
 
 /* Application shell */
