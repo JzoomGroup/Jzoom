@@ -33,6 +33,7 @@ import {
   localizedExpectedOutput,
   localizedFreeText,
   localizedServiceDescription,
+  localizedServiceScope,
   priorityLabel,
   requestStatusLabel,
   type ClientDisplayLocale,
@@ -671,8 +672,18 @@ export function ClientRequestList({
                       </span>
                     </div>
                     <div className="hours-strip">
-                      <span>{clientName(selectedService.service.category, locale)}</span>
-                      <span>{clientName(selectedService.service.category, locale)}</span>
+                      {Array.from(
+                        new Set(
+                          [
+                            clientName(selectedService.service.category, locale),
+                            selectedService.service.serviceLine,
+                          ]
+                            .map((value) => localizedServiceScope(value, locale))
+                            .filter((value): value is string => Boolean(value)),
+                        ),
+                      ).map((value) => (
+                        <span key={value}>{value}</span>
+                      ))}
                     </div>
                   </>
                 )}
