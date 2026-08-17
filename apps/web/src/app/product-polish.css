@@ -140,16 +140,21 @@ body {
 }
 
 .premium-nav a.active {
-  border-color: #ffd9d5;
-  background: var(--polish-coral-soft);
-  color: var(--polish-ink);
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--jzoom-coral), #ff766b);
+  color: #ffffff;
   font-weight: 600;
-  box-shadow: none !important;
+  box-shadow: 0 6px 14px rgba(255, 90, 77, 0.18) !important;
 }
 
 .premium-nav a.active svg {
-  color: var(--polish-coral);
+  color: #ffffff;
   stroke-width: 2;
+}
+
+.premium-nav a.active:hover,
+.premium-nav a.active:hover svg {
+  color: #ffffff;
 }
 
 .premium-workspace {
@@ -706,6 +711,16 @@ body {
 .catalog-panel {
   margin-block-end: 12px;
   padding: 16px;
+}
+
+.quote-summary-grid {
+  margin-block-end: 12px;
+}
+
+.quote-summary-grid > .os-section-card,
+.quote-summary-grid > .catalog-panel {
+  height: 100%;
+  margin-block: 0;
 }
 
 .os-section-heading,

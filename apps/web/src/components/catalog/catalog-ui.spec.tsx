@@ -219,6 +219,7 @@ describe("Admin catalog UI", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("MS-HR")).toBeInTheDocument();
     expect(screen.getAllByText("1 active")).toHaveLength(2);
+    expect(screen.queryByText("Administration areas")).not.toBeInTheDocument();
   });
 
   it("creates a category through the catalog API and refreshes the snapshot", async () => {

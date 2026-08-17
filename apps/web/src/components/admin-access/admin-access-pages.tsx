@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState, type FormEvent } from "react";
 import {
   adminAccessErrorMessage,
@@ -116,10 +115,6 @@ const copy = {
     usersDescription:
       "عرض مستخدمي البوابة مع أدوارهم ونطاقاتهم وتعييناتهم بدون كشف كلمات المرور أو أسرار الدخول.",
     usersWithOverrides: "صلاحيات مخصصة",
-    viewAuditLogs: "عرض سجل التدقيق",
-    viewPermissions: "عرض الصلاحيات",
-    viewRoles: "عرض الأدوار",
-    viewUsers: "عرض المستخدمين",
     when: "الوقت",
   },
   en: {
@@ -209,10 +204,6 @@ const copy = {
     usersDescription:
       "Review portal users with roles, scopes, and assignments without exposing passwords or login secrets.",
     usersWithOverrides: "Custom permissions",
-    viewAuditLogs: "View audit logs",
-    viewPermissions: "View permissions",
-    viewRoles: "View roles",
-    viewUsers: "View users",
     when: "When",
   },
 } as const;
@@ -590,18 +581,6 @@ function moduleGroups(permissions: AdminAccessPermission[]) {
   }, {});
 }
 
-function AccessNav({ locale }: { locale: SupportedLocale }) {
-  const t = copy[locale];
-  return (
-    <nav className="access-inline-nav" aria-label={t.access}>
-      <Link href="/admin/users">{t.viewUsers}</Link>
-      <Link href="/admin/roles">{t.viewRoles}</Link>
-      <Link href="/admin/permissions">{t.viewPermissions}</Link>
-      <Link href="/admin/audit-logs">{t.viewAuditLogs}</Link>
-    </nav>
-  );
-}
-
 const emptySetup: AdminAccessSetup = {
   clients: [],
   roles: [],
@@ -901,9 +880,7 @@ export function AdminUsersPageContent({
 
   return (
     <>
-      <PageHeader eyebrow={t.access} title={t.portalUsers} description={t.usersDescription}>
-        <AccessNav locale={lang} />
-      </PageHeader>
+      <PageHeader eyebrow={t.access} title={t.portalUsers} description={t.usersDescription} />
 
       <section className="access-command">
         <div className="access-command-main">
@@ -1357,9 +1334,7 @@ export function AdminRolesPageContent({
 
   return (
     <>
-      <PageHeader eyebrow={t.access} title={t.roles} description={t.rolesDescription}>
-        <AccessNav locale={lang} />
-      </PageHeader>
+      <PageHeader eyebrow={t.access} title={t.roles} description={t.rolesDescription} />
 
       <section className="access-command">
         <div className="access-command-main">
@@ -1476,9 +1451,7 @@ export function AdminPermissionsPageContent({
 
   return (
     <>
-      <PageHeader eyebrow={t.access} title={t.permissions} description={t.permissionsDescription}>
-        <AccessNav locale={lang} />
-      </PageHeader>
+      <PageHeader eyebrow={t.access} title={t.permissions} description={t.permissionsDescription} />
 
       <section className="access-command">
         <div className="access-command-main">
@@ -1640,9 +1613,7 @@ export function AdminAuditLogsPageContent({
 
   return (
     <>
-      <PageHeader eyebrow={t.security} title={t.auditLogs} description={t.auditDescription}>
-        <AccessNav locale={lang} />
-      </PageHeader>
+      <PageHeader eyebrow={t.security} title={t.auditLogs} description={t.auditDescription} />
 
       <section className="access-command access-audit-command">
         <div className="access-command-main">

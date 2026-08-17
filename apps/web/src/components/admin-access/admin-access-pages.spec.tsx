@@ -93,10 +93,7 @@ describe("Admin access pages", () => {
     render(<AdminUsersPageContent locale="en" users={[user]} />);
 
     expect(screen.getByRole("heading", { level: 1, name: "Portal users" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View audit logs" })).toHaveAttribute(
-      "href",
-      "/admin/audit-logs",
-    );
+    expect(screen.queryByRole("link", { name: "View audit logs" })).not.toBeInTheDocument();
     expect(screen.getByText("Ada Admin")).toBeInTheDocument();
     expect(screen.getByText("ada@example.com")).toBeInTheDocument();
     expect(screen.getAllByText("Platform Admin")).not.toHaveLength(0);

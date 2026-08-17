@@ -9,7 +9,6 @@ import type {
 import type { RequestQueueResponse, RequestSummary } from "../lib/request-types";
 import { healthReasonText, healthStatusText } from "./operations/health-i18n";
 import {
-  ActionCard,
   BentoGrid,
   EmptyState,
   MetricCard,
@@ -88,18 +87,6 @@ const copy = {
       priority: "الأولوية",
       updated: "آخر تحديث",
     },
-    shortcuts: {
-      title: "اختصارات الإدارة",
-      description: "مساحات الإعداد الأساسية المدعومة حاليًا من النظام.",
-      clientsTitle: "إدارة العملاء",
-      clientsDescription: "ملفات العملاء، الحالات، جهات التواصل، ومستخدمي البوابة.",
-      catalogTitle: "كتالوج الخدمات",
-      catalogDescription: "الخدمات الشهرية، الباقات، البنود، الاشتراطات، والإصدارات.",
-      templatesTitle: "نماذج الطلبات",
-      templatesDescription: "نماذج ديناميكية مرتبطة ببنود الخدمات لإنشاء الطلبات.",
-      platformTitle: "إعدادات المنصة",
-      platformDescription: "الإعدادات، مسارات العمل، الإشعارات، وقوالب المستندات.",
-    },
   },
   en: {
     eyebrow: "Admin Console",
@@ -165,18 +152,6 @@ const copy = {
       status: "Status",
       priority: "Priority",
       updated: "Updated",
-    },
-    shortcuts: {
-      title: "Administration shortcuts",
-      description: "Core setup areas that currently have backend-backed management screens.",
-      clientsTitle: "Client management",
-      clientsDescription: "Client profiles, status, contacts, and linked portal users.",
-      catalogTitle: "Monthly catalog",
-      catalogDescription: "Monthly services, levels, items, package inclusion, and revisions.",
-      templatesTitle: "Request templates",
-      templatesDescription: "Dynamic service-item forms used by client request intake.",
-      platformTitle: "Platform configuration",
-      platformDescription: "Settings, workflow states, notifications, and document templates.",
     },
   },
 } as const;
@@ -295,7 +270,7 @@ export function AdminDashboard({
         />
       </BentoGrid>
 
-      <section className="quote-summary-grid">
+      <section className="quote-summary-grid dashboard-summary-grid">
         <SectionCard
           title={t.queues.title}
           description={t.queues.description}
@@ -454,64 +429,6 @@ export function AdminDashboard({
         )}
       </SectionCard>
 
-      <SectionCard title={t.shortcuts.title} description={t.shortcuts.description}>
-        <div className="admin-area-grid">
-          <ActionCard
-            href="/admin/clients"
-            index="01"
-            title={t.shortcuts.clientsTitle}
-            description={t.shortcuts.clientsDescription}
-          />
-          <ActionCard
-            href="/admin/users"
-            index="02"
-            title={language === "ar" ? "إدارة المستخدمين" : "User management"}
-            description={
-              language === "ar"
-                ? "الأدوار، النطاقات، حالة الحساب، وصلاحيات المستخدمين."
-                : "Roles, scopes, account status, and user permissions."
-            }
-          />
-          <ActionCard
-            href="/admin/roles"
-            index="03"
-            title={language === "ar" ? "الأدوار والصلاحيات" : "Roles & permissions"}
-            description={
-              language === "ar"
-                ? "مراجعة أدوار النظام والصلاحيات التشغيلية المرتبطة بها."
-                : "Review system roles and assigned operational permissions."
-            }
-          />
-          <ActionCard
-            href="/admin/catalog"
-            index="04"
-            title={t.shortcuts.catalogTitle}
-            description={t.shortcuts.catalogDescription}
-          />
-          <ActionCard
-            href="/admin/request-templates"
-            index="05"
-            title={t.shortcuts.templatesTitle}
-            description={t.shortcuts.templatesDescription}
-          />
-          <ActionCard
-            href="/admin/platform-configuration"
-            index="06"
-            title={t.shortcuts.platformTitle}
-            description={t.shortcuts.platformDescription}
-          />
-          <ActionCard
-            href="/admin/audit-logs"
-            index="07"
-            title={language === "ar" ? "سجل التدقيق" : "Audit logs"}
-            description={
-              language === "ar"
-                ? "أحداث الأمان وتغييرات الصلاحيات والعمليات الحساسة."
-                : "Security events, permission changes, and sensitive operations."
-            }
-          />
-        </div>
-      </SectionCard>
     </>
   );
 }

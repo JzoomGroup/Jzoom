@@ -1,17 +1,14 @@
 import type { CatalogSnapshot } from "../../lib/catalog-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
 import { localizedCatalogLabel } from "../../lib/localized-content";
-import { ControlDeck, ControlTile, MetricCard, SectionCard, SmartTable } from "../premium-os";
+import { MetricCard, SectionCard, SmartTable } from "../premium-os";
 import { SectionHeader, StatusBadge } from "./catalog-shared";
 
 const copy = {
   ar: {
     active: "نشطة",
     adminConsole: "لوحة الأدمن",
-    administrationAreas: "مناطق الإدارة",
-    administrationDescription: "كل تغيير معتمد من الخادم ويُسجل في سجل التدقيق.",
     categories: "التصنيفات",
-    categoriesDescription: "تجميع محلي، ترتيب، وتحكم آمن بالحالة.",
     category: "التصنيف",
     catalogSummary: "ملخص الكتالوج",
     items: "البنود",
@@ -20,32 +17,19 @@ const copy = {
       "إدارة الكتالوج الشهري الحي المرتبط بقاعدة البيانات مع الحفاظ على كل إصدار تاريخي مثبت.",
     monthlyGroups: "مجموعات شهرية",
     monthlyServices: "الخدمات الشهرية",
-    monthlyServicesDescription: "أسماء، ساعات، أسعار، رسوم، وتوفر باقات مع إصدارات آمنة.",
-    oneTimeCategories: "تصنيفات المرة الواحدة",
-    oneTimeCategoriesDescription: "تصنيفات محلية للبناء والحلول الرقمية مع تحكم آمن بالحالة.",
-    oneTimeServices: "خدمات المرة الواحدة",
-    oneTimeServicesDescription: "تسعير بإصدارات، مراحل، مخرجات، مهام، ومدة تنفيذ.",
     packageLevels: "مستويات الباقات",
     revision: "الإصدار",
     seededCatalog: "رؤية الكتالوج المحمل",
     seededCatalogDescription: "إصدارات الخدمات الحية الحالية المحملة من ملف الاستيراد المعتمد.",
     service: "الخدمة",
     serviceItems: "بنود الخدمة",
-    serviceItemsDescription: "تعريفات البنود ومصفوفة شمول الباقات الكاملة.",
-    serviceLevels: "مستويات الخدمة",
-    serviceLevelsDescription:
-      "الباقات الأساسية والنمو والمتقدمة والشراكة، مع دعم مستويات مستقبلية قابلة للتكوين.",
     status: "الحالة",
     subscriptionTiers: "شرائح الاشتراك",
   },
   en: {
     active: "active",
     adminConsole: "Admin Console",
-    administrationAreas: "Administration areas",
-    administrationDescription:
-      "Each change is authorized by the backend and written to the audit log.",
     categories: "Categories",
-    categoriesDescription: "Localized grouping, ordering, and lifecycle controls.",
     category: "Category",
     catalogSummary: "Catalog summary",
     items: "Items",
@@ -54,23 +38,12 @@ const copy = {
       "Manage the live PostgreSQL-backed monthly catalog while preserving every pinned historical revision.",
     monthlyGroups: "Monthly groups",
     monthlyServices: "Monthly services",
-    monthlyServicesDescription:
-      "Revision-safe names, hours, rates, fees, and package availability.",
-    oneTimeCategories: "One-time categories",
-    oneTimeCategoriesDescription:
-      "Localized Build and Digital groupings with safe lifecycle controls.",
-    oneTimeServices: "One-time services",
-    oneTimeServicesDescription: "Revisioned pricing, phases, deliverables, tasks, and duration.",
     packageLevels: "Package levels",
     revision: "Revision",
     seededCatalog: "Seeded catalog visibility",
     seededCatalogDescription: "The current live service revisions loaded from Excel V3.",
     service: "Service",
     serviceItems: "Service items",
-    serviceItemsDescription: "Item definitions and the complete package inclusion matrix.",
-    serviceLevels: "Service levels",
-    serviceLevelsDescription:
-      "Basic, Growth, Advanced, Partnership, and future configurable levels.",
     status: "Status",
     subscriptionTiers: "Subscription tiers",
   },
@@ -127,45 +100,6 @@ export function CatalogOverview({
           detail={t.subscriptionTiers}
         />
       </section>
-
-      <ControlDeck title={t.administrationAreas} description={t.administrationDescription}>
-        <ControlTile
-          href="/admin/catalog/categories"
-          meta="01"
-          title={t.categories}
-          description={t.categoriesDescription}
-        />
-        <ControlTile
-          href="/admin/catalog/monthly-services"
-          meta="02"
-          title={t.monthlyServices}
-          description={t.monthlyServicesDescription}
-        />
-        <ControlTile
-          href="/admin/catalog/service-items"
-          meta="03"
-          title={t.serviceItems}
-          description={t.serviceItemsDescription}
-        />
-        <ControlTile
-          href="/admin/catalog/service-levels"
-          meta="04"
-          title={t.serviceLevels}
-          description={t.serviceLevelsDescription}
-        />
-        <ControlTile
-          href="/admin/catalog/one-time-categories"
-          meta="05"
-          title={t.oneTimeCategories}
-          description={t.oneTimeCategoriesDescription}
-        />
-        <ControlTile
-          href="/admin/catalog/one-time-services"
-          meta="06"
-          title={t.oneTimeServices}
-          description={t.oneTimeServicesDescription}
-        />
-      </ControlDeck>
 
       <SectionCard title={t.seededCatalog} description={t.seededCatalogDescription}>
         <SmartTable>

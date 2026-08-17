@@ -265,13 +265,10 @@ describe("AdminDashboard", () => {
     expect(
       screen.getByText("Overdue work or returned outputs require urgent follow-up."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Client management/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Manage clients" })).toHaveAttribute(
       "href",
       "/admin/clients",
     );
-    expect(screen.getByRole("link", { name: /Request templates/ })).toHaveAttribute(
-      "href",
-      "/admin/request-templates",
-    );
+    expect(screen.queryByRole("heading", { name: "Administration shortcuts" })).not.toBeInTheDocument();
   });
 });
