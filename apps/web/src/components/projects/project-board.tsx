@@ -891,13 +891,16 @@ export function ProjectDetail({
                       <span>{t.outputFile}</span>
                       <input
                         type="file"
-                        onChange={(event) =>
+                        aria-label={`${t.outputFile} - ${localizedOutputTitle(output, locale)}`}
+                        onChange={(event) => {
+                          const selectedFile = event.currentTarget.files?.[0] ?? null;
                           setOutputFiles((current) => ({
                             ...current,
-                            [output.id]: event.target.files?.[0] ?? null,
-                          }))
-                        }
+                            [output.id]: selectedFile,
+                          }));
+                        }}
                       />
+                      {outputFiles[output.id] ? <small>{outputFiles[output.id]?.name}</small> : null}
                     </label>
                     <button
                       className="os-button os-button-secondary"

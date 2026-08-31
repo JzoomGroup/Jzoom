@@ -255,6 +255,23 @@ describe("project delivery UI", () => {
     );
   });
 
+  it("keeps a selected replacement file visible for a returned project output", () => {
+    const returnedOutput = {
+      ...project().outputs[0]!,
+      status: "RETURNED_BY_CLIENT" as const,
+    };
+    render(<ProjectDetail locale="ar" project={project({ outputs: [returnedOutput] })} />);
+
+    const file = new File(["revision"], "project-output-v2.pdf", {
+      type: "application/pdf",
+    });
+    fireEvent.change(screen.getByLabelText(/ملف المخرج - /), {
+      target: { files: [file] },
+    });
+
+    expect(screen.getByText("project-output-v2.pdf")).toBeInTheDocument();
+  });
+
   it("shows internal review controls only to project supervisors", async () => {
     const supervisorProject = project({
       capabilities: { canDeliver: false, canSupervise: true, canClientDecide: false },
