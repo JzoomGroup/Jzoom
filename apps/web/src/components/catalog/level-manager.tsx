@@ -110,20 +110,6 @@ export function LevelManager({
       />
       <CatalogFeedback error={mutation.error} success={mutation.success} />
 
-      <section className="package-admin-command" aria-label={t.packageStudio}>
-        <div className="package-admin-command-main">
-          <p className="eyebrow">{t.packageStudio}</p>
-          <h2>{t.configuredPackages}</h2>
-          <p>{t.packageStudioDescription}</p>
-        </div>
-        <div className="package-admin-guardrails">
-          <strong>{t.rules}</strong>
-          <span>{t.safetyA}</span>
-          <span>{t.safetyB}</span>
-          <span>{t.safetyC}</span>
-        </div>
-      </section>
-
       <BentoGrid compact>
         <MetricCard
           accent

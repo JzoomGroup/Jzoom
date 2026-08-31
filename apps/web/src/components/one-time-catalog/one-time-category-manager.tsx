@@ -102,20 +102,6 @@ export function OneTimeCategoryManager({
       />
       <CatalogFeedback error={mutation.error} success={mutation.success} />
 
-      <section className="one-time-category-command" aria-label={t.oneTimeCategoryStudio}>
-        <div className="one-time-category-command-main">
-          <p className="eyebrow">{t.oneTimeCategoryStudio}</p>
-          <h2>{t.configuredCategories}</h2>
-          <p>{t.oneTimeCategoryStudioDescription}</p>
-        </div>
-        <div className="one-time-category-guardrails">
-          <strong>{t.studioRules}</strong>
-          <span>{t.studioSafetyA}</span>
-          <span>{t.studioSafetyB}</span>
-          <span>{t.studioSafetyC}</span>
-        </div>
-      </section>
-
       <BentoGrid compact>
         <MetricCard
           accent

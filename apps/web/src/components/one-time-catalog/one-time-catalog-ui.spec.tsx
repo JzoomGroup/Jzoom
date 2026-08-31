@@ -119,8 +119,8 @@ describe("One-time Admin catalog UI", () => {
       .mockImplementationOnce(() => jsonResponse(snapshot()));
 
     render(<OneTimeCategoryManager initialSnapshot={snapshot()} />);
-    expect(screen.getByText("One-time category studio")).toBeInTheDocument();
-    expect(screen.getAllByRole("heading", { name: "Configured categories" })).toHaveLength(2);
+    expect(screen.queryByText("One-time category studio")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Configured categories" })).toHaveLength(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Add category" }));
     expect(screen.getByRole("dialog", { name: "New one-time category" })).toBeInTheDocument();
@@ -163,9 +163,9 @@ describe("One-time Admin catalog UI", () => {
       .mockImplementationOnce(() => jsonResponse(snapshot()));
 
     render(<OneTimeServiceManager initialSnapshot={snapshot()} />);
-    expect(screen.getByText("One-time service studio")).toBeInTheDocument();
+    expect(screen.queryByText("One-time service studio")).not.toBeInTheDocument();
     expect(screen.getAllByRole("heading", { name: "Configured one-time services" })).toHaveLength(
-      2,
+      1,
     );
     expect(screen.getByRole("heading", { name: "Website build" })).toBeInTheDocument();
     expect(screen.getAllByText("12000 SAR").length).toBeGreaterThan(0);

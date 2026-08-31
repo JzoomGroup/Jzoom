@@ -221,20 +221,6 @@ export function ItemManager({
       />
       <CatalogFeedback error={mutation.error} success={mutation.success} />
 
-      <section className="item-admin-command" aria-label={t.serviceItemStudio}>
-        <div className="item-admin-command-main">
-          <p className="eyebrow">{t.serviceItemStudio}</p>
-          <h2>{t.matrix}</h2>
-          <p>{t.serviceItemStudioDescription}</p>
-        </div>
-        <div className="item-admin-guardrails">
-          <strong>{t.matrixRules}</strong>
-          <span>{t.studioSafetyA}</span>
-          <span>{t.studioSafetyB}</span>
-          <span>{t.studioSafetyC}</span>
-        </div>
-      </section>
-
       <BentoGrid compact>
         <MetricCard
           accent

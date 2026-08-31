@@ -223,20 +223,6 @@ export function ServiceManager({
       />
       <CatalogFeedback error={mutation.error} success={mutation.success} />
 
-      <section className="service-admin-command" aria-label={t.monthlyServiceStudio}>
-        <div className="service-admin-command-main">
-          <p className="eyebrow">{t.monthlyServiceStudio}</p>
-          <h2>{t.configuredServices}</h2>
-          <p>{t.monthlyServiceStudioDescription}</p>
-        </div>
-        <div className="service-admin-guardrails">
-          <strong>{t.studioRules}</strong>
-          <span>{t.studioSafetyA}</span>
-          <span>{t.studioSafetyB}</span>
-          <span>{t.studioSafetyC}</span>
-        </div>
-      </section>
-
       <BentoGrid compact>
         <MetricCard
           accent

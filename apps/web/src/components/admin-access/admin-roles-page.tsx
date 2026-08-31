@@ -36,14 +36,6 @@ export function AdminRolesPageContent({
     <>
       <PageHeader eyebrow={t.access} title={t.roles} description={t.rolesDescription} />
 
-      <section className="access-command">
-        <div className="access-command-main">
-          <p className="eyebrow">{t.accessCenter}</p>
-          <h2>{t.roles}</h2>
-          <p>{t.rolesDescription}</p>
-        </div>
-      </section>
-
       <BentoGrid compact>
         <MetricCard accent label={t.roles} value={number(roles.length, lang)} detail={t.total} />
         <MetricCard

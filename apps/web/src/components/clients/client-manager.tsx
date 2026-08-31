@@ -557,20 +557,6 @@ export function ClientManager({
       />
       <CatalogFeedback error={error} success={success} />
 
-      <section className="client-admin-command" aria-label={t.clientAdminCenter}>
-        <div className="client-admin-command-main">
-          <p className="eyebrow">{t.clientAdminCenter}</p>
-          <h2>{t.clientList}</h2>
-          <p>{t.clientAdminCenterDescription}</p>
-        </div>
-        <div className="client-admin-guardrails">
-          <strong>{t.guardrails}</strong>
-          <span>{t.guardrailA}</span>
-          <span>{t.guardrailB}</span>
-          <span>{t.guardrailC}</span>
-        </div>
-      </section>
-
       <BentoGrid compact>
         <MetricCard
           accent

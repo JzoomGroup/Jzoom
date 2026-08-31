@@ -47,15 +47,7 @@
   .pricing-journey,
   .request-ops-command,
   .request-list-command,
-  .access-command,
-  .access-audit-card,
-  .platform-command,
-  .client-admin-command,
-  .package-admin-command,
-  .service-admin-command,
-  .item-admin-command,
-  .one-time-service-command,
-  .one-time-category-command {
+  .access-audit-card {
     grid-template-columns: 1fr;
   }
 
@@ -204,28 +196,16 @@
     grid-template-columns: 1fr;
   }
 
-  .client-admin-command-main,
-  .client-admin-guardrails,
   .client-admin-editor,
   .client-admin-card,
-  .package-admin-command-main,
-  .package-admin-guardrails,
   .package-admin-editor,
   .package-admin-card,
-  .service-admin-command-main,
-  .service-admin-guardrails,
   .service-admin-editor,
   .service-admin-card,
-  .item-admin-command-main,
-  .item-admin-guardrails,
   .item-admin-editor,
   .item-admin-card,
-  .one-time-service-command-main,
-  .one-time-service-guardrails,
   .one-time-service-editor,
   .one-time-service-card,
-  .one-time-category-command-main,
-  .one-time-category-guardrails,
   .one-time-category-editor,
   .one-time-category-card {
     border-radius: 18px;

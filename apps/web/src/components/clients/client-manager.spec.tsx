@@ -48,11 +48,11 @@ function snapshot(): ClientsSnapshot {
 }
 
 describe("ClientManager", () => {
-  it("renders the premium client administration center with client cards", () => {
+  it("renders client cards without a duplicate administration intro", () => {
     render(<ClientManager initialSnapshot={snapshot()} locale="en" />);
 
     expect(screen.getByRole("heading", { level: 1, name: "Clients" })).toBeInTheDocument();
-    expect(screen.getByText("Client administration center")).toBeInTheDocument();
+    expect(screen.queryByText("Client administration center")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: "Acme Logistics" })).toBeInTheDocument();
     expect(screen.getByText("Acme Logistics LLC")).toBeInTheDocument();
     expect(screen.getByText("client@acme.test")).toBeInTheDocument();

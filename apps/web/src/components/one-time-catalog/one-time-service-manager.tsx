@@ -466,20 +466,6 @@ export function OneTimeServiceManager({
         success={transferSuccess ?? mutation.success}
       />
 
-      <section className="one-time-service-command" aria-label={t.oneTimeServiceStudio}>
-        <div className="one-time-service-command-main">
-          <p className="eyebrow">{t.oneTimeServiceStudio}</p>
-          <h2>{t.configuredServices}</h2>
-          <p>{t.oneTimeServiceStudioDescription}</p>
-        </div>
-        <div className="one-time-service-guardrails">
-          <strong>{t.studioRules}</strong>
-          <span>{t.studioSafetyA}</span>
-          <span>{t.studioSafetyB}</span>
-          <span>{t.studioSafetyC}</span>
-        </div>
-      </section>
-
       <BentoGrid compact>
         <MetricCard
           accent

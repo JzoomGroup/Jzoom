@@ -42,14 +42,6 @@ export function AdminPermissionsPageContent({
         description={t.permissionCenterDescription}
       />
 
-      <section className="access-command">
-        <div className="access-command-main">
-          <p className="eyebrow">{t.permissionMap}</p>
-          <h2>{t.permissionCenter}</h2>
-          <p>{t.permissionCenterDescription}</p>
-        </div>
-      </section>
-
       {center.feedback ? (
         <div className={`access-feedback ${center.feedback.type}`} role="status">
           {center.feedback.text}

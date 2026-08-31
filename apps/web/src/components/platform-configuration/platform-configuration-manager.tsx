@@ -814,20 +814,6 @@ export function PlatformConfigurationManager({
       />
       <CatalogFeedback error={error} success={success} />
 
-      <section className="platform-command" aria-label={t.platformConfiguration}>
-        <div className="platform-command-main">
-          <p className="eyebrow">{t.configurationMap}</p>
-          <h2>{t.configurationMap}</h2>
-          <p>{t.configurationMapDescription}</p>
-        </div>
-        <div className="platform-guardrails">
-          <strong>{t.guardrails}</strong>
-          <span>{t.guardrailA}</span>
-          <span>{t.guardrailB}</span>
-          <span>{t.guardrailC}</span>
-        </div>
-      </section>
-
       <BentoGrid compact>
         <MetricCard
           accent

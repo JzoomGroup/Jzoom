@@ -102,14 +102,6 @@ export function AdminAuditLogsPageContent({
     <>
       <PageHeader eyebrow={t.security} title={t.auditLogs} description={t.auditDescription} />
 
-      <section className="access-command">
-        <div className="access-command-main">
-          <p className="eyebrow">{t.auditCenter}</p>
-          <h2>{t.auditTrail}</h2>
-          <p>{t.auditCenterDescription}</p>
-        </div>
-      </section>
-
       <BentoGrid compact>
         <MetricCard accent label={t.auditLogs} value={number(logs.length, lang)} detail={t.total} />
         <MetricCard

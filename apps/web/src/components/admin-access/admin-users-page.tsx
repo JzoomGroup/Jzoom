@@ -109,14 +109,6 @@ export function AdminUsersPageContent({
         ]}
       />
 
-      <section className="access-command">
-        <div className="access-command-main">
-          <p className="eyebrow">{t.accessCenter}</p>
-          <h2>{t.portalUsers}</h2>
-          <p>{t.accessCenterDescription}</p>
-        </div>
-      </section>
-
       {feedback ? (
         <div className={`access-feedback ${feedback.type}`} role="status">
           {feedback.text}
