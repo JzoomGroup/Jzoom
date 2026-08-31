@@ -1423,12 +1423,13 @@ export function RequestDetail({
                           <input
                             type="file"
                             aria-label={`${t.revisionFileRequired} - ${output.title}`}
-                            onChange={(event) =>
+                            onChange={(event) => {
+                              const selectedFile = event.currentTarget.files?.[0] ?? null;
                               setRevisionFiles((current) => ({
                                 ...current,
-                                [output.id]: event.target.files?.[0] ?? null,
-                              }))
-                            }
+                                [output.id]: selectedFile,
+                              }));
+                            }}
                           />
                           <span>{revisionFiles[output.id]?.name ?? t.revisionFileRequired}</span>
                         </label>
