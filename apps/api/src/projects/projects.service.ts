@@ -444,7 +444,6 @@ export class ProjectsService {
     const savedFile = await this.database.prisma.$transaction(async (transaction) => {
       const saved = await transaction.fileMetadata.create({
         data: {
-          projectId: id,
           outputId,
           uploadedById: principal.userId,
           storageProvider: stored.storageProvider,
@@ -504,7 +503,7 @@ export class ProjectsService {
     const file = await this.database.prisma.fileMetadata.findFirst({
       where: {
         id: fileId,
-        projectId: id,
+        OR: [{ projectId: id }, { output: { projectId: id } }],
         archivedAt: null,
         ...(clientSafe
           ? {

@@ -30,6 +30,23 @@ async function expectDownloadAvailable(page: Page, link: ReturnType<Page["locato
   expect((await response.body()).byteLength).toBeGreaterThan(0);
 }
 
+async function chooseRevisionFile(
+  page: Page,
+  outputCard: ReturnType<Page["locator"]>,
+  name: string,
+  contents: string,
+) {
+  const chooserPromise = page.waitForEvent("filechooser");
+  await outputCard.getByText("اختر ملف النسخة الجديدة قبل المتابعة.").click();
+  const chooser = await chooserPromise;
+  await chooser.setFiles({
+    name,
+    mimeType: "text/plain",
+    buffer: Buffer.from(contents),
+  });
+  await expect(outputCard).toContainText(name);
+}
+
 test("completes the monthly request, document, hours, output, and client decision cycle", async ({
   browser,
 }, testInfo) => {
@@ -155,12 +172,15 @@ test("completes the monthly request, document, hours, output, and client decisio
     .locator("#request-outputs article")
     .filter({ hasText: outputTitle })
     .first();
-  await outputCard.locator('input[type="file"]').setInputFiles({
-    name: `output-${runId}-v2.txt`,
-    mimeType: "text/plain",
-    buffer: Buffer.from(`Jzoom output ${runId} revision 2`),
-  });
+  const secondOutputFileName = `output-${runId}-v2.txt`;
+  await chooseRevisionFile(
+    specialist.page,
+    outputCard,
+    secondOutputFileName,
+    `Jzoom output ${runId} revision 2`,
+  );
   await outputCard.getByRole("button", { name: "رفع نسخة جديدة" }).click();
+  await expect(outputCard.getByRole("button", { name: "إرسال" })).toBeVisible();
   await acceptNextDialog(specialist.page);
   await outputCard.getByRole("button", { name: "إرسال" }).click();
 
@@ -192,12 +212,15 @@ test("completes the monthly request, document, hours, output, and client decisio
     .locator("#request-outputs article")
     .filter({ hasText: outputTitle })
     .first();
-  await outputCard.locator('input[type="file"]').setInputFiles({
-    name: `output-${runId}-v3.txt`,
-    mimeType: "text/plain",
-    buffer: Buffer.from(`Jzoom output ${runId} revision 3`),
-  });
+  const thirdOutputFileName = `output-${runId}-v3.txt`;
+  await chooseRevisionFile(
+    specialist.page,
+    outputCard,
+    thirdOutputFileName,
+    `Jzoom output ${runId} revision 3`,
+  );
   await outputCard.getByRole("button", { name: "رفع نسخة جديدة" }).click();
+  await expect(outputCard.getByRole("button", { name: "إرسال" })).toBeVisible();
   await acceptNextDialog(specialist.page);
   await outputCard.getByRole("button", { name: "إرسال" }).click();
 
