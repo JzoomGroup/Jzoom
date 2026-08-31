@@ -661,6 +661,37 @@ describe("Request lifecycle UI", () => {
     expect(screen.queryByRole("button", { name: "Update status" })).not.toBeInTheDocument();
   });
 
+  it("keeps a selected revision file ready for upload", () => {
+    const request = {
+      ...serviceRequest(),
+      status: "IN_PROGRESS" as const,
+      outputs: [
+        {
+          ...serviceRequest().outputs[0]!,
+          status: "RETURNED_BY_CLIENT" as const,
+          title: "Returned output",
+        },
+      ],
+    };
+    const revision = new File(["updated output"], "output-v2.txt", { type: "text/plain" });
+
+    renderRequestDetail(
+      request,
+      currentUser({
+        id: "specialist-user-1",
+        email: "specialist@example.com",
+        displayName: "Specialist User",
+        roles: ["ROLE-SPECIALIST"],
+      }),
+    );
+
+    fireEvent.change(screen.getByLabelText(/Choose the new revision file before continuing/), {
+      target: { files: [revision] },
+    });
+
+    expect(screen.getByText("output-v2.txt")).toBeInTheDocument();
+  });
+
   it("presents completed specialist requests as Arabic read-only workspaces", () => {
     const request = {
       ...serviceRequest(),

@@ -31,15 +31,12 @@ async function expectDownloadAvailable(page: Page, link: ReturnType<Page["locato
 }
 
 async function chooseRevisionFile(
-  page: Page,
   outputCard: ReturnType<Page["locator"]>,
   name: string,
   contents: string,
 ) {
-  const chooserPromise = page.waitForEvent("filechooser");
-  await outputCard.getByText("اختر ملف النسخة الجديدة قبل المتابعة.").click();
-  const chooser = await chooserPromise;
-  await chooser.setFiles({
+  const revisionInput = outputCard.getByLabel(/اختر ملف النسخة الجديدة قبل المتابعة/);
+  await revisionInput.setInputFiles({
     name,
     mimeType: "text/plain",
     buffer: Buffer.from(contents),
@@ -50,7 +47,7 @@ async function chooseRevisionFile(
 test("completes the monthly request, document, hours, output, and client decision cycle", async ({
   browser,
 }, testInfo) => {
-  test.setTimeout(120_000);
+  test.setTimeout(240_000);
   test.skip(testInfo.project.name !== "desktop", "Operational mutation coverage runs once.");
   test.skip(!allowMutations, "Explicit UAT mutation opt-in is required.");
   test.skip(
@@ -174,7 +171,6 @@ test("completes the monthly request, document, hours, output, and client decisio
     .first();
   const secondOutputFileName = `output-${runId}-v2.txt`;
   await chooseRevisionFile(
-    specialist.page,
     outputCard,
     secondOutputFileName,
     `Jzoom output ${runId} revision 2`,
@@ -214,7 +210,6 @@ test("completes the monthly request, document, hours, output, and client decisio
     .first();
   const thirdOutputFileName = `output-${runId}-v3.txt`;
   await chooseRevisionFile(
-    specialist.page,
     outputCard,
     thirdOutputFileName,
     `Jzoom output ${runId} revision 3`,

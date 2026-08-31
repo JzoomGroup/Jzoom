@@ -1422,6 +1422,7 @@ export function RequestDetail({
                         <label>
                           <input
                             type="file"
+                            aria-label={`${t.revisionFileRequired} - ${output.title}`}
                             onChange={(event) =>
                               setRevisionFiles((current) => ({
                                 ...current,
