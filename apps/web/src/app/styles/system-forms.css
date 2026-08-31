@@ -164,3 +164,19 @@
   font-size: 0.78rem;
   line-height: 1.5;
 }
+.localized-date-input {
+  display: grid;
+  gap: 5px;
+  inline-size: 100%;
+}
+
+.localized-date-input > input {
+  inline-size: 100%;
+}
+
+.localized-date-input > small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+}

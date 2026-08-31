@@ -7,6 +7,7 @@ import type {
   AdminAccessUser,
 } from "../../lib/admin-access-types";
 import type { SupportedLocale } from "../../lib/i18n";
+import { LocalizedDateInput } from "../localized-date-input";
 import { number, permissionLabel, roleLabel } from "./admin-access-formatters";
 import type { UserAccessEditorController } from "./use-user-access-editor";
 
@@ -172,8 +173,8 @@ export function UserAccessRolesPanel({
                     </label>
                     <label>
                       <span>{t.expiryOptional}</span>
-                      <input
-                        type="date"
+                      <LocalizedDateInput
+                        locale={locale}
                         value={override.expiresOn}
                         min={new Date().toISOString().slice(0, 10)}
                         disabled={!canModifyPermissions}

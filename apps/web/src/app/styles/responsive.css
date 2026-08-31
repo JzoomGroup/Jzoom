@@ -1,4 +1,12 @@
 @media (max-width: 1180px) {
+  .access-user-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .access-user-search {
+    grid-column: 1 / -1;
+  }
+
   .os-bento-grid,
   .metric-grid,
   .pricing-total-grid,
@@ -79,6 +87,25 @@
 }
 
 @media (max-width: 760px) {
+  .access-user-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .access-user-search {
+    grid-column: auto;
+  }
+
+  .access-user-toolbar .os-button,
+  .access-pagination .os-button {
+    width: 100%;
+  }
+
+  .access-user-results,
+  .access-pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .os-page-header,
   .catalog-header,
   .quote-list-main,

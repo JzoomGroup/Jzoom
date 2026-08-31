@@ -117,6 +117,33 @@ describe("Admin access pages", () => {
     expect(screen.getByDisplayValue("ada@example.com")).toBeInTheDocument();
   });
 
+  it("filters and paginates the user directory without rendering every account at once", () => {
+    const users = Array.from({ length: 13 }, (_, index) => ({
+      ...user,
+      displayName: `Directory User ${index + 1}`,
+      email: `directory-${index + 1}@example.com`,
+      id: `user-${index + 1}`,
+      permissionOverrides: [],
+    }));
+
+    render(
+      <AdminUsersPageContent locale="en" permissions={[permission]} roles={[role]} users={users} />,
+    );
+
+    expect(screen.getAllByRole("button", { name: "Manage user" })).toHaveLength(12);
+    expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByText("Directory User 13")).toBeInTheDocument();
+    expect(screen.queryByText("Directory User 1")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search users" }), {
+      target: { value: "directory-4@example.com" },
+    });
+    expect(screen.getByText("Directory User 4")).toBeInTheDocument();
+    expect(screen.queryByText("Directory User 13")).not.toBeInTheDocument();
+  });
+
   it("renders role profiles with capabilities and permission chips", () => {
     render(<AdminRolesPageContent locale="en" permissions={[permission]} roles={[role]} />);
 

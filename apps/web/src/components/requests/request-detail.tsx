@@ -38,6 +38,7 @@ import type {
 import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
 import { riyadhDateInputValue } from "../../lib/stable-date";
 import { PageHeader, PriorityChip, StatusChip } from "../premium-os";
+import { LocalizedDateInput } from "../localized-date-input";
 
 const statuses: RequestStatus[] = [
   "NEW",
@@ -1608,9 +1609,9 @@ export function RequestDetail({
             <form className="catalog-form" noValidate onSubmit={submitTimeEntry}>
               <label>
                 {t.workDate}
-                <input
+                <LocalizedDateInput
                   required
-                  type="date"
+                  locale={locale}
                   value={timeForm.workDate}
                   onChange={(event) => setTimeForm({ ...timeForm, workDate: event.target.value })}
                 />

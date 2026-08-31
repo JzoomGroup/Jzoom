@@ -24,6 +24,7 @@ import type {
   PricingStudioCatalog,
 } from "../../lib/pricing-types";
 import { LogoutButton } from "../logout-button";
+import { LocalizedDateInput } from "../localized-date-input";
 import { EmptyState, PageHeader, SmartTable, StatusChip } from "../premium-os";
 import { PricingServicePicker, type MonthlySelectionState } from "./pricing-service-picker";
 
@@ -435,7 +436,7 @@ export function PricingStudio({
         </header>
       )}
 
-      <div className="pricing-layout">
+      <div className={showDrafts ? "pricing-layout drafts-open" : "pricing-layout"}>
         <aside className="pricing-drafts">
           <div className="pricing-aside-heading">
             <div>
@@ -447,6 +448,7 @@ export function PricingStudio({
             </Link>
           </div>
           <button
+            aria-controls="pricing-drafts-content"
             aria-expanded={showDrafts}
             className="pricing-drafts-toggle"
             type="button"
@@ -454,7 +456,10 @@ export function PricingStudio({
           >
             {showDrafts ? t.hideDrafts : t.showDrafts}
           </button>
-          <div className={showDrafts ? "pricing-drafts-content is-open" : "pricing-drafts-content"}>
+          <div
+            className={showDrafts ? "pricing-drafts-content is-open" : "pricing-drafts-content"}
+            id="pricing-drafts-content"
+          >
             {drafts.length === 0 ? (
               <p className="pricing-muted">{t.noDrafts}</p>
             ) : (
@@ -692,9 +697,9 @@ export function PricingStudio({
               </label>
               <label>
                 {t.pricingDate}
-                <input
+                <LocalizedDateInput
                   aria-label={t.pricingDate}
-                  type="date"
+                  locale={locale}
                   value={pricingDate}
                   disabled={isArchived}
                   onChange={(event) => {

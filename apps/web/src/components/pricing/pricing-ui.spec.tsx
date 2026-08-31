@@ -284,6 +284,46 @@ describe("PR 6 pricing UI", () => {
     expect(replaceMock).toHaveBeenCalledWith(`/pricing/${draft.id}`);
   });
 
+  it("keeps saved drafts collapsed by default and exposes an Arabic date preview", () => {
+    const draft = savedDraft();
+    const summary = {
+      calculationVersion: draft.calculationVersion,
+      client: draft.client,
+      currency: draft.currency,
+      draftNumber: draft.draftNumber,
+      id: draft.id,
+      itemCount: 1,
+      lastCalculatedAt: draft.lastCalculatedAt,
+      pricingDate: draft.pricingDate,
+      status: draft.status,
+      title: draft.title,
+      totals: draft.calculation?.totals ?? null,
+      updatedAt: draft.updatedAt,
+    };
+    const { container } = render(
+      <PricingStudio
+        displayName="Pricing Admin"
+        isAdmin
+        initialCatalog={studioCatalog()}
+        initialDraft={draft}
+        initialDrafts={[summary]}
+        locale="ar"
+      />,
+    );
+
+    const toggle = screen.getByRole("button", { name: "عرض المسودات المحفوظة" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(container.querySelector(".pricing-layout")).not.toHaveClass("drafts-open");
+    expect(screen.getByText(/٢٢.*٠٦.*٢٠٢٦/)).toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(screen.getByRole("button", { name: "إخفاء المسودات" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(container.querySelector(".pricing-layout")).toHaveClass("drafts-open");
+  });
+
   it("creates a new client inside pricing and selects it for the draft", async () => {
     const fetchMock = jest.mocked(fetch);
     fetchMock.mockImplementationOnce(() =>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { ChevronLeft, ChevronRight, RotateCcw, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 import { adminAccessCopy } from "../../i18n/admin-access";
 import type {
   AdminAccessPermission,
@@ -62,6 +63,11 @@ export function AdminUsersPageContent({
   const lang = language(locale);
   const t = adminAccessCopy[lang];
   const [userEditorBusy, setUserEditorBusy] = useState(false);
+  const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [typeFilter, setTypeFilter] = useState("ALL");
+  const [page, setPage] = useState(1);
   const {
     applySnapshot,
     closeOperatingForm,
@@ -87,6 +93,42 @@ export function AdminUsersPageContent({
     visibleServiceItems,
   } = useOperatingUsers({ currentUserId, initialSetup: setup, initialUsers: users, locale: lang });
   const { activeUsers, disabledUsers, lockedUsers, usersWithOverrides } = metrics;
+  const filteredUsers = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase(lang === "ar" ? "ar" : "en");
+    return currentUsers.filter((user) => {
+      if (statusFilter !== "ALL" && userStatus(user) !== statusFilter) return false;
+      if (typeFilter !== "ALL" && user.userType !== typeFilter) return false;
+      if (roleFilter !== "ALL" && !user.roles.some((role) => role.code === roleFilter)) {
+        return false;
+      }
+      if (!normalizedQuery) return true;
+
+      return [
+        user.displayName,
+        user.email,
+        ...user.roles.flatMap((role) => [role.code, roleLabel(role, lang)]),
+        scopesLabel(user, lang),
+        ...operatingScopeLabels(user, lang),
+      ].some((value) =>
+        value.toLocaleLowerCase(lang === "ar" ? "ar" : "en").includes(normalizedQuery),
+      );
+    });
+  }, [currentUsers, lang, query, roleFilter, statusFilter, typeFilter]);
+  const usersPerPage = 12;
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / usersPerPage));
+  const currentPage = Math.min(page, totalPages);
+  const visibleUsers = filteredUsers.slice(
+    (currentPage - 1) * usersPerPage,
+    currentPage * usersPerPage,
+  );
+
+  function resetDirectory() {
+    setQuery("");
+    setRoleFilter("ALL");
+    setStatusFilter("ALL");
+    setTypeFilter("ALL");
+    setPage(1);
+  }
 
   return (
     <>
@@ -390,109 +432,222 @@ export function AdminUsersPageContent({
       </BentoGrid>
 
       <SectionCard title={t.portalUsers} eyebrow={t.access}>
+        <div className="access-user-toolbar">
+          <label className="access-user-search">
+            <span>{t.searchUsers}</span>
+            <span className="access-search-input">
+              <Search aria-hidden="true" size={16} />
+              <input
+                type="search"
+                value={query}
+                placeholder={t.searchUsersPlaceholder}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setPage(1);
+                }}
+              />
+            </span>
+          </label>
+          <label>
+            <span>{t.status}</span>
+            <select
+              value={statusFilter}
+              onChange={(event) => {
+                setStatusFilter(event.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="ALL">{t.allStatuses}</option>
+              <option value="ACTIVE">{t.active}</option>
+              <option value="DISABLED">{t.disabled}</option>
+              <option value="LOCKED">{t.locked}</option>
+              <option value="INVITED">{t.invited}</option>
+              <option value="ARCHIVED">{t.archived}</option>
+            </select>
+          </label>
+          <label>
+            <span>{t.role}</span>
+            <select
+              value={roleFilter}
+              onChange={(event) => {
+                setRoleFilter(event.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="ALL">{t.allRoles}</option>
+              {roles.map((role) => (
+                <option key={role.code} value={role.code}>
+                  {roleLabel(role, lang)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>{t.type}</span>
+            <select
+              value={typeFilter}
+              onChange={(event) => {
+                setTypeFilter(event.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="ALL">{t.allTypes}</option>
+              <option value="INTERNAL">{t.internal}</option>
+              <option value="EXTERNAL">{t.external}</option>
+            </select>
+          </label>
+          <button className="os-button os-button-secondary" type="button" onClick={resetDirectory}>
+            <RotateCcw aria-hidden="true" size={15} />
+            {t.resetFilters}
+          </button>
+        </div>
+
+        <div className="access-user-results" aria-live="polite">
+          <span>
+            {t.filteredResults}: {number(filteredUsers.length, lang)}
+          </span>
+        </div>
+
         {currentUsers.length === 0 ? (
           <EmptyState title={t.emptyUsers}>{t.usersDescription}</EmptyState>
+        ) : filteredUsers.length === 0 ? (
+          <EmptyState title={t.noMatchingUsers}>{t.adjustUserFilters}</EmptyState>
         ) : (
-          <div className="access-user-grid">
-            {currentUsers.map((user) => (
-              <article className="access-user-card" key={user.id}>
-                <div className="access-user-top">
-                  <span className="access-avatar" aria-hidden="true">
-                    {initials(user.displayName)}
-                  </span>
-                  <div>
-                    <h3>{user.displayName}</h3>
-                    <p>{user.email}</p>
+          <>
+            <div className="access-user-grid">
+              {visibleUsers.map((user) => (
+                <article className="access-user-card" key={user.id}>
+                  <div className="access-user-top">
+                    <span className="access-avatar" aria-hidden="true">
+                      {initials(user.displayName)}
+                    </span>
+                    <div>
+                      <h3>{user.displayName}</h3>
+                      <p>{user.email}</p>
+                    </div>
+                    <StatusChip
+                      status={userStatus(user)}
+                      label={statusLabel(userStatus(user), lang)}
+                    />
                   </div>
-                  <StatusChip
-                    status={userStatus(user)}
-                    label={statusLabel(userStatus(user), lang)}
-                  />
-                </div>
 
-                <dl className="access-definition-grid">
-                  <div>
-                    <dt>{t.type}</dt>
-                    <dd>{userTypeLabel(user.userType, lang)}</dd>
-                  </div>
-                  <div>
-                    <dt>{t.lastLogin}</dt>
-                    <dd>{date(user.lastLoginAt, lang, t.never)}</dd>
-                  </div>
-                  <div>
-                    <dt>{t.roles}</dt>
-                    <dd>{user.roles.map((role) => roleLabel(role, lang)).join(", ") || "-"}</dd>
-                  </div>
-                  <div>
-                    <dt>{t.scopes}</dt>
-                    <dd>{scopesLabel(user, lang)}</dd>
-                  </div>
-                </dl>
+                  <dl className="access-definition-grid">
+                    <div>
+                      <dt>{t.type}</dt>
+                      <dd>{userTypeLabel(user.userType, lang)}</dd>
+                    </div>
+                    <div>
+                      <dt>{t.lastLogin}</dt>
+                      <dd>{date(user.lastLoginAt, lang, t.never)}</dd>
+                    </div>
+                    <div>
+                      <dt>{t.roles}</dt>
+                      <dd>{user.roles.map((role) => roleLabel(role, lang)).join(", ") || "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>{t.scopes}</dt>
+                      <dd>{scopesLabel(user, lang)}</dd>
+                    </div>
+                  </dl>
 
-                <div className="access-chip-list">
-                  {user.roles.map((role) => (
-                    <span key={role.code}>{roleLabel(role, lang)}</span>
-                  ))}
-                  {user.permissionOverrides.length > 0 ? (
-                    <span className="attention">{t.usersWithOverrides}</span>
+                  <div className="access-chip-list">
+                    {user.roles.map((role) => (
+                      <span key={role.code}>{roleLabel(role, lang)}</span>
+                    ))}
+                    {user.permissionOverrides.length > 0 ? (
+                      <span className="attention">{t.usersWithOverrides}</span>
+                    ) : null}
+                    {user.mustChangePassword ? (
+                      <span className="attention">{t.passwordChangeRequired}</span>
+                    ) : null}
+                  </div>
+
+                  {operatingScopeLabels(user, lang).length > 0 ? (
+                    <div className="operating-scope-summary">
+                      <strong>{t.operatingScope}</strong>
+                      <div className="access-chip-list">
+                        {operatingScopeLabels(user, lang)
+                          .slice(0, 8)
+                          .map((label) => (
+                            <span key={label}>{label}</span>
+                          ))}
+                        {operatingScopeLabels(user, lang).length > 8 ? (
+                          <span>+{number(operatingScopeLabels(user, lang).length - 8, lang)}</span>
+                        ) : null}
+                      </div>
+                    </div>
                   ) : null}
-                  {user.mustChangePassword ? (
-                    <span className="attention">{t.passwordChangeRequired}</span>
-                  ) : null}
-                </div>
 
-                {operatingScopeLabels(user, lang).length > 0 ? (
-                  <div className="operating-scope-summary">
-                    <strong>{t.operatingScope}</strong>
-                    <div className="access-chip-list">
-                      {operatingScopeLabels(user, lang)
-                        .slice(0, 8)
-                        .map((label) => (
-                          <span key={label}>{label}</span>
+                  <details className="access-details">
+                    <summary>{t.overrides}</summary>
+                    {user.permissionOverrides.length === 0 ? (
+                      <p>{t.noOverrides}</p>
+                    ) : (
+                      <div className="access-override-list">
+                        {user.permissionOverrides.map((override) => (
+                          <article
+                            key={`${user.id}-${override.permission.code}-${override.effect}`}
+                          >
+                            <strong>
+                              {formatCode(override.effect, lang)} -{" "}
+                              {permissionLabel(override.permission, lang)}
+                            </strong>
+                            <small>{override.permission.code}</small>
+                            <p>{localizedAdminText(override.reason, lang, t.reason)}</p>
+                            {override.expiresAt ? (
+                              <span>
+                                {t.expires}: {date(override.expiresAt, lang, "-")}
+                              </span>
+                            ) : null}
+                          </article>
                         ))}
-                      {operatingScopeLabels(user, lang).length > 8 ? (
-                        <span>+{number(operatingScopeLabels(user, lang).length - 8, lang)}</span>
-                      ) : null}
-                    </div>
+                      </div>
+                    )}
+                  </details>
+                  <div className="operating-user-actions">
+                    <button
+                      className="button-primary"
+                      type="button"
+                      onClick={() => openUserManager(user)}
+                    >
+                      {t.manageUser}
+                    </button>
                   </div>
-                ) : null}
-
-                <details className="access-details">
-                  <summary>{t.overrides}</summary>
-                  {user.permissionOverrides.length === 0 ? (
-                    <p>{t.noOverrides}</p>
+                </article>
+              ))}
+            </div>
+            {totalPages > 1 ? (
+              <nav className="access-pagination" aria-label={t.userPagination}>
+                <button
+                  className="os-button os-button-secondary"
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => setPage((value) => Math.max(1, value - 1))}
+                >
+                  {lang === "ar" ? (
+                    <ChevronRight aria-hidden="true" size={16} />
                   ) : (
-                    <div className="access-override-list">
-                      {user.permissionOverrides.map((override) => (
-                        <article key={`${user.id}-${override.permission.code}-${override.effect}`}>
-                          <strong>
-                            {formatCode(override.effect, lang)} -{" "}
-                            {permissionLabel(override.permission, lang)}
-                          </strong>
-                          <small>{override.permission.code}</small>
-                          <p>{localizedAdminText(override.reason, lang, t.reason)}</p>
-                          {override.expiresAt ? (
-                            <span>
-                              {t.expires}: {date(override.expiresAt, lang, "-")}
-                            </span>
-                          ) : null}
-                        </article>
-                      ))}
-                    </div>
+                    <ChevronLeft aria-hidden="true" size={16} />
                   )}
-                </details>
-                <div className="operating-user-actions">
-                  <button
-                    className="button-primary"
-                    type="button"
-                    onClick={() => openUserManager(user)}
-                  >
-                    {t.manageUser}
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
+                  {t.previousPage}
+                </button>
+                <strong>{t.pageOf(number(currentPage, lang), number(totalPages, lang))}</strong>
+                <button
+                  className="os-button os-button-secondary"
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+                >
+                  {t.nextPage}
+                  {lang === "ar" ? (
+                    <ChevronLeft aria-hidden="true" size={16} />
+                  ) : (
+                    <ChevronRight aria-hidden="true" size={16} />
+                  )}
+                </button>
+              </nav>
+            ) : null}
+          </>
         )}
       </SectionCard>
     </>
