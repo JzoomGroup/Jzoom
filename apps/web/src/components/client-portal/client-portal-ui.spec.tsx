@@ -438,18 +438,10 @@ describe("Client portal UI", () => {
     expect(screen.getByRole("button", { name: "تسجيل الخروج" })).toBeInTheDocument();
   });
 
-  it("renders overview account context and record counts", () => {
-    render(
-      <ClientOverview
-        account={account()}
-        quotes={[quoteSummary()]}
-        invoices={[invoiceSummary()]}
-        requests={[requestSummary()]}
-      />,
-    );
+  it("keeps the client overview focused on requests and required actions", () => {
+    render(<ClientOverview account={account()} requests={[requestSummary()]} />);
 
     expect(screen.getByRole("heading", { name: "Welcome, Client User" })).toBeInTheDocument();
-    expect(screen.getByText("CLIENT-1")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Open requests / Active services" }),
     ).toBeInTheDocument();
@@ -457,15 +449,11 @@ describe("Client portal UI", () => {
     expect(screen.getByText("No client action is pending.")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Open requests" })).toBeInTheDocument();
     expect(screen.getAllByText("Open requests").length).toBeGreaterThan(0);
-    expect(screen.getByRole("heading", { name: "Service catalog" })).toBeInTheDocument();
-    const availableServiceCard = screen
-      .getByRole("heading", { name: "Client Service" })
-      .closest("article");
-    expect(availableServiceCard).not.toHaveTextContent(/Rate|Price|Duration|SAR/);
-    expect(screen.getByRole("link", { name: "View quotes" })).toHaveAttribute(
-      "href",
-      "/client/quotes",
-    );
+    expect(screen.queryByRole("heading", { name: "Service catalog" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Commercial records" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "View quotes" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "View invoices" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Available services")).not.toBeInTheDocument();
   });
 
   it("renders client quote list and PDF detail without internal fields", () => {
@@ -667,9 +655,10 @@ describe("Client portal UI", () => {
     expect(screen.queryByLabelText("Subscription service ID")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Service item revision ID")).not.toBeInTheDocument();
     expect(screen.getByText("Request setup")).toBeInTheDocument();
-    expect(screen.getByText("Selected work item")).toBeInTheDocument();
-    expect(screen.getByText("Selected service summary")).toBeInTheDocument();
-    expect(screen.getByText("Included service items")).toBeInTheDocument();
+    expect(screen.queryByText("Selected work item")).not.toBeInTheDocument();
+    expect(screen.queryByText("Selected service summary")).not.toBeInTheDocument();
+    expect(screen.queryByText("Included service items")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Request setup")).not.toBeInTheDocument();
     expect(screen.getByText("Next step")).toBeInTheDocument();
     expect(screen.getByLabelText("Request stats")).toBeInTheDocument();
 

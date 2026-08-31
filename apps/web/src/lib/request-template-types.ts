@@ -1,4 +1,5 @@
 export type RequestTemplateFieldType =
+  | "NOTE"
   | "SHORT_TEXT"
   | "LONG_TEXT"
   | "NUMBER"
@@ -138,7 +139,12 @@ export interface RequestTemplateServiceItem {
   code: string;
   status: string;
   sortOrder: number;
-  monthlyService: { id: string; code: string };
+  monthlyService: {
+    id: string;
+    code: string;
+    category?: { id: string; code: string; nameAr: string; nameEn: string };
+    revisions?: Array<{ nameAr: string; nameEn: string }>;
+  };
   latestRevision: {
     id: string;
     version: number;
@@ -174,7 +180,12 @@ export interface ActiveRequestTemplateResponse {
   serviceItem: {
     id: string;
     code: string;
-    monthlyService: { id: string; code: string };
+    monthlyService: {
+      id: string;
+      code: string;
+      category?: { id: string; code: string; nameAr: string; nameEn: string };
+      revisions?: Array<{ nameAr: string; nameEn: string }>;
+    };
   };
   template: RequestTemplateVersion | null;
 }

@@ -1,4 +1,4 @@
-export type ClientQuoteStatus = "ISSUED" | "ACCEPTED";
+export type ClientQuoteStatus = "ISSUED" | "APPROVED" | "ACCEPTED" | "ACTIVATED";
 export type ClientInvoiceStatus = "ISSUED";
 
 export interface ClientPortalAccount {

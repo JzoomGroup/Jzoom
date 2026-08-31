@@ -1,6 +1,15 @@
 import type { PricingCalculation, PricingClient, PricingLine } from "./pricing-types";
 
-export type QuoteStatus = "DRAFT" | "ISSUED" | "ACCEPTED" | "REJECTED" | "EXPIRED" | "CANCELLED";
+export type QuoteStatus =
+  | "DRAFT"
+  | "ISSUED"
+  | "APPROVED"
+  | "ACCEPTED"
+  | "REJECTED"
+  | "EXPIRED"
+  | "CANCELLED"
+  | "ACTIVATED";
+export type QuotePaymentMethod = "BANK_TRANSFER" | "CARD" | "CASH" | "OTHER";
 export type QuoteInvoiceStatus = "DRAFT" | "ISSUED" | "CANCELLED" | "VOIDED";
 
 export interface QuoteTerms {
@@ -69,7 +78,16 @@ export interface Quote {
   currency: string;
   issueDate: string | null;
   validUntil: string | null;
+  approvedAt: string | null;
   acceptedAt: string | null;
+  payment: null | {
+    method: QuotePaymentMethod;
+    paidAt: string;
+    reference: string | null;
+    note: string | null;
+    recordedById: string;
+    recordedAt: string;
+  };
   rejectedAt: string | null;
   expiredAt: string | null;
   cancelledAt: string | null;
@@ -142,6 +160,8 @@ export interface QuoteOnboardingOptions {
     nameAr: string;
     nameEn: string;
     serviceLevelLabel: string | null;
+    serviceLevelLabelAr: string | null;
+    serviceLevelLabelEn: string | null;
     hoursAllocated: number | null;
     monthlyServiceId: string | null;
     monthlyServiceRevisionId: string | null;
@@ -167,6 +187,7 @@ export interface QuoteOnboardingInput {
 
 export interface QuoteOnboardingResult {
   completed: boolean;
+  quoteStatus: "ACTIVATED";
   portalUser: null | {
     id: string;
     email: string;
@@ -178,6 +199,8 @@ export interface QuoteOnboardingResult {
     subscriptionId: string | null;
     createdServiceIds: string[];
     reusedServiceIds: string[];
+    toppedUpServiceIds: string[];
+    replacedServiceIds: string[];
   };
   assignments: Array<{
     quoteItemId: string;

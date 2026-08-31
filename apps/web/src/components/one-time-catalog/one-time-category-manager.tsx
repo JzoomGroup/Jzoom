@@ -18,6 +18,7 @@ import {
   useCatalogMutation,
 } from "../catalog/catalog-shared";
 import { BentoGrid, MetricCard, PageHeader, SectionCard } from "../premium-os";
+import { AppDialog } from "../app-dialog";
 
 function localizedCategoryName(category: OneTimeCategory, locale: SupportedLocale): string {
   return localizedCatalogLabel(category, locale);
@@ -130,12 +131,15 @@ export function OneTimeCategoryManager({
       </BentoGrid>
 
       {creating || editing ? (
-        <section className="one-time-category-editor">
-          <div className="one-time-category-editor-heading">
-            <span>{creating ? t.createCategory : t.edit}</span>
-            <h2>{creating ? t.newCategory : t.editCategory(editing!.code)}</h2>
-            <p>{t.codesImmutable}</p>
-          </div>
+        <AppDialog
+          busy={mutation.submitting}
+          closeLabel={locale === "ar" ? "إغلاق" : "Close"}
+          description={t.codesImmutable}
+          eyebrow={creating ? t.createCategory : t.edit}
+          onClose={closeForm}
+          size="lg"
+          title={creating ? t.newCategory : t.editCategory(editing!.code)}
+        >
           <form
             className="catalog-form wide-form one-time-category-form"
             noValidate
@@ -186,7 +190,7 @@ export function OneTimeCategoryManager({
               submitLabel={creating ? t.createCategory : t.saveCategory}
             />
           </form>
-        </section>
+        </AppDialog>
       ) : null}
 
       <SectionCard

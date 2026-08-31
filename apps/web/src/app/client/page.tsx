@@ -1,17 +1,11 @@
 import { ClientOverview } from "../../components/client-portal/client-overview";
 import { ClientShell } from "../../components/client-portal/client-shell";
-import {
-  requireClientInvoices,
-  requireClientPortalAccount,
-  requireClientQuotes,
-} from "../../lib/client-portal-server";
+import { requireClientPortalAccount } from "../../lib/client-portal-server";
 import { requireClientRequests } from "../../lib/request-server";
 
 export default async function ClientPortalPage() {
-  const [account, quotes, invoices, requests] = await Promise.all([
+  const [account, requests] = await Promise.all([
     requireClientPortalAccount(),
-    requireClientQuotes(),
-    requireClientInvoices(),
     requireClientRequests(),
   ]);
 
@@ -21,13 +15,7 @@ export default async function ClientPortalPage() {
       displayName={account.user.displayName}
       locale={account.user.preferredLocale}
     >
-      <ClientOverview
-        account={account}
-        quotes={quotes}
-        invoices={invoices}
-        requests={requests}
-        locale={account.user.preferredLocale}
-      />
+      <ClientOverview account={account} requests={requests} locale={account.user.preferredLocale} />
     </ClientShell>
   );
 }

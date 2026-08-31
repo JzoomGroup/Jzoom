@@ -29,7 +29,7 @@ export function CreateInvoiceAction({
     );
   }
 
-  if (quote.status !== "ACCEPTED") {
+  if (!["APPROVED", "ACCEPTED", "ACTIVATED"].includes(quote.status)) {
     return null;
   }
 

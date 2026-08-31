@@ -26,6 +26,7 @@ import type { RequestMetadata } from "../auth/auth.types.js";
 import type { RequestWithId } from "../request-context/request-with-id.js";
 import { ACCOUNT_MANAGER_ROLE_CODE, MANAGE_QUOTES_PERMISSION } from "./quotes.constants.js";
 import {
+  ConfirmQuotePaymentDto,
   CreateQuoteDto,
   QuoteLifecycleActionDto,
   QuoteOnboardingDto,
@@ -48,6 +49,7 @@ function metadata(request: RequestWithId): RequestMetadata {
 @ApiTags("quotes")
 @ApiCookieAuth()
 @ApiExtraModels(
+  ConfirmQuotePaymentDto,
   CreateQuoteDto,
   QuoteLifecycleActionDto,
   QuoteOnboardingDto,
@@ -116,15 +118,25 @@ export class QuotesController {
   @Post(":id/accept")
   @HttpCode(200)
   @ApiOperation({
-    summary:
-      "Confirm external approval and payment for an issued quote without mutating its immutable snapshot",
+    summary: "Confirm payment for an approved quote and preserve structured payment evidence",
   })
   accept(
+    @Param("id") id: string,
+    @Body() input: ConfirmQuotePaymentDto | undefined,
+    @Req() request: RequestWithId,
+  ) {
+    return this.quotes.confirmPayment(id, input ?? {}, request.auth!, metadata(request));
+  }
+
+  @Post(":id/approve")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Record client approval for an issued quote before payment" })
+  approve(
     @Param("id") id: string,
     @Body() input: QuoteLifecycleActionDto | undefined,
     @Req() request: RequestWithId,
   ) {
-    return this.quotes.accept(id, input?.note, request.auth!, metadata(request));
+    return this.quotes.approve(id, input?.note, request.auth!, metadata(request));
   }
 
   @Post(":id/onboarding")

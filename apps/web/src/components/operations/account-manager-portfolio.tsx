@@ -58,7 +58,6 @@ export function AccountManagerPortfolio({
   const language = normalizeLocale(locale);
   const t = copy[language];
   const attentionClients = portfolio.portfolio.filter((entry) => entry.health.code === "ATTENTION");
-  const watchClients = portfolio.portfolio.filter((entry) => entry.health.code === "WATCH");
   const totals = portfolio.portfolio.reduce(
     (acc, entry) => ({
       approvedHours: acc.approvedHours + entry.indicators.approvedHoursThisMonth,
@@ -91,11 +90,6 @@ export function AccountManagerPortfolio({
           accent
         />
         <MetricCard
-          label={t.openRequests}
-          value={number(totals.openRequests, language)}
-          detail={t.open}
-        />
-        <MetricCard
           label={t.overdueRequests}
           value={number(totals.overdueRequests, language)}
           detail={t.overdue}
@@ -109,11 +103,6 @@ export function AccountManagerPortfolio({
           label={t.approvedHours}
           value={number(totals.approvedHours, language)}
           detail={t.hours}
-        />
-        <MetricCard
-          label={healthLabel("WATCH", language)}
-          value={number(watchClients.length, language)}
-          detail={t.clientHealthActivity}
         />
       </BentoGrid>
 
@@ -137,7 +126,7 @@ export function AccountManagerPortfolio({
                     <span>{entry.client.code}</span>
                   </div>
                   <p>{healthReason(entry.health.code, language)}</p>
-                  <dl className="entity-meta four-up">
+                  <dl className="entity-meta four-up portfolio-client-signals">
                     <div>
                       <dt>{t.open}</dt>
                       <dd>{number(entry.indicators.openRequests, language)}</dd>
@@ -154,36 +143,49 @@ export function AccountManagerPortfolio({
                       <dt>{t.hours}</dt>
                       <dd>{number(entry.indicators.approvedHoursThisMonth, language)}</dd>
                     </div>
-                    <div>
-                      <dt>{t.sector}</dt>
-                      <dd>{entry.client.sector}</dd>
-                    </div>
-                    <div>
-                      <dt>{t.city}</dt>
-                      <dd>{entry.client.city ?? "-"}</dd>
-                    </div>
-                    <div>
-                      <dt>{t.assignedManagers}</dt>
-                      <dd>
-                        {entry.accountManagers.map((manager) => manager.displayName).join(", ") ||
-                          "-"}
-                      </dd>
-                    </div>
                   </dl>
-                  <div className="activity-list">
-                    <h4>{t.recentActivity}</h4>
-                    {recentActivity.length === 0 ? (
-                      <EmptyState>{t.noActivity}</EmptyState>
-                    ) : (
-                      recentActivity.map((activity) => (
-                        <article key={activity.id}>
-                          <strong>{activity.request?.requestNumber ?? t.requestActivity}</strong>
-                          <p>{activity.reason ?? t.activityRecorded}</p>
-                          <small>{dateTime(activity.occurredAt, language)}</small>
-                        </article>
-                      ))
-                    )}
-                  </div>
+                  <details className="portfolio-client-details">
+                    <summary>
+                      {language === "ar"
+                        ? "بيانات العميل والمسؤولية"
+                        : "Client context and ownership"}
+                    </summary>
+                    <dl className="entity-meta portfolio-client-context">
+                      <div>
+                        <dt>{t.sector}</dt>
+                        <dd>{entry.client.sector}</dd>
+                      </div>
+                      <div>
+                        <dt>{t.city}</dt>
+                        <dd>{entry.client.city ?? "-"}</dd>
+                      </div>
+                      <div>
+                        <dt>{t.assignedManagers}</dt>
+                        <dd>
+                          {entry.accountManagers.map((manager) => manager.displayName).join(", ") ||
+                            "-"}
+                        </dd>
+                      </div>
+                    </dl>
+                  </details>
+                  <details className="portfolio-client-details">
+                    <summary>
+                      {t.recentActivity} ({number(recentActivity.length, language)})
+                    </summary>
+                    <div className="activity-list portfolio-activity-list">
+                      {recentActivity.length === 0 ? (
+                        <EmptyState>{t.noActivity}</EmptyState>
+                      ) : (
+                        recentActivity.map((activity) => (
+                          <article key={activity.id}>
+                            <strong>{activity.request?.requestNumber ?? t.requestActivity}</strong>
+                            <p>{activity.reason ?? t.activityRecorded}</p>
+                            <small>{dateTime(activity.occurredAt, language)}</small>
+                          </article>
+                        ))
+                      )}
+                    </div>
+                  </details>
                 </article>
               );
             })}

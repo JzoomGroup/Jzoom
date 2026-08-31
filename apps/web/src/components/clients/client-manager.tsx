@@ -7,6 +7,7 @@ import { clientsErrorMessage, clientsRequest, refreshClients } from "../../lib/c
 import type { ClientStatus, ClientsSnapshot, ManagedClient } from "../../lib/clients-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
 import { CatalogFeedback } from "../catalog/catalog-shared";
+import { AppDialog } from "../app-dialog";
 import {
   BentoGrid,
   EmptyState,
@@ -198,7 +199,12 @@ function ClientForm({
         </p>
       ) : null}
       <div className="form-actions">
-        <button type="button" className="os-button os-button-secondary" onClick={onCancel}>
+        <button
+          type="button"
+          className="os-button os-button-secondary"
+          disabled={submitting}
+          onClick={onCancel}
+        >
           {t.cancel}
         </button>
         <button type="submit" className="os-button os-button-primary" disabled={submitting}>
@@ -292,7 +298,12 @@ function PortalUserForm({
         </select>
       </label>
       <div className="form-actions">
-        <button type="button" className="os-button os-button-secondary" onClick={onCancel}>
+        <button
+          type="button"
+          className="os-button os-button-secondary"
+          disabled={submitting}
+          onClick={onCancel}
+        >
           {t.cancel}
         </button>
         <button type="submit" className="os-button os-button-primary" disabled={submitting}>
@@ -585,11 +596,14 @@ export function ClientManager({
       </BentoGrid>
 
       {editing ? (
-        <section className="client-admin-editor">
-          <div className="client-admin-editor-heading">
-            <span>{t.edit}</span>
-            <h2>{t.editClient(editing.name)}</h2>
-          </div>
+        <AppDialog
+          busy={submitting}
+          closeLabel={t.cancel}
+          eyebrow={t.edit}
+          onClose={() => setEditing(null)}
+          size="lg"
+          title={t.editClient(editing.name)}
+        >
           <ClientForm
             client={editing}
             onCancel={() => setEditing(null)}
@@ -597,15 +611,18 @@ export function ClientManager({
             submitting={submitting}
             t={t}
           />
-        </section>
+        </AppDialog>
       ) : null}
 
       {userClient ? (
-        <section className="client-admin-editor">
-          <div className="client-admin-editor-heading">
-            <span>{t.portalAccess}</span>
-            <h2>{t.createPortalUserFor(userClient.name)}</h2>
-          </div>
+        <AppDialog
+          busy={submitting}
+          closeLabel={t.cancel}
+          eyebrow={t.portalAccess}
+          onClose={() => setUserClient(null)}
+          size="md"
+          title={t.createPortalUserFor(userClient.name)}
+        >
           <PortalUserForm
             client={userClient}
             onCancel={() => setUserClient(null)}
@@ -614,7 +631,7 @@ export function ClientManager({
             t={t}
             {...(error ? { externalError: error } : {})}
           />
-        </section>
+        </AppDialog>
       ) : null}
 
       <SectionCard title={t.clientList} description={t.clientListDescription}>

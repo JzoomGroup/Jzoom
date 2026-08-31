@@ -176,8 +176,8 @@ export class MonthlyPricingSelectionDto {
   @ApiPropertyOptional({ type: Number, default: 1 })
   @IsOptional()
   @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0.01)
+  @IsInt()
+  @Min(1)
   @Max(10_000)
   quantity?: number;
 }
@@ -190,8 +190,8 @@ export class OneTimePricingSelectionDto {
   @ApiPropertyOptional({ type: Number, default: 1 })
   @IsOptional()
   @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0.01)
+  @IsInt()
+  @Min(1)
   @Max(10_000)
   quantity?: number;
 }

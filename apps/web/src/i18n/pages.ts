@@ -41,6 +41,33 @@ export const authPageCopy = {
   },
 } as const;
 
+export const systemStateCopy = {
+  ar: {
+    loading: "جاري تجهيز الصفحة...",
+    errorEyebrow: "تعذر إكمال الطلب",
+    errorTitle: "حدث خلل مؤقت.",
+    errorLead:
+      "لم نتمكن من تحميل هذه الصفحة الآن. أعد المحاولة، وإذا استمرت المشكلة تواصل مع مسؤول المنصة.",
+    retry: "إعادة المحاولة",
+    home: "العودة إلى الرئيسية",
+    notFoundEyebrow: "404 - الصفحة غير موجودة",
+    notFoundTitle: "لم نعثر على هذه الصفحة.",
+    notFoundLead: "قد يكون الرابط تغير أو لم يعد متاحًا لحسابك.",
+  },
+  en: {
+    loading: "Preparing the page...",
+    errorEyebrow: "Request interrupted",
+    errorTitle: "A temporary problem occurred.",
+    errorLead:
+      "We could not load this page. Try again, and contact the platform administrator if the problem continues.",
+    retry: "Try again",
+    home: "Return home",
+    notFoundEyebrow: "404 - Page not found",
+    notFoundTitle: "We could not find this page.",
+    notFoundLead: "The link may have changed or may no longer be available to your account.",
+  },
+} as const;
+
 export const settingsPageCopy = {
   ar: {
     eyebrow: "إعدادات الأدمن",
@@ -62,9 +89,9 @@ export const settingsPageCopy = {
 
 export const profilePageCopy = {
   ar: {
-    eyebrow: "الملف الشخصي",
-    title: "ملف الحساب",
-    lead: "معلومات الدخول والصلاحيات الحالية داخل منصة جزوم.",
+    eyebrow: "حسابي",
+    title: "إعدادات الحساب",
+    lead: "راجع معلومات حسابك وحدّث كلمة المرور من مكان واحد.",
     email: "البريد الإلكتروني",
     accountType: "نوع الحساب",
     roles: "الأدوار",
@@ -73,13 +100,15 @@ export const profilePageCopy = {
     english: "English",
     clientAccount: "حساب عميل",
     internalAccount: "حساب داخلي",
+    securityTitle: "كلمة المرور",
+    securityLead: "استخدم كلمة قوية لا تستعملها في حسابات أخرى.",
     signOut: "تسجيل الخروج",
     signingOut: "جاري تسجيل الخروج...",
   },
   en: {
-    eyebrow: "Authenticated profile",
-    title: "Account profile",
-    lead: "Current sign-in, role, and permission context for the Jzoom platform.",
+    eyebrow: "My account",
+    title: "Account settings",
+    lead: "Review your account information and update your password in one place.",
     email: "Email",
     accountType: "Account type",
     roles: "Roles",
@@ -88,6 +117,8 @@ export const profilePageCopy = {
     english: "English",
     clientAccount: "Client account",
     internalAccount: "Internal account",
+    securityTitle: "Password",
+    securityLead: "Use a strong password that you do not use for other accounts.",
     signOut: "Sign out",
     signingOut: "Signing out...",
   },

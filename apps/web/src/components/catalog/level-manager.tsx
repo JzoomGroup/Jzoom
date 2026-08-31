@@ -16,6 +16,7 @@ import {
   useCatalogMutation,
 } from "./catalog-shared";
 import { BentoGrid, MetricCard, PageHeader, SectionCard } from "../premium-os";
+import { AppDialog } from "../app-dialog";
 
 function levelLocale(locale: string | undefined): SupportedLocale {
   return normalizeLocale(locale);
@@ -154,12 +155,15 @@ export function LevelManager({
       </BentoGrid>
 
       {creating || editing ? (
-        <section className="package-admin-editor">
-          <div className="package-admin-editor-heading">
-            <span>{creating ? t.createLevel : t.edit}</span>
-            <h2>{creating ? t.newServiceLevel : t.editLevel(editing!.code)}</h2>
-            <p>{t.packageCodesImmutable}</p>
-          </div>
+        <AppDialog
+          busy={mutation.submitting}
+          closeLabel={locale === "ar" ? "إغلاق" : "Close"}
+          description={t.packageCodesImmutable}
+          eyebrow={creating ? t.createLevel : t.edit}
+          onClose={closeForm}
+          size="lg"
+          title={creating ? t.newServiceLevel : t.editLevel(editing!.code)}
+        >
           <form className="catalog-form wide-form package-admin-form" noValidate onSubmit={submit}>
             {creating ? (
               <label>
@@ -217,7 +221,7 @@ export function LevelManager({
               submitLabel={creating ? t.createLevel : t.saveLevel}
             />
           </form>
-        </section>
+        </AppDialog>
       ) : null}
 
       <SectionCard title={t.configuredPackages} description={t.packagesDescription}>

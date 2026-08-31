@@ -12,8 +12,6 @@ import { TokenService } from "./token.service.js";
 import type { AuthRuntimeEnvironment } from "./auth.types.js";
 import type { RequestWithId } from "../request-context/request-with-id.js";
 
-const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
-
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
@@ -48,11 +46,7 @@ export class AuthGuard implements CanActivate {
       ALLOW_PASSWORD_CHANGE_REQUIRED_KEY,
       [context.getHandler(), context.getClass()],
     );
-    if (
-      principal.mustChangePassword &&
-      !allowPasswordChangeRequired &&
-      !SAFE_METHODS.has(request.method)
-    ) {
+    if (principal.mustChangePassword && !allowPasswordChangeRequired) {
       throw new ForbiddenException({
         code: "PASSWORD_CHANGE_REQUIRED",
         message: "The password must be changed before continuing",

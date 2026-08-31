@@ -383,7 +383,9 @@ export class QuotePdfService {
 
   private quoteStatusLabel(status: string): string {
     const labels: Record<string, string> = {
-      ACCEPTED: "مؤكد خارج النظام",
+      ACCEPTED: "تم تأكيد الدفع",
+      ACTIVATED: "مفعّل",
+      APPROVED: "وافق العميل",
       CANCELLED: "ملغي",
       DRAFT: "مسودة",
       EXPIRED: "منتهي الصلاحية",

@@ -19,6 +19,16 @@ function serviceName(
   return locale === "ar" ? service.nameAr || service.nameEn : service.nameEn || service.nameAr;
 }
 
+function serviceLevelName(
+  service: QuoteOnboardingOptions["services"][number],
+  locale: SupportedLocale,
+): string | null {
+  if (locale === "ar") {
+    return service.serviceLevelLabelAr || service.serviceLevelLabel;
+  }
+  return service.serviceLevelLabelEn || service.serviceLevelLabel;
+}
+
 function initialAssignments(options: QuoteOnboardingOptions): Record<string, string[]> {
   return Object.fromEntries(
     options.services.map((service) => [service.quoteItemId, service.existingSpecialistIds]),
@@ -64,6 +74,8 @@ export function QuoteOnboardingDialog({
       })),
     [assignments, options.services],
   );
+  const monthlyCount = options.services.filter((service) => service.lineType === "MONTHLY").length;
+  const oneTimeCount = options.services.length - monthlyCount;
 
   function toggleSpecialist(quoteItemId: string, specialistId: string) {
     setAssignments((current) => {
@@ -203,9 +215,14 @@ export function QuoteOnboardingDialog({
           <section className="quote-onboarding-panel">
             <div className="quote-onboarding-panel-heading">
               <h3>{t.services}</h3>
-              <span>
-                {countText(options.services.length, locale)} {lineTypeLabel("MONTHLY", locale)}
-              </span>
+              <div className="quote-onboarding-counts">
+                <span>
+                  {countText(monthlyCount, locale)} {lineTypeLabel("MONTHLY", locale)}
+                </span>
+                <span>
+                  {countText(oneTimeCount, locale)} {lineTypeLabel("ONE_TIME", locale)}
+                </span>
+              </div>
             </div>
             {options.services.length === 0 ? (
               <p className="pricing-muted">{t.noServices}</p>
@@ -217,7 +234,9 @@ export function QuoteOnboardingDialog({
                       <strong>{serviceName(service, locale)}</strong>
                       <small>
                         {lineTypeLabel(service.lineType, locale)} · {service.serviceCode}
-                        {service.serviceLevelLabel ? ` · ${service.serviceLevelLabel}` : ""}
+                        {serviceLevelName(service, locale)
+                          ? ` · ${serviceLevelName(service, locale)}`
+                          : ""}
                         {service.hoursAllocated !== null
                           ? ` · ${countText(service.hoursAllocated, locale)} ${t.hours}`
                           : ""}
@@ -262,6 +281,12 @@ export function QuoteOnboardingDialog({
               {t.completed} {t.createdServices}:{" "}
               {countText(result.subscription.createdServiceIds.length, locale)} · {t.reusedServices}
               : {countText(result.subscription.reusedServiceIds.length, locale)} ·{" "}
+              {t.toppedUpServices}:{" "}
+              {countText(result.subscription.toppedUpServiceIds.length, locale)}
+              {" · "}
+              {t.replacedServices}:{" "}
+              {countText(result.subscription.replacedServiceIds.length, locale)}
+              {" · "}
               {t.createdProjects}: {countText(result.projects.createdProjectIds.length, locale)} ·{" "}
               {t.reusedProjects}: {countText(result.projects.reusedProjectIds.length, locale)}
             </p>

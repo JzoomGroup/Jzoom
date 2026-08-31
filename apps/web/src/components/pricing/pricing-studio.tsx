@@ -25,11 +25,7 @@ import type {
 } from "../../lib/pricing-types";
 import { LogoutButton } from "../logout-button";
 import { EmptyState, PageHeader, SmartTable, StatusChip } from "../premium-os";
-
-interface MonthlySelectionState {
-  levelId: string;
-  quantity: number;
-}
+import { PricingServicePicker, type MonthlySelectionState } from "./pricing-service-picker";
 
 function pricingDateInput(value?: string): string {
   return (value ? new Date(value) : new Date()).toISOString().slice(0, 10);
@@ -97,29 +93,6 @@ function createClientPayload(form: FormData): PricingClientCreateInput {
   };
 }
 
-function serviceLineLabel(value: string, locale: SupportedLocale): string {
-  if (locale === "en") return value;
-  if (value === "Build") return "بناء";
-  if (value === "Digital") return "رقمي";
-  return /[\u0600-\u06ff]/.test(value) ? value : "مسار خدمة";
-}
-
-function categoryLabel(value: string, locale: SupportedLocale): string {
-  if (locale === "en" || /[\u0600-\u06ff]/.test(value)) return value;
-  const labels: Record<string, string> = {
-    Build: "بناء",
-    Consulting: "استشارات",
-    Digital: "رقمي",
-    Finance: "مالية",
-    HR: "موارد بشرية",
-    Legal: "قانونية",
-    Marketing: "تسويق",
-    Operations: "تشغيل",
-    Strategy: "استراتيجية",
-  };
-  return labels[value] ?? "تصنيف خدمة";
-}
-
 function levelLabel(value: string | null | undefined, locale: SupportedLocale): string {
   if (!value || locale === "en" || /[\u0600-\u06ff]/.test(value)) return value ?? "";
   const labels: Record<string, string> = {
@@ -150,13 +123,6 @@ function oneTimeName(
   return locale === "ar"
     ? service.revision.nameAr || "خدمة مرة واحدة غير مترجمة"
     : service.revision.nameEn || service.revision.nameAr;
-}
-
-function serviceDescription(name: string, description: string, locale: SupportedLocale): string {
-  if (locale === "en") return description;
-  return /[\u0600-\u06ff]/.test(description)
-    ? description
-    : `خدمة ${name} ضمن كتالوج التسعير، يتم احتسابها من الخلفية حسب الإعدادات الحالية.`;
 }
 
 function lineName(line: PricingCalculation["lines"][number], locale: SupportedLocale): string {
@@ -236,6 +202,8 @@ export function PricingStudio({
   const [clientSubmitting, setClientSubmitting] = useState(false);
   const [showClientCreator, setShowClientCreator] = useState(openClientCreator && isAdmin);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
+  const [showDrafts, setShowDrafts] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
 
@@ -249,12 +217,14 @@ export function PricingStudio({
   const selectedOneTimeServices = catalog.oneTimeServices.filter((service) =>
     oneTimeSelections.has(service.revision.id),
   );
-  const quoteReady = Boolean(currentDraft && calculation && !isArchived);
+  const quoteReady = Boolean(currentDraft && calculation && !isArchived && !isDirty);
   const quoteReadiness = quoteReady
     ? t.quoteReady
-    : currentDraft
-      ? t.quoteNeedsPreview
-      : t.quoteNeedsDraft;
+    : isDirty
+      ? t.quoteNeedsSave
+      : currentDraft
+        ? t.quoteNeedsPreview
+        : t.quoteNeedsDraft;
 
   const input = useMemo<PricingInput>(
     () => ({
@@ -285,6 +255,15 @@ export function PricingStudio({
     setSuccess(undefined);
   }
 
+  function markChanged(clearCalculation = true) {
+    clearFeedback();
+    setIsDirty(true);
+    setShowQuoteForm(false);
+    if (clearCalculation) {
+      setCalculation(null);
+    }
+  }
+
   async function createClient(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearFeedback();
@@ -307,7 +286,7 @@ export function PricingStudio({
         ),
       }));
       setClientId(created.id);
-      setCalculation(null);
+      markChanged();
       setShowClientCreator(false);
       setSuccess(t.clientCreated);
     } catch (clientError) {
@@ -318,8 +297,7 @@ export function PricingStudio({
   }
 
   function toggleMonthly(revisionId: string, defaultLevelId: string, checked: boolean) {
-    clearFeedback();
-    setCalculation(null);
+    markChanged();
     setMonthlySelections((current) => {
       const next = new Map(current);
       if (checked) {
@@ -332,8 +310,7 @@ export function PricingStudio({
   }
 
   function updateMonthly(revisionId: string, update: Partial<MonthlySelectionState>) {
-    clearFeedback();
-    setCalculation(null);
+    markChanged();
     setMonthlySelections((current) => {
       const next = new Map(current);
       const existing = next.get(revisionId);
@@ -345,8 +322,7 @@ export function PricingStudio({
   }
 
   function toggleOneTime(revisionId: string, checked: boolean) {
-    clearFeedback();
-    setCalculation(null);
+    markChanged();
     setOneTimeSelections((current) => {
       const next = new Map(current);
       if (checked) {
@@ -354,6 +330,15 @@ export function PricingStudio({
       } else {
         next.delete(revisionId);
       }
+      return next;
+    });
+  }
+
+  function updateOneTime(revisionId: string, quantity: number) {
+    markChanged();
+    setOneTimeSelections((current) => {
+      const next = new Map(current);
+      next.set(revisionId, quantity);
       return next;
     });
   }
@@ -388,6 +373,7 @@ export function PricingStudio({
       );
       setCurrentDraft(saved);
       setCalculation(saved.calculation);
+      setIsDirty(false);
       setDrafts(await refreshPricingDrafts());
       setSuccess(currentDraft ? t.pricingDraftUpdated : t.pricingDraftSaved);
       router.replace(`/pricing/${saved.id}`);
@@ -460,34 +446,44 @@ export function PricingStudio({
               {t.newDraft}
             </Link>
           </div>
-          {drafts.length === 0 ? (
-            <p className="pricing-muted">{t.noDrafts}</p>
-          ) : (
-            <div className="pricing-draft-list">
-              {drafts.map((draft) => (
-                <Link
-                  key={draft.id}
-                  href={`/pricing/${draft.id}`}
-                  className={currentDraft?.id === draft.id ? "active" : undefined}
-                >
-                  <div className="pricing-draft-list-top">
-                    <strong>{draft.title}</strong>
-                    <StatusChip
-                      status={draft.status}
-                      label={draftStatusLabel(draft.status, locale)}
-                    />
-                  </div>
-                  <span>{draft.client.name}</span>
-                  <small>
-                    {draft.draftNumber} - {number(draft.itemCount, locale)} {t.items}
-                  </small>
-                  <small>
-                    {t.draftValue}: {draft.totals ? sar(draft.totals.finalTotal, locale) : "-"}
-                  </small>
-                </Link>
-              ))}
-            </div>
-          )}
+          <button
+            aria-expanded={showDrafts}
+            className="pricing-drafts-toggle"
+            type="button"
+            onClick={() => setShowDrafts((current) => !current)}
+          >
+            {showDrafts ? t.hideDrafts : t.showDrafts}
+          </button>
+          <div className={showDrafts ? "pricing-drafts-content is-open" : "pricing-drafts-content"}>
+            {drafts.length === 0 ? (
+              <p className="pricing-muted">{t.noDrafts}</p>
+            ) : (
+              <div className="pricing-draft-list">
+                {drafts.map((draft) => (
+                  <Link
+                    key={draft.id}
+                    href={`/pricing/${draft.id}`}
+                    className={currentDraft?.id === draft.id ? "active" : undefined}
+                  >
+                    <div className="pricing-draft-list-top">
+                      <strong>{draft.title}</strong>
+                      <StatusChip
+                        status={draft.status}
+                        label={draftStatusLabel(draft.status, locale)}
+                      />
+                    </div>
+                    <span>{draft.client.name}</span>
+                    <small>
+                      {draft.draftNumber} - {number(draft.itemCount, locale)} {t.items}
+                    </small>
+                    <small>
+                      {t.draftValue}: {draft.totals ? sar(draft.totals.finalTotal, locale) : "-"}
+                    </small>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         </aside>
 
         <main className="pricing-main">
@@ -672,7 +668,7 @@ export function PricingStudio({
                   disabled={isArchived}
                   onChange={(event) => {
                     setClientId(event.target.value);
-                    setCalculation(null);
+                    markChanged();
                   }}
                 >
                   {catalog.clients.map((client) => (
@@ -688,7 +684,10 @@ export function PricingStudio({
                   aria-label={t.draftTitle}
                   value={title}
                   disabled={isArchived}
-                  onChange={(event) => setTitle(event.target.value)}
+                  onChange={(event) => {
+                    setTitle(event.target.value);
+                    markChanged(false);
+                  }}
                 />
               </label>
               <label>
@@ -700,7 +699,7 @@ export function PricingStudio({
                   disabled={isArchived}
                   onChange={(event) => {
                     setPricingDate(event.target.value);
-                    setCalculation(null);
+                    markChanged();
                   }}
                 />
               </label>
@@ -710,7 +709,10 @@ export function PricingStudio({
                   aria-label={t.internalNotes}
                   value={notes}
                   disabled={isArchived}
-                  onChange={(event) => setNotes(event.target.value)}
+                  onChange={(event) => {
+                    setNotes(event.target.value);
+                    markChanged(false);
+                  }}
                 />
               </label>
             </div>
@@ -736,175 +738,17 @@ export function PricingStudio({
             )}
           </section>
 
-          <section className="catalog-panel">
-            <div className="panel-heading">
-              <div>
-                <h2>{t.monthlyServices}</h2>
-                <p>{t.monthlyServicesDescription}</p>
-              </div>
-              <span>{t.selected(monthlySelections.size)}</span>
-            </div>
-            <div className="pricing-service-grid">
-              {catalog.monthlyServices.map((service) => {
-                const selected = monthlySelections.get(service.revision.id);
-                const name = monthlyName(service, locale);
-                return (
-                  <article
-                    className={selected ? "pricing-service-card selected" : "pricing-service-card"}
-                    key={service.id}
-                  >
-                    <label className="pricing-select-heading">
-                      <input
-                        type="checkbox"
-                        aria-label={t.selectService(name)}
-                        checked={Boolean(selected)}
-                        disabled={isArchived}
-                        onChange={(event) =>
-                          toggleMonthly(
-                            service.revision.id,
-                            service.revision.levels[0]!.id,
-                            event.target.checked,
-                          )
-                        }
-                      />
-                      <span>
-                        <small>{service.code}</small>
-                        <strong>{name}</strong>
-                        <em>{categoryLabel(service.categoryName, locale)}</em>
-                      </span>
-                    </label>
-                    <p>{serviceDescription(name, service.revision.description, locale)}</p>
-                    <dl className="pricing-card-meta">
-                      <div>
-                        <dt>{t.monthlyRate}</dt>
-                        <dd>{sar(service.revision.sellingHourlyRateSar, locale)}</dd>
-                      </div>
-                      <div>
-                        <dt>{t.setupPct}</dt>
-                        <dd>{number(service.revision.setupFeePct, locale)}%</dd>
-                      </div>
-                      <div>
-                        <dt>{t.package}</dt>
-                        <dd>{number(service.revision.levels.length, locale)}</dd>
-                      </div>
-                    </dl>
-                    {selected && (
-                      <div className="pricing-selection-fields">
-                        <label>
-                          {t.package}
-                          <select
-                            aria-label={`${name} ${t.package}`}
-                            value={selected.levelId}
-                            onChange={(event) =>
-                              updateMonthly(service.revision.id, {
-                                levelId: event.target.value,
-                              })
-                            }
-                          >
-                            {service.revision.levels.map((level) => (
-                              <option key={level.id} value={level.id}>
-                                {locale === "ar"
-                                  ? level.labelAr || levelLabel(level.labelEn, locale)
-                                  : (level.labelEn ?? level.labelAr)}{" "}
-                                - {number(level.hours, locale)}
-                                {locale === "ar" ? " س" : "h"}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label>
-                          {t.quantity}
-                          <input
-                            aria-label={`${name} ${t.quantity}`}
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            value={selected.quantity}
-                            onChange={(event) =>
-                              updateMonthly(service.revision.id, {
-                                quantity: Number(event.target.value),
-                              })
-                            }
-                          />
-                        </label>
-                      </div>
-                    )}
-                  </article>
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="catalog-panel">
-            <div className="panel-heading">
-              <div>
-                <h2>{t.oneTimeServices}</h2>
-                <p>{t.oneTimeServicesDescription}</p>
-              </div>
-              <span>{t.selected(oneTimeSelections.size)}</span>
-            </div>
-            <div className="pricing-service-grid">
-              {catalog.oneTimeServices.map((service) => {
-                const quantity = oneTimeSelections.get(service.revision.id);
-                const selected = quantity !== undefined;
-                const name = oneTimeName(service, locale);
-                return (
-                  <article
-                    className={selected ? "pricing-service-card selected" : "pricing-service-card"}
-                    key={service.id}
-                  >
-                    <label className="pricing-select-heading">
-                      <input
-                        type="checkbox"
-                        aria-label={t.selectService(name)}
-                        checked={selected}
-                        disabled={isArchived}
-                        onChange={(event) =>
-                          toggleOneTime(service.revision.id, event.target.checked)
-                        }
-                      />
-                      <span>
-                        <small>{service.code}</small>
-                        <strong>{name}</strong>
-                        <em>{serviceLineLabel(service.serviceLine, locale)}</em>
-                      </span>
-                    </label>
-                    <p>{serviceDescription(name, service.revision.description, locale)}</p>
-                    <dl className="pricing-card-meta">
-                      <div>
-                        <dt>{t.subtotalBase}</dt>
-                        <dd>{sar(service.revision.basePriceSar, locale)}</dd>
-                      </div>
-                      <div>
-                        <dt>{t.duration}</dt>
-                        <dd>
-                          {number(service.revision.durationDays, locale)} {t.days}
-                        </dd>
-                      </div>
-                    </dl>
-                    {selected && (
-                      <label className="pricing-quantity">
-                        {t.quantity}
-                        <input
-                          aria-label={`${name} ${t.quantity}`}
-                          type="number"
-                          min="0.01"
-                          step="0.01"
-                          value={quantity}
-                          onChange={(event) => {
-                            const next = new Map(oneTimeSelections);
-                            next.set(service.revision.id, Number(event.target.value));
-                            setOneTimeSelections(next);
-                            setCalculation(null);
-                          }}
-                        />
-                      </label>
-                    )}
-                  </article>
-                );
-              })}
-            </div>
-          </section>
+          <PricingServicePicker
+            catalog={catalog}
+            disabled={isArchived}
+            locale={locale}
+            monthlySelections={monthlySelections}
+            oneTimeSelections={oneTimeSelections}
+            onMonthlyChange={updateMonthly}
+            onMonthlyToggle={toggleMonthly}
+            onOneTimeChange={updateOneTime}
+            onOneTimeToggle={toggleOneTime}
+          />
 
           <section className="catalog-panel pricing-review">
             <div className="panel-heading">
@@ -947,7 +791,7 @@ export function PricingStudio({
                   <button
                     className="os-button os-button-secondary"
                     type="button"
-                    disabled={submitting !== null}
+                    disabled={submitting !== null || !quoteReady}
                     onClick={() => setShowQuoteForm((visible) => !visible)}
                   >
                     {t.createQuote}
@@ -955,9 +799,16 @@ export function PricingStudio({
                 )}
               </div>
             </div>
+            {isDirty ? (
+              <p className="pricing-unsaved-notice" role="status">
+                <strong>{t.unsavedChanges}</strong>
+                <span>{t.unsavedChangesDescription}</span>
+              </p>
+            ) : null}
             {showQuoteForm && currentDraft && (
               <QuoteCreationForm
                 pricingDraftId={currentDraft.id}
+                defaultValidityDays={catalog.defaults.quoteValidityDays}
                 disabled={submitting !== null}
                 onCancel={() => setShowQuoteForm(false)}
                 onError={setError}
@@ -1056,12 +907,14 @@ export function PricingStudio({
 
 function QuoteCreationForm({
   pricingDraftId,
+  defaultValidityDays,
   disabled,
   onCancel,
   onError,
   locale: localeInput = "en",
 }: {
   pricingDraftId: string;
+  defaultValidityDays: number;
   disabled: boolean;
   onCancel: () => void;
   onError: (message: string | undefined) => void;
@@ -1080,7 +933,7 @@ function QuoteCreationForm({
     try {
       const quote = await createQuote({
         pricingDraftId,
-        validityDays: Number(form.get("validityDays") ?? 30),
+        validityDays: Number(form.get("validityDays") ?? defaultValidityDays),
         terms: {
           paymentTerms: String(form.get("paymentTerms") ?? "").trim(),
           ...(String(form.get("deliveryTerms") ?? "").trim()
@@ -1110,7 +963,14 @@ function QuoteCreationForm({
       </div>
       <label>
         {t.validityDays}
-        <input name="validityDays" type="number" min="1" max="365" defaultValue="30" required />
+        <input
+          name="validityDays"
+          type="number"
+          min="1"
+          max="365"
+          defaultValue={defaultValidityDays}
+          required
+        />
       </label>
       <label>
         {t.paymentTerms}

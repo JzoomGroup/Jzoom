@@ -14,6 +14,7 @@ import type {
   RequestSummary,
 } from "../../lib/request-types";
 import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
+import { replaceCurrentUrlQuery } from "../../lib/url-state";
 import {
   BentoGrid,
   EmptyState,
@@ -142,6 +143,27 @@ function displayDate(value: string | null, locale: SupportedLocale): string {
   }).format(new Date(value));
 }
 
+function datetimeLocalValue(value: string): string {
+  if (!value || !Number.isFinite(new Date(value).getTime())) {
+    return value;
+  }
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    hour: "2-digit",
+    hourCycle: "h23",
+    minute: "2-digit",
+    month: "2-digit",
+    timeZone: platformTimeZone,
+    year: "numeric",
+  })
+    .formatToParts(new Date(value))
+    .reduce<Record<string, string>>((result, part) => {
+      if (part.type !== "literal") result[part.type] = part.value;
+      return result;
+    }, {});
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+}
+
 function localizedServiceName(request: RequestSummary, locale: SupportedLocale): string {
   return locale === "ar"
     ? request.service.monthlyService.nameAr || request.service.monthlyService.nameEn
@@ -158,10 +180,19 @@ function statusLabel(status: RequestStatus, locale: SupportedLocale): string {
 
 export function RequestQueue({
   intakeOptions = emptyIntakeOptions,
+  initialFilters,
   initialQueue,
   locale: localeInput = "en",
 }: {
   intakeOptions?: RequestIntakeOptions | null;
+  initialFilters?: {
+    assigneeId: string;
+    clientId: string;
+    dueTo: string;
+    priority: string;
+    serviceId: string;
+    status: string;
+  };
   initialQueue: RequestQueueResponse;
   locale?: string;
 }) {
@@ -173,15 +204,19 @@ export function RequestQueue({
   const [queue, setQueue] = useState(initialQueue);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState({
-    assigneeId: "",
-    clientId: "",
-    dueTo: "",
-    priority: "",
-    serviceId: "",
-    status: "",
+  const [filters, setFilters] = useState(() => {
+    const values = initialFilters ?? {
+      assigneeId: "",
+      clientId: "",
+      dueTo: "",
+      priority: "",
+      serviceId: "",
+      status: "",
+    };
+    return { ...values, dueTo: datetimeLocalValue(values.dueTo) };
   });
   const numberFormatter = new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA");
+  const activeFilterCount = Object.values(filters).filter((value) => value.trim()).length;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -191,10 +226,15 @@ export function RequestQueue({
       const activeFilters = Object.fromEntries(
         Object.entries(filters).filter(([, value]) => value.trim().length > 0),
       );
-      if (activeFilters.dueTo) {
-        activeFilters.dueTo = new Date(activeFilters.dueTo).toISOString();
+      const urlFilters = { ...activeFilters };
+      if (urlFilters.dueTo) {
+        urlFilters.dueTo = new Date(urlFilters.dueTo).toISOString();
       }
-      setQueue(await refreshRequestQueue(queue.queue, activeFilters));
+      setQueue(await refreshRequestQueue(queue.queue, urlFilters));
+      replaceCurrentUrlQuery(
+        { ...urlFilters, queue: queue.queue === "all" ? undefined : queue.queue },
+        ["assigneeId", "clientId", "dueTo", "priority", "queue", "serviceId", "status"],
+      );
     } catch (caught) {
       setError(requestErrorMessage(caught));
     } finally {
@@ -206,7 +246,17 @@ export function RequestQueue({
     setLoading(true);
     setError(null);
     try {
-      setQueue(await refreshRequestQueue(nextQueue));
+      const activeFilters = Object.fromEntries(
+        Object.entries(filters).filter(([, value]) => value.trim().length > 0),
+      );
+      if (activeFilters.dueTo) {
+        activeFilters.dueTo = new Date(activeFilters.dueTo).toISOString();
+      }
+      setQueue(await refreshRequestQueue(nextQueue, activeFilters));
+      replaceCurrentUrlQuery(
+        { ...activeFilters, queue: nextQueue === "all" ? undefined : nextQueue },
+        ["assigneeId", "clientId", "dueTo", "priority", "queue", "serviceId", "status"],
+      );
     } catch (caught) {
       setError(requestErrorMessage(caught));
     } finally {
@@ -220,7 +270,6 @@ export function RequestQueue({
         eyebrow={t.internalExecution}
         title={t.workQueues}
         description={t.workQueuesDescription}
-        actions={[{ href: "/requests", label: t.allRequests, variant: "secondary" }]}
       />
 
       <div className="request-queue-command">
@@ -268,92 +317,104 @@ export function RequestQueue({
             </button>
           ))}
         </div>
-        <form
-          className="catalog-form wide-form request-queue-filter-form"
-          noValidate
-          onSubmit={submit}
-        >
-          <label>
-            {t.status}
-            <select
-              value={filters.status}
-              onChange={(event) => setFilters({ ...filters, status: event.target.value })}
-            >
-              {statuses.map((status) => (
-                <option key={status || "any"} value={status}>
-                  {status ? statusLabel(status, locale) : t.anyStatus}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t.priority}
-            <select
-              value={filters.priority}
-              onChange={(event) => setFilters({ ...filters, priority: event.target.value })}
-            >
-              {priorities.map((priority) => (
-                <option key={priority || "any"} value={priority}>
-                  {priority ? priorityLabel(priority, locale) : t.anyPriority}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t.clientId}
-            <select
-              value={filters.clientId}
-              onChange={(event) => setFilters({ ...filters, clientId: event.target.value })}
-            >
-              <option value="">{t.anyClient}</option>
-              {filterOptions.clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {intakeClientLabel(client)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t.serviceId}
-            <select
-              value={filters.serviceId}
-              onChange={(event) => setFilters({ ...filters, serviceId: event.target.value })}
-            >
-              <option value="">{t.anyService}</option>
-              {serviceOptions.map((service) => (
-                <option key={service.monthlyService.id} value={service.monthlyService.id}>
-                  {intakeServiceLabel(service, locale)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t.assigneeId}
-            <select
-              value={filters.assigneeId}
-              onChange={(event) => setFilters({ ...filters, assigneeId: event.target.value })}
-            >
-              <option value="">{t.anyAssignee}</option>
-              {assigneeOptions.map((candidate) => (
-                <option key={candidate.id} value={candidate.id}>
-                  {candidateLabel(candidate)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t.dueBefore}
-            <input
-              type="datetime-local"
-              value={filters.dueTo}
-              onChange={(event) => setFilters({ ...filters, dueTo: event.target.value })}
-            />
-          </label>
-          <button className="os-button os-button-primary" disabled={loading} type="submit">
-            {t.applyFilters}
-          </button>
-        </form>
-        {error && <p className="form-error">{error}</p>}
+        <details className="request-queue-filter-details">
+          <summary>
+            <span>{t.queueFilters}</span>
+            {activeFilterCount > 0 ? (
+              <strong>{numberFormatter.format(activeFilterCount)}</strong>
+            ) : null}
+          </summary>
+          <form
+            className="catalog-form wide-form request-queue-filter-form"
+            noValidate
+            onSubmit={submit}
+          >
+            <label>
+              {t.status}
+              <select
+                value={filters.status}
+                onChange={(event) => setFilters({ ...filters, status: event.target.value })}
+              >
+                {statuses.map((status) => (
+                  <option key={status || "any"} value={status}>
+                    {status ? statusLabel(status, locale) : t.anyStatus}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {t.priority}
+              <select
+                value={filters.priority}
+                onChange={(event) => setFilters({ ...filters, priority: event.target.value })}
+              >
+                {priorities.map((priority) => (
+                  <option key={priority || "any"} value={priority}>
+                    {priority ? priorityLabel(priority, locale) : t.anyPriority}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {t.clientId}
+              <select
+                value={filters.clientId}
+                onChange={(event) => setFilters({ ...filters, clientId: event.target.value })}
+              >
+                <option value="">{t.anyClient}</option>
+                {filterOptions.clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {intakeClientLabel(client)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {t.serviceId}
+              <select
+                value={filters.serviceId}
+                onChange={(event) => setFilters({ ...filters, serviceId: event.target.value })}
+              >
+                <option value="">{t.anyService}</option>
+                {serviceOptions.map((service) => (
+                  <option key={service.monthlyService.id} value={service.monthlyService.id}>
+                    {intakeServiceLabel(service, locale)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {t.assigneeId}
+              <select
+                value={filters.assigneeId}
+                onChange={(event) => setFilters({ ...filters, assigneeId: event.target.value })}
+              >
+                <option value="">{t.anyAssignee}</option>
+                {assigneeOptions.map((candidate) => (
+                  <option key={candidate.id} value={candidate.id}>
+                    {candidateLabel(candidate)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {t.dueBefore}
+              <input
+                type="datetime-local"
+                value={filters.dueTo}
+                onChange={(event) => setFilters({ ...filters, dueTo: event.target.value })}
+              />
+            </label>
+            <button className="os-button os-button-primary" disabled={loading} type="submit">
+              {t.applyFilters}
+            </button>
+          </form>
+        </details>
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
       </SectionCard>
 
       <SectionCard

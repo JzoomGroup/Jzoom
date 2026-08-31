@@ -7,11 +7,17 @@ import {
   getQuoteOnboardingOptions,
   quoteErrorMessage,
 } from "../../lib/quote-client";
-import type { Quote, QuoteOnboardingOptions, QuoteStatus } from "../../lib/quote-types";
+import type {
+  Quote,
+  QuoteOnboardingOptions,
+  QuoteOnboardingResult,
+  QuoteStatus,
+} from "../../lib/quote-types";
 import { commercialCopy, commercialLocale } from "../commercial-i18n";
 import { QuoteOnboardingDialog } from "./quote-onboarding-dialog";
+import { QuotePaymentDialog } from "./quote-payment-dialog";
 
-type LifecycleTarget = Exclude<QuoteStatus, "DRAFT">;
+type LifecycleTarget = "ISSUED" | "APPROVED" | "REJECTED" | "EXPIRED" | "CANCELLED";
 
 interface LifecycleAction {
   label: string;
@@ -42,6 +48,7 @@ export function QuoteLifecycleActions({
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
   const [onboardingOptions, setOnboardingOptions] = useState<QuoteOnboardingOptions | null>(null);
+  const [paymentOpen, setPaymentOpen] = useState(false);
   const actions: Partial<Record<QuoteStatus, LifecycleAction[]>> = {
     DRAFT: [
       { label: t.issueQuote, status: "ISSUED" },
@@ -53,7 +60,7 @@ export function QuoteLifecycleActions({
       },
     ],
     ISSUED: [
-      { label: t.acceptQuote, status: "ACCEPTED" },
+      { label: t.approveQuote, status: "APPROVED" },
       {
         label: t.rejectQuote,
         notePrompt: t.rejectionNote,
@@ -71,6 +78,20 @@ export function QuoteLifecycleActions({
   };
   const availableActions = actions[status] ?? [];
 
+  async function paymentConfirmed(updated: Quote) {
+    setPaymentOpen(false);
+    onUpdated?.(updated);
+    setSuccess(t.quoteStatusChanged(updated.status));
+    onAccepted?.(updated);
+    if (!compact && !onAccepted) {
+      try {
+        setOnboardingOptions(await getQuoteOnboardingOptions(quoteId));
+      } catch (optionsError) {
+        setError(quoteErrorMessage(optionsError));
+      }
+    }
+  }
+
   async function run(action: LifecycleAction) {
     const rawNote = action.notePrompt ? window.prompt(action.notePrompt) : undefined;
     if (rawNote === null) {
@@ -87,16 +108,6 @@ export function QuoteLifecycleActions({
       const updated = await advanceQuoteLifecycle(quoteId, action.status, note);
       onUpdated?.(updated);
       setSuccess(t.quoteStatusChanged(action.status));
-      if (action.status === "ACCEPTED") {
-        onAccepted?.(updated);
-      }
-      if (action.status === "ACCEPTED" && !compact && !onAccepted) {
-        try {
-          setOnboardingOptions(await getQuoteOnboardingOptions(quoteId));
-        } catch (optionsError) {
-          setError(quoteErrorMessage(optionsError));
-        }
-      }
     } catch (lifecycleError) {
       setError(quoteErrorMessage(lifecycleError));
     } finally {
@@ -104,7 +115,7 @@ export function QuoteLifecycleActions({
     }
   }
 
-  if (availableActions.length === 0) {
+  if (availableActions.length === 0 && status !== "APPROVED") {
     return null;
   }
 
@@ -127,6 +138,20 @@ export function QuoteLifecycleActions({
               {submitting === action.status ? t.saving : action.label}
             </button>
           ))}
+          {status === "APPROVED" ? (
+            <button
+              className="os-button os-button-primary"
+              disabled={Boolean(submitting)}
+              type="button"
+              onClick={() => {
+                setError(undefined);
+                setSuccess(undefined);
+                setPaymentOpen(true);
+              }}
+            >
+              {t.acceptQuote}
+            </button>
+          ) : null}
         </div>
         {(error || success) && (
           <small
@@ -145,6 +170,14 @@ export function QuoteLifecycleActions({
           onCompleted={() => router.refresh()}
         />
       ) : null}
+      {paymentOpen ? (
+        <QuotePaymentDialog
+          locale={locale}
+          quoteId={quoteId}
+          onClose={() => setPaymentOpen(false)}
+          onConfirmed={(updated) => void paymentConfirmed(updated)}
+        />
+      ) : null}
     </>
   );
 }
@@ -152,10 +185,12 @@ export function QuoteLifecycleActions({
 export function QuoteOnboardingLauncher({
   compact = false,
   locale: localeInput = "en",
+  onCompleted,
   quoteId,
 }: {
   compact?: boolean;
   locale?: string;
+  onCompleted?: (result: QuoteOnboardingResult) => void;
   quoteId: string;
 }) {
   const router = useRouter();
@@ -199,7 +234,11 @@ export function QuoteOnboardingLauncher({
           locale={locale}
           options={onboardingOptions}
           onClose={() => setOnboardingOptions(null)}
-          onCompleted={() => router.refresh()}
+          onCompleted={(result) => {
+            onCompleted?.(result);
+            setOnboardingOptions(null);
+            router.refresh();
+          }}
         />
       ) : null}
     </>

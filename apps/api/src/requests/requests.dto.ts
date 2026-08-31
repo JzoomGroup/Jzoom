@@ -434,37 +434,6 @@ export class RequestClientDocumentDto {
   dueAt?: string;
 }
 
-export class UploadClientDocumentMetadataDto {
-  @ApiPropertyOptional({ type: String })
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  @MaxLength(260)
-  originalName?: string;
-
-  @ApiPropertyOptional({ type: String })
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  @MaxLength(160)
-  mimeType?: string;
-
-  @ApiPropertyOptional({ type: Number, minimum: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(2_147_483_647)
-  sizeBytes?: number;
-
-  @ApiPropertyOptional({ type: String })
-  @IsOptional()
-  @IsString()
-  @MinLength(64)
-  @MaxLength(64)
-  sha256?: string;
-}
-
 export class ClientDocumentRequestStatusDto {
   @ApiProperty({ enum: CLIENT_DOCUMENT_REQUEST_STATUSES })
   @IsIn(CLIENT_DOCUMENT_REQUEST_STATUSES)
@@ -571,32 +540,7 @@ export class AddInternalNoteDto {
   body!: string;
 }
 
-export class AddAttachmentMetadataDto {
-  @ApiProperty({ type: String })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(260)
-  originalName!: string;
-
-  @ApiProperty({ type: String })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(160)
-  mimeType!: string;
-
-  @ApiProperty({ type: Number, minimum: 1 })
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(2_147_483_647)
-  sizeBytes!: number;
-
-  @ApiProperty({ type: String })
-  @IsString()
-  @MinLength(64)
-  @MaxLength(64)
-  sha256!: string;
-
+export class UploadVisibilityDto {
   @ApiPropertyOptional({ enum: ["INTERNAL", "CLIENT_VISIBLE"], default: "INTERNAL" })
   @IsOptional()
   @IsIn(["INTERNAL", "CLIENT_VISIBLE"])

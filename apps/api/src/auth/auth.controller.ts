@@ -138,6 +138,7 @@ export class AuthController {
   }
 
   @Get("me")
+  @AllowPasswordChangeRequired()
   @ApiCookieAuth()
   @ApiOperation({ summary: "Return the authenticated profile and effective access" })
   me(@Req() request: RequestWithId) {
@@ -168,6 +169,7 @@ export class AuthController {
   async changePassword(@Body() input: ChangePasswordDto, @Req() request: RequestWithId) {
     await this.auth.changePassword(
       request.auth!.userId,
+      input.currentPassword,
       input.newPassword,
       input.confirmPassword,
       metadata(request),

@@ -5,7 +5,7 @@ import {
   requirePricingDraft,
   requirePricingDrafts,
 } from "../../lib/pricing-server";
-import { QuoteShell } from "../quotes/quote-shell";
+import { CommercialShell } from "../commercial-shell";
 import { PricingStudio } from "./pricing-studio";
 
 export async function PricingStudioPage({
@@ -34,10 +34,9 @@ export async function PricingStudioPage({
   }
 
   return (
-    <QuoteShell
+    <CommercialShell
       activePath="/pricing"
       displayName={user.displayName}
-      isAdmin={user.roles.includes("ROLE-ADMIN")}
       locale={user.preferredLocale}
       permissions={user.permissions}
       roles={user.roles}
@@ -52,6 +51,6 @@ export async function PricingStudioPage({
         locale={user.preferredLocale}
         openClientCreator={openClientCreator && !draft}
       />
-    </QuoteShell>
+    </CommercialShell>
   );
 }

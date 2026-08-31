@@ -233,6 +233,7 @@ describe("Admin catalog UI", () => {
     render(<CategoryManager snapshot={catalogSnapshot()} setSnapshot={setSnapshot} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Add category" }));
+    expect(screen.getByRole("dialog", { name: "New category" })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Code"), {
       target: { value: "cat-finance" },
     });
@@ -322,6 +323,7 @@ describe("Admin catalog UI", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Add service level" }));
 
+    expect(screen.getByRole("dialog", { name: "New service level" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "New service level" })).toBeInTheDocument();
     expect(screen.getByLabelText("Code")).toBeInTheDocument();
   });
@@ -339,6 +341,7 @@ describe("Admin catalog UI", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Add monthly service" }));
 
+    expect(screen.getByRole("dialog", { name: "New monthly service" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "New monthly service" })).toBeInTheDocument();
     expect(screen.getByLabelText("Code")).toBeInTheDocument();
     expect(screen.getByText("Monthly hours by package")).toBeInTheDocument();
@@ -357,6 +360,7 @@ describe("Admin catalog UI", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Add service item" }));
 
+    expect(screen.getByRole("dialog", { name: "New service item" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "New service item" })).toBeInTheDocument();
     expect(screen.getByLabelText("Code")).toBeInTheDocument();
     expect(screen.getAllByText("Package inclusion").length).toBeGreaterThan(0);

@@ -18,6 +18,16 @@ test("API environment applies safe non-production defaults", () => {
   assert.equal(environment.auth.cookieName, "jzoom_session");
   assert.equal(environment.auth.cookieDomain, undefined);
   assert.equal(environment.auth.cookieSecure, false);
+  assert.equal(environment.auth.defaultTemporaryPassword, undefined);
+});
+
+test("API environment accepts an explicit temporary password with the eight-character policy", () => {
+  const environment = parseApiEnvironment({
+    DATABASE_URL: "postgresql://user:password@localhost:5432/jzoom",
+    AUTH_DEFAULT_TEMPORARY_PASSWORD: "Secure#8",
+  });
+
+  assert.equal(environment.auth.defaultTemporaryPassword, "Secure#8");
 });
 
 test("Swagger UI is disabled by default in production", () => {

@@ -168,6 +168,18 @@ const adminNavigation: NavItem[] = [
     sectionAr: "التشغيل التجاري",
     sectionEn: "Commercial operations",
   },
+  {
+    href: "/pricing/quotes",
+    icon: FileText,
+    labelAr: "عروض الأسعار",
+    labelEn: "Quotes",
+  },
+  {
+    href: "/pricing/invoices",
+    icon: ReceiptText,
+    labelAr: "الفواتير",
+    labelEn: "Invoices",
+  },
 ];
 
 const clientNavigation: NavItem[] = [

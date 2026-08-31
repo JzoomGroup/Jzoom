@@ -22,6 +22,7 @@ import {
   useCatalogMutation,
 } from "./catalog-shared";
 import { BentoGrid, MetricCard, PageHeader, SectionCard } from "../premium-os";
+import { AppDialog } from "../app-dialog";
 
 interface EditableLevelConfig {
   serviceLevelId: string;
@@ -261,16 +262,19 @@ export function ServiceManager({
       </BentoGrid>
 
       {creating || editing ? (
-        <section className="service-admin-editor">
-          <div className="service-admin-editor-heading">
-            <span>{creating ? t.createService : t.createRevision}</span>
-            <h2>{creating ? t.newMonthlyService : t.editService(editing!.code)}</h2>
-            <p>
-              {creating
-                ? t.createServiceDescription
-                : t.createRevisionDescription((current?.version ?? 0) + 1)}
-            </p>
-          </div>
+        <AppDialog
+          busy={mutation.submitting}
+          closeLabel={locale === "ar" ? "إغلاق" : "Close"}
+          description={
+            creating
+              ? t.createServiceDescription
+              : t.createRevisionDescription((current?.version ?? 0) + 1)
+          }
+          eyebrow={creating ? t.createService : t.createRevision}
+          onClose={closeForm}
+          size="xl"
+          title={creating ? t.newMonthlyService : t.editService(editing!.code)}
+        >
           <form className="catalog-form wide-form service-admin-form" noValidate onSubmit={submit}>
             {creating ? (
               <label>
@@ -490,7 +494,7 @@ export function ServiceManager({
               submitLabel={creating ? t.createService : t.createRevision}
             />
           </form>
-        </section>
+        </AppDialog>
       ) : null}
 
       <SectionCard

@@ -1,0 +1,423 @@
+.pricing-shell-embedded .pricing-layout {
+  min-height: auto;
+  grid-template-columns: minmax(220px, 250px) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.pricing-shell-embedded .pricing-main {
+  min-width: 0;
+  padding: 0;
+}
+
+.pricing-shell-embedded .pricing-drafts {
+  position: sticky;
+  top: 16px;
+  align-self: start;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  scrollbar-width: none;
+}
+
+.pricing-shell-embedded .pricing-drafts::-webkit-scrollbar {
+  display: none;
+}
+
+.pricing-drafts-toggle {
+  display: none;
+  width: 100%;
+  min-height: 38px;
+  margin-block-end: 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-muted);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pricing-picker-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-block-end: 14px;
+}
+
+.pricing-picker-heading h2,
+.pricing-picker-heading p {
+  margin: 0;
+}
+
+.pricing-picker-heading h2 {
+  margin-block: 3px 5px;
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.pricing-picker-heading > div:first-child > p:last-child {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.pricing-service-tabs {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(130px, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.pricing-service-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted-strong);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pricing-service-tabs button span {
+  display: inline-grid;
+  min-width: 22px;
+  min-height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--muted-strong);
+  font-size: 10px;
+}
+
+.pricing-service-tabs button.active {
+  background: var(--jzoom-coral);
+  color: #ffffff;
+}
+
+.pricing-service-tabs button.active span {
+  color: var(--jzoom-coral);
+}
+
+.pricing-picker-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(170px, 0.45fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  margin-block-end: 14px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.pricing-search-field,
+.pricing-category-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 38px;
+  padding-inline: 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--muted);
+}
+
+.pricing-search-field input,
+.pricing-category-filter select {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+}
+
+.pricing-selected-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding-inline: 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pricing-selected-toggle input {
+  accent-color: var(--jzoom-coral);
+}
+
+.pricing-result-count {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pricing-service-picker .pricing-service-grid {
+  align-items: stretch;
+  grid-auto-rows: 1fr;
+}
+
+.pricing-service-picker .pricing-service-card {
+  display: grid;
+  grid-template-rows: auto minmax(42px, auto) auto 1fr;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+  height: 100%;
+  padding: 14px;
+  border-radius: 8px;
+  background: #ffffff !important;
+}
+
+.pricing-service-picker .pricing-service-card.selected {
+  border-color: rgba(255, 90, 77, 0.42) !important;
+  box-shadow: inset 3px 0 var(--jzoom-coral);
+}
+
+[dir="rtl"] .pricing-service-picker .pricing-service-card.selected {
+  box-shadow: inset -3px 0 var(--jzoom-coral);
+}
+
+.pricing-service-picker .pricing-select-heading strong {
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.pricing-service-picker .pricing-service-card > p {
+  min-height: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.pricing-service-picker .pricing-service-warning {
+  align-self: end;
+  padding: 8px 10px;
+  border: 1px solid #f5c36f;
+  border-radius: 7px;
+  background: #fff9ed;
+  color: #6f4300;
+  font-size: 11px;
+}
+
+.pricing-service-picker .pricing-card-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin: 0;
+}
+
+.pricing-service-picker .pricing-card-meta > div {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-muted);
+}
+
+.pricing-service-picker .pricing-card-meta dd {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.pricing-service-picker .pricing-selection-fields,
+.pricing-service-picker .pricing-quantity {
+  align-self: end;
+  width: 100%;
+  margin: 0;
+}
+
+.pricing-unsaved-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #f5c36f;
+  border-radius: 7px;
+  background: #fff9ed;
+  color: #6f4300;
+  font-size: 12px;
+}
+
+.pricing-unsaved-notice strong {
+  white-space: nowrap;
+}
+
+.quote-payment-dialog {
+  width: min(620px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(13, 19, 33, 0.2);
+}
+
+.quote-payment-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-block-end: 16px;
+}
+
+.quote-payment-header h2,
+.quote-payment-header p {
+  margin: 0;
+}
+
+.quote-payment-header h2 {
+  margin-block: 3px 5px;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.quote-payment-header > div > p:last-child {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.quote-payment-form {
+  display: grid;
+  gap: 14px;
+}
+
+.quote-payment-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.quote-payment-fields label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted-strong);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.quote-payment-fields input,
+.quote-payment-fields select,
+.quote-payment-fields textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+}
+
+.quote-payment-fields textarea {
+  resize: vertical;
+}
+
+.quote-onboarding-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.quote-onboarding-counts span {
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  color: var(--muted-strong);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+@media (max-width: 1180px) {
+  .pricing-shell-embedded .pricing-layout {
+    display: block;
+  }
+
+  .pricing-shell-embedded .pricing-drafts {
+    position: static;
+    max-height: none;
+    margin-block-end: 14px;
+  }
+
+  .pricing-drafts-toggle {
+    display: block;
+  }
+
+  .pricing-drafts-content {
+    display: none;
+  }
+
+  .pricing-drafts-content.is-open {
+    display: block;
+  }
+}
+
+@media (max-width: 760px) {
+  .pricing-picker-heading,
+  .pricing-unsaved-notice {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pricing-service-tabs,
+  .pricing-picker-toolbar {
+    width: 100%;
+  }
+
+  .pricing-picker-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pricing-service-picker .pricing-card-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pricing-service-picker .pricing-selection-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quote-payment-header {
+    display: grid;
+  }
+
+  .quote-payment-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pricing-result-count {
+    padding-inline: 4px;
+  }
+}

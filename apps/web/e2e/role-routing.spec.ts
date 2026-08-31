@@ -35,3 +35,38 @@ for (const account of accounts) {
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   });
 }
+
+test("keeps an authenticated session across refresh, direct URLs, tabs, and browser history", async ({
+  context,
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Session persistence runs once on desktop.");
+  const adminEmail = process.env.E2E_ADMIN_EMAIL;
+  test.skip(!adminEmail || !password, "Missing E2E credentials for Admin.");
+
+  await page.goto("/login?returnTo=%2Fadmin%2Fusers");
+  await page.getByLabel("البريد الإلكتروني").fill(adminEmail!);
+  await page.getByLabel("كلمة المرور").fill(password!);
+  await page.getByRole("button", { name: "تسجيل الدخول" }).click();
+  await page.waitForURL(/\/admin\/users(?:\?|$)/, { timeout: 20_000 });
+
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1, name: "مستخدمو البوابة" })).toBeVisible();
+
+  const secondTab = await context.newPage();
+  await secondTab.goto("/admin/permissions");
+  await expect(
+    secondTab.getByRole("heading", { level: 1, name: "مركز إدارة الصلاحيات" }),
+  ).toBeVisible();
+  await secondTab.close();
+
+  await page.goto("/admin/permissions");
+  await page.goBack();
+  await expect(page).toHaveURL(/\/admin\/users(?:\?|$)/);
+  await page.goForward();
+  await expect(page).toHaveURL(/\/admin\/permissions(?:\?|$)/);
+
+  await context.clearCookies();
+  await page.reload();
+  await expect(page).toHaveURL(/\/login\?returnTo=/);
+});

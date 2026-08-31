@@ -1,6 +1,7 @@
 "use client";
 
-import { Activity, KeyRound, Network, ShieldCheck, UserRound, X } from "lucide-react";
+import { useEffect } from "react";
+import { Activity, KeyRound, Network, ShieldCheck, UserRound } from "lucide-react";
 import { adminAccessCopy } from "../../i18n/admin-access";
 import type {
   AdminAccessPermission,
@@ -9,8 +10,6 @@ import type {
   AdminUsersSnapshot,
 } from "../../lib/admin-access-types";
 import type { SupportedLocale } from "../../lib/i18n";
-import { StatusChip } from "../premium-os";
-import { initials, statusLabel, userStatus } from "./admin-access-formatters";
 import { UserAccessActivityPanel } from "./user-access-activity-panel";
 import { UserAccessProfilePanel } from "./user-access-profile-panel";
 import { UserAccessRolesPanel } from "./user-access-roles-panel";
@@ -30,8 +29,8 @@ export function UserAccessEditor({
   canModifyPermissions,
   isCurrentUser,
   locale,
-  onClose,
   onEditScope,
+  onBusyChange,
   onResetPassword,
   onSnapshot,
   permissions,
@@ -42,8 +41,8 @@ export function UserAccessEditor({
   canModifyPermissions: boolean;
   isCurrentUser: boolean;
   locale: SupportedLocale;
-  onClose: () => void;
   onEditScope: (user: AdminAccessUser) => void;
+  onBusyChange?: (busy: boolean) => void;
   onResetPassword: (user: AdminAccessUser) => Promise<void>;
   onSnapshot: (snapshot: AdminUsersSnapshot) => void;
   permissions: AdminAccessPermission[];
@@ -60,6 +59,10 @@ export function UserAccessEditor({
     roles,
     user,
   });
+  useEffect(() => {
+    onBusyChange?.(Boolean(editor.savingAction) || resettingPassword);
+    return () => onBusyChange?.(false);
+  }, [editor.savingAction, onBusyChange, resettingPassword]);
   const tabs: Array<{ id: UserEditorTab; label: string }> = [
     { id: "profile", label: t.userProfile },
     { id: "access", label: t.accessAndRoles },
@@ -70,31 +73,6 @@ export function UserAccessEditor({
 
   return (
     <section className="user-access-center" aria-label={t.userDetails}>
-      <header className="user-access-heading">
-        <div className="user-access-identity">
-          <span className="access-avatar" aria-hidden="true">
-            {initials(user.displayName)}
-          </span>
-          <div>
-            <span>{t.userDetails}</span>
-            <h2>{user.displayName}</h2>
-            <p>{user.email}</p>
-          </div>
-        </div>
-        <div className="user-access-heading-actions">
-          <StatusChip status={userStatus(user)} label={statusLabel(userStatus(user), locale)} />
-          <button
-            type="button"
-            className="icon-button"
-            aria-label={t.closeUserManager}
-            title={t.closeUserManager}
-            onClick={onClose}
-          >
-            <X aria-hidden="true" size={18} />
-          </button>
-        </div>
-      </header>
-
       <p className="user-access-description">{t.userManagementDescription}</p>
 
       <nav className="user-access-tabs" aria-label={t.userDetails}>

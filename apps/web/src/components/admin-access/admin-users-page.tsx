@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { adminAccessCopy } from "../../i18n/admin-access";
 import type {
   AdminAccessPermission,
@@ -15,6 +16,7 @@ import {
   SectionCard,
   StatusChip,
 } from "../premium-os";
+import { AppDialog } from "../app-dialog";
 import {
   date,
   formatCode,
@@ -59,6 +61,7 @@ export function AdminUsersPageContent({
 }) {
   const lang = language(locale);
   const t = adminAccessCopy[lang];
+  const [userEditorBusy, setUserEditorBusy] = useState(false);
   const {
     applySnapshot,
     closeOperatingForm,
@@ -121,27 +124,47 @@ export function AdminUsersPageContent({
       ) : null}
 
       {selectedUser ? (
-        <UserAccessEditor
-          key={selectedUser.id}
-          canModifyPermissions={canModifyPermissions}
-          isCurrentUser={selectedUser.id === currentUserId}
-          locale={lang}
+        <AppDialog
+          busy={userEditorBusy || resettingUserId === selectedUser.id}
+          closeLabel={t.closeUserManager}
+          description={selectedUser.email}
+          eyebrow={t.userDetails}
+          headerAside={
+            <StatusChip
+              status={userStatus(selectedUser)}
+              label={statusLabel(userStatus(selectedUser), lang)}
+            />
+          }
           onClose={closeUserManager}
-          onEditScope={(user) => {
-            closeUserManager();
-            openScopeEditor(user);
-          }}
-          onResetPassword={resetPassword}
-          onSnapshot={applySnapshot}
-          permissions={permissions}
-          resettingPassword={resettingUserId === selectedUser.id}
-          roles={roles}
-          user={selectedUser}
-        />
+          size="full"
+          title={selectedUser.displayName}
+        >
+          <UserAccessEditor
+            key={selectedUser.id}
+            canModifyPermissions={canModifyPermissions}
+            isCurrentUser={selectedUser.id === currentUserId}
+            locale={lang}
+            onEditScope={(user) => {
+              closeUserManager();
+              openScopeEditor(user);
+            }}
+            onBusyChange={setUserEditorBusy}
+            onResetPassword={resetPassword}
+            onSnapshot={applySnapshot}
+            permissions={permissions}
+            resettingPassword={resettingUserId === selectedUser.id}
+            roles={roles}
+            user={selectedUser}
+          />
+        </AppDialog>
       ) : null}
 
       {showCreator ? (
-        <SectionCard
+        <AppDialog
+          busy={saving}
+          closeLabel={t.cancel}
+          onClose={closeOperatingForm}
+          size="full"
           title={isEditingScope ? t.editOperatingScope : t.createOperatingUser}
           eyebrow={t.operatingScope}
         >
@@ -341,7 +364,12 @@ export function AdminUsersPageContent({
             </div>
 
             <div className="operating-user-actions">
-              <button className="button-secondary" type="button" onClick={closeOperatingForm}>
+              <button
+                className="button-secondary"
+                disabled={saving}
+                type="button"
+                onClick={closeOperatingForm}
+              >
                 {t.cancel}
               </button>
               <button className="button-primary" type="submit" disabled={saving}>
@@ -349,7 +377,7 @@ export function AdminUsersPageContent({
               </button>
             </div>
           </form>
-        </SectionCard>
+        </AppDialog>
       ) : null}
 
       <BentoGrid compact>

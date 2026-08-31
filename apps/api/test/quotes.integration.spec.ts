@@ -481,11 +481,11 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
       new Date(Date.now() - 60_000),
     );
     const expiredAccept = await accountManager.agent
-      .post(`/api/v1/quotes/${expiredAcceptanceFixture.id}/accept`)
+      .post(`/api/v1/quotes/${expiredAcceptanceFixture.id}/approve`)
       .set("X-CSRF-Token", accountManager.csrf)
       .send({})
       .expect(409);
-    expect(expiredAccept.body.code).toBe("EXPIRED_QUOTE_CANNOT_BE_ACCEPTED");
+    expect(expiredAccept.body.code).toBe("EXPIRED_QUOTE_CANNOT_BE_APPROVED");
 
     const expired = await accountManager.agent
       .post(`/api/v1/quotes/${expiredAcceptanceFixture.id}/expire`)
@@ -500,14 +500,188 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
       .set("X-CSRF-Token", accountManager.csrf)
       .send({ status: "ISSUED" })
       .expect(200);
+    const approved = await accountManager.agent
+      .post(`/api/v1/quotes/${quote.body.id}/approve`)
+      .set("X-CSRF-Token", accountManager.csrf)
+      .send({ note: "Client approved the commercial offer" })
+      .expect(200);
+    expect(approved.body.status).toBe("APPROVED");
+    expect(approved.body.approvedAt).toBeTruthy();
     const accepted = await accountManager.agent
       .post(`/api/v1/quotes/${quote.body.id}/accept`)
       .set("X-CSRF-Token", accountManager.csrf)
-      .send({})
+      .send({ method: "BANK_TRANSFER", reference: "PR7-BANK-100" })
       .expect(200);
     expect(accepted.body.status).toBe("ACCEPTED");
     expect(accepted.body.acceptedAt).toBeTruthy();
+    expect(accepted.body.payment).toMatchObject({
+      method: "BANK_TRANSFER",
+      reference: "PR7-BANK-100",
+    });
     expect(accepted.body.snapshotHash).toBe(originalSnapshot.hash);
+
+    const [specialistRole, projectSpecialistRole] = await Promise.all([
+      database.role.findUniqueOrThrow({ where: { code: "ROLE-SPECIALIST" } }),
+      database.role.findUniqueOrThrow({ where: { code: "ROLE-PROJECT-SPECIALIST" } }),
+    ]);
+    const specialistPasswordHash = await new PasswordHasherService().hash("StrongPassword123");
+    const [monthlySpecialist, projectSpecialist] = await Promise.all([
+      database.user.create({
+        data: {
+          email: "monthly.specialist@pr7.test",
+          displayName: "PR7 Monthly Specialist",
+          userType: "INTERNAL",
+          status: "ACTIVE",
+          passwordHash: specialistPasswordHash,
+          passwordChangedAt: new Date(),
+          roles: { create: { roleId: specialistRole.id } },
+          specialistServiceScopes: {
+            create: {
+              clientId,
+              monthlyServiceId: monthly.id,
+              status: "ACTIVE",
+            },
+          },
+        },
+      }),
+      database.user.create({
+        data: {
+          email: "project.specialist@pr7.test",
+          displayName: "PR7 Project Specialist",
+          userType: "INTERNAL",
+          status: "ACTIVE",
+          passwordHash: specialistPasswordHash,
+          passwordChangedAt: new Date(),
+          roles: { create: { roleId: projectSpecialistRole.id } },
+          specialistServiceScopes: {
+            create: {
+              clientId,
+              oneTimeServiceId: oneTime.id,
+              status: "ACTIVE",
+            },
+          },
+        },
+      }),
+    ]);
+
+    const onboardingOptions = await accountManager.agent
+      .get(`/api/v1/quotes/${quote.body.id}/onboarding-options`)
+      .expect(200);
+    const monthlyTarget = onboardingOptions.body.services.find(
+      (service: { lineType: string }) => service.lineType === "MONTHLY",
+    );
+    const oneTimeTarget = onboardingOptions.body.services.find(
+      (service: { lineType: string }) => service.lineType === "ONE_TIME",
+    );
+    expect(monthlyTarget.eligibleSpecialistIds).toContain(monthlySpecialist.id);
+    expect(oneTimeTarget.eligibleSpecialistIds).toContain(projectSpecialist.id);
+
+    const onboarding = await accountManager.agent
+      .post(`/api/v1/quotes/${quote.body.id}/onboarding`)
+      .set("X-CSRF-Token", accountManager.csrf)
+      .send({
+        serviceAssignments: [
+          {
+            quoteItemId: monthlyTarget.quoteItemId,
+            specialistIds: [monthlySpecialist.id],
+          },
+          {
+            quoteItemId: oneTimeTarget.quoteItemId,
+            specialistIds: [projectSpecialist.id],
+          },
+        ],
+      })
+      .expect(200);
+    expect(onboarding.body).toMatchObject({
+      completed: true,
+      quoteStatus: "ACTIVATED",
+      subscription: {
+        createdServiceIds: [expect.any(String)],
+        toppedUpServiceIds: [],
+      },
+    });
+
+    const activatedServiceId = onboarding.body.subscription.createdServiceIds[0] as string;
+    const firstActivation = await database.subscriptionService.findUniqueOrThrow({
+      where: { id: activatedServiceId },
+      select: { hoursAllocated: true },
+    });
+    expect(Number(firstActivation.hoursAllocated)).toBe(Number(monthlyTarget.hoursAllocated));
+
+    const repeatedOnboarding = await accountManager.agent
+      .post(`/api/v1/quotes/${quote.body.id}/onboarding`)
+      .set("X-CSRF-Token", accountManager.csrf)
+      .send({
+        serviceAssignments: [
+          {
+            quoteItemId: monthlyTarget.quoteItemId,
+            specialistIds: [monthlySpecialist.id],
+          },
+          {
+            quoteItemId: oneTimeTarget.quoteItemId,
+            specialistIds: [projectSpecialist.id],
+          },
+        ],
+      })
+      .expect(409);
+    expect(repeatedOnboarding.body.code).toBe("ACCEPTED_QUOTE_REQUIRED_FOR_ONBOARDING");
+
+    const renewalQuote = await accountManager.agent
+      .post("/api/v1/quotes")
+      .set("X-CSRF-Token", accountManager.csrf)
+      .send({
+        pricingDraftId: draft.body.id,
+        validityDays: 30,
+        terms: { paymentTerms: "Due on approval" },
+      })
+      .expect(201);
+    await accountManager.agent
+      .patch(`/api/v1/quotes/${renewalQuote.body.id}/status`)
+      .set("X-CSRF-Token", accountManager.csrf)
+      .send({ status: "ISSUED" })
+      .expect(200);
+    await accountManager.agent
+      .post(`/api/v1/quotes/${renewalQuote.body.id}/approve`)
+      .set("X-CSRF-Token", accountManager.csrf)
+      .send({ note: "Renewal approved" })
+      .expect(200);
+    await accountManager.agent
+      .post(`/api/v1/quotes/${renewalQuote.body.id}/accept`)
+      .set("X-CSRF-Token", accountManager.csrf)
+      .send({ method: "BANK_TRANSFER", reference: "PR7-BANK-101" })
+      .expect(200);
+
+    const renewalOptions = await accountManager.agent
+      .get(`/api/v1/quotes/${renewalQuote.body.id}/onboarding-options`)
+      .expect(200);
+    const renewalMonthlyTarget = renewalOptions.body.services.find(
+      (service: { lineType: string }) => service.lineType === "MONTHLY",
+    );
+    const renewalOnboarding = await accountManager.agent
+      .post(`/api/v1/quotes/${renewalQuote.body.id}/onboarding`)
+      .set("X-CSRF-Token", accountManager.csrf)
+      .send({
+        serviceAssignments: [
+          {
+            quoteItemId: renewalMonthlyTarget.quoteItemId,
+            specialistIds: [monthlySpecialist.id],
+          },
+        ],
+      })
+      .expect(200);
+    expect(renewalOnboarding.body.subscription).toMatchObject({
+      createdServiceIds: [],
+      reusedServiceIds: [activatedServiceId],
+      toppedUpServiceIds: [activatedServiceId],
+    });
+    const renewedService = await database.subscriptionService.findUniqueOrThrow({
+      where: { id: activatedServiceId },
+      select: { hoursAllocated: true },
+    });
+    expect(Number(renewedService.hoursAllocated)).toBe(
+      Number(monthlyTarget.hoursAllocated) + Number(renewalMonthlyTarget.hoursAllocated),
+    );
+
     await accountManager.agent
       .post(`/api/v1/quotes/${quote.body.id}/reject`)
       .set("X-CSRF-Token", accountManager.csrf)
@@ -522,10 +696,12 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
         eventCode: {
           in: [
             "QUOTE_ACCEPTED",
+            "QUOTE_APPROVED",
             "QUOTE_CANCELLED",
             "QUOTE_CREATED",
             "QUOTE_EXPIRED",
             "QUOTE_PDF_GENERATED",
+            "QUOTE_PAYMENT_CONFIRMED",
             "QUOTE_REJECTED",
             "QUOTE_STATUS_CHANGED",
           ],
@@ -536,10 +712,12 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
     expect(auditEvents.map((event) => event.eventCode)).toEqual(
       expect.arrayContaining([
         "QUOTE_ACCEPTED",
+        "QUOTE_APPROVED",
         "QUOTE_CANCELLED",
         "QUOTE_CREATED",
         "QUOTE_EXPIRED",
         "QUOTE_PDF_GENERATED",
+        "QUOTE_PAYMENT_CONFIRMED",
         "QUOTE_REJECTED",
         "QUOTE_STATUS_CHANGED",
       ]),

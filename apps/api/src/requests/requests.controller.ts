@@ -32,7 +32,6 @@ import { CLIENT_ROLE_CODE } from "../client-portal/client-portal.constants.js";
 import type { RequestWithId } from "../request-context/request-with-id.js";
 import { RequestTemplateAnswerInputDto } from "../request-templates/request-templates.dto.js";
 import {
-  AddAttachmentMetadataDto,
   AddInternalNoteDto,
   AddRequestCommentDto,
   AssignRequestDto,
@@ -53,7 +52,7 @@ import {
   UpdateTimeEntryDto,
   UpdateRequestOutputDto,
   UpdateRequestTaskDto,
-  UploadClientDocumentMetadataDto,
+  UploadVisibilityDto,
 } from "./requests.dto.js";
 import {
   ACCOUNT_MANAGER_ROLE_CODE,
@@ -93,7 +92,6 @@ const uploadInterceptor = FileInterceptor("file", {
 @ApiTags("requests")
 @ApiCookieAuth()
 @ApiExtraModels(
-  AddAttachmentMetadataDto,
   AddInternalNoteDto,
   AddRequestCommentDto,
   AssignRequestDto,
@@ -115,7 +113,7 @@ const uploadInterceptor = FileInterceptor("file", {
   UpdateTimeEntryDto,
   UpdateRequestOutputDto,
   UpdateRequestTaskDto,
-  UploadClientDocumentMetadataDto,
+  UploadVisibilityDto,
 )
 @RequireRoles(
   ADMIN_ROLE_CODE,
@@ -238,17 +236,6 @@ export class RequestsController {
     return this.requests.addInternalNote(id, input, request.auth!, metadata(request));
   }
 
-  @Post(":id/attachments")
-  @HttpCode(200)
-  @ApiOperation({ summary: "Attach file metadata to a request" })
-  addAttachmentMetadata(
-    @Param("id") id: string,
-    @Body() input: AddAttachmentMetadataDto,
-    @Req() request: RequestWithId,
-  ) {
-    return this.requests.addAttachmentMetadata(id, input, request.auth!, metadata(request));
-  }
-
   @Post(":id/attachments/upload")
   @HttpCode(200)
   @UseInterceptors(uploadInterceptor)
@@ -267,7 +254,7 @@ export class RequestsController {
   uploadAttachment(
     @Param("id") id: string,
     @UploadedFile() file: UploadedRequestFile | undefined,
-    @Body() input: Pick<AddAttachmentMetadataDto, "visibility">,
+    @Body() input: UploadVisibilityDto,
     @Req() request: RequestWithId,
   ) {
     return this.requests.addAttachmentFile(id, file, input, request.auth!, metadata(request));
@@ -360,7 +347,7 @@ export class RequestsController {
     @Param("id") id: string,
     @Param("outputId") outputId: string,
     @UploadedFile() file: UploadedRequestFile | undefined,
-    @Body() input: Pick<AddAttachmentMetadataDto, "visibility">,
+    @Body() input: UploadVisibilityDto,
     @Req() request: RequestWithId,
   ) {
     return this.requests.addOutputFile(id, outputId, file, input, request.auth!, metadata(request));
@@ -556,10 +543,6 @@ export class ClientRequestsController {
       type: "object",
       properties: {
         file: { type: "string", format: "binary" },
-        originalName: { type: "string" },
-        mimeType: { type: "string" },
-        sizeBytes: { type: "number" },
-        sha256: { type: "string" },
       },
       required: ["file"],
     },
@@ -567,14 +550,12 @@ export class ClientRequestsController {
   uploadDocument(
     @Param("id") id: string,
     @Param("documentRequestId") documentRequestId: string,
-    @Body() input: UploadClientDocumentMetadataDto,
     @UploadedFile() file: UploadedRequestFile | undefined,
     @Req() request: RequestWithId,
   ) {
     return this.requests.uploadClientDocument(
       id,
       documentRequestId,
-      input,
       file,
       request.auth!,
       metadata(request),

@@ -132,10 +132,7 @@ describe("InternalRoleDashboard", () => {
     expect(screen.getByRole("heading", { name: "My execution dashboard" })).toBeInTheDocument();
     expect(screen.getByText("Specialist queue")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Priority work" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Work queues/ })).toHaveAttribute(
-      "href",
-      "/requests/queues",
-    );
+    expect(screen.queryByRole("heading", { name: "Quick actions" })).not.toBeInTheDocument();
   });
 
   it("renders management health and reporting context when provided", () => {
@@ -156,6 +153,7 @@ describe("InternalRoleDashboard", () => {
     expect(
       screen.getByText("Overdue work or returned outputs require urgent follow-up."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Reports/ })).toHaveAttribute("href", "/reports");
+    expect(screen.getByText("Monthly reports")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Quick actions" })).not.toBeInTheDocument();
   });
 });

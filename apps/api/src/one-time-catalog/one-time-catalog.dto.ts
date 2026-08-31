@@ -16,7 +16,7 @@ import {
   MinLength,
   ValidateNested,
 } from "class-validator";
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional, OmitType } from "@nestjs/swagger";
 import {
   ArchiveCatalogEntryDto,
   CatalogStatusDto,
@@ -334,3 +334,50 @@ export class CreateOneTimeServiceDto extends OneTimeServiceFieldsDto {
 }
 
 export class UpdateOneTimeServiceDto extends OneTimeServiceFieldsDto {}
+
+export class ImportOneTimeServiceDto extends OmitType(OneTimeServiceFieldsDto, [
+  "categoryId",
+] as const) {
+  @ApiProperty({ type: String, example: "OT-BUILD-WEBSITE" })
+  @IsString()
+  @Matches(CATALOG_CODE_PATTERN)
+  @MaxLength(80)
+  code!: string;
+
+  @ApiProperty({ type: String, example: "OT-CAT-BUILD" })
+  @IsString()
+  @Matches(CATALOG_CODE_PATTERN)
+  @MaxLength(60)
+  categoryCode!: string;
+
+  @ApiProperty({ enum: catalogStatuses })
+  @IsIn(catalogStatuses)
+  status!: CatalogLifecycleStatus;
+
+  @ApiPropertyOptional({ type: Number, default: 0 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(100_000)
+  sortOrder?: number;
+}
+
+export class ImportOneTimeCatalogDto {
+  @ApiProperty({ enum: ["jzoom-one-time-catalog"] })
+  @IsIn(["jzoom-one-time-catalog"])
+  format!: "jzoom-one-time-catalog";
+
+  @ApiProperty({ type: Number, enum: [1] })
+  @Type(() => Number)
+  @IsInt()
+  @IsIn([1])
+  version!: 1;
+
+  @ApiProperty({ type: () => [ImportOneTimeServiceDto] })
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => ImportOneTimeServiceDto)
+  services!: ImportOneTimeServiceDto[];
+}

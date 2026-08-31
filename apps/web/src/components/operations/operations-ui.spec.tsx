@@ -267,6 +267,14 @@ describe("Operations foundation UI", () => {
     );
   });
 
+  it("does not expose notification event codes in the Arabic inbox", () => {
+    render(<NotificationInbox initial={notifications()} locale="ar" />);
+
+    expect(screen.getByText("مشاركة مخرج مع العميل")).toBeInTheDocument();
+    expect(screen.getByText("طلب خدمة")).toBeInTheDocument();
+    expect(screen.queryByText("REQUEST_OUTPUT_SHARED_WITH_CLIENT")).not.toBeInTheDocument();
+  });
+
   it("renders internal report preparation without exposing advanced analytics", () => {
     render(<MonthlyReports initialReports={[report("PREPARED")]} />);
 

@@ -409,4 +409,63 @@ describeWithDatabase("PR 5 one-time catalog APIs", () => {
       { code: "PR5-ORDER-A", sortOrder: 1 },
     ]);
   });
+
+  it("exports complete templates and imports new services atomically in create-only mode", async () => {
+    const admin = await login("admin@pr5.test");
+    await admin.agent
+      .post("/api/v1/admin/catalog/one-time/categories")
+      .set("X-CSRF-Token", admin.csrf)
+      .send({
+        code: "PR5-CAT-IMPORT",
+        nameAr: "استيراد",
+        nameEn: "Import",
+        status: "ACTIVE",
+      })
+      .expect(201);
+
+    const { categoryId: _categoryId, ...exportedService } = {
+      ...servicePayload("00000000-0000-4000-8000-000000000000"),
+      code: "PR5-IMPORT-A",
+      categoryCode: "PR5-CAT-IMPORT",
+    };
+    void _categoryId;
+    const imported = await admin.agent
+      .post("/api/v1/services/one-time/import")
+      .set("X-CSRF-Token", admin.csrf)
+      .send({ format: "jzoom-one-time-catalog", version: 1, services: [exportedService] })
+      .expect(201);
+    expect(imported.body.services).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "PR5-IMPORT-A",
+          revision: expect.objectContaining({
+            phases: expect.arrayContaining([expect.objectContaining({ code: "PHASE-DISCOVERY" })]),
+            deliverables: expect.arrayContaining([
+              expect.objectContaining({
+                code: "DEL-BRIEF",
+                tasks: expect.arrayContaining([
+                  expect.objectContaining({ code: "TASK-INTERVIEW" }),
+                ]),
+              }),
+            ]),
+          }),
+        }),
+      ]),
+    );
+
+    const exported = await admin.agent.get("/api/v1/services/one-time/export").expect(200);
+    expect(exported.body).toMatchObject({ format: "jzoom-one-time-catalog", version: 1 });
+    expect(exported.body.services).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "PR5-IMPORT-A", categoryCode: "PR5-CAT-IMPORT" }),
+      ]),
+    );
+
+    await admin.agent
+      .post("/api/v1/services/one-time/import")
+      .set("X-CSRF-Token", admin.csrf)
+      .send({ format: "jzoom-one-time-catalog", version: 1, services: [exportedService] })
+      .expect(409);
+    expect(await database.oneTimeService.count({ where: { code: "PR5-IMPORT-A" } })).toBe(1);
+  });
 });

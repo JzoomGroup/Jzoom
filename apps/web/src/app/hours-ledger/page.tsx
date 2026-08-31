@@ -8,6 +8,7 @@ import {
   requireMonthlyUsage,
 } from "../../lib/operations-server";
 import { requireRequestIntakeOptions } from "../../lib/request-server";
+import { firstQueryValue, type QueryValue } from "../../lib/url-state";
 
 const ledgerRoles = [
   "ROLE-ADMIN",
@@ -19,7 +20,19 @@ const ledgerRoles = [
 
 const closingRoles = ["ROLE-ADMIN", "ROLE-MGMT", "ROLE-AM"] as const;
 
-export default async function HoursLedgerPage() {
+export default async function HoursLedgerPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, QueryValue>>;
+}) {
+  const params = await searchParams;
+  const clientId = firstQueryValue(params.clientId);
+  const periodInput = firstQueryValue(params.period);
+  const period = /^\d{4}-(0[1-9]|1[0-2])$/.test(periodInput) ? periodInput : undefined;
+  const filters = {
+    ...(clientId ? { clientId } : {}),
+    ...(period ? { period } : {}),
+  };
   const user = await getCurrentUser();
   if (!user) {
     redirect("/login");
@@ -32,9 +45,9 @@ export default async function HoursLedgerPage() {
     closingRoles.includes(role as (typeof closingRoles)[number]),
   );
   const [ledger, usage, closings, intakeOptions] = await Promise.all([
-    requireHoursLedger(),
-    requireMonthlyUsage(),
-    canManageClosings ? requireMonthlyClosings() : Promise.resolve([]),
+    requireHoursLedger(filters),
+    requireMonthlyUsage(filters),
+    canManageClosings ? requireMonthlyClosings(filters) : Promise.resolve([]),
     requireRequestIntakeOptions(),
   ]);
 
@@ -50,6 +63,7 @@ export default async function HoursLedgerPage() {
       <HoursLedger
         canManageClosings={canManageClosings}
         clientOptions={intakeOptions.clients}
+        initialClientId={clientId}
         initialClosings={closings}
         initialLedger={ledger}
         initialUsage={usage}

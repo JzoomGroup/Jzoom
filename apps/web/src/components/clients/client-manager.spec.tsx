@@ -71,6 +71,9 @@ describe("ClientManager", () => {
     fireEvent.click(screen.getByRole("button", { name: "Portal user" }));
 
     expect(
+      screen.getByRole("dialog", { name: "Create portal user for Acme Logistics" }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole("heading", { level: 2, name: "Create portal user for Acme Logistics" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Portal user guardrails")).toBeInTheDocument();

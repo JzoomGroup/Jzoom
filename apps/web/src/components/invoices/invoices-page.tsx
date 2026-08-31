@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "../../lib/auth";
 import { requireInvoice, requireInvoices } from "../../lib/invoice-server";
-import { QuoteShell } from "../quotes/quote-shell";
+import { CommercialShell } from "../commercial-shell";
 import { InvoiceDetail } from "./invoice-detail";
 import { InvoiceList } from "./invoice-list";
 
@@ -30,10 +30,9 @@ export async function InvoicesPage({ invoiceId }: { invoiceId?: string }) {
   }
 
   return (
-    <QuoteShell
+    <CommercialShell
       activePath="/pricing/invoices"
       displayName={user.displayName}
-      isAdmin={user.roles.includes("ROLE-ADMIN")}
       locale={user.preferredLocale}
       permissions={user.permissions}
       roles={user.roles}
@@ -43,6 +42,6 @@ export async function InvoicesPage({ invoiceId }: { invoiceId?: string }) {
       ) : (
         <InvoiceDetail initialInvoice={content} locale={user.preferredLocale} />
       )}
-    </QuoteShell>
+    </CommercialShell>
   );
 }

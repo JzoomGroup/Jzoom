@@ -72,6 +72,8 @@ export interface PricingMonthlyService {
   id: string;
   code: string;
   categoryName: string;
+  categoryNameAr?: string;
+  categoryNameEn?: string;
   revision: {
     id: string;
     version: number;
@@ -95,6 +97,8 @@ export interface PricingOneTimeService {
   code: string;
   serviceLine: string;
   categoryName: string;
+  categoryNameAr?: string;
+  categoryNameEn?: string;
   revision: {
     id: string;
     version: number;
@@ -108,6 +112,9 @@ export interface PricingOneTimeService {
 }
 
 export interface PricingStudioCatalog {
+  defaults: {
+    quoteValidityDays: number;
+  };
   clients: PricingClient[];
   monthlyServices: PricingMonthlyService[];
   oneTimeServices: PricingOneTimeService[];
@@ -147,6 +154,9 @@ export interface PricingLine {
   internalCost: number;
   serviceLevelCode?: string;
   serviceLevelLabel?: string;
+  serviceLevelLabelAr?: string;
+  serviceLevelLabelEn?: string | null;
+  packageHours?: number;
   hours?: number;
   unitRate?: number;
   serviceLine?: string;

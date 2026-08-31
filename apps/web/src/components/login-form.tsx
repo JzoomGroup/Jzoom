@@ -5,7 +5,7 @@ import { loginFormCopy as copy } from "../i18n/dictionaries/administration";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { normalizeLocale } from "../lib/i18n";
-import { postLoginRoute } from "../lib/route-access";
+import { postLoginRoute, safeReturnTo } from "../lib/route-access";
 import { syncDocumentLocale } from "./locale-document-sync";
 
 interface LoginResponse {
@@ -16,7 +16,7 @@ interface LoginResponse {
   };
 }
 
-export function LoginForm({ locale = "en" }: { locale?: string }) {
+export function LoginForm({ locale = "en", returnTo }: { locale?: string; returnTo?: string }) {
   const router = useRouter();
   const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
@@ -57,9 +57,10 @@ export function LoginForm({ locale = "en" }: { locale?: string }) {
 
     const body = (await response.json()) as LoginResponse;
     syncDocumentLocale(body.user.preferredLocale ?? currentLocale);
-    router.replace(
-      body.user.mustChangePassword ? "/change-password" : postLoginRoute(body.user.roles),
-    );
+    const destination = body.user.mustChangePassword
+      ? "/change-password"
+      : (safeReturnTo(returnTo) ?? postLoginRoute(body.user.roles));
+    router.replace(destination);
     router.refresh();
   }
 
@@ -67,7 +68,14 @@ export function LoginForm({ locale = "en" }: { locale?: string }) {
     <form className="auth-form" method="post" noValidate onSubmit={submit}>
       <label>
         {labels.email}
-        <input name="email" type="email" autoComplete="email" required />
+        <input
+          aria-describedby={error ? "login-error" : undefined}
+          aria-invalid={error ? "true" : undefined}
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+        />
       </label>
       <label>
         {labels.password}
@@ -75,12 +83,14 @@ export function LoginForm({ locale = "en" }: { locale?: string }) {
           name="password"
           type="password"
           autoComplete="current-password"
+          aria-describedby={error ? "login-error" : undefined}
+          aria-invalid={error ? "true" : undefined}
           minLength={8}
           required
         />
       </label>
       {error ? (
-        <p className="form-error" role="alert">
+        <p className="form-error" id="login-error" role="alert">
           {error}
         </p>
       ) : null}

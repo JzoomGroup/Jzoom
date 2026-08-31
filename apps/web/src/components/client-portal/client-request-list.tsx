@@ -8,8 +8,13 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import {
   RequestTemplateFields,
   type TemplateAnswerState,
+  type TemplateFileState,
 } from "../request-templates/request-template-fields";
-import { createClientServiceRequest, requestErrorMessage } from "../../lib/request-client";
+import {
+  createClientServiceRequest,
+  requestErrorMessage,
+  uploadRequestAttachment,
+} from "../../lib/request-client";
 import { answersForTemplate, fetchActiveRequestTemplate } from "../../lib/request-templates-client";
 import type {
   ClientPortalAccount,
@@ -17,15 +22,7 @@ import type {
 } from "../../lib/client-portal-types";
 import type { RequestTemplateVersion, TemplateAnswerValue } from "../../lib/request-template-types";
 import type { RequestStatus, RequestSummary } from "../../lib/request-types";
-import {
-  BentoGrid,
-  EmptyState,
-  MetricCard,
-  PageHeader,
-  PriorityChip,
-  SectionCard,
-  StatusChip,
-} from "../premium-os";
+import { EmptyState, PageHeader, PriorityChip, SectionCard, StatusChip } from "../premium-os";
 import {
   clientDate,
   clientLabel,
@@ -34,8 +31,6 @@ import {
   clientNumber,
   localizedExpectedOutput,
   localizedFreeText,
-  localizedServiceDescription,
-  localizedServiceScope,
   priorityLabel,
   requestStatusLabel,
   type ClientDisplayLocale,
@@ -65,14 +60,6 @@ function serviceLabel(
   locale: ClientDisplayLocale,
 ): string {
   return `${clientName(service.service, locale)} - ${clientLabel(service.serviceLevel, locale)}`;
-}
-
-function openRequestCount(requests: RequestSummary[], subscriptionServiceId: string): number {
-  return requests.filter(
-    (request) =>
-      request.service.subscriptionServiceId === subscriptionServiceId &&
-      !["COMPLETED", "CLOSED", "REJECTED"].includes(request.status),
-  ).length;
 }
 
 function requestNextStep(request: RequestSummary, t: (typeof copy)[ClientDisplayLocale]): string {
@@ -109,6 +96,7 @@ export function ClientRequestList({
   const [templateNotice, setTemplateNotice] = useState<string | null>(null);
   const [activeTemplate, setActiveTemplate] = useState<RequestTemplateVersion | null>(null);
   const [templateAnswers, setTemplateAnswers] = useState<TemplateAnswerState>({});
+  const [templateFiles, setTemplateFiles] = useState<TemplateFileState>({});
   const [form, setForm] = useState({
     clientId: defaultService?.clientId ?? account.clients[0]?.id ?? "",
     subscriptionServiceId: defaultService?.id ?? "",
@@ -124,25 +112,14 @@ export function ClientRequestList({
   const draftKey = `jzoom.client.requestDraft.${account.user.id}`;
   const selectedService =
     services.find((service) => service.id === form.subscriptionServiceId) ?? null;
-  const selectedClient =
-    account.clients.find((client) => client.id === form.clientId) ?? account.clients[0] ?? null;
   const selectedServiceItem =
     selectedService?.serviceItems.find((item) => item.id === form.serviceItemRevisionId) ?? null;
   const selectedServiceItems = selectedService?.serviceItems ?? [];
-  const selectedServiceOpenRequests = selectedService
-    ? openRequestCount(items, selectedService.id)
-    : 0;
   const templateRequiredFields =
     activeTemplate?.fields.filter((field) => field.required).length ?? 0;
   const templateOptionalFields = activeTemplate
     ? activeTemplate.fields.length - templateRequiredFields
     : 0;
-  const openRequests = items.filter(
-    (request) => !["COMPLETED", "CLOSED", "REJECTED"].includes(request.status),
-  ).length;
-  const waitingClientRequests = items.filter(
-    (request) => request.status === "WAITING_CLIENT",
-  ).length;
   const requestServiceOptions = useMemo(
     () =>
       Array.from(
@@ -204,6 +181,7 @@ export function ClientRequestList({
       setTemplateNotice(t.generalTemplateNotice);
       setActiveTemplate(null);
       setTemplateAnswers({});
+      setTemplateFiles({});
       return;
     }
     setLoadingTemplate(true);
@@ -212,6 +190,7 @@ export function ClientRequestList({
       const response = await fetchActiveRequestTemplate(selectedServiceItemRevisionId);
       setActiveTemplate(response.template);
       setTemplateAnswers({});
+      setTemplateFiles({});
       setTemplateNotice(
         response.template
           ? t.templateLoaded(
@@ -238,6 +217,7 @@ export function ClientRequestList({
     }));
     setActiveTemplate(null);
     setTemplateAnswers({});
+    setTemplateFiles({});
     setTemplateNotice(null);
   }
 
@@ -298,6 +278,18 @@ export function ClientRequestList({
       const created = await createClientServiceRequest(payload);
       window.localStorage.removeItem(draftKey);
       setItems((current) => [created, ...current]);
+      try {
+        for (const file of Object.values(templateFiles).flat()) {
+          await uploadRequestAttachment(created.id, file, "CLIENT_VISIBLE");
+        }
+      } catch {
+        setError(
+          locale === "ar"
+            ? "تم إنشاء الطلب، لكن تعذر رفع بعض الملفات. افتح الطلب وأعد رفعها من قسم المستندات."
+            : "The request was created, but some files could not be uploaded. Open it and upload them again.",
+        );
+        return;
+      }
       router.push(`/client/requests/${created.id}`);
     } catch (caught) {
       setError(requestErrorMessage(caught));
@@ -310,30 +302,6 @@ export function ClientRequestList({
     <>
       <PageHeader eyebrow={t.clientServiceCenter} title={t.requests} description={t.serviceIntro} />
 
-      <BentoGrid compact>
-        <MetricCard
-          accent
-          label={t.openRequests}
-          value={clientNumber(openRequests, locale)}
-          detail={t.stillActive}
-        />
-        <MetricCard
-          label={t.waitingForYou}
-          value={clientNumber(waitingClientRequests, locale)}
-          detail={t.clientActionNeeded}
-        />
-        <MetricCard
-          label={t.subscribedServices}
-          value={clientNumber(services.length, locale)}
-          detail={t.availableForIntake}
-        />
-        <MetricCard
-          label={t.selectedService}
-          value={clientNumber(selectedService ? selectedService.hoursAllocated : 0, locale)}
-          detail={t.monthlyHours}
-        />
-      </BentoGrid>
-
       <SectionCard
         eyebrow={t.requestIntake}
         title={t.createRequest}
@@ -343,167 +311,70 @@ export function ClientRequestList({
           <EmptyState title={t.noSubscribedServices}>{t.activeSubscribedEmpty}</EmptyState>
         ) : (
           <form className="catalog-form wide-form client-request-form" noValidate onSubmit={submit}>
-            <div className="request-intake-steps form-span" aria-label={t.requestSetup}>
-              <div className="active">
-                <span>1</span>
-                <strong>{t.service}</strong>
-                <small>{t.serviceStep}</small>
-              </div>
-              <div>
-                <span>2</span>
-                <strong>{t.requestDetails}</strong>
-                <small>{t.requestDetailsStep}</small>
-              </div>
-              <div>
-                <span>3</span>
-                <strong>{t.review}</strong>
-                <small>{t.reviewStep}</small>
-              </div>
-            </div>
-
-            <div className="client-request-readiness form-span">
-              <div>
-                <span>{t.selectedService}</span>
-                <strong>{selectedService ? serviceLabel(selectedService, locale) : t.auto}</strong>
-              </div>
-              <div>
-                <span>{t.selectedServiceItem}</span>
-                <strong>
-                  {selectedServiceItem ? clientName(selectedServiceItem, locale) : t.generalItem}
-                </strong>
-              </div>
-              <div>
-                <span>{t.templateFields}</span>
-                <strong>{activeTemplate ? t.templateReady : t.auto}</strong>
-              </div>
-            </div>
-
-            <div className="request-intake-layout form-span">
-              <section className="request-intake-panel">
-                <div className="request-panel-heading">
-                  <span>01</span>
-                  <div>
-                    <h3>{t.requestSetup}</h3>
-                    <p>{t.serviceDescription}</p>
-                  </div>
+            <section className="request-intake-panel form-span">
+              <div className="request-panel-heading">
+                <span>01</span>
+                <div>
+                  <h3>{t.requestSetup}</h3>
+                  <p>{t.serviceDescription}</p>
                 </div>
-                <div className="request-field-grid">
-                  <label>
-                    {t.service}
-                    <select
-                      required
-                      value={form.subscriptionServiceId}
-                      onChange={(event) => selectService(event.target.value)}
-                    >
-                      {services.map((service) => (
-                        <option key={service.id} value={service.id}>
-                          {serviceLabel(service, locale)} - {service.client.code} -{" "}
-                          {clientNumber(service.hoursAllocated, locale)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    {t.exactItem}
-                    <select
-                      value={form.serviceItemRevisionId}
-                      onChange={(event) => selectServiceItem(event.target.value)}
-                    >
-                      <option value="">{t.generalItem}</option>
-                      {selectedServiceItems.map((item) => {
-                        const itemName = clientName(item, locale);
-                        const expectedOutput = localizedExpectedOutput({
-                          fallbackName: itemName,
-                          locale,
-                          value: item.expectedOutput,
-                        });
-                        return (
-                          <option key={item.id} value={item.id}>
-                            {itemName}
-                            {expectedOutput && expectedOutput !== itemName
-                              ? ` - ${expectedOutput}`
-                              : ""}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </label>
-                </div>
-                {selectedServiceItem ? (
-                  <p className="catalog-feedback success">
-                    {t.expectedOutput}:{" "}
-                    {localizedExpectedOutput({
-                      fallbackName: clientName(selectedServiceItem, locale),
-                      locale,
-                      value: selectedServiceItem.expectedOutput,
-                    })}
-                    {selectedServiceItem.requiresFile ? ` - ${t.itemAttachmentHint}` : ""}
-                  </p>
-                ) : (
-                  <p className="catalog-feedback success">{t.generalItemNotice}</p>
-                )}
-              </section>
-
-              <aside className="request-intake-panel request-selected-card">
-                <div className="request-panel-heading compact">
-                  <span>{t.auto}</span>
-                  <div>
-                    <h3>{t.selectedServiceSummary}</h3>
-                    <p>{selectedClient?.code ?? t.client}</p>
-                  </div>
-                </div>
-                {selectedService && (
-                  <>
-                    <strong>{serviceLabel(selectedService, locale)}</strong>
-                    <p>
-                      {localizedServiceDescription({
-                        description: selectedService.service.description,
-                        domain: selectedService.service.domain,
+              </div>
+              <div className="request-field-grid">
+                <label>
+                  {t.service}
+                  <select
+                    required
+                    value={form.subscriptionServiceId}
+                    onChange={(event) => selectService(event.target.value)}
+                  >
+                    {services.map((service) => (
+                      <option key={service.id} value={service.id}>
+                        {serviceLabel(service, locale)} - {service.client.code} -{" "}
+                        {clientNumber(service.hoursAllocated, locale)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  {t.exactItem}
+                  <select
+                    value={form.serviceItemRevisionId}
+                    onChange={(event) => selectServiceItem(event.target.value)}
+                  >
+                    <option value="">{t.generalItem}</option>
+                    {selectedServiceItems.map((item) => {
+                      const itemName = clientName(item, locale);
+                      const expectedOutput = localizedExpectedOutput({
+                        fallbackName: itemName,
                         locale,
-                        name: clientName(selectedService.service, locale),
-                        serviceLine: selectedService.service.serviceLine,
-                      })}
-                    </p>
-                    <div className="request-mini-metrics">
-                      <span>
-                        <small>{t.monthlyHours}</small>
-                        <strong>{clientNumber(selectedService.hoursAllocated, locale)}</strong>
-                      </span>
-                      <span>
-                        <small>{t.openOnService}</small>
-                        <strong>{clientNumber(selectedServiceOpenRequests, locale)}</strong>
-                      </span>
-                      <span>
-                        <small>{t.includedItems}</small>
-                        <strong>{clientNumber(selectedServiceItems.length, locale)}</strong>
-                      </span>
-                      <span>
-                        <small>{t.templateFields}</small>
-                        <strong>
-                          {activeTemplate
-                            ? clientNumber(activeTemplate.fields.length, locale)
-                            : t.auto}
-                        </strong>
-                      </span>
-                    </div>
-                    <div className="hours-strip">
-                      {Array.from(
-                        new Set(
-                          [
-                            clientName(selectedService.service.category, locale),
-                            selectedService.service.serviceLine,
-                          ]
-                            .map((value) => localizedServiceScope(value, locale))
-                            .filter((value): value is string => Boolean(value)),
-                        ),
-                      ).map((value) => (
-                        <span key={value}>{value}</span>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </aside>
-            </div>
+                        value: item.expectedOutput,
+                      });
+                      return (
+                        <option key={item.id} value={item.id}>
+                          {itemName}
+                          {expectedOutput && expectedOutput !== itemName
+                            ? ` - ${expectedOutput}`
+                            : ""}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </label>
+              </div>
+              {selectedServiceItem ? (
+                <p className="catalog-feedback success">
+                  {t.expectedOutput}:{" "}
+                  {localizedExpectedOutput({
+                    fallbackName: clientName(selectedServiceItem, locale),
+                    locale,
+                    value: selectedServiceItem.expectedOutput,
+                  })}
+                  {selectedServiceItem.requiresFile ? ` - ${t.itemAttachmentHint}` : ""}
+                </p>
+              ) : (
+                <p className="catalog-feedback success">{t.generalItemNotice}</p>
+              )}
+            </section>
 
             <section className="request-intake-panel request-details-panel form-span">
               <div className="request-panel-heading">
@@ -606,6 +477,9 @@ export function ClientRequestList({
               template={activeTemplate}
               values={templateAnswers}
               onChange={setTemplateAnswer}
+              onFilesChange={(code, files) =>
+                setTemplateFiles((current) => ({ ...current, [code]: files }))
+              }
             />
             {error && <p className="form-error form-span">{error}</p>}
             <div className="request-review-bar form-span">
@@ -693,7 +567,7 @@ export function ClientRequestList({
             {filteredItems.length === 0 ? (
               <EmptyState title={t.noFilteredRequests}>{t.noFilteredRequestsBody}</EmptyState>
             ) : (
-              <div className="quote-list-grid">
+              <div className="client-request-list">
                 {filteredItems.map((request) => (
                   <article className="quote-list-card client-request-list-card" key={request.id}>
                     <Link className="quote-list-main" href={`/client/requests/${request.id}`}>

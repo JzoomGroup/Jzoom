@@ -364,22 +364,6 @@ export function addInternalNote(id: string, body: string): Promise<ServiceReques
   });
 }
 
-export function addAttachmentMetadata(
-  id: string,
-  input: {
-    originalName: string;
-    mimeType: string;
-    sizeBytes: number;
-    sha256: string;
-    visibility: "INTERNAL" | "CLIENT_VISIBLE";
-  },
-): Promise<ServiceRequest> {
-  return requestAction(`requests/${id}/attachments`, {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
-}
-
 export function uploadRequestAttachment(
   id: string,
   file: File,

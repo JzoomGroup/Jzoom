@@ -9,23 +9,32 @@ import { createHash, randomUUID } from "node:crypto";
 import type { Prisma } from "@jzoom/database";
 import {
   ADMIN_ROLE_CODE,
-  DEFAULT_TEMPORARY_PASSWORD,
   PROJECT_SPECIALIST_ROLE_CODE,
+  temporaryPassword,
 } from "../auth/auth.constants.js";
 import { AuthAuditService } from "../auth/audit.service.js";
 import type { AuthenticatedPrincipal, RequestMetadata } from "../auth/auth.types.js";
 import { PasswordHasherService } from "../auth/password-hasher.service.js";
 import { CLIENT_ROLE_CODE } from "../client-portal/client-portal.constants.js";
 import { DatabaseService } from "../database/database.service.js";
+import { RuntimePlatformSettingsService } from "../platform-configuration/runtime-platform-settings.service.js";
 import { ProjectsService } from "../projects/projects.service.js";
 import { QuotePdfService } from "./quote-pdf.service.js";
 import { QUOTE_EVENT } from "./quotes.constants.js";
-import type { CreateQuoteDto, QuoteOnboardingDto } from "./quotes.dto.js";
+import type { ConfirmQuotePaymentDto, CreateQuoteDto, QuoteOnboardingDto } from "./quotes.dto.js";
 
 const SPECIALIST_ROLE_CODE = "ROLE-SPECIALIST";
 const specialistRoleCodes = [SPECIALIST_ROLE_CODE, PROJECT_SPECIALIST_ROLE_CODE] as const;
 
-type PublicQuoteStatus = "DRAFT" | "ISSUED" | "ACCEPTED" | "REJECTED" | "EXPIRED" | "CANCELLED";
+type PublicQuoteStatus =
+  | "DRAFT"
+  | "ISSUED"
+  | "APPROVED"
+  | "ACCEPTED"
+  | "REJECTED"
+  | "EXPIRED"
+  | "CANCELLED"
+  | "ACTIVATED";
 
 interface SnapshotLine {
   sortOrder: number;
@@ -37,6 +46,9 @@ interface SnapshotLine {
   nameEn: string;
   serviceLevelCode?: string;
   serviceLevelLabel?: string;
+  serviceLevelLabelAr?: string;
+  serviceLevelLabelEn?: string;
+  packageHours?: number;
   quantity: number;
   hours?: number;
   unitRate?: number;
@@ -70,6 +82,8 @@ export interface OnboardingServiceTarget {
   nameAr: string;
   nameEn: string;
   serviceLevelLabel: string | null;
+  serviceLevelLabelAr: string | null;
+  serviceLevelLabelEn: string | null;
   hoursAllocated: number | null;
   monthlyServiceId: string | null;
   monthlyServiceRevisionId: string | null;
@@ -82,15 +96,19 @@ export interface OnboardingServiceTarget {
 
 const transitions: Record<PublicQuoteStatus, PublicQuoteStatus[]> = {
   DRAFT: ["ISSUED", "CANCELLED"],
-  ISSUED: ["ACCEPTED", "REJECTED", "EXPIRED", "CANCELLED"],
-  ACCEPTED: [],
+  ISSUED: ["APPROVED", "REJECTED", "EXPIRED", "CANCELLED"],
+  APPROVED: ["ACCEPTED", "CANCELLED"],
+  ACCEPTED: ["ACTIVATED"],
   REJECTED: [],
   EXPIRED: [],
   CANCELLED: [],
+  ACTIVATED: [],
 };
 
 const lifecycleAuditEvents: Partial<Record<PublicQuoteStatus, string>> = {
   ACCEPTED: QUOTE_EVENT.accepted,
+  ACTIVATED: QUOTE_EVENT.activated,
+  APPROVED: QUOTE_EVENT.approved,
   REJECTED: QUOTE_EVENT.rejected,
   EXPIRED: QUOTE_EVENT.expired,
   CANCELLED: QUOTE_EVENT.cancelled,
@@ -164,6 +182,8 @@ export class QuotesService {
     @Inject(PasswordHasherService) private readonly passwords: PasswordHasherService,
     @Inject(ProjectsService) private readonly projects: ProjectsService,
     @Inject(QuotePdfService) private readonly quotePdf: QuotePdfService,
+    @Inject(RuntimePlatformSettingsService)
+    private readonly settings: RuntimePlatformSettingsService,
   ) {}
 
   async list(principal: AuthenticatedPrincipal) {
@@ -333,9 +353,23 @@ export class QuotesService {
     }
 
     const temporaryPasswordHash = input.portalUser
-      ? await this.passwords.hash(DEFAULT_TEMPORARY_PASSWORD)
+      ? await this.passwords.hash(temporaryPassword())
       : undefined;
     const result = await this.database.prisma.$transaction(async (transaction) => {
+      const activationClaim = await transaction.quote.updateMany({
+        where: { id: quote.id, status: "ACCEPTED" },
+        data: {
+          status: "ACTIVATED",
+          statusReason: null,
+          statusChangedAt: now,
+        },
+      });
+      if (activationClaim.count !== 1) {
+        throw new ConflictException({
+          code: "QUOTE_ALREADY_ACTIVATED",
+          message: "This quote has already been activated",
+        });
+      }
       const portalUser = input.portalUser
         ? await this.createOrLinkPortalUserInTransaction(
             transaction,
@@ -395,6 +429,8 @@ export class QuotesService {
           subscriptionId: result.subscription.subscriptionId,
           subscriptionServicesCreated: result.subscription.createdServiceIds.length,
           subscriptionServicesReused: result.subscription.reusedServiceIds.length,
+          subscriptionServicesToppedUp: result.subscription.toppedUpServiceIds.length,
+          subscriptionServicesReplaced: result.subscription.replacedServiceIds.length,
           projectsCreated: result.projects.createdProjectIds.length,
           projectsReused: result.projects.reusedProjectIds.length,
           assignments: result.assignments,
@@ -403,9 +439,22 @@ export class QuotesService {
       },
       metadata,
     );
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: QUOTE_EVENT.activated,
+        entityType: "Quote",
+        entityId: quote.id,
+        before: { status: "ACCEPTED" },
+        after: { status: "ACTIVATED", changedAt: now.toISOString() },
+        severity: "HIGH",
+      },
+      metadata,
+    );
 
     return {
       completed: true,
+      quoteStatus: "ACTIVATED" as const,
       ...result,
     };
   }
@@ -465,9 +514,14 @@ export class QuotesService {
       });
     }
 
+    const defaultValidityDays = await this.settings.number("pricing.quote.validity_days", {
+      fallback: 30,
+      minimum: 1,
+      maximum: 365,
+    });
     const validUntil = input.validUntil
       ? new Date(input.validUntil)
-      : new Date(Date.now() + (input.validityDays ?? 30) * 86_400_000);
+      : new Date(Date.now() + (input.validityDays ?? defaultValidityDays) * 86_400_000);
     if (validUntil <= new Date()) {
       throw new BadRequestException({
         code: "QUOTE_VALIDITY_MUST_BE_FUTURE",
@@ -636,6 +690,7 @@ export class QuotesService {
     note: string | undefined,
     principal: AuthenticatedPrincipal,
     metadata: RequestMetadata,
+    paymentSnapshot?: Record<string, unknown>,
   ) {
     const quote = await this.requireAccessibleQuote(id, principal);
     const current = quote.status as PublicQuoteStatus;
@@ -659,6 +714,24 @@ export class QuotesService {
         message: "An expired quote cannot be externally confirmed",
       });
     }
+    if (target === "APPROVED" && quote.validUntil && quote.validUntil <= now) {
+      throw new ConflictException({
+        code: "EXPIRED_QUOTE_CANNOT_BE_APPROVED",
+        message: "An expired quote cannot be approved",
+      });
+    }
+    if (target === "ACCEPTED" && !paymentSnapshot) {
+      throw new ConflictException({
+        code: "QUOTE_PAYMENT_CONFIRMATION_REQUIRED",
+        message: "Use the payment confirmation action before marking a quote as paid",
+      });
+    }
+    if (target === "ACTIVATED") {
+      throw new ConflictException({
+        code: "QUOTE_ONBOARDING_REQUIRED_FOR_ACTIVATION",
+        message: "Complete client service onboarding before activating a quote",
+      });
+    }
     if (target === "EXPIRED" && (!quote.validUntil || quote.validUntil > now)) {
       throw new ConflictException({
         code: "QUOTE_NOT_YET_EXPIRED",
@@ -673,7 +746,10 @@ export class QuotesService {
         statusReason: trimmedNote ?? null,
         statusChangedAt: now,
         ...(target === "ISSUED" ? { issueDate: now } : {}),
-        ...(target === "ACCEPTED" ? { acceptedAt: now, approvedAt: now } : {}),
+        ...(target === "APPROVED" ? { approvedAt: now } : {}),
+        ...(target === "ACCEPTED"
+          ? { acceptedAt: now, paymentSnapshot: json(paymentSnapshot!) }
+          : {}),
         ...(target === "REJECTED" ? { rejectedAt: now } : {}),
         ...(target === "EXPIRED" ? { expiredAt: now } : {}),
         ...(target === "CANCELLED" ? { cancelledAt: now } : {}),
@@ -721,7 +797,60 @@ export class QuotesService {
     principal: AuthenticatedPrincipal,
     metadata: RequestMetadata,
   ) {
-    return this.changeStatus(id, "ACCEPTED", note, principal, metadata);
+    return this.confirmPayment(id, note ? { note } : {}, principal, metadata);
+  }
+
+  approve(
+    id: string,
+    note: string | undefined,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    return this.changeStatus(id, "APPROVED", note, principal, metadata);
+  }
+
+  async confirmPayment(
+    id: string,
+    input: ConfirmQuotePaymentDto,
+    principal: AuthenticatedPrincipal,
+    metadata: RequestMetadata,
+  ) {
+    const now = new Date();
+    const paidAt = input.paidAt ? new Date(input.paidAt) : now;
+    if (paidAt.getTime() > now.getTime() + 300_000) {
+      throw new BadRequestException({
+        code: "QUOTE_PAYMENT_DATE_IN_FUTURE",
+        message: "Payment confirmation date cannot be in the future",
+      });
+    }
+    const paymentSnapshot = {
+      method: input.method ?? "OTHER",
+      paidAt: paidAt.toISOString(),
+      reference: input.reference?.trim() || null,
+      note: input.note?.trim() || null,
+      recordedById: principal.userId,
+      recordedAt: now.toISOString(),
+    };
+    const updated = await this.changeStatus(
+      id,
+      "ACCEPTED",
+      input.note,
+      principal,
+      metadata,
+      paymentSnapshot,
+    );
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: QUOTE_EVENT.paymentConfirmed,
+        entityType: "Quote",
+        entityId: id,
+        after: paymentSnapshot,
+        severity: "HIGH",
+      },
+      metadata,
+    );
+    return updated;
   }
 
   reject(
@@ -790,6 +919,8 @@ export class QuotesService {
       stringValue(snapshot, "serviceLevelLabel") ??
       stringValue(snapshot, "serviceLevelCode") ??
       null;
+    const serviceLevelLabelAr = stringValue(snapshot, "serviceLevelLabelAr") ?? null;
+    const serviceLevelLabelEn = stringValue(snapshot, "serviceLevelLabelEn") ?? null;
     const snapshotHours = optionalNumericValue(snapshot, "hours");
 
     if (item.lineType === "MONTHLY") {
@@ -831,6 +962,8 @@ export class QuotesService {
         nameAr,
         nameEn,
         serviceLevelLabel,
+        serviceLevelLabelAr,
+        serviceLevelLabelEn,
         hoursAllocated,
         monthlyServiceId: revision.monthlyServiceId,
         monthlyServiceRevisionId,
@@ -872,6 +1005,8 @@ export class QuotesService {
       nameAr,
       nameEn,
       serviceLevelLabel,
+      serviceLevelLabelAr,
+      serviceLevelLabelEn,
       hoursAllocated: snapshotHours,
       monthlyServiceId: null,
       monthlyServiceRevisionId: null,
@@ -1162,16 +1297,20 @@ export class QuotesService {
 
     const createdServiceIds: string[] = [];
     const reusedServiceIds: string[] = [];
+    const toppedUpServiceIds: string[] = [];
+    const replacedServiceIds: string[] = [];
     if (!subscription) {
       return {
         subscriptionId: null,
         createdServiceIds,
         reusedServiceIds,
+        toppedUpServiceIds,
+        replacedServiceIds,
       };
     }
 
     for (const service of monthlyServices) {
-      const existing = await transaction.subscriptionService.findFirst({
+      const activeServiceVersions = await transaction.subscriptionService.findMany({
         where: {
           subscription: {
             clientId,
@@ -1179,19 +1318,26 @@ export class QuotesService {
             startsAt: { lte: now },
             OR: [{ endsAt: null }, { endsAt: { gt: now } }],
           },
-          monthlyServiceRevisionId: service.monthlyServiceRevisionId!,
-          serviceLevelId: service.serviceLevelId!,
+          monthlyServiceRevision: { monthlyServiceId: service.monthlyServiceId! },
           status: "ACTIVE",
           startsAt: { lte: now },
           OR: [{ endsAt: null }, { endsAt: { gt: now } }],
         },
-        select: { id: true },
+        orderBy: [{ startsAt: "desc" }, { createdAt: "desc" }],
+        select: {
+          id: true,
+          hoursAllocated: true,
+          monthlyServiceRevisionId: true,
+          serviceLevelId: true,
+          scopeSnapshot: true,
+        },
       });
-      if (existing) {
-        reusedServiceIds.push(existing.id);
-        continue;
-      }
-
+      const matchingService = activeServiceVersions.find(
+        (candidate) =>
+          candidate.monthlyServiceRevisionId === service.monthlyServiceRevisionId &&
+          candidate.serviceLevelId === service.serviceLevelId,
+      );
+      const purchasedHours = service.hoursAllocated ?? 0;
       const scopeSnapshot = {
         source: "QUOTE_ONBOARDING",
         quoteId: quote.id,
@@ -1199,7 +1345,66 @@ export class QuotesService {
         quoteItemId: service.quoteItemId,
         serviceCode: service.serviceCode,
         serviceLevelLabel: service.serviceLevelLabel,
+        serviceLevelLabelAr: service.serviceLevelLabelAr,
+        serviceLevelLabelEn: service.serviceLevelLabelEn,
+        purchasedHours,
       };
+
+      if (matchingService) {
+        const previousHours = numberValue(matchingService.hoursAllocated);
+        const totalHours = previousHours + purchasedHours;
+        await transaction.subscriptionService.update({
+          where: { id: matchingService.id },
+          data: {
+            hoursAllocated: totalHours,
+            scopeSnapshot: json(scopeSnapshot),
+          },
+        });
+        await transaction.subscriptionServiceHistory.create({
+          data: {
+            subscriptionServiceId: matchingService.id,
+            effectiveAt: now,
+            changeType: "HOURS_ADDED_FROM_ACCEPTED_QUOTE",
+            beforeSnapshot: json({
+              hoursAllocated: previousHours,
+              scopeSnapshot: matchingService.scopeSnapshot,
+            }),
+            afterSnapshot: json({ hoursAllocated: totalHours, ...scopeSnapshot }),
+            reason: `Added ${purchasedHours} purchased hours from quote ${quote.quoteNumber}`,
+          },
+        });
+        reusedServiceIds.push(matchingService.id);
+        toppedUpServiceIds.push(matchingService.id);
+        continue;
+      }
+
+      for (const previousService of activeServiceVersions) {
+        await transaction.subscriptionService.update({
+          where: { id: previousService.id },
+          data: { status: "DISABLED", endsAt: now },
+        });
+        await transaction.subscriptionServiceHistory.create({
+          data: {
+            subscriptionServiceId: previousService.id,
+            effectiveAt: now,
+            changeType: "REPLACED_FROM_ACCEPTED_QUOTE",
+            beforeSnapshot: json({
+              hoursAllocated: numberValue(previousService.hoursAllocated),
+              monthlyServiceRevisionId: previousService.monthlyServiceRevisionId,
+              serviceLevelId: previousService.serviceLevelId,
+              scopeSnapshot: previousService.scopeSnapshot,
+            }),
+            afterSnapshot: json({
+              status: "DISABLED",
+              endsAt: now.toISOString(),
+              replacementQuoteId: quote.id,
+            }),
+            reason: `Replaced by quote ${quote.quoteNumber}`,
+          },
+        });
+        replacedServiceIds.push(previousService.id);
+      }
+
       const created = await transaction.subscriptionService.create({
         data: {
           subscriptionId: subscription.id,
@@ -1228,6 +1433,8 @@ export class QuotesService {
       subscriptionId: subscription.id,
       createdServiceIds,
       reusedServiceIds,
+      toppedUpServiceIds,
+      replacedServiceIds,
     };
   }
 
@@ -1393,6 +1600,8 @@ export class QuotesService {
         : [];
     const serviceLevelCode = stringValue(line, "serviceLevelCode");
     const serviceLevelLabel = stringValue(line, "serviceLevelLabel");
+    const serviceLevelLabelAr = stringValue(line, "serviceLevelLabelAr");
+    const serviceLevelLabelEn = stringValue(line, "serviceLevelLabelEn");
     const snapshot: SnapshotLine & { serviceItems: typeof serviceItems } = {
       sortOrder: Number.isInteger(line.sortOrder) ? Number(line.sortOrder) : index,
       lineType,
@@ -1403,6 +1612,11 @@ export class QuotesService {
       nameEn: stringValue(line, "nameEn") ?? "",
       ...(serviceLevelCode ? { serviceLevelCode } : {}),
       ...(serviceLevelLabel ? { serviceLevelLabel } : {}),
+      ...(serviceLevelLabelAr ? { serviceLevelLabelAr } : {}),
+      ...(serviceLevelLabelEn ? { serviceLevelLabelEn } : {}),
+      ...(line.packageHours !== undefined
+        ? { packageHours: numericValue(line, "packageHours") }
+        : {}),
       quantity: numericValue(line, "quantity"),
       ...(line.hours !== undefined ? { hours: numericValue(line, "hours") } : {}),
       ...(line.unitRate !== undefined ? { unitRate: numericValue(line, "unitRate") } : {}),
@@ -1581,7 +1795,9 @@ export class QuotesService {
       currency: quote.currency,
       issueDate: quote.issueDate?.toISOString() ?? null,
       validUntil: quote.validUntil?.toISOString() ?? null,
+      approvedAt: quote.approvedAt?.toISOString() ?? null,
       acceptedAt: quote.acceptedAt?.toISOString() ?? null,
+      payment: quote.paymentSnapshot,
       rejectedAt: quote.rejectedAt?.toISOString() ?? null,
       expiredAt: quote.expiredAt?.toISOString() ?? null,
       cancelledAt: quote.cancelledAt?.toISOString() ?? null,

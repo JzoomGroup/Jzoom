@@ -22,6 +22,7 @@ import {
   useCatalogMutation,
 } from "../catalog/catalog-shared";
 import { MetricCard, SectionCard } from "../premium-os";
+import { AppDialog } from "../app-dialog";
 
 const statusLabels = {
   ACTIVE: { ar: "نشطة", en: "Active" },
@@ -102,7 +103,7 @@ export function PricingRuleManager({
           }
         : {}),
       name: String(form.get("name") ?? "").trim(),
-      ruleType: String(form.get("ruleType") ?? "FORMULA") as PricingRuleType,
+      ruleType: String(form.get("ruleType") ?? "RATE_CARD") as PricingRuleType,
       calculationMethod: String(
         form.get("calculationMethod") ?? "NONE",
       ) as PricingCalculationMethod,
@@ -139,7 +140,9 @@ export function PricingRuleManager({
 
   const current = editing?.revision;
   const activeRules = snapshot.rules.filter((rule) => rule.status === "ACTIVE").length;
-  const enabledRules = snapshot.rules.filter((rule) => rule.revision?.isEnabled).length;
+  const enabledRules = snapshot.rules.filter(
+    (rule) => rule.revision?.isEnabled && rule.revision.ruleType !== "FORMULA",
+  ).length;
   const formulaRules = snapshot.rules.filter(
     (rule) => rule.revision?.ruleType === "FORMULA",
   ).length;
@@ -184,15 +187,17 @@ export function PricingRuleManager({
       </section>
 
       {(creating || editing) && (
-        <section className="catalog-panel editor-panel">
-          <div className="panel-heading">
-            <div>
-              <h2>{creating ? t.newRule : t.reviseRule(editing!.code)}</h2>
-              <p>
-                {creating ? t.newRuleDescription : t.currentVersionDescription(current?.version)}
-              </p>
-            </div>
-          </div>
+        <AppDialog
+          busy={mutation.submitting}
+          closeLabel={locale === "ar" ? "إغلاق" : "Close"}
+          description={
+            creating ? t.newRuleDescription : t.currentVersionDescription(current?.version)
+          }
+          eyebrow={t.pricingRules}
+          onClose={closeForm}
+          size="xl"
+          title={creating ? t.newRule : t.reviseRule(editing!.code)}
+        >
           <form className="catalog-form wide-form" noValidate onSubmit={submit}>
             {creating && (
               <label>
@@ -211,7 +216,7 @@ export function PricingRuleManager({
             </label>
             <label>
               {t.ruleType}
-              <select name="ruleType" defaultValue={current?.ruleType ?? "FORMULA"}>
+              <select name="ruleType" defaultValue={current?.ruleType ?? "RATE_CARD"}>
                 {snapshot.ruleTypes.map((type) => (
                   <option key={type} value={type}>
                     {optionLabel(type, locale)}
@@ -344,7 +349,7 @@ export function PricingRuleManager({
               submitLabel={creating ? t.createRule : t.createRevision}
             />
           </form>
-        </section>
+        </AppDialog>
       )}
 
       <SectionCard title={t.configuredRules} description={t.records(snapshot.rules.length)}>

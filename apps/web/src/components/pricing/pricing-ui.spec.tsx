@@ -56,6 +56,7 @@ function rulesSnapshot(): PricingRulesSnapshot {
 
 function studioCatalog(): PricingStudioCatalog {
   return {
+    defaults: { quoteValidityDays: 30 },
     clients: [
       {
         id: "11111111-1111-4111-8111-111111111111",
@@ -192,6 +193,7 @@ describe("PR 6 pricing UI", () => {
 
     render(<PricingRuleManager initialSnapshot={rulesSnapshot()} />);
     fireEvent.click(screen.getByRole("button", { name: "Add pricing rule" }));
+    expect(screen.getByRole("dialog", { name: "New pricing rule" })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Code"), { target: { value: "price-tax-standard" } });
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Standard tax" } });
     fireEvent.change(screen.getByLabelText("Rule type"), { target: { value: "TAX" } });
@@ -199,7 +201,7 @@ describe("PR 6 pricing UI", () => {
       target: { value: "PERCENTAGE" },
     });
     fireEvent.change(screen.getByLabelText("Value"), { target: { value: "15" } });
-    fireEvent.change(screen.getByLabelText("Formula or rule"), {
+    fireEvent.change(screen.getByLabelText("Rule description or documentation formula"), {
       target: { value: "final_before_tax * 15%" },
     });
     fireEvent.change(screen.getByLabelText("Applies to"), {
@@ -358,5 +360,48 @@ describe("PR 6 pricing UI", () => {
       terms: { paymentTerms: "50% upfront" },
     });
     expect(pushMock).toHaveBeenCalledWith("/pricing/quotes/66666666-6666-4666-8666-666666666666");
+  });
+
+  it("prevents issuing a stale quote until current draft changes are saved", () => {
+    const draft = savedDraft();
+
+    render(
+      <PricingStudio
+        displayName="Pricing Admin"
+        isAdmin
+        initialCatalog={studioCatalog()}
+        initialDrafts={[]}
+        initialDraft={draft}
+      />,
+    );
+
+    const createQuote = screen.getByRole("button", { name: "Create quote" });
+    expect(createQuote).toBeEnabled();
+
+    fireEvent.change(screen.getByLabelText("Draft title"), {
+      target: { value: "Updated commercial scope" },
+    });
+
+    expect(screen.getByText("You have unsaved changes")).toBeInTheDocument();
+    expect(createQuote).toBeDisabled();
+  });
+
+  it("keeps monthly services without active packages visible but unavailable", () => {
+    const catalog = studioCatalog();
+    catalog.monthlyServices[0]!.revision.levels = [];
+
+    render(
+      <PricingStudio
+        displayName="Pricing Admin"
+        isAdmin
+        initialCatalog={catalog}
+        initialDrafts={[]}
+      />,
+    );
+
+    expect(
+      screen.getByText("This service has no active packages. Review its setup before adding it."),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Select Monthly operations")).toBeDisabled();
   });
 });

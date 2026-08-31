@@ -1,18 +1,7 @@
 import { clientCopy } from "../../i18n/dictionaries/client-portal";
 import Link from "next/link";
-import type {
-  ClientInvoiceSummary,
-  ClientPortalAccount,
-  ClientPortalAvailableMonthlyService,
-  ClientPortalAvailableOneTimeService,
-  ClientPortalSubscribedMonthlyService,
-  ClientQuoteSummary,
-} from "../../lib/client-portal-types";
-import {
-  localizedFreeText,
-  localizedServiceDescription,
-  localizedServiceScope,
-} from "./client-format";
+import type { ClientPortalAccount } from "../../lib/client-portal-types";
+import { localizedFreeText } from "./client-format";
 import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
 import type { RequestSummary } from "../../lib/request-types";
 import {
@@ -43,14 +32,6 @@ function formatNumber(value: number, locale: SupportedLocale): string {
   return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA").format(value);
 }
 
-function formatCurrency(value: number, locale: SupportedLocale): string {
-  return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA", {
-    currency: "SAR",
-    maximumFractionDigits: 2,
-    style: "currency",
-  }).format(value);
-}
-
 function formatDate(value: string | null, locale: SupportedLocale, copy: ClientCopy): string {
   if (!value) return copy.notSet;
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
@@ -62,143 +43,21 @@ function localizedName(value: { nameAr: string; nameEn: string }, locale: Suppor
   return locale === "ar" ? value.nameAr || value.nameEn : value.nameEn || value.nameAr;
 }
 
-function localizedLevel(
-  value: { labelAr: string; labelEn: string | null },
-  locale: SupportedLocale,
-): string {
-  return locale === "ar" ? value.labelAr || value.labelEn || "" : value.labelEn || value.labelAr;
-}
-
 function statusLabel(status: RequestSummary["status"], locale: SupportedLocale): string {
   return requestStatusLabels[status]?.[locale] ?? status;
 }
 
-function SubscribedServiceCard({
-  copy,
-  locale,
-  service,
-}: {
-  copy: ClientCopy;
-  locale: SupportedLocale;
-  service: ClientPortalSubscribedMonthlyService;
-}) {
-  return (
-    <article className="entity-card">
-      <div className="entity-card-heading">
-        <div>
-          <small>
-            {localizedServiceScope(localizedName(service.service.category, locale), locale) ??
-              (locale === "ar" ? "مجال الخدمة" : localizedName(service.service.category, locale))}
-          </small>
-          <h3>{localizedName(service.service, locale)}</h3>
-        </div>
-        <span>{service.service.code}</span>
-      </div>
-      <dl className="entity-meta four-up">
-        <div>
-          <dt>{copy.level}</dt>
-          <dd>{localizedLevel(service.serviceLevel, locale)}</dd>
-        </div>
-        <div>
-          <dt>{copy.hours}</dt>
-          <dd>{formatNumber(service.hoursAllocated, locale)}</dd>
-        </div>
-        <div>
-          <dt>{copy.line}</dt>
-          <dd>{locale === "ar" ? "مسار الخدمة" : service.service.serviceLine}</dd>
-        </div>
-        <div>
-          <dt>{copy.clientCode}</dt>
-          <dd>{service.client.code}</dd>
-        </div>
-      </dl>
-      {service.serviceItems.length > 0 && (
-        <div className="entity-meta">
-          <div>
-            <dt>{copy.includedItems}</dt>
-            <dd>{service.serviceItems.map((item) => localizedName(item, locale)).join(", ")}</dd>
-          </div>
-        </div>
-      )}
-      <div className="row-actions">
-        <Link className="os-button os-button-secondary" href="/client/requests">
-          {copy.createRequest}
-        </Link>
-      </div>
-    </article>
-  );
-}
-
-function AvailableMonthlyCard({
-  locale,
-  service,
-}: {
-  locale: SupportedLocale;
-  service: ClientPortalAvailableMonthlyService;
-}) {
-  return (
-    <article className="entity-card available-service-card">
-      <div className="entity-card-heading">
-        <div>
-          <h3>{localizedName(service, locale)}</h3>
-        </div>
-      </div>
-      <p>
-        {localizedServiceDescription({
-          description: service.description,
-          domain: service.domain,
-          locale,
-          name: localizedName(service, locale),
-          serviceLine: service.serviceLine,
-        })}
-      </p>
-    </article>
-  );
-}
-
-function AvailableOneTimeCard({
-  locale,
-  service,
-}: {
-  locale: SupportedLocale;
-  service: ClientPortalAvailableOneTimeService;
-}) {
-  return (
-    <article className="entity-card available-service-card">
-      <div className="entity-card-heading">
-        <div>
-          <h3>{localizedName(service, locale)}</h3>
-        </div>
-      </div>
-      <p>
-        {localizedServiceDescription({
-          description: service.description,
-          locale,
-          name: localizedName(service, locale),
-          serviceLine: service.serviceLine,
-        })}
-      </p>
-    </article>
-  );
-}
-
 export function ClientOverview({
   account,
-  invoices,
   locale: localeInput,
-  quotes,
   requests,
 }: {
   account: ClientPortalAccount;
-  invoices: ClientInvoiceSummary[];
   locale?: string;
-  quotes: ClientQuoteSummary[];
   requests: RequestSummary[];
 }) {
   const locale = normalizeLocale(localeInput ?? account.user.preferredLocale);
   const copy = clientCopy[locale];
-  const availableCount =
-    account.services.availableMonthly.length + account.services.availableOneTime.length;
   const openRequests = requests.filter(
     (request) => !["CLOSED", "COMPLETED", "REJECTED"].includes(request.status),
   );
@@ -207,11 +66,6 @@ export function ClientOverview({
     ["COMPLETED", "CLOSED"].includes(request.status),
   );
   const latestOpenRequests = openRequests.slice(0, 3);
-  const subscribedHours = account.services.subscribedMonthly.reduce(
-    (total, service) => total + service.hoursAllocated,
-    0,
-  );
-  const accountTitle = account.clients[0]?.name ?? copy.accountContext;
 
   return (
     <>
@@ -244,26 +98,6 @@ export function ClientOverview({
           label={copy.activeServices}
           value={formatNumber(account.services.subscribedMonthly.length, locale)}
           detail={copy.subscribedMonthlyServices}
-        />
-        <MetricCard
-          label={copy.monthlyHours}
-          value={formatNumber(subscribedHours, locale)}
-          detail={copy.allocatedSubscriptionHours}
-        />
-        <MetricCard
-          label={copy.quotes}
-          value={formatNumber(quotes.length, locale)}
-          detail={copy.issuedCommercialRecords}
-        />
-        <MetricCard
-          label={copy.invoices}
-          value={formatNumber(invoices.length, locale)}
-          detail={copy.billingRecords}
-        />
-        <MetricCard
-          label={copy.availableServices}
-          value={formatNumber(availableCount, locale)}
-          detail={copy.catalogOptions}
         />
       </BentoGrid>
 
@@ -338,101 +172,6 @@ export function ClientOverview({
           </div>
         </SectionCard>
       </section>
-
-      <section className="quote-summary-grid">
-        <SectionCard eyebrow={copy.accountContext} title={accountTitle}>
-          <dl className="quote-definition-list">
-            <div>
-              <dt>{copy.email}</dt>
-              <dd>{account.user.email}</dd>
-            </div>
-            <div>
-              <dt>{copy.clientCode}</dt>
-              <dd>{account.clients.map((client) => client.code).join(", ")}</dd>
-            </div>
-            <div>
-              <dt>{copy.authorizedApprover}</dt>
-              <dd>{account.clients[0]?.authorizedApprover ?? copy.notSpecified}</dd>
-            </div>
-          </dl>
-        </SectionCard>
-        <SectionCard eyebrow={copy.openRecords} title={copy.commercialSnapshots}>
-          <div className="pricing-total-grid">
-            <div>
-              <span>{copy.quotes}</span>
-              <strong>{formatNumber(quotes.length, locale)}</strong>
-            </div>
-            <div>
-              <span>{copy.invoices}</span>
-              <strong>{formatNumber(invoices.length, locale)}</strong>
-            </div>
-            <div className="primary">
-              <span>{copy.latestInvoice}</span>
-              <strong>
-                {invoices[0] ? formatCurrency(invoices[0].finalDueNoTax, locale) : "-"}
-              </strong>
-            </div>
-          </div>
-          <div className="row-actions">
-            <Link className="os-button os-button-secondary" href="/client/quotes">
-              {copy.viewQuotes}
-            </Link>
-            <Link className="os-button os-button-secondary" href="/client/invoices">
-              {copy.viewInvoices}
-            </Link>
-          </div>
-        </SectionCard>
-      </section>
-
-      <SectionCard
-        eyebrow={copy.myServices}
-        title={copy.activeMonthlyServices}
-        action={
-          <StatusChip
-            status="ACTIVE"
-            label={`${formatNumber(account.services.subscribedMonthly.length, locale)} ${copy.active}`}
-          />
-        }
-      >
-        {account.services.subscribedMonthly.length === 0 ? (
-          <EmptyState>{copy.noActiveServices}</EmptyState>
-        ) : (
-          <div className="entity-grid service-grid">
-            {account.services.subscribedMonthly.map((service) => (
-              <SubscribedServiceCard
-                key={service.id}
-                copy={copy}
-                locale={locale}
-                service={service}
-              />
-            ))}
-          </div>
-        )}
-      </SectionCard>
-
-      <SectionCard
-        eyebrow={copy.availableServices}
-        title={copy.serviceCatalog}
-        action={
-          <StatusChip
-            status="ACTIVE"
-            label={`${formatNumber(availableCount, locale)} ${copy.available}`}
-          />
-        }
-      >
-        {availableCount === 0 ? (
-          <EmptyState>{copy.noCatalogServices}</EmptyState>
-        ) : (
-          <div className="entity-grid service-grid">
-            {account.services.availableMonthly.map((service) => (
-              <AvailableMonthlyCard key={service.id} locale={locale} service={service} />
-            ))}
-            {account.services.availableOneTime.map((service) => (
-              <AvailableOneTimeCard key={service.id} locale={locale} service={service} />
-            ))}
-          </div>
-        )}
-      </SectionCard>
     </>
   );
 }

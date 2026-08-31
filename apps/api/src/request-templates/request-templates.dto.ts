@@ -55,6 +55,16 @@ export class CreateFieldLibraryItemDto {
   @ApiPropertyOptional({ type: String })
   @IsOptional()
   @IsString()
+  placeholderAr?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  placeholderEn?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
   systemKey?: string;
 
   @ApiPropertyOptional({ type: Object })
@@ -97,6 +107,16 @@ export class UpdateFieldLibraryItemDto {
   @IsOptional()
   @IsString()
   helpTextEn?: string | null;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  placeholderAr?: string | null;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  placeholderEn?: string | null;
 
   @ApiPropertyOptional({ type: String })
   @IsOptional()

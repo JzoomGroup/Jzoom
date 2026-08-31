@@ -143,8 +143,7 @@ export const clientCopy = {
     openRecords: "سجلات مفتوحة",
     openRequest: "فتح الطلب",
     openRequests: "طلبات مفتوحة",
-    pageDescription:
-      "مركز تشغيلي واضح يجمع خدماتك وطلباتك ومستنداتك ومخرجاتك وعروضك وفواتيرك وتقاريرك في مساحة واحدة.",
+    pageDescription: "ابدأ طلبًا جديدًا وتابع ما يحتاج إلى إجراء منك بسهولة.",
     pending: "قيد الانتظار",
     quotes: "العروض",
     serviceCatalog: "كتالوج الخدمات",
@@ -204,8 +203,7 @@ export const clientCopy = {
     openRecords: "Open records",
     openRequest: "Open request",
     openRequests: "Open requests",
-    pageDescription:
-      "A clear operating center for your services, requests, documents, outputs, quotes, invoices, and reports.",
+    pageDescription: "Start a new request and follow everything that needs your attention.",
     pending: "pending",
     quotes: "Quotes",
     serviceCatalog: "Service catalog",

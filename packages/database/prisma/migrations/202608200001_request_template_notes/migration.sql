@@ -1,0 +1,1 @@
+ALTER TYPE "RequestTemplateFieldType" ADD VALUE IF NOT EXISTS 'NOTE';

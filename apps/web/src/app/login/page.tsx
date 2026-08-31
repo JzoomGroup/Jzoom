@@ -5,8 +5,14 @@ import { authPageCopy } from "../../i18n/pages";
 import { directionForLocale, htmlLangForLocale } from "../../lib/i18n";
 import { getRequestLocale } from "../../lib/i18n-server";
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ returnTo?: string | string[] }>;
+} = {}) {
   const locale = await getRequestLocale();
+  const params = searchParams ? await searchParams : undefined;
+  const returnTo = Array.isArray(params?.returnTo) ? params.returnTo[0] : params?.returnTo;
   const copy = authPageCopy.login[locale];
 
   return (
@@ -22,7 +28,7 @@ export default async function LoginPage() {
         <p className="eyebrow">{copy.eyebrow}</p>
         <h1 id="login-title">{copy.title}</h1>
         <p className="lead">{copy.lead}</p>
-        <LoginForm locale={locale} />
+        <LoginForm locale={locale} {...(returnTo ? { returnTo } : {})} />
       </section>
     </main>
   );

@@ -14,6 +14,8 @@ import { ONE_TIME_CATALOG_EVENT, ONE_TIME_SERVICE_PATHS } from "./one-time-catal
 import type {
   CreateOneTimeCategoryDto,
   CreateOneTimeServiceDto,
+  ImportOneTimeCatalogDto,
+  ImportOneTimeServiceDto,
   OneTimeTemplateDto,
   UpdateOneTimeCategoryDto,
   UpdateOneTimeServiceDto,
@@ -193,6 +195,192 @@ export class OneTimeCatalogService {
             : null,
         };
       }),
+    };
+  }
+
+  async exportCatalog() {
+    const snapshot = await this.getSnapshot();
+    return {
+      format: "jzoom-one-time-catalog" as const,
+      version: 1 as const,
+      exportedAt: new Date().toISOString(),
+      services: snapshot.services.map((service) => ({
+        code: service.code,
+        categoryCode: service.category.code,
+        serviceLine: service.serviceLine,
+        status: service.status,
+        sortOrder: service.sortOrder,
+        nameAr: service.revision?.nameAr ?? service.code,
+        nameEn: service.revision?.nameEn ?? service.code,
+        description: service.revision?.description ?? "",
+        basePriceSar: service.revision?.basePriceSar ?? 0,
+        estimatedHours: service.revision?.estimatedHours ?? 0,
+        internalHourlyCostSar: service.revision?.internalHourlyCostSar ?? 0,
+        durationDays: service.revision?.durationDays ?? 0,
+        visibleInPricing: service.revision?.visibleInPricing ?? false,
+        createsProject: service.revision?.createsProject ?? true,
+        phases:
+          service.revision?.phases.map((phase) => ({
+            code: phase.code,
+            nameAr: phase.nameAr,
+            nameEn: phase.nameEn,
+            description: phase.description,
+            sortOrder: phase.sortOrder,
+            isRequired: phase.isRequired,
+            status: phase.status,
+          })) ?? [],
+        deliverables:
+          service.revision?.deliverables.map((deliverable) => ({
+            code: deliverable.code,
+            ...(deliverable.phaseCode ? { phaseCode: deliverable.phaseCode } : {}),
+            nameAr: deliverable.nameAr,
+            nameEn: deliverable.nameEn,
+            description: deliverable.description,
+            sortOrder: deliverable.sortOrder,
+            isRequired: deliverable.isRequired,
+            requiresClientApproval: deliverable.requiresClientApproval,
+            status: deliverable.status,
+            tasks: deliverable.tasks.map((task) => ({
+              code: task.code,
+              nameAr: task.nameAr,
+              nameEn: task.nameEn,
+              description: task.description,
+              estimatedHours: task.estimatedHours,
+              sortOrder: task.sortOrder,
+              isRequired: task.isRequired,
+              status: task.status,
+            })),
+          })) ?? [],
+      })),
+    };
+  }
+
+  async importCatalog(input: ImportOneTimeCatalogDto, actorId: string, metadata: RequestMetadata) {
+    if (input.services.length === 0) {
+      throw new BadRequestException({
+        code: "ONE_TIME_IMPORT_EMPTY",
+        message: "The import file must contain at least one service",
+      });
+    }
+    const services = input.services.map((service) => this.normalizedImportService(service));
+    uniqueValues(
+      services.map((service) => service.code),
+      "ONE_TIME_IMPORT_DUPLICATE_CODE",
+      "Service codes must be unique inside the import file",
+    );
+    const categoryCodes = [...new Set(services.map((service) => service.categoryCode))];
+    const [categories, existingServices] = await Promise.all([
+      this.database.prisma.oneTimeServiceCategory.findMany({
+        where: { code: { in: categoryCodes }, status: { not: "ARCHIVED" } },
+        select: { id: true, code: true, status: true },
+      }),
+      this.database.prisma.oneTimeService.findMany({
+        where: { code: { in: services.map((service) => service.code) } },
+        select: { code: true },
+      }),
+    ]);
+    const categoriesByCode = new Map(categories.map((category) => [category.code, category]));
+    const missingCategoryCodes = categoryCodes.filter((code) => !categoriesByCode.has(code));
+    if (missingCategoryCodes.length > 0) {
+      throw new BadRequestException({
+        code: "ONE_TIME_IMPORT_CATEGORY_NOT_FOUND",
+        message: "Create or enable the referenced categories before importing services",
+        categoryCodes: missingCategoryCodes,
+      });
+    }
+    if (existingServices.length > 0) {
+      throw new ConflictException({
+        code: "ONE_TIME_IMPORT_SERVICE_EXISTS",
+        message: "Import is create-only; one or more service codes already exist",
+        serviceCodes: existingServices.map((service) => service.code),
+      });
+    }
+    for (const service of services) {
+      this.assertCategoryAvailable(
+        categoriesByCode.get(service.categoryCode)!.status,
+        service.status === "ACTIVE",
+      );
+      this.validateTemplate(service, service.status === "ACTIVE");
+    }
+
+    const now = new Date();
+    const importedIds = await this.database.prisma.$transaction(async (transaction) => {
+      const ids: string[] = [];
+      for (const service of services) {
+        const category = categoriesByCode.get(service.categoryCode)!;
+        const databaseStatus = toDatabaseStatus(service.status);
+        const stable = await transaction.oneTimeService.create({
+          data: {
+            categoryId: category.id,
+            code: service.code,
+            serviceLine: service.serviceLine,
+            status: databaseStatus,
+            sortOrder: service.sortOrder ?? 0,
+            archivedAt: databaseStatus === "ARCHIVED" ? now : null,
+          },
+        });
+        const revisionStatus =
+          databaseStatus === "DRAFT"
+            ? "DRAFT"
+            : databaseStatus === "ARCHIVED"
+              ? "ARCHIVED"
+              : "ACTIVE";
+        const revision = await transaction.oneTimeServiceRevision.create({
+          data: {
+            oneTimeServiceId: stable.id,
+            version: 1,
+            status: revisionStatus,
+            effectiveFrom: revisionStatus === "ACTIVE" ? now : null,
+            effectiveTo: revisionStatus === "ARCHIVED" ? now : null,
+            nameAr: service.nameAr.trim(),
+            nameEn: service.nameEn.trim(),
+            paymentType: "One-Time",
+            basePriceSar: service.basePriceSar,
+            estimatedHours: service.estimatedHours,
+            internalHourlyCostSar: service.internalHourlyCostSar,
+            durationDays: service.durationDays,
+            visibleInPricing: service.visibleInPricing ?? true,
+            createsProject: service.createsProject ?? true,
+            description: service.description.trim(),
+          },
+        });
+        await this.createTemplate(transaction, revision.id, service);
+        ids.push(stable.id);
+      }
+      return ids;
+    });
+    await this.audit.record(
+      {
+        actorId,
+        eventCode: ONE_TIME_CATALOG_EVENT.servicesImported,
+        entityType: "OneTimeServiceImport",
+        entityId: `import-${now.toISOString()}`,
+        after: { count: importedIds.length, serviceIds: importedIds },
+        severity: "HIGH",
+      },
+      metadata,
+    );
+    return this.getSnapshot();
+  }
+
+  private normalizedImportService(service: ImportOneTimeServiceDto): ImportOneTimeServiceDto {
+    return {
+      ...service,
+      code: service.code.trim().toUpperCase(),
+      categoryCode: service.categoryCode.trim().toUpperCase(),
+      phases: service.phases.map((phase) => ({
+        ...phase,
+        code: phase.code.trim().toUpperCase(),
+      })),
+      deliverables: service.deliverables.map((deliverable) => ({
+        ...deliverable,
+        code: deliverable.code.trim().toUpperCase(),
+        ...(deliverable.phaseCode ? { phaseCode: deliverable.phaseCode.trim().toUpperCase() } : {}),
+        tasks: deliverable.tasks.map((task) => ({
+          ...task,
+          code: task.code.trim().toUpperCase(),
+        })),
+      })),
     };
   }
 

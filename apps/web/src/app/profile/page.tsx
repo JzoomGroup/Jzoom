@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "../../components/app-shell";
+import { ChangePasswordForm } from "../../components/change-password-form";
 import { LogoutButton } from "../../components/logout-button";
 import { PageHeader, SectionCard } from "../../components/premium-os";
 import { profilePageCopy, profileRoleLabel } from "../../i18n/pages";
@@ -30,27 +31,33 @@ export default async function ProfilePage() {
     >
       <PageHeader eyebrow={copy.eyebrow} title={copy.title} description={copy.lead} />
 
-      <SectionCard title={user!.displayName} description={user!.email}>
-        <dl className="profile-list os-definition-list">
-          <div>
-            <dt>{copy.email}</dt>
-            <dd>{user!.email}</dd>
-          </div>
-          <div>
-            <dt>{copy.accountType}</dt>
-            <dd>{user!.userType === "EXTERNAL" ? copy.clientAccount : copy.internalAccount}</dd>
-          </div>
-          <div>
-            <dt>{copy.roles}</dt>
-            <dd>{user!.roles.map((role) => profileRoleLabel(role, locale)).join(", ")}</dd>
-          </div>
-          <div>
-            <dt>{copy.language}</dt>
-            <dd>{locale === "ar" ? copy.arabic : copy.english}</dd>
-          </div>
-        </dl>
-        <LogoutButton label={copy.signOut} submittingLabel={copy.signingOut} />
-      </SectionCard>
+      <div className="profile-settings-grid">
+        <SectionCard title={user!.displayName} description={user!.email}>
+          <dl className="profile-list os-definition-list">
+            <div>
+              <dt>{copy.email}</dt>
+              <dd>{user!.email}</dd>
+            </div>
+            <div>
+              <dt>{copy.accountType}</dt>
+              <dd>{user!.userType === "EXTERNAL" ? copy.clientAccount : copy.internalAccount}</dd>
+            </div>
+            <div>
+              <dt>{copy.roles}</dt>
+              <dd>{user!.roles.map((role) => profileRoleLabel(role, locale)).join(", ")}</dd>
+            </div>
+            <div>
+              <dt>{copy.language}</dt>
+              <dd>{locale === "ar" ? copy.arabic : copy.english}</dd>
+            </div>
+          </dl>
+          <LogoutButton label={copy.signOut} submittingLabel={copy.signingOut} />
+        </SectionCard>
+
+        <SectionCard title={copy.securityTitle} description={copy.securityLead}>
+          <ChangePasswordForm locale={locale} redirectOnSuccess={false} requireCurrentPassword />
+        </SectionCard>
+      </div>
     </AppShell>
   );
 }

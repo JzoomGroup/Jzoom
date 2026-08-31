@@ -13,6 +13,7 @@ import { AuthAuditService } from "../auth/audit.service.js";
 import type { AuthenticatedPrincipal, RequestMetadata } from "../auth/auth.types.js";
 import type { CatalogLifecycleStatus } from "../catalog-admin/catalog.dto.js";
 import { DatabaseService } from "../database/database.service.js";
+import { RuntimePlatformSettingsService } from "../platform-configuration/runtime-platform-settings.service.js";
 import { PRICING_EVENT, PRICING_RULE_TYPES } from "./pricing.constants.js";
 import type { CreatePricingRuleDto, PricingInputDto, UpdatePricingRuleDto } from "./pricing.dto.js";
 
@@ -81,6 +82,8 @@ export class PricingService {
   constructor(
     @Inject(DatabaseService) private readonly database: DatabaseService,
     @Inject(AuthAuditService) private readonly audit: AuthAuditService,
+    @Inject(RuntimePlatformSettingsService)
+    private readonly settings: RuntimePlatformSettingsService,
   ) {}
 
   async getAdminRules() {
@@ -371,7 +374,14 @@ export class PricingService {
       }),
     ]);
 
+    const quoteValidityDays = await this.settings.number("pricing.quote.validity_days", {
+      fallback: 30,
+      minimum: 1,
+      maximum: 365,
+    });
+
     return {
+      defaults: { quoteValidityDays },
       clients,
       monthlyServices: monthlyServices.flatMap((service) => {
         const revision = service.revisions[0];
@@ -383,6 +393,8 @@ export class PricingService {
             id: service.id,
             code: service.code,
             categoryName: service.category.nameEn,
+            categoryNameAr: service.category.nameAr,
+            categoryNameEn: service.category.nameEn,
             revision: {
               id: revision.id,
               version: revision.version,
@@ -413,6 +425,8 @@ export class PricingService {
             code: service.code,
             serviceLine: service.serviceLine,
             categoryName: service.category.nameEn,
+            categoryNameAr: service.category.nameAr,
+            categoryNameEn: service.category.nameEn,
             revision: {
               id: revision.id,
               version: revision.version,
@@ -710,8 +724,9 @@ export class PricingService {
       );
       const rate = this.applyRate(numberValue(revision.sellingHourlyRateSar), rateRules);
       rateRules.forEach((rule) => appliedRuleIds.add(rule.id));
-      const hours = numberValue(level.hours);
-      const base = money(hours * rate * quantity);
+      const packageHours = numberValue(level.hours);
+      const hours = money(packageHours * quantity);
+      const base = money(hours * rate);
       const setupRules = this.matchingRules(
         rules,
         "SETUP_FEE",
@@ -726,7 +741,7 @@ export class PricingService {
           ? this.applyAmountRules(base, configuredSetupRules, quantity)
           : money(base * (numberValue(revision.setupFeePct) / 100));
       configuredSetupRules.forEach((rule) => appliedRuleIds.add(rule.id));
-      const internalCost = money(hours * numberValue(revision.internalHourlyCostSar) * quantity);
+      const internalCost = money(hours * numberValue(revision.internalHourlyCostSar));
       return {
         sortOrder,
         lineType: "MONTHLY" as const,
@@ -737,7 +752,10 @@ export class PricingService {
         nameEn: revision.nameEn,
         serviceLevelCode: level.serviceLevel.code,
         serviceLevelLabel: level.serviceLevel.labelEn ?? level.serviceLevel.labelAr,
+        serviceLevelLabelAr: level.serviceLevel.labelAr,
+        serviceLevelLabelEn: level.serviceLevel.labelEn,
         quantity,
+        packageHours,
         hours,
         unitRate: money(rate),
         baseAmount: base,
@@ -796,28 +814,48 @@ export class PricingService {
     const subtotalOneTime = money(oneTimeLines.reduce((total, line) => total + line.baseAmount, 0));
     const subtotal = money(subtotalMonthly + subtotalSetup + subtotalOneTime);
     const discountRules = rules.filter((rule) => rule.ruleType === "DISCOUNT");
+    const defaultDiscountPct =
+      discountRules.length === 0
+        ? await this.settings.number("pricing.discount.default_pct", {
+            fallback: 0,
+            minimum: 0,
+            maximum: 100,
+          })
+        : 0;
     const discountTotal = money(
       Math.min(
         subtotal,
-        discountRules.reduce((total, rule) => {
-          appliedRuleIds.add(rule.id);
-          const base =
-            rule.targetType === "MONTHLY"
-              ? subtotalMonthly + subtotalSetup
-              : rule.targetType === "ONE_TIME"
-                ? subtotalOneTime
-                : subtotal;
-          return total + this.ruleAmount(base, rule, 1);
-        }, 0),
+        discountRules.length > 0
+          ? discountRules.reduce((total, rule) => {
+              appliedRuleIds.add(rule.id);
+              const base =
+                rule.targetType === "MONTHLY"
+                  ? subtotalMonthly + subtotalSetup
+                  : rule.targetType === "ONE_TIME"
+                    ? subtotalOneTime
+                    : subtotal;
+              return total + this.ruleAmount(base, rule, 1);
+            }, 0)
+          : subtotal * (defaultDiscountPct / 100),
       ),
     );
     const finalBeforeTax = money(subtotal - discountTotal);
     const taxRules = rules.filter((rule) => rule.ruleType === "TAX");
+    const defaultTaxPct =
+      taxRules.length === 0
+        ? await this.settings.number("pricing.tax.default_pct", {
+            fallback: 15,
+            minimum: 0,
+            maximum: 100,
+          })
+        : 0;
     const taxTotal = money(
-      taxRules.reduce((total, rule) => {
-        appliedRuleIds.add(rule.id);
-        return total + this.ruleAmount(finalBeforeTax, rule, 1);
-      }, 0),
+      taxRules.length > 0
+        ? taxRules.reduce((total, rule) => {
+            appliedRuleIds.add(rule.id);
+            return total + this.ruleAmount(finalBeforeTax, rule, 1);
+          }, 0)
+        : finalBeforeTax * (defaultTaxPct / 100),
     );
     const internalCost = money(
       [...monthlyLines, ...oneTimeLines].reduce((total, line) => total + line.internalCost, 0),
@@ -850,16 +888,42 @@ export class PricingService {
         pricingDate: pricingDate.toISOString(),
         currency: input.currency ?? "SAR",
         lines: [...monthlyLines, ...oneTimeLines],
-        appliedRules: rules
-          .filter((rule) => appliedRuleIds.has(rule.id))
-          .map((rule) => ({
-            code: rule.code,
-            name: rule.name,
-            version: rule.version,
-            ruleType: rule.ruleType,
-            calculationMethod: rule.calculationMethod,
-            value: rule.value,
-          })),
+        appliedRules: [
+          ...rules
+            .filter((rule) => appliedRuleIds.has(rule.id))
+            .map((rule) => ({
+              code: rule.code,
+              name: rule.name,
+              version: rule.version,
+              ruleType: rule.ruleType,
+              calculationMethod: rule.calculationMethod,
+              value: rule.value,
+            })),
+          ...(defaultDiscountPct > 0
+            ? [
+                {
+                  code: "PLATFORM-DEFAULT-DISCOUNT",
+                  name: "Platform default discount",
+                  version: 1,
+                  ruleType: "DISCOUNT",
+                  calculationMethod: "PERCENTAGE",
+                  value: defaultDiscountPct,
+                },
+              ]
+            : []),
+          ...(defaultTaxPct > 0
+            ? [
+                {
+                  code: "PLATFORM-DEFAULT-TAX",
+                  name: "Platform default tax",
+                  version: 1,
+                  ruleType: "TAX",
+                  calculationMethod: "PERCENTAGE",
+                  value: defaultTaxPct,
+                },
+              ]
+            : []),
+        ],
         totals: {
           subtotalMonthly,
           subtotalSetup,
@@ -893,7 +957,7 @@ export class PricingService {
     });
     return records.flatMap((record) => {
       const revision = record.revisions[0];
-      if (!revision?.isEnabled) {
+      if (!revision?.isEnabled || revision.ruleType === "FORMULA") {
         return [];
       }
       return [

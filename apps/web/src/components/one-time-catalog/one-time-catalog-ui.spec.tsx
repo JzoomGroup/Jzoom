@@ -123,6 +123,7 @@ describe("One-time Admin catalog UI", () => {
     expect(screen.getAllByRole("heading", { name: "Configured categories" })).toHaveLength(2);
 
     fireEvent.click(screen.getByRole("button", { name: "Add category" }));
+    expect(screen.getByRole("dialog", { name: "New one-time category" })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Code"), {
       target: { value: "pr5-cat-digital" },
     });
@@ -170,8 +171,11 @@ describe("One-time Admin catalog UI", () => {
     expect(screen.getAllByText("12000 SAR").length).toBeGreaterThan(0);
     expect(screen.getByText("Template links")).toBeInTheDocument();
     expect(screen.getByText("Deliverables and tasks")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Export catalog" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Import services" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Edit details & template" }));
+    expect(screen.getByRole("dialog", { name: "Edit OT-BUILD-WEBSITE" })).toBeInTheDocument();
     expect(screen.getByDisplayValue("Stakeholder interview")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Create revision" }));
 

@@ -1,4 +1,4 @@
-import { postLoginRoute, protectedRouteRedirect } from "./route-access";
+import { postLoginRoute, protectedRouteRedirect, safeReturnTo } from "./route-access";
 
 const user = {
   id: "user-1",
@@ -39,5 +39,13 @@ describe("frontend authorization routing", () => {
     expect(postLoginRoute(["ROLE-SPECIALIST"])).toBe("/specialist");
     expect(postLoginRoute(["ROLE-PROJECT-SPECIALIST"])).toBe("/projects");
     expect(postLoginRoute(["ROLE-UNKNOWN"])).toBe("/profile");
+  });
+
+  it("accepts only internal post-login destinations", () => {
+    expect(safeReturnTo("/requests/queues?status=NEW")).toBe("/requests/queues?status=NEW");
+    expect(safeReturnTo("https://attacker.example/path")).toBeNull();
+    expect(safeReturnTo("//attacker.example/path")).toBeNull();
+    expect(safeReturnTo("/login")).toBeNull();
+    expect(safeReturnTo("/change-password")).toBeNull();
   });
 });

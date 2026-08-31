@@ -1,9 +1,11 @@
 import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { jest } from "@jest/globals";
 import { createHash } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileStorageService } from "../src/requests/file-storage.service.js";
+import type { RuntimePlatformSettingsService } from "../src/platform-configuration/runtime-platform-settings.service.js";
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -151,5 +153,33 @@ describe("FileStorageService", () => {
     await expect(service.readableFile("requests/request-1/missing.txt")).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+
+  it("enforces MIME types configured by the Admin runtime setting", async () => {
+    const settings = {
+      number: jest.fn(async () => 1),
+      stringArray: jest.fn(async () => ["application/pdf", "image/*"]),
+    } as unknown as RuntimePlatformSettingsService;
+    const service = new FileStorageService(settings);
+
+    await expect(
+      service.storeRequestFile("request-5", "attachments", {
+        buffer: Buffer.from("script"),
+        mimetype: "text/javascript",
+        originalname: "script.js",
+        size: 6,
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: "FILE_TYPE_NOT_ALLOWED" }),
+    });
+
+    await expect(
+      service.storeRequestFile("request-5", "attachments", {
+        buffer: Buffer.from("pdf"),
+        mimetype: "application/pdf",
+        originalname: "document.pdf",
+        size: 3,
+      }),
+    ).resolves.toEqual(expect.objectContaining({ mimeType: "application/pdf" }));
   });
 });

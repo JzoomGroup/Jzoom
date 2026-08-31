@@ -6,7 +6,6 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { randomUUID } from "node:crypto";
 import type { ReadStream } from "node:fs";
 import { Prisma } from "@jzoom/database";
 import { ADMIN_ROLE_CODE, MANAGEMENT_ROLE_CODE } from "../auth/auth.constants.js";
@@ -15,6 +14,7 @@ import type { AuthenticatedPrincipal, RequestMetadata } from "../auth/auth.types
 import { CLIENT_ROLE_CODE } from "../client-portal/client-portal.constants.js";
 import { DatabaseService } from "../database/database.service.js";
 import { NotificationsService } from "../notifications/notifications.service.js";
+import { RuntimePlatformSettingsService } from "../platform-configuration/runtime-platform-settings.service.js";
 import { REQUEST_TEMPLATE_EVENT } from "../request-templates/request-templates.constants.js";
 import { RequestTemplatesService } from "../request-templates/request-templates.service.js";
 import {
@@ -28,7 +28,6 @@ import {
 } from "./requests.constants.js";
 import { FileStorageService, type UploadedRequestFile } from "./file-storage.service.js";
 import type {
-  AddAttachmentMetadataDto,
   AddInternalNoteDto,
   AddRequestCommentDto,
   AssignRequestDto,
@@ -48,7 +47,7 @@ import type {
   UpdateTimeEntryDto,
   UpdateRequestOutputDto,
   UpdateRequestTaskDto,
-  UploadClientDocumentMetadataDto,
+  UploadVisibilityDto,
 } from "./requests.dto.js";
 
 const workflowCode = "REQUEST_LIFECYCLE_FOUNDATION";
@@ -336,6 +335,8 @@ export class RequestsService {
     @Inject(NotificationsService) private readonly notifications: NotificationsService,
     @Inject(RequestTemplatesService) private readonly requestTemplates: RequestTemplatesService,
     @Inject(FileStorageService) private readonly fileStorage: FileStorageService,
+    @Inject(RuntimePlatformSettingsService)
+    private readonly settings: RuntimePlatformSettingsService,
   ) {}
 
   async list(principal: AuthenticatedPrincipal) {
@@ -815,6 +816,11 @@ export class RequestsService {
       ACCOUNT_MANAGER_ROLE_CODE,
     ]);
     const workflow = await this.ensureRequestWorkflow();
+    const defaultSlaDays = await this.settings.number("sla.default_days", {
+      fallback: 0,
+      minimum: 0,
+      maximum: 365,
+    });
     const requestNumber = await this.nextRequestNumber();
     const requestData: Prisma.RequestUncheckedCreateInput = {
       requestNumber,
@@ -837,6 +843,8 @@ export class RequestsService {
     };
     if (input.dueAt) {
       requestData.dueAt = new Date(input.dueAt);
+    } else if (defaultSlaDays > 0) {
+      requestData.dueAt = new Date(Date.now() + defaultSlaDays * 86_400_000);
     }
 
     const request = await this.database.prisma.request.create({
@@ -1094,48 +1102,10 @@ export class RequestsService {
     return this.get(id, principal);
   }
 
-  async addAttachmentMetadata(
-    id: string,
-    input: AddAttachmentMetadataDto,
-    principal: AuthenticatedPrincipal,
-    metadata: RequestMetadata,
-  ) {
-    await this.requireAccessibleRequest(id, principal);
-    this.assertCanAddOperationalContext(principal);
-    const file = await this.database.prisma.fileMetadata.create({
-      data: {
-        requestId: id,
-        uploadedById: principal.userId,
-        storageProvider: "metadata-only",
-        storageKey: `requests/${id}/metadata/${randomUUID()}/${input.originalName}`,
-        originalName: input.originalName,
-        mimeType: input.mimeType,
-        sizeBytes: BigInt(input.sizeBytes),
-        sha256: input.sha256,
-        visibility: input.visibility ?? "INTERNAL",
-      },
-    });
-    await this.audit.record(
-      {
-        actorId: principal.userId,
-        eventCode: REQUEST_EVENT.attachmentAdded,
-        entityType: "Request",
-        entityId: id,
-        after: {
-          fileId: file.id,
-          originalName: file.originalName,
-          visibility: file.visibility,
-        },
-      },
-      metadata,
-    );
-    return this.get(id, principal);
-  }
-
   async addAttachmentFile(
     id: string,
     file: UploadedRequestFile | undefined,
-    input: Pick<AddAttachmentMetadataDto, "visibility">,
+    input: UploadVisibilityDto,
     principal: AuthenticatedPrincipal,
     metadata: RequestMetadata,
   ) {
@@ -1185,7 +1155,7 @@ export class RequestsService {
     id: string,
     outputId: string,
     file: UploadedRequestFile | undefined,
-    input: Pick<AddAttachmentMetadataDto, "visibility">,
+    input: UploadVisibilityDto,
     principal: AuthenticatedPrincipal,
     metadata: RequestMetadata,
   ) {
@@ -1998,7 +1968,6 @@ export class RequestsService {
   async uploadClientDocument(
     id: string,
     documentRequestId: string,
-    input: UploadClientDocumentMetadataDto,
     file: UploadedRequestFile | undefined,
     principal: AuthenticatedPrincipal,
     metadata: RequestMetadata,
@@ -2011,9 +1980,13 @@ export class RequestsService {
         message: "Only open document requests can receive a client upload",
       });
     }
-    const stored = file
-      ? await this.fileStorage.storeRequestFile(id, "client-documents", file)
-      : this.metadataOnlyUpload(id, documentRequest.id, input);
+    if (!file) {
+      throw new BadRequestException({
+        code: "FILE_REQUIRED",
+        message: "A file is required",
+      });
+    }
+    const stored = await this.fileStorage.storeRequestFile(id, "client-documents", file);
     const fileMetadata = await this.database.prisma.fileMetadata.create({
       data: {
         requestId: id,
@@ -3617,10 +3590,14 @@ export class RequestsService {
   }
 
   private async ensureRequestWorkflow(): Promise<RequestWorkflow> {
+    const configuredWorkflowCode = await this.settings.string(
+      "workflow.request.default",
+      workflowCode,
+    );
     const definition = await this.database.prisma.workflowDefinition.upsert({
-      where: { code: workflowCode },
+      where: { code: configuredWorkflowCode },
       create: {
-        code: workflowCode,
+        code: configuredWorkflowCode,
         name: "Request Lifecycle Foundation",
         type: "REQUEST",
         status: "ACTIVE",
@@ -3704,27 +3681,6 @@ export class RequestsService {
       return `${configuredBase.replace(/\/$/, "")}/${path}`;
     }
     return `/api/v1/${path}`;
-  }
-
-  private metadataOnlyUpload(
-    requestId: string,
-    documentRequestId: string,
-    input: UploadClientDocumentMetadataDto,
-  ) {
-    if (!input.originalName || !input.mimeType || !input.sizeBytes || !input.sha256) {
-      throw new BadRequestException({
-        code: "FILE_REQUIRED",
-        message: "A file is required",
-      });
-    }
-    return {
-      originalName: input.originalName,
-      mimeType: input.mimeType,
-      sizeBytes: input.sizeBytes,
-      sha256: input.sha256,
-      storageProvider: "client-upload-metadata",
-      storageKey: `requests/${requestId}/client-documents/${documentRequestId}/${randomUUID()}/${input.originalName}`,
-    };
   }
 
   private normalizeFileVisibility(value: unknown): "INTERNAL" | "CLIENT_VISIBLE" {

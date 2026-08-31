@@ -50,7 +50,9 @@ const priorityLabels = {
 } as const;
 
 const quoteStatusLabels = {
-  ACCEPTED: { ar: "مؤكد خارج النظام", en: "Externally confirmed" },
+  ACCEPTED: { ar: "تم تأكيد الدفع", en: "Payment confirmed" },
+  ACTIVATED: { ar: "مفعّل", en: "Activated" },
+  APPROVED: { ar: "تمت الموافقة", en: "Approved" },
   ISSUED: { ar: "صادر", en: "Issued" },
 } as const;
 

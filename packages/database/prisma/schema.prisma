@@ -184,6 +184,7 @@ enum RequestTemplateRevisionStatus {
 }
 
 enum RequestTemplateFieldType {
+  NOTE
   SHORT_TEXT
   LONG_TEXT
   NUMBER
@@ -1556,6 +1557,7 @@ model Quote {
   pricingSnapshot      Json?
   pricingRulesSnapshot Json?
   termsSnapshot        Json?
+  paymentSnapshot      Json?
   sourceDraftSnapshot  Json?
   totalsSnapshot       Json?
   snapshotHash         String?

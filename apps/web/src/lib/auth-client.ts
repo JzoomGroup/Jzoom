@@ -23,7 +23,11 @@ export class AuthApiError extends Error {
   }
 }
 
-export async function changePassword(newPassword: string, confirmPassword: string) {
+export async function changePassword(input: {
+  confirmPassword: string;
+  currentPassword?: string;
+  newPassword: string;
+}) {
   const csrfCookieName = process.env.NEXT_PUBLIC_AUTH_CSRF_COOKIE_NAME ?? "jzoom_csrf";
   const csrf = cookieValue(csrfCookieName);
   const headers = new Headers({ "Content-Type": "application/json" });
@@ -35,7 +39,7 @@ export async function changePassword(newPassword: string, confirmPassword: strin
     method: "PATCH",
     credentials: "include",
     headers,
-    body: JSON.stringify({ newPassword, confirmPassword }),
+    body: JSON.stringify(input),
   });
 
   if (!response.ok) {

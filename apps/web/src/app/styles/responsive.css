@@ -36,10 +36,6 @@
     grid-template-columns: 1fr;
   }
 
-  .request-intake-layout {
-    grid-template-columns: 1fr;
-  }
-
   .request-field-grid-three {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -70,9 +66,7 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .client-request-readiness,
-  .client-upload-steps,
-  .client-request-card-stats {
+  .client-upload-steps {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
@@ -135,11 +129,9 @@
   .project-room-progress-grid,
   .project-command-strip,
   .request-filter-bar,
-  .client-request-readiness,
-  .client-upload-steps,
-  .client-request-card-stats,
-  .request-primary-actions,
   .request-intake-steps,
+  .client-upload-steps,
+  .request-primary-actions,
   .pricing-journey-steps,
   .request-field-grid,
   .request-field-grid-three,
@@ -171,6 +163,34 @@
   .request-intake-steps span,
   .request-panel-heading > span {
     justify-self: start;
+  }
+
+  .client-request-list-card .quote-list-main {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .client-request-list-card .quote-list-meta {
+    align-items: flex-start;
+  }
+
+  .client-request-card-stats {
+    flex-wrap: wrap;
+  }
+
+  .notification-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .notification-row-heading {
+    display: grid;
+    gap: 7px;
+  }
+
+  .notification-row-actions {
+    grid-column: 2;
+    flex-wrap: wrap;
   }
 
   .request-review-bar {

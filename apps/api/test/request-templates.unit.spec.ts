@@ -45,6 +45,27 @@ describe("request template validation", () => {
     expect(() => validateRequestTemplateDefinition(validTemplate())).not.toThrow();
   });
 
+  it("accepts instructional notes as non-answerable template elements", () => {
+    const template = validTemplate({
+      fields: [
+        ...validTemplate().fields,
+        {
+          code: "submission_note",
+          sectionCode: "basic_request_information",
+          fieldType: "NOTE",
+          labelAr: "تنبيه قبل الإرسال",
+          labelEn: "Submission note",
+          helpTextAr: "تأكد من مطابقة البيانات للمستند الرسمي.",
+          required: false,
+          clientVisible: true,
+          sortOrder: 2,
+        },
+      ],
+    });
+
+    expect(() => validateRequestTemplateDefinition(template)).not.toThrow();
+  });
+
   it("rejects duplicate field codes after normalization", () => {
     const template = validTemplate({
       fields: [

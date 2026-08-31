@@ -110,6 +110,7 @@ describe("Admin access pages", () => {
     expect(screen.getByText("Temporary QA access")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Manage user" }));
+    expect(screen.getByRole("dialog", { name: "Ada Admin" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "User record" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Profile" })).toBeInTheDocument();
     expect(screen.getByDisplayValue("Ada Admin")).toBeInTheDocument();
@@ -152,6 +153,7 @@ describe("Admin access pages", () => {
   });
 
   it("renders Arabic audit logs as a security review center", () => {
+    window.history.replaceState({}, "", "/admin/audit-logs");
     render(<AdminAuditLogsPageContent locale="ar" logs={[auditLog]} />);
 
     expect(screen.getByRole("heading", { level: 1, name: "سجل التدقيق" })).toBeInTheDocument();
@@ -160,5 +162,10 @@ describe("Admin access pages", () => {
     expect(screen.getByText("AUTH_PERMISSION_DENIED")).toBeInTheDocument();
     expect(screen.getAllByText("صلاحية غير متوفرة")).not.toHaveLength(0);
     expect(screen.queryByText("ملاحظات الأمان")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText("بحث بالمستخدم أو الحدث أو السجل"), {
+      target: { value: "AUTH_PERMISSION_DENIED" },
+    });
+    expect(new URL(window.location.href).searchParams.get("q")).toBe("AUTH_PERMISSION_DENIED");
   });
 });

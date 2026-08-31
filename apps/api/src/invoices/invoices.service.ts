@@ -146,17 +146,17 @@ export class InvoicesService {
     principal: AuthenticatedPrincipal,
     metadata: RequestMetadata,
   ) {
-    const quote = await this.requireAcceptedQuote(input.quoteId, principal);
+    const quote = await this.requireInvoiceEligibleQuote(input.quoteId, principal);
     if (!quote.clientId) {
       throw new ConflictException({
         code: "QUOTE_CLIENT_REQUIRED_FOR_INVOICE",
-        message: "Externally confirmed quotes must have a client before an invoice can be created",
+        message: "Approved quotes must have a client before an invoice can be created",
       });
     }
     if (quote.items.length === 0) {
       throw new ConflictException({
         code: "QUOTE_ITEMS_REQUIRED_FOR_INVOICE",
-        message: "Externally confirmed quotes must include at least one snapshotted line item",
+        message: "Approved quotes must include at least one snapshotted line item",
       });
     }
 
@@ -345,7 +345,7 @@ export class InvoicesService {
     return this.changeStatus(id, "VOIDED", note, principal, metadata);
   }
 
-  private async requireAcceptedQuote(id: string, principal: AuthenticatedPrincipal) {
+  private async requireInvoiceEligibleQuote(id: string, principal: AuthenticatedPrincipal) {
     const quote = await this.database.prisma.quote.findFirst({
       where: { id, ...this.quoteAccessWhere(principal) },
       include: {
@@ -361,10 +361,10 @@ export class InvoicesService {
         message: "The quote could not be found",
       });
     }
-    if (quote.status !== "ACCEPTED") {
+    if (!["APPROVED", "ACCEPTED", "ACTIVATED"].includes(quote.status)) {
       throw new ConflictException({
-        code: "ACCEPTED_QUOTE_REQUIRED_FOR_INVOICE",
-        message: "Invoices can only be created from externally confirmed quotes",
+        code: "APPROVED_QUOTE_REQUIRED_FOR_INVOICE",
+        message: "Invoices can only be created after client approval",
       });
     }
     return quote;
@@ -465,7 +465,9 @@ export class InvoicesService {
     };
   }
 
-  private quoteSnapshot(quote: Awaited<ReturnType<InvoicesService["requireAcceptedQuote"]>>) {
+  private quoteSnapshot(
+    quote: Awaited<ReturnType<InvoicesService["requireInvoiceEligibleQuote"]>>,
+  ) {
     return {
       id: quote.id,
       quoteNumber: quote.quoteNumber,
@@ -486,7 +488,7 @@ export class InvoicesService {
   }
 
   private invoiceItemSnapshot(
-    item: Awaited<ReturnType<InvoicesService["requireAcceptedQuote"]>>["items"][number],
+    item: Awaited<ReturnType<InvoicesService["requireInvoiceEligibleQuote"]>>["items"][number],
   ) {
     return {
       quoteItemId: item.id,

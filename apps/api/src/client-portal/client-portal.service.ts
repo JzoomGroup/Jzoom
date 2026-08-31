@@ -6,10 +6,15 @@ import { InvoicePdfService } from "../invoices/invoice-pdf.service.js";
 import { QuotePdfService } from "../quotes/quote-pdf.service.js";
 import { CLIENT_PORTAL_EVENT } from "./client-portal.constants.js";
 
-type ClientPortalQuoteStatus = "ISSUED" | "ACCEPTED";
+type ClientPortalQuoteStatus = "ISSUED" | "APPROVED" | "ACCEPTED" | "ACTIVATED";
 type ClientPortalInvoiceStatus = "ISSUED";
 
-const clientQuoteStatuses: ClientPortalQuoteStatus[] = ["ISSUED", "ACCEPTED"];
+const clientQuoteStatuses: ClientPortalQuoteStatus[] = [
+  "ISSUED",
+  "APPROVED",
+  "ACCEPTED",
+  "ACTIVATED",
+];
 const clientInvoiceStatuses: ClientPortalInvoiceStatus[] = ["ISSUED"];
 
 function numberValue(value: unknown): number {

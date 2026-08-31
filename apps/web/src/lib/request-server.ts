@@ -81,8 +81,11 @@ export function requireRequests(): Promise<RequestSummary[]> {
 
 export function requireRequestQueue(
   queue: RequestQueueResponse["queue"] = "all",
+  filters: Record<string, string> = {},
 ): Promise<RequestQueueResponse> {
-  return requireRequestResponse<RequestQueueResponse>(`requests/queues/${queue}`);
+  const query = new URLSearchParams(filters);
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return requireRequestResponse<RequestQueueResponse>(`requests/queues/${queue}${suffix}`);
 }
 
 export function requireRequest(id: string): Promise<ServiceRequest> {

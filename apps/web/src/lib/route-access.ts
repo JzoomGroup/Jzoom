@@ -11,6 +11,27 @@ type PostLoginRoute =
   | "/projects"
   | "/profile";
 
+const AUTH_ONLY_PATHS = new Set(["/login", "/change-password"]);
+
+export function safeReturnTo(value: string | null | undefined): string | null {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return null;
+  }
+
+  try {
+    const candidate = new URL(value, "https://portal.jzoom.invalid");
+    if (candidate.origin !== "https://portal.jzoom.invalid") {
+      return null;
+    }
+    if (AUTH_ONLY_PATHS.has(candidate.pathname)) {
+      return null;
+    }
+    return `${candidate.pathname}${candidate.search}${candidate.hash}`;
+  } catch {
+    return null;
+  }
+}
+
 export function protectedRouteRedirect(
   user: CurrentUser | null,
   adminOnly = false,

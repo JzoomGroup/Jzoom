@@ -414,6 +414,7 @@ function SettingCard({
   setting: PlatformSetting;
 }) {
   const t = copy[locale];
+  const runtimeState = runtimeSettingState(setting.key);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -438,6 +439,16 @@ function SettingCard({
         title={settingKeyLabel(setting.key, locale)}
       />
       <p className="platform-muted">{setting.key}</p>
+      <StatusChip
+        status={runtimeState === "APPLIED" ? "ACTIVE" : "DRAFT"}
+        label={
+          runtimeState === "APPLIED"
+            ? t.runtimeApplied
+            : runtimeState === "IN_APP_ONLY"
+              ? t.inAppOnly
+              : t.referenceOnly
+        }
+      />
       {setting.current?.masked ? <p className="platform-muted">{t.maskedValue}</p> : null}
       <form className="catalog-form platform-card-form" noValidate onSubmit={submit}>
         <label className="full-span">
@@ -465,6 +476,27 @@ function SettingCard({
       </form>
     </article>
   );
+}
+
+function runtimeSettingState(key: string): "APPLIED" | "IN_APP_ONLY" | "REFERENCE_ONLY" {
+  if (
+    [
+      "attachments.allowed_mime_types",
+      "attachments.max_size_mb",
+      "client_health.score_rules",
+      "pricing.discount.default_pct",
+      "pricing.quote.validity_days",
+      "pricing.tax.default_pct",
+      "sla.default_days",
+      "workflow.request.default",
+    ].includes(key)
+  ) {
+    return "APPLIED";
+  }
+  if (key === "notifications.outbound_mode") {
+    return "IN_APP_ONLY";
+  }
+  return "REFERENCE_ONLY";
 }
 
 function NotificationCard({

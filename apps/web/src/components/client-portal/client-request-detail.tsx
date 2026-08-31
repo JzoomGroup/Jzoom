@@ -402,7 +402,11 @@ export function ClientRequestDetail({
         </div>
       </PageHeader>
 
-      {error && <p className="form-error">{error}</p>}
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
 
       <section className="client-request-command">
         <div className="client-command-main">

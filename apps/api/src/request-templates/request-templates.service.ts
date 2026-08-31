@@ -29,7 +29,18 @@ const requestTemplateVersionInclude = {
     include: {
       serviceItem: {
         include: {
-          monthlyService: { select: { id: true, code: true } },
+          monthlyService: {
+            select: {
+              id: true,
+              code: true,
+              category: { select: { id: true, code: true, nameAr: true, nameEn: true } },
+              revisions: {
+                orderBy: { version: "desc" as const },
+                take: 1,
+                select: { nameAr: true, nameEn: true },
+              },
+            },
+          },
           revisions: {
             orderBy: { version: "desc" as const },
             take: 1,
@@ -330,7 +341,18 @@ export class RequestTemplatesService {
       }),
       this.database.prisma.serviceItem.findMany({
         include: {
-          monthlyService: { select: { id: true, code: true } },
+          monthlyService: {
+            select: {
+              id: true,
+              code: true,
+              category: { select: { id: true, code: true, nameAr: true, nameEn: true } },
+              revisions: {
+                orderBy: { version: "desc" },
+                take: 1,
+                select: { nameAr: true, nameEn: true },
+              },
+            },
+          },
           revisions: { orderBy: { version: "desc" }, take: 1 },
           requestTemplates: { include: requestTemplateSnapshotInclude },
         },
@@ -483,6 +505,8 @@ export class RequestTemplatesService {
         labelEn: input.labelEn.trim(),
         helpTextAr: cleanText(input.helpTextAr),
         helpTextEn: cleanText(input.helpTextEn),
+        placeholderAr: cleanText(input.placeholderAr),
+        placeholderEn: cleanText(input.placeholderEn),
         systemKey: cleanText(input.systemKey),
         defaultConfig:
           input.defaultConfig === undefined ? Prisma.JsonNull : json(input.defaultConfig),
@@ -524,6 +548,12 @@ export class RequestTemplatesService {
         ...(input.labelEn !== undefined ? { labelEn: input.labelEn.trim() } : {}),
         ...(input.helpTextAr !== undefined ? { helpTextAr: cleanText(input.helpTextAr) } : {}),
         ...(input.helpTextEn !== undefined ? { helpTextEn: cleanText(input.helpTextEn) } : {}),
+        ...(input.placeholderAr !== undefined
+          ? { placeholderAr: cleanText(input.placeholderAr) }
+          : {}),
+        ...(input.placeholderEn !== undefined
+          ? { placeholderEn: cleanText(input.placeholderEn) }
+          : {}),
         ...(input.systemKey !== undefined ? { systemKey: cleanText(input.systemKey) } : {}),
         ...(input.defaultConfig !== undefined
           ? { defaultConfig: nullableJson(input.defaultConfig) }
@@ -759,6 +789,7 @@ export class RequestTemplatesService {
       (field) =>
         field.required &&
         field.clientVisible &&
+        field.fieldType !== "NOTE" &&
         field.fieldType !== "FILE" &&
         isEmptyAnswer(answersByCode.get(field.code)),
     );

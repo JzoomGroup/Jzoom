@@ -6,13 +6,14 @@ import type {
   QuoteOnboardingInput,
   QuoteOnboardingOptions,
   QuoteOnboardingResult,
+  QuotePaymentMethod,
   QuoteStatus,
   QuoteSummary,
 } from "./quote-types";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
 const lifecyclePaths = {
-  ACCEPTED: "accept",
+  APPROVED: "approve",
   CANCELLED: "cancel",
   EXPIRED: "expire",
   REJECTED: "reject",
@@ -67,9 +68,24 @@ export function completeQuoteOnboarding(
   });
 }
 
+export function confirmQuotePayment(
+  id: string,
+  input: {
+    method: QuotePaymentMethod;
+    paidAt?: string;
+    reference?: string;
+    note?: string;
+  },
+): Promise<Quote> {
+  return quoteRequest<Quote>(`quotes/${id}/accept`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 export function advanceQuoteLifecycle(
   id: string,
-  status: Exclude<QuoteStatus, "DRAFT">,
+  status: "ISSUED" | "APPROVED" | "REJECTED" | "EXPIRED" | "CANCELLED",
   note?: string,
 ): Promise<Quote> {
   if (status === "ISSUED") {
@@ -86,7 +102,7 @@ export function advanceQuoteLifecycle(
 }
 
 export function acceptQuote(id: string, note?: string): Promise<Quote> {
-  return advanceQuoteLifecycle(id, "ACCEPTED", note);
+  return confirmQuotePayment(id, { method: "OTHER", ...(note ? { note } : {}) });
 }
 
 export function rejectQuote(id: string, note?: string): Promise<Quote> {

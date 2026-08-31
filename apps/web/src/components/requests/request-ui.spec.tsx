@@ -646,11 +646,11 @@ describe("Request lifecycle UI", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Specialist workbench" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Add checklist item/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Checklist" })).toHaveAttribute(
       "href",
       "#request-checklist",
     );
-    expect(screen.getByRole("link", { name: /Create internal output/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Outputs" })).toHaveAttribute(
       "href",
       "#request-outputs",
     );
@@ -730,14 +730,11 @@ describe("Request lifecycle UI", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Supervisor review" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Supervisor review/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Outputs" })).toHaveAttribute(
       "href",
       "#request-outputs",
     );
-    expect(screen.getByRole("link", { name: /Submitted hours Approve/ })).toHaveAttribute(
-      "href",
-      "#request-hours",
-    );
+    expect(screen.getByRole("link", { name: "Hours" })).toHaveAttribute("href", "#request-hours");
     expect(screen.queryByRole("button", { name: "Approve request" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Approve" }).length).toBeGreaterThanOrEqual(2);
     expect(
@@ -782,6 +779,7 @@ describe("Request lifecycle UI", () => {
   });
 
   it("loads filtered internal work queues through the backend API", async () => {
+    window.history.replaceState({}, "", "/requests/queues");
     const fetchMock = jest.mocked(fetch);
     fetchMock.mockImplementationOnce(() =>
       jsonResponse({
@@ -803,6 +801,10 @@ describe("Request lifecycle UI", () => {
     expect(calledUrl.searchParams.get("queue")).toBe("all");
     expect(calledUrl.searchParams.get("status")).toBe("IN_PROGRESS");
     expect(calledUrl.searchParams.get("dueTo")).toBe(new Date("2026-06-30T09:00").toISOString());
+    const browserUrl = new URL(window.location.href);
+    expect(browserUrl.pathname).toBe("/requests/queues");
+    expect(browserUrl.searchParams.get("status")).toBe("IN_PROGRESS");
+    expect(browserUrl.searchParams.get("dueTo")).toBe(new Date("2026-06-30T09:00").toISOString());
     expect(await screen.findByText("No requests match this queue.")).toBeInTheDocument();
   });
 

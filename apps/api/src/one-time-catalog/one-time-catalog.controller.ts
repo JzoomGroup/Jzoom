@@ -21,6 +21,7 @@ import {
   CatalogStatusDto,
   CreateOneTimeCategoryDto,
   CreateOneTimeServiceDto,
+  ImportOneTimeCatalogDto,
   OneTimeDeliverableDto,
   OneTimePhaseDto,
   OneTimeTaskDto,
@@ -45,6 +46,7 @@ const documentedModels = [
   CatalogStatusDto,
   CreateOneTimeCategoryDto,
   CreateOneTimeServiceDto,
+  ImportOneTimeCatalogDto,
   OneTimeDeliverableDto,
   OneTimePhaseDto,
   OneTimeTaskDto,
@@ -151,6 +153,18 @@ export class OneTimeServicesController {
   @Get()
   async list() {
     return (await this.catalog.getSnapshot()).services;
+  }
+
+  @Get("export")
+  @ApiOperation({ summary: "Export the complete one-time service catalog as portable JSON" })
+  exportCatalog() {
+    return this.catalog.exportCatalog();
+  }
+
+  @Post("import")
+  @ApiOperation({ summary: "Validate and atomically import new one-time services" })
+  importCatalog(@Body() input: ImportOneTimeCatalogDto, @Req() request: RequestWithId) {
+    return this.catalog.importCatalog(input, request.auth!.userId, metadata(request));
   }
 
   @Post()

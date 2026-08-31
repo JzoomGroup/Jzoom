@@ -17,6 +17,8 @@ import type {
   MonthlyClosing,
   MonthlyUsageResponse,
 } from "../../lib/operations-types";
+import { replaceCurrentUrlQuery } from "../../lib/url-state";
+import { AppDialog } from "../app-dialog";
 import {
   BentoGrid,
   EmptyState,
@@ -100,6 +102,7 @@ function metric(label: ReactNode, value: ReactNode) {
 export function HoursLedger({
   canManageClosings,
   clientOptions = [],
+  initialClientId = "",
   initialClosings,
   initialLedger,
   initialUsage,
@@ -107,6 +110,7 @@ export function HoursLedger({
 }: {
   canManageClosings: boolean;
   clientOptions?: OperationsClientOption[];
+  initialClientId?: string;
   initialClosings: MonthlyClosing[];
   initialLedger: HoursLedgerResponse;
   initialUsage: MonthlyUsageResponse;
@@ -119,8 +123,10 @@ export function HoursLedger({
   const [closings, setClosings] = useState(initialClosings);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showClosingForm, setShowClosingForm] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
-    clientId: "",
+    clientId: initialClientId,
     period: initialLedger.period.key || currentPeriod(),
   });
   const [closingForm, setClosingForm] = useState({
@@ -146,6 +152,14 @@ export function HoursLedger({
       setLedger(nextLedger);
       setUsage(nextUsage);
       setClosings(nextClosings);
+      replaceCurrentUrlQuery(
+        {
+          clientId: filters.clientId.trim() || undefined,
+          period: filters.period === currentPeriod() ? undefined : filters.period,
+        },
+        ["clientId", "period"],
+      );
+      setShowFilters(false);
     } catch (caught) {
       setError(operationsErrorMessage(caught));
     } finally {
@@ -165,6 +179,7 @@ export function HoursLedger({
         ...(closingForm.title.trim() ? { title: closingForm.title.trim() } : {}),
       });
       setClosings((items) => [closing, ...items.filter((item) => item.id !== closing.id)]);
+      setShowClosingForm(false);
     } catch (caught) {
       setError(operationsErrorMessage(caught));
     } finally {
@@ -186,8 +201,6 @@ export function HoursLedger({
     }
   }
 
-  const draftClosings = closings.filter((closing) => closing.status === "DRAFT").length;
-
   return (
     <>
       <PageHeader
@@ -204,15 +217,39 @@ export function HoursLedger({
             </span>
           </>
         }
+        actions={[
+          {
+            label: t.filterUsage,
+            onClick: () => setShowFilters(true),
+            variant: "secondary",
+          },
+          ...(canManageClosings
+            ? [
+                {
+                  label: t.prepareClosing,
+                  onClick: () => setShowClosingForm(true),
+                  variant: "primary" as const,
+                },
+              ]
+            : []),
+        ]}
       />
 
-      {error && <p className="form-error">{error}</p>}
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
 
-      <section className="operations-command-panel">
-        <SectionCard
-          eyebrow={t.ledgerFilters}
-          title={t.filterUsage}
+      {showFilters ? (
+        <AppDialog
+          busy={saving}
+          closeLabel={locale === "ar" ? "إغلاق" : "Close"}
           description={t.filterDescription}
+          eyebrow={t.ledgerFilters}
+          onClose={() => setShowFilters(false)}
+          size="md"
+          title={t.filterUsage}
         >
           <form className="catalog-form" noValidate onSubmit={refresh}>
             <label>
@@ -244,8 +281,8 @@ export function HoursLedger({
               </button>
             </div>
           </form>
-        </SectionCard>
-      </section>
+        </AppDialog>
+      ) : null}
 
       <BentoGrid compact>
         <MetricCard
@@ -268,26 +305,6 @@ export function HoursLedger({
           label={t.billable}
           value={hours(ledger.totals.billableHours, locale)}
           detail={t.billableDetail}
-        />
-        <MetricCard
-          label={t.tracked}
-          value={hours(ledger.totals.hours, locale)}
-          detail={t.trackedDetail}
-        />
-        <MetricCard
-          label={t.clients}
-          value={number(usage.clients.length, locale)}
-          detail={t.clientsDetail}
-        />
-        <MetricCard
-          label={t.rejected}
-          value={hours(ledger.totals.rejectedHours, locale)}
-          detail={t.rejectedDetail}
-        />
-        <MetricCard
-          label={t.closingDrafts}
-          value={number(draftClosings, locale)}
-          detail={t.closingReady}
         />
       </BentoGrid>
 
@@ -316,11 +333,15 @@ export function HoursLedger({
         )}
       </SectionCard>
 
-      {canManageClosings && (
-        <SectionCard
-          eyebrow={t.closingWorkflow}
-          title={t.prepareClosing}
+      {canManageClosings && showClosingForm ? (
+        <AppDialog
+          busy={saving}
+          closeLabel={locale === "ar" ? "إغلاق" : "Close"}
           description={t.prepareClosingDescription}
+          eyebrow={t.closingWorkflow}
+          onClose={() => setShowClosingForm(false)}
+          size="md"
+          title={t.prepareClosing}
         >
           <form className="catalog-form" noValidate onSubmit={prepare}>
             <label>
@@ -362,8 +383,8 @@ export function HoursLedger({
               </button>
             </div>
           </form>
-        </SectionCard>
-      )}
+        </AppDialog>
+      ) : null}
 
       {canManageClosings && (
         <SectionCard title={t.closingLibrary} description={t.closingLibraryDescription}>

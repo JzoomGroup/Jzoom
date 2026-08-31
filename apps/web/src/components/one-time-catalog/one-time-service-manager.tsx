@@ -2,9 +2,13 @@
 
 import { oneTimeServiceManagerCopy as copy } from "../../i18n/dictionaries/catalog";
 
-import { useMemo, useState, type FormEvent } from "react";
-import { PencilLine } from "lucide-react";
-import { refreshOneTimeCatalog } from "../../lib/one-time-catalog-client";
+import { useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { Download, PencilLine, Upload } from "lucide-react";
+import {
+  exportOneTimeCatalog,
+  importOneTimeCatalog,
+  refreshOneTimeCatalog,
+} from "../../lib/one-time-catalog-client";
 import type {
   OneTimeCatalogSnapshot,
   OneTimeDeliverable,
@@ -25,6 +29,7 @@ import {
   useCatalogMutation,
 } from "../catalog/catalog-shared";
 import { BentoGrid, MetricCard, PageHeader, SectionCard } from "../premium-os";
+import { AppDialog } from "../app-dialog";
 
 interface EditablePhase {
   code: string;
@@ -162,6 +167,10 @@ export function OneTimeServiceManager({
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [phases, setPhases] = useState<EditablePhase[]>([]);
   const [deliverables, setDeliverables] = useState<EditableDeliverable[]>([]);
+  const [transferBusy, setTransferBusy] = useState<"export" | "import" | null>(null);
+  const [transferError, setTransferError] = useState<string>();
+  const [transferSuccess, setTransferSuccess] = useState<string>();
+  const importInputRef = useRef<HTMLInputElement>(null);
   const mutation = useCatalogMutation(setSnapshot, refreshOneTimeCatalog);
   const visibleServices = useMemo(
     () =>
@@ -194,6 +203,46 @@ export function OneTimeServiceManager({
     setCreating(true);
     setPhases([]);
     setDeliverables([]);
+  }
+
+  async function exportCatalog() {
+    setTransferBusy("export");
+    setTransferError(undefined);
+    setTransferSuccess(undefined);
+    try {
+      const exported = await exportOneTimeCatalog();
+      const blob = new Blob([JSON.stringify(exported, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `jzoom-one-time-catalog-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setTransferSuccess(t.exportSuccess);
+    } catch {
+      setTransferError(t.exportError);
+    } finally {
+      setTransferBusy(null);
+    }
+  }
+
+  async function importCatalog(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setTransferBusy("import");
+    setTransferError(undefined);
+    setTransferSuccess(undefined);
+    try {
+      const payload = JSON.parse(await file.text()) as unknown;
+      const next = await importOneTimeCatalog(payload);
+      setSnapshot(next);
+      setTransferSuccess(t.importSuccess(next.services.length));
+    } catch {
+      setTransferError(t.importError);
+    } finally {
+      setTransferBusy(null);
+    }
   }
 
   function openEdit(service: OneTimeService) {
@@ -384,7 +433,38 @@ export function OneTimeServiceManager({
         title={t.oneTimeServices}
         description={t.serviceDescription}
       />
-      <CatalogFeedback error={mutation.error} success={mutation.success} />
+      <div className="os-page-actions one-time-transfer-actions">
+        <button
+          className="os-button os-button-secondary"
+          type="button"
+          disabled={transferBusy !== null}
+          onClick={() => void exportCatalog()}
+        >
+          <Download aria-hidden="true" size={16} />
+          {transferBusy === "export" ? t.exporting : t.exportCatalog}
+        </button>
+        <button
+          className="os-button os-button-secondary"
+          type="button"
+          disabled={transferBusy !== null}
+          onClick={() => importInputRef.current?.click()}
+        >
+          <Upload aria-hidden="true" size={16} />
+          {transferBusy === "import" ? t.importing : t.importCatalog}
+        </button>
+        <input
+          ref={importInputRef}
+          className="visually-hidden"
+          type="file"
+          accept="application/json,.json"
+          aria-label={t.importCatalog}
+          onChange={(event) => void importCatalog(event)}
+        />
+      </div>
+      <CatalogFeedback
+        error={transferError ?? mutation.error}
+        success={transferSuccess ?? mutation.success}
+      />
 
       <section className="one-time-service-command" aria-label={t.oneTimeServiceStudio}>
         <div className="one-time-service-command-main">
@@ -425,16 +505,19 @@ export function OneTimeServiceManager({
       </BentoGrid>
 
       {creating || editing ? (
-        <section className="one-time-service-editor">
-          <div className="one-time-service-editor-heading">
-            <span>{creating ? t.createService : t.createRevision}</span>
-            <h2>{creating ? t.newService : t.editService(editing!.code)}</h2>
-            <p>
-              {creating
-                ? t.createServiceDescription
-                : t.createRevisionDescription((current?.version ?? 0) + 1)}
-            </p>
-          </div>
+        <AppDialog
+          busy={mutation.submitting}
+          closeLabel={locale === "ar" ? "إغلاق" : "Close"}
+          description={
+            creating
+              ? t.createServiceDescription
+              : t.createRevisionDescription((current?.version ?? 0) + 1)
+          }
+          eyebrow={creating ? t.createService : t.createRevision}
+          onClose={closeForm}
+          size="full"
+          title={creating ? t.newService : t.editService(editing!.code)}
+        >
           <form
             className="catalog-form wide-form one-time-service-form"
             noValidate
@@ -965,7 +1048,7 @@ export function OneTimeServiceManager({
               submitLabel={creating ? t.createService : t.createRevision}
             />
           </form>
-        </section>
+        </AppDialog>
       ) : null}
 
       <SectionCard

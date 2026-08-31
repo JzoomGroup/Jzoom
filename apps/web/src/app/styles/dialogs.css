@@ -1,0 +1,190 @@
+.app-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: clamp(10px, 2.5vw, 28px);
+  background: rgba(12, 20, 35, 0.48);
+  backdrop-filter: blur(5px);
+  animation: app-dialog-backdrop-enter 140ms ease-out;
+}
+
+.app-dialog {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(100%, 760px);
+  max-height: calc(100dvh - clamp(20px, 5vw, 56px));
+  overflow: hidden;
+  border: 1px solid rgba(219, 225, 234, 0.96);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 28px 90px rgba(12, 20, 35, 0.24);
+  outline: none;
+  animation: app-dialog-enter 160ms ease-out;
+}
+
+.app-dialog-sm {
+  width: min(100%, 520px);
+}
+
+.app-dialog-md {
+  width: min(100%, 680px);
+}
+
+.app-dialog-lg {
+  width: min(100%, 900px);
+}
+
+.app-dialog-xl {
+  width: min(100%, 1180px);
+}
+
+.app-dialog-full {
+  width: min(100%, 1440px);
+}
+
+.app-dialog-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  border-block-end: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.app-dialog-heading {
+  min-width: 0;
+}
+
+.app-dialog-heading h2,
+.app-dialog-heading p {
+  margin: 0;
+}
+
+.app-dialog-heading h2 {
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.app-dialog-heading > p:last-child:not(.eyebrow) {
+  max-width: 78ch;
+  margin-block-start: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.app-dialog-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-dialog-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 18px;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: none;
+}
+
+.app-dialog-body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.app-dialog-body > :first-child {
+  margin-block-start: 0;
+}
+
+.app-dialog-body > :last-child {
+  margin-block-end: 0;
+}
+
+.app-dialog .catalog-panel,
+.app-dialog .os-section-card,
+.app-dialog .user-access-center {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.app-dialog .form-actions,
+.app-dialog .operating-user-actions {
+  position: sticky;
+  bottom: -18px;
+  z-index: 3;
+  margin-block-start: 8px;
+  padding: 12px 0 0;
+  border-block-start: 1px solid var(--line);
+  background: #ffffff;
+}
+
+@keyframes app-dialog-backdrop-enter {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes app-dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+}
+
+@media (max-width: 680px) {
+  .app-dialog-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .app-dialog,
+  .app-dialog-sm,
+  .app-dialog-md,
+  .app-dialog-lg,
+  .app-dialog-xl,
+  .app-dialog-full {
+    width: 100%;
+    max-height: calc(100dvh - max(8px, env(safe-area-inset-top)));
+    border-width: 1px 0 0;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .app-dialog-header {
+    gap: 10px;
+    padding: 13px 14px;
+  }
+
+  .app-dialog-heading h2 {
+    font-size: 16px;
+  }
+
+  .app-dialog-body {
+    padding: 14px;
+    padding-block-end: calc(18px + env(safe-area-inset-bottom));
+  }
+
+  .app-dialog .form-actions,
+  .app-dialog .operating-user-actions {
+    bottom: calc(-18px - env(safe-area-inset-bottom));
+    margin-inline: -14px;
+    padding: 11px 14px calc(12px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-dialog-backdrop,
+  .app-dialog {
+    animation: none;
+  }
+}

@@ -22,6 +22,7 @@ import {
   useCatalogMutation,
 } from "./catalog-shared";
 import { BentoGrid, MetricCard, PageHeader, SectionCard } from "../premium-os";
+import { AppDialog } from "../app-dialog";
 
 interface EditableInclusion {
   serviceLevelId: string;
@@ -337,16 +338,17 @@ export function ItemManager({
       </SectionCard>
 
       {creating || editing ? (
-        <section className="item-admin-editor">
-          <div className="item-admin-editor-heading">
-            <span>{creating ? t.createItem : t.createRevision}</span>
-            <h2>{creating ? t.newItem : t.editItemTitle(editing!.code)}</h2>
-            <p>
-              {creating
-                ? t.chooseParentMatrix
-                : t.saveRevisionDescription((current?.version ?? 0) + 1)}
-            </p>
-          </div>
+        <AppDialog
+          busy={mutation.submitting}
+          closeLabel={locale === "ar" ? "إغلاق" : "Close"}
+          description={
+            creating ? t.chooseParentMatrix : t.saveRevisionDescription((current?.version ?? 0) + 1)
+          }
+          eyebrow={creating ? t.createItem : t.createRevision}
+          onClose={closeForm}
+          size="xl"
+          title={creating ? t.newItem : t.editItemTitle(editing!.code)}
+        >
           <form className="catalog-form wide-form item-admin-form" noValidate onSubmit={submit}>
             {creating ? (
               <>
@@ -468,7 +470,7 @@ export function ItemManager({
               submitLabel={creating ? t.createItem : t.createRevision}
             />
           </form>
-        </section>
+        </AppDialog>
       ) : null}
 
       <SectionCard title={t.itemDefinitions} description={t.itemDefinitionsDescription}>

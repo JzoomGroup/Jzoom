@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "../../lib/auth";
 import { requireQuote, requireQuotes } from "../../lib/quote-server";
+import { CommercialShell } from "../commercial-shell";
 import { QuoteDetail } from "./quote-detail";
 import { QuoteList } from "./quote-list";
-import { QuoteShell } from "./quote-shell";
 
 function canUseQuotes(
   user: Awaited<ReturnType<typeof getCurrentUser>>,
@@ -30,10 +30,9 @@ export async function QuotesPage({ quoteId }: { quoteId?: string }) {
   }
 
   return (
-    <QuoteShell
+    <CommercialShell
       activePath="/pricing/quotes"
       displayName={user.displayName}
-      isAdmin={user.roles.includes("ROLE-ADMIN")}
       locale={user.preferredLocale}
       permissions={user.permissions}
       roles={user.roles}
@@ -43,6 +42,6 @@ export async function QuotesPage({ quoteId }: { quoteId?: string }) {
       ) : (
         <QuoteDetail initialQuote={content} locale={user.preferredLocale} />
       )}
-    </QuoteShell>
+    </CommercialShell>
   );
 }

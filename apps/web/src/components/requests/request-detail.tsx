@@ -65,11 +65,9 @@ const workflowStages: RequestStatus[] = [
 
 const startableStatuses: RequestStatus[] = ["NEW", "TRIAGE", "ASSIGNED", "RETURNED"];
 
-type RequestTaskStatus = ServiceRequest["tasks"][number]["status"];
 type RequestOutputStatus = ServiceRequest["outputs"][number]["status"];
 type RequestTimeEntryStatus = ServiceRequest["timeEntries"][number]["status"];
 
-const openTaskStatuses: RequestTaskStatus[] = ["PENDING", "TODO", "IN_PROGRESS", "BLOCKED"];
 const submittableOutputStatuses: RequestOutputStatus[] = ["DRAFT"];
 const closableOutputStatuses: RequestOutputStatus[] = [
   "SHARED_WITH_CLIENT",
@@ -179,12 +177,6 @@ function assignmentCandidateLabel(candidate: RequestAssignmentCandidate): string
 
 function hasRole(user: CurrentUser, role: string): boolean {
   return user.roles.includes(role);
-}
-
-function hours(entries: ServiceRequest["timeEntries"], locale: SupportedLocale): string {
-  const total = entries.reduce((sum, entry) => sum + Number(entry.hours), 0);
-  const value = total.toFixed(total % 1 === 0 ? 0 : 2);
-  return locale === "ar" ? `${value} س` : `${value}h`;
 }
 
 function serviceName(request: ServiceRequest, locale: SupportedLocale): string {
@@ -329,24 +321,6 @@ function RequestDetailNav({ locale }: { locale: SupportedLocale }) {
   );
 }
 
-function RequestSignalCard({
-  detail,
-  label,
-  value,
-}: {
-  detail: string;
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <article>
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <small>{detail}</small>
-    </article>
-  );
-}
-
 function EmptyActivity({ message }: { message: string }) {
   return (
     <article className="activity-empty">
@@ -469,17 +443,12 @@ export function RequestDetail({
   const canStartWork = canExecute && startableStatuses.includes(request.status);
   const workspace = roleWorkspace(currentUser, locale);
   const taskAssignmentCandidates = assignmentCandidates?.specialists ?? [];
-  const openTasks = request.tasks.filter((task) => openTaskStatuses.includes(task.status));
   const reviewOutputs = request.outputs.filter((output) => output.status === "INTERNAL_REVIEW");
   const readyOutputs = request.outputs.filter((output) => output.status === "APPROVED_INTERNAL");
   const returnedOutputs = request.outputs.filter((output) =>
     ["RETURNED_BY_CLIENT", "REVISION_REQUESTED"].includes(output.status),
   );
   const submittedTimeEntries = request.timeEntries.filter((entry) => entry.status === "SUBMITTED");
-  const approvedTimeEntries = request.timeEntries.filter((entry) => entry.status === "APPROVED");
-  const clientDocumentRequests = request.documentRequests.filter(
-    (documentRequest) => documentRequest.status === "REQUESTED",
-  );
   const uploadedDocumentRequests = request.documentRequests.filter(
     (documentRequest) => documentRequest.status === "UPLOADED",
   );
@@ -874,34 +843,6 @@ export function RequestDetail({
     );
   }
 
-  const operationShortcuts = [
-    ...(canAssign
-      ? [{ href: "#request-context", label: t.saveAssignment, detail: t.assignments }]
-      : []),
-    ...(canStartWork
-      ? [{ href: "#request-lifecycle", label: t.startWork, detail: t.lifecycle }]
-      : []),
-    ...(canExecute
-      ? [
-          { href: "#request-checklist", label: t.addChecklistItem, detail: t.internalChecklist },
-          { href: "#request-outputs", label: t.createInternalOutput, detail: t.internalOutputs },
-          { href: "#request-hours", label: t.addTime, detail: t.basicTimeEntries },
-        ]
-      : []),
-    ...(canSupervise
-      ? [
-          { href: "#request-outputs", label: t.supervisorReview, detail: t.internalOutputs },
-          { href: "#request-hours", label: t.approve, detail: t.submittedHours },
-        ]
-      : []),
-    ...(canRequestDocuments
-      ? [{ href: "#request-documents", label: t.requestDocument, detail: t.clientDocuments }]
-      : []),
-    ...(canAddOperationalContext
-      ? [{ href: "#request-comments", label: t.addComment, detail: t.comments }]
-      : []),
-  ].slice(0, 6);
-
   return (
     <>
       <PageHeader
@@ -936,56 +877,25 @@ export function RequestDetail({
 
       <RequestDetailNav locale={locale} />
 
-      <section className="request-ops-command">
-        <div className="request-ops-main">
+      <section className="request-next-step-bar" aria-label={t.nextAction}>
+        <div className="request-next-step-heading">
           <p className="eyebrow">{t.operationsWorkbench}</p>
           <h2>{workspace.title}</h2>
-          <p>{workspace.description}</p>
-          <div className="request-next-actions">
-            {nextActions.length === 0 ? (
-              <article>
-                <strong>{t.noAction}</strong>
-                <p>{t.noActionBody}</p>
-              </article>
-            ) : (
-              nextActions.map((action) => (
-                <article key={action}>
-                  <strong>{t.nextAction}</strong>
-                  <p>{action}</p>
-                </article>
-              ))
-            )}
-          </div>
-          <div className="request-primary-actions" aria-label={t.actionShortcuts}>
-            {operationShortcuts.map((action) => (
-              <a key={`${action.href}-${action.label}`} href={action.href}>
-                <span>{action.detail}</span>
-                <strong>{action.label}</strong>
-              </a>
-            ))}
-          </div>
         </div>
-        <div className="request-ops-metrics" aria-label={t.operationsSignals}>
-          <RequestSignalCard
-            label={t.internalChecklist}
-            value={openTasks.length}
-            detail={`${request.tasks.length} ${t.totalChecklistItems}`}
-          />
-          <RequestSignalCard
-            label={t.supervisorReview}
-            value={reviewOutputs.length}
-            detail={`${readyOutputs.length} ${t.approvedReady}`}
-          />
-          <RequestSignalCard
-            label={t.clientDocuments}
-            value={clientDocumentRequests.length}
-            detail={`${uploadedDocumentRequests.length} ${t.uploadedByClient}`}
-          />
-          <RequestSignalCard
-            label={t.submittedHours}
-            value={hours(submittedTimeEntries, locale)}
-            detail={`${hours(approvedTimeEntries, locale)} ${t.approved}`}
-          />
+        <div className="request-next-actions">
+          {nextActions.length === 0 ? (
+            <article>
+              <strong>{t.noAction}</strong>
+              <p>{t.noActionBody}</p>
+            </article>
+          ) : (
+            nextActions.map((action) => (
+              <article key={action}>
+                <strong>{t.nextAction}</strong>
+                <p>{action}</p>
+              </article>
+            ))
+          )}
         </div>
       </section>
 

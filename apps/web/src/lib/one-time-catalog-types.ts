@@ -89,3 +89,10 @@ export interface OneTimeCatalogSnapshot {
   categories: OneTimeCategory[];
   services: OneTimeService[];
 }
+
+export interface OneTimeCatalogExport {
+  exportedAt: string;
+  format: "jzoom-one-time-catalog";
+  version: 1;
+  services: unknown[];
+}

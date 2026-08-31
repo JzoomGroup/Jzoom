@@ -1,15 +1,20 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { RequestTemplateManager } from "./request-template-manager";
-import { reviseRequestTemplate } from "../../lib/request-templates-client";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  createRequestFieldLibraryItem,
+  refreshRequestTemplates,
+  reviseRequestTemplate,
+} from "../../lib/request-templates-client";
 import type { RequestTemplatesSnapshot } from "../../lib/request-template-types";
+import { RequestTemplateManager } from "./request-template-manager";
 
 jest.mock("../../lib/request-templates-client", () => ({
   applySuggestedRequestTemplate: jest.fn(),
   changeRequestTemplateVersionStatus: jest.fn(),
   createRequestFieldLibraryItem: jest.fn(),
   refreshRequestTemplates: jest.fn(),
-  requestTemplateErrorMessage: () => "Template request failed",
+  requestTemplateErrorMessage: () => "تعذر تنفيذ العملية.",
   reviseRequestTemplate: jest.fn(),
+  updateRequestFieldLibraryItem: jest.fn(),
 }));
 
 function snapshot(): RequestTemplatesSnapshot {
@@ -19,11 +24,11 @@ function snapshot(): RequestTemplatesSnapshot {
         id: "library-field-1",
         code: "employee_count",
         fieldType: "NUMBER",
-        labelAr: "Employee count",
+        labelAr: "عدد الموظفين",
         labelEn: "Employee count",
-        helpTextAr: null,
+        helpTextAr: "أدخل العدد الحالي للموظفين.",
         helpTextEn: null,
-        placeholderAr: null,
+        placeholderAr: "مثال: 25",
         placeholderEn: null,
         systemKey: "employee_count",
         defaultConfig: null,
@@ -40,13 +45,23 @@ function snapshot(): RequestTemplatesSnapshot {
         code: "SI-HR-POLICY",
         status: "ACTIVE",
         sortOrder: 1,
-        monthlyService: { id: "service-1", code: "MS-HR" },
+        monthlyService: {
+          id: "service-1",
+          code: "MS-HR",
+          category: {
+            id: "category-1",
+            code: "HR",
+            nameAr: "الموارد البشرية",
+            nameEn: "Human resources",
+          },
+          revisions: [{ nameAr: "الموارد البشرية", nameEn: "Human resources" }],
+        },
         latestRevision: {
           id: "service-item-revision-1",
           version: 1,
-          nameAr: "HR policy preparation",
+          nameAr: "إعداد سياسة موارد بشرية",
           nameEn: "HR policy preparation",
-          expectedOutput: "Prepared HR policy.",
+          expectedOutput: "سياسة موارد بشرية جاهزة للاعتماد.",
           requiresFile: false,
         },
         template: null,
@@ -57,101 +72,138 @@ function snapshot(): RequestTemplatesSnapshot {
 
 describe("RequestTemplateManager", () => {
   beforeEach(() => {
-    jest.mocked(reviseRequestTemplate).mockReset();
+    jest.clearAllMocks();
+    jest.spyOn(window, "confirm").mockReturnValue(true);
   });
 
-  it("builds and saves a service item request template without JSON editing", async () => {
-    const nextSnapshot = snapshot();
-    nextSnapshot.serviceItems[0] = {
-      ...nextSnapshot.serviceItems[0]!,
-      template: {
-        id: "template-1",
-        status: "ACTIVE",
-        active: null,
-        suggested: null,
-        drafts: [],
-        archivedCount: 0,
-      },
-    };
-    jest.mocked(reviseRequestTemplate).mockResolvedValue(nextSnapshot);
-
+  it("builds a field visually, previews it, and saves a draft", async () => {
+    jest.mocked(reviseRequestTemplate).mockResolvedValue(snapshot());
     render(<RequestTemplateManager initialSnapshot={snapshot()} />);
 
-    expect(screen.getByRole("heading", { name: "منشئ نماذج بنود الخدمة" })).toBeInTheDocument();
-    expect(screen.queryByLabelText("Template config JSON")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "مصمم نماذج الطلبات" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "النماذج" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByLabelText("الخدمة الرئيسية")).toHaveDisplayValue("الموارد البشرية");
+    expect(screen.getByLabelText("بند الخدمة")).toHaveDisplayValue("إعداد سياسة موارد بشرية");
 
-    fireEvent.click(screen.getByRole("button", { name: "إضافة حقل" }));
-    const fieldGroup = screen.getByRole("group", { name: "الحقل 1" });
-    fireEvent.change(within(fieldGroup).getByLabelText("التسمية بالإنجليزية"), {
-      target: { value: "Number of employees" },
+    fireEvent.click(screen.getByRole("button", { name: "إضافة عنصر" }));
+    fireEvent.click(screen.getByRole("button", { name: "رقم" }));
+    fireEvent.change(screen.getByLabelText("اسم الحقل"), {
+      target: { value: "عدد الموظفين المطلوب" },
     });
-    fireEvent.change(within(fieldGroup).getByLabelText("التسمية بالعربية"), {
-      target: { value: "Number of employees" },
-    });
-    fireEvent.change(within(fieldGroup).getByLabelText("النوع"), {
-      target: { value: "NUMBER" },
-    });
-    fireEvent.click(within(fieldGroup).getByLabelText("مطلوب"));
+    fireEvent.click(screen.getByRole("checkbox", { name: /حقل إلزامي/ }));
 
-    fireEvent.click(screen.getByRole("button", { name: "حفظ نسخة قالب جديدة" }));
+    expect(screen.getAllByText("عدد الموظفين المطلوب").length).toBeGreaterThan(1);
+    fireEvent.click(screen.getByRole("button", { name: "حفظ كمسودة" }));
 
     await waitFor(() => expect(reviseRequestTemplate).toHaveBeenCalledTimes(1));
     expect(reviseRequestTemplate).toHaveBeenCalledWith(
       "service-item-1",
       expect.objectContaining({
         status: "DRAFT",
-        reason: "إنشاء من إدارة نماذج الطلبات",
-        sections: [
-          expect.objectContaining({
-            code: "basic_request_information",
-            titleEn: "Basic request information",
-          }),
-        ],
         fields: [
           expect.objectContaining({
-            code: "field_1",
             fieldType: "NUMBER",
-            labelEn: "Number of employees",
+            labelAr: "عدد الموظفين المطلوب",
+            labelEn: "عدد الموظفين المطلوب",
             required: true,
-            clientVisible: true,
           }),
         ],
       }),
     );
   });
 
-  it("applies a practical preset before saving a template version", async () => {
+  it("adds instructional notes and document upload fields to the real client preview", async () => {
     jest.mocked(reviseRequestTemplate).mockResolvedValue(snapshot());
-
     render(<RequestTemplateManager initialSnapshot={snapshot()} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /مستندات الموارد البشرية/ }));
-    fireEvent.click(screen.getByRole("button", { name: "حفظ نسخة قالب جديدة" }));
+    fireEvent.click(screen.getByRole("button", { name: "إضافة عنصر" }));
+    fireEvent.click(screen.getByRole("button", { name: "ملاحظة إرشادية" }));
+    fireEvent.change(screen.getByLabelText("عنوان الملاحظة"), {
+      target: { value: "تنبيه قبل الإرسال" },
+    });
+    fireEvent.change(screen.getByLabelText("نص الملاحظة"), {
+      target: { value: "تأكد من مطابقة البيانات للمستند الرسمي." },
+    });
+
+    expect(screen.getAllByText("تنبيه قبل الإرسال").length).toBeGreaterThan(1);
+    expect(screen.getAllByText("تأكد من مطابقة البيانات للمستند الرسمي.").length).toBeGreaterThan(
+      1,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "إضافة عنصر" }));
+    fireEvent.click(screen.getByRole("button", { name: "رفع مستند" }));
+    fireEvent.change(screen.getByLabelText("اسم الحقل"), {
+      target: { value: "السجل التجاري" },
+    });
+
+    expect(screen.getAllByText("السجل التجاري").length).toBeGreaterThan(1);
+    expect(screen.getByLabelText("معاينة الجوال")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "نشر للعميل" }));
+    await waitFor(() => expect(reviseRequestTemplate).toHaveBeenCalledTimes(1));
+    expect(reviseRequestTemplate).toHaveBeenCalledWith(
+      "service-item-1",
+      expect.objectContaining({
+        status: "ACTIVE",
+        fields: expect.arrayContaining([
+          expect.objectContaining({ fieldType: "NOTE", required: false }),
+          expect.objectContaining({ fieldType: "FILE", labelAr: "السجل التجاري" }),
+        ]),
+      }),
+    );
+  });
+
+  it("creates reusable fields from the shared fields tab", async () => {
+    jest.mocked(createRequestFieldLibraryItem).mockResolvedValue(snapshot().fieldLibrary[0]!);
+    jest.mocked(refreshRequestTemplates).mockResolvedValue(snapshot());
+    render(<RequestTemplateManager initialSnapshot={snapshot()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "إضافة عنصر" }));
+    fireEvent.click(screen.getByRole("button", { name: "رقم" }));
+    fireEvent.change(screen.getByLabelText("اسم الحقل"), {
+      target: { value: "تعديل غير محفوظ" },
+    });
+    fireEvent.click(screen.getByRole("tab", { name: /الحقول المشتركة/ }));
+    fireEvent.click(screen.getByRole("button", { name: "حقل مشترك جديد" }));
+    fireEvent.change(screen.getByLabelText("اسم الحقل بالعربية"), {
+      target: { value: "رقم الموظف" },
+    });
+    fireEvent.change(screen.getByLabelText("نوع الحقل"), { target: { value: "NUMBER" } });
+    fireEvent.click(screen.getByRole("button", { name: "إنشاء الحقل" }));
+
+    await waitFor(() => expect(createRequestFieldLibraryItem).toHaveBeenCalledTimes(1));
+    expect(createRequestFieldLibraryItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fieldType: "NUMBER",
+        labelAr: "رقم الموظف",
+        labelEn: "رقم الموظف",
+      }),
+    );
+    await waitFor(() => expect(screen.getByRole("tab", { name: "النماذج" })).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("tab", { name: "النماذج" }));
+    expect(screen.getAllByText("تعديل غير محفوظ").length).toBeGreaterThan(1);
+  });
+
+  it("keeps internal fields hidden from the client and preserves their visibility setting", async () => {
+    jest.mocked(reviseRequestTemplate).mockResolvedValue(snapshot());
+    render(<RequestTemplateManager initialSnapshot={snapshot()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "إضافة عنصر" }));
+    fireEvent.click(screen.getByRole("button", { name: "نص قصير" }));
+    fireEvent.change(screen.getByLabelText("اسم الحقل"), {
+      target: { value: "ملاحظة تشغيلية داخلية" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: /يظهر للعميل/ }));
+
+    expect(screen.getAllByText("ملاحظة تشغيلية داخلية")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "حفظ كمسودة" }));
 
     await waitFor(() => expect(reviseRequestTemplate).toHaveBeenCalledTimes(1));
     expect(reviseRequestTemplate).toHaveBeenCalledWith(
       "service-item-1",
       expect.objectContaining({
-        fields: expect.arrayContaining([
-          expect.objectContaining({
-            code: "employee_name",
-            labelAr: "اسم الموظف",
-            required: true,
-          }),
-          expect.objectContaining({
-            code: "document_purpose",
-            fieldType: "DROPDOWN",
-            options: expect.arrayContaining([
-              expect.objectContaining({ value: "bank", labelAr: "بنك" }),
-            ]),
-          }),
-        ]),
-        documentChecklist: expect.arrayContaining([
-          expect.objectContaining({
-            code: "supporting_documents",
-            labelAr: "المستندات الداعمة",
-          }),
-        ]),
+        fields: [expect.objectContaining({ clientVisible: false })],
       }),
     );
   });

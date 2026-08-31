@@ -7,6 +7,7 @@ import { PencilLine } from "lucide-react";
 import type { CatalogCategory, CatalogSnapshot } from "../../lib/catalog-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
 import { localizedCatalogLabel, localizedDescription } from "../../lib/localized-content";
+import { AppDialog } from "../app-dialog";
 import {
   CatalogFeedback,
   EmptyState,
@@ -95,13 +96,15 @@ export function CategoryManager({
       <CatalogFeedback error={mutation.error} success={mutation.success} />
 
       {(creating || editing) && (
-        <section className="catalog-panel editor-panel">
-          <div className="panel-heading">
-            <div>
-              <h2>{creating ? t.newCategory : t.editCategory(editing!.code)}</h2>
-              <p>{t.codesImmutable}</p>
-            </div>
-          </div>
+        <AppDialog
+          busy={mutation.submitting}
+          closeLabel={locale === "ar" ? "إغلاق" : "Close"}
+          description={t.codesImmutable}
+          eyebrow={creating ? t.addCategory : t.editCategory(editing!.code)}
+          onClose={closeForm}
+          size="md"
+          title={creating ? t.newCategory : t.editCategory(editing!.code)}
+        >
           <form className="catalog-form" noValidate onSubmit={submit}>
             {creating && (
               <label>
@@ -148,7 +151,7 @@ export function CategoryManager({
               submitLabel={creating ? t.createCategory : t.saveCategory}
             />
           </form>
-        </section>
+        </AppDialog>
       )}
 
       <section className="catalog-panel">

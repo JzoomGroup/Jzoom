@@ -316,6 +316,9 @@ describeWithDatabase("PR 3 PostgreSQL authentication and RBAC", () => {
     const profile = await operator.agent.get("/api/v1/auth/me").expect(200);
     expect(profile.body.user.mustChangePassword).toBe(true);
 
+    const protectedRead = await operator.agent.get("/api/v1/auth/access/admin").expect(403);
+    expect(protectedRead.body.code).toBe("PASSWORD_CHANGE_REQUIRED");
+
     await operator.agent
       .patch("/api/v1/auth/me/password")
       .set("X-CSRF-Token", operator.csrf)
@@ -324,6 +327,53 @@ describeWithDatabase("PR 3 PostgreSQL authentication and RBAC", () => {
 
     const updatedProfile = await operator.agent.get("/api/v1/auth/me").expect(200);
     expect(updatedProfile.body.user.mustChangePassword).toBe(false);
+  });
+
+  it("requires the current password for a later self-service password change", async () => {
+    const admin = await login("admin@pr3.test");
+    await admin.agent
+      .post("/api/v1/auth/admin/users")
+      .set("X-CSRF-Token", admin.csrf)
+      .send({
+        clientIds: [],
+        displayName: "Password Settings User",
+        email: "password.settings@pr3.test",
+        monthlyServiceIds: [],
+        oneTimeServiceIds: [],
+        roleCode: "ROLE-ADMIN",
+        serviceItemIds: [],
+        specialistIds: [],
+      })
+      .expect(201);
+
+    const firstLogin = await login("password.settings@pr3.test", DEFAULT_TEMPORARY_PASSWORD);
+    await firstLogin.agent
+      .patch("/api/v1/auth/me/password")
+      .set("X-CSRF-Token", firstLogin.csrf)
+      .send({ newPassword: "FirstPass123", confirmPassword: "FirstPass123" })
+      .expect(200);
+
+    const established = await login("password.settings@pr3.test", "FirstPass123");
+    const rejected = await established.agent
+      .patch("/api/v1/auth/me/password")
+      .set("X-CSRF-Token", established.csrf)
+      .send({
+        currentPassword: "WrongPass123",
+        newPassword: "SecondPass456",
+        confirmPassword: "SecondPass456",
+      })
+      .expect(400);
+    expect(rejected.body.code).toBe("CURRENT_PASSWORD_INVALID");
+
+    await established.agent
+      .patch("/api/v1/auth/me/password")
+      .set("X-CSRF-Token", established.csrf)
+      .send({
+        currentPassword: "FirstPass123",
+        newPassword: "SecondPass456",
+        confirmPassword: "SecondPass456",
+      })
+      .expect(200);
   });
 
   it("lets Admins reset a user password to the temporary default", async () => {

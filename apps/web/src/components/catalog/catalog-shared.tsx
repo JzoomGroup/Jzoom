@@ -66,7 +66,12 @@ export function FormActions({
   const t = sharedCopy[lang];
   return (
     <div className="form-actions">
-      <button type="button" className="os-button os-button-secondary" onClick={onCancel}>
+      <button
+        type="button"
+        className="os-button os-button-secondary"
+        disabled={submitting}
+        onClick={onCancel}
+      >
         {t.cancel}
       </button>
       <button type="submit" className="os-button os-button-primary" disabled={submitting}>

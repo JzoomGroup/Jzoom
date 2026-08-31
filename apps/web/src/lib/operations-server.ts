@@ -11,6 +11,16 @@ import type {
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
 
+function queryString(input: Record<string, string | undefined>): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(input)) {
+    if (value) {
+      params.set(key, value);
+    }
+  }
+  return params.size > 0 ? `?${params.toString()}` : "";
+}
+
 async function requireOperationsResponse<T>(path: string, fallbackPath = "/profile"): Promise<T> {
   const cookieStore = await cookies();
   const response = await fetch(`${apiBaseUrl}/${path}`, {
@@ -59,14 +69,29 @@ export function requireAccountManagerPortfolio(): Promise<AccountManagerPortfoli
   );
 }
 
-export function requireHoursLedger(): Promise<HoursLedgerResponse> {
-  return requireOperationsResponse<HoursLedgerResponse>("hours-ledger", "/hours-ledger");
+export function requireHoursLedger(
+  input: { clientId?: string; period?: string } = {},
+): Promise<HoursLedgerResponse> {
+  return requireOperationsResponse<HoursLedgerResponse>(
+    `hours-ledger${queryString(input)}`,
+    "/hours-ledger",
+  );
 }
 
-export function requireMonthlyUsage(): Promise<MonthlyUsageResponse> {
-  return requireOperationsResponse<MonthlyUsageResponse>("hours-ledger/usage", "/hours-ledger");
+export function requireMonthlyUsage(
+  input: { clientId?: string; period?: string } = {},
+): Promise<MonthlyUsageResponse> {
+  return requireOperationsResponse<MonthlyUsageResponse>(
+    `hours-ledger/usage${queryString(input)}`,
+    "/hours-ledger",
+  );
 }
 
-export function requireMonthlyClosings(): Promise<MonthlyClosing[]> {
-  return requireOperationsResponse<MonthlyClosing[]>("hours-ledger/closings", "/hours-ledger");
+export function requireMonthlyClosings(
+  input: { clientId?: string; period?: string } = {},
+): Promise<MonthlyClosing[]> {
+  return requireOperationsResponse<MonthlyClosing[]>(
+    `hours-ledger/closings${queryString(input)}`,
+    "/hours-ledger",
+  );
 }

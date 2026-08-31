@@ -145,6 +145,7 @@ describe("PR 1 API foundation", () => {
     expect(document.paths["/api/v1/quotes/{id}"]).toBeDefined();
     expect(document.paths["/api/v1/quotes/{id}/pdf"]).toBeDefined();
     expect(document.paths["/api/v1/quotes/{id}/accept"]).toBeDefined();
+    expect(document.paths["/api/v1/quotes/{id}/approve"]).toBeDefined();
     expect(document.paths["/api/v1/quotes/{id}/reject"]).toBeDefined();
     expect(document.paths["/api/v1/quotes/{id}/expire"]).toBeDefined();
     expect(document.paths["/api/v1/quotes/{id}/cancel"]).toBeDefined();
@@ -173,7 +174,8 @@ describe("PR 1 API foundation", () => {
     expect(document.paths["/api/v1/requests/{id}/status"]).toBeDefined();
     expect(document.paths["/api/v1/requests/{id}/comments"]).toBeDefined();
     expect(document.paths["/api/v1/requests/{id}/internal-notes"]).toBeDefined();
-    expect(document.paths["/api/v1/requests/{id}/attachments"]).toBeDefined();
+    expect(document.paths["/api/v1/requests/{id}/attachments"]).toBeUndefined();
+    expect(document.paths["/api/v1/requests/{id}/attachments/upload"]).toBeDefined();
     expect(document.paths["/api/v1/requests/{id}/tasks"]).toBeDefined();
     expect(document.paths["/api/v1/requests/{id}/tasks/{taskId}"]).toBeDefined();
     expect(document.paths["/api/v1/requests/{id}/outputs"]).toBeDefined();

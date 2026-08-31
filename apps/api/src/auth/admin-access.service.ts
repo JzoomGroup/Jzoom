@@ -4,7 +4,7 @@ import { DatabaseService } from "../database/database.service.js";
 import {
   ADMIN_ROLE_CODE,
   CRITICAL_ADMIN_PERMISSIONS,
-  DEFAULT_TEMPORARY_PASSWORD,
+  temporaryPassword,
   PROJECT_SPECIALIST_ROLE_CODE,
 } from "./auth.constants.js";
 import { AuthAuditService } from "./audit.service.js";
@@ -515,7 +515,7 @@ export class AdminAccessService {
     const roleCode = role.code;
 
     await this.assertScopeReferences(input, roleCode);
-    const temporaryPasswordHash = await this.passwords.hash(DEFAULT_TEMPORARY_PASSWORD);
+    const temporaryPasswordHash = await this.passwords.hash(temporaryPassword());
     const userId = await this.database.prisma.$transaction(async (transaction) => {
       const user = existing
         ? await transaction.user.update({
@@ -598,7 +598,7 @@ export class AdminAccessService {
     }
 
     const now = new Date();
-    const passwordHash = await this.passwords.hash(DEFAULT_TEMPORARY_PASSWORD);
+    const passwordHash = await this.passwords.hash(temporaryPassword());
     await this.database.prisma.$transaction(async (transaction) => {
       await transaction.user.update({
         where: { id: userId },

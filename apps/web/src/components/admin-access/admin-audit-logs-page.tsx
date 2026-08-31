@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { adminAccessCopy } from "../../i18n/admin-access";
 import type { AdminAuditLog } from "../../lib/admin-access-types";
+import { replaceCurrentUrlQuery } from "../../lib/url-state";
 import {
   BentoGrid,
   EmptyState,
@@ -23,9 +24,16 @@ import {
 } from "./admin-access-formatters";
 
 export function AdminAuditLogsPageContent({
+  initialFilters,
   locale,
   logs,
 }: {
+  initialFilters?: {
+    category: string;
+    eventCode: string;
+    query: string;
+    severity: string;
+  };
   locale: string;
   logs: AdminAuditLog[];
 }) {
@@ -37,12 +45,26 @@ export function AdminAuditLogsPageContent({
   const sensitiveLogs = logs.filter(
     (log) => log.severity === "CRITICAL" || log.severity === "HIGH",
   );
-  const [filters, setFilters] = useState({
-    category: "all",
-    eventCode: "all",
-    query: "",
-    severity: "all",
-  });
+  const [filters, setFilters] = useState(
+    initialFilters ?? {
+      category: "all",
+      eventCode: "all",
+      query: "",
+      severity: "all",
+    },
+  );
+  function updateFilters(next: typeof filters) {
+    setFilters(next);
+    replaceCurrentUrlQuery(
+      {
+        category: next.category === "all" ? undefined : next.category,
+        event: next.eventCode === "all" ? undefined : next.eventCode,
+        q: next.query.trim() || undefined,
+        severity: next.severity === "all" ? undefined : next.severity,
+      },
+      ["category", "event", "q", "severity"],
+    );
+  }
   const eventOptions = useMemo(
     () => Array.from(new Set(logs.map((log) => log.eventCode))).sort(),
     [logs],
@@ -114,14 +136,14 @@ export function AdminAuditLogsPageContent({
             <input
               placeholder={t.auditSearch}
               value={filters.query}
-              onChange={(event) => setFilters({ ...filters, query: event.target.value })}
+              onChange={(event) => updateFilters({ ...filters, query: event.target.value })}
             />
           </label>
           <label>
             {t.severity}
             <select
               value={filters.severity}
-              onChange={(event) => setFilters({ ...filters, severity: event.target.value })}
+              onChange={(event) => updateFilters({ ...filters, severity: event.target.value })}
             >
               <option value="all">{t.allSeverities}</option>
               {(["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const).map((severity) => (
@@ -135,7 +157,7 @@ export function AdminAuditLogsPageContent({
             {t.auditCategoryFilter}
             <select
               value={filters.category}
-              onChange={(event) => setFilters({ ...filters, category: event.target.value })}
+              onChange={(event) => updateFilters({ ...filters, category: event.target.value })}
             >
               <option value="all">{t.auditCategoryFilter}</option>
               {categoryOptions.map((category) => (
@@ -149,7 +171,7 @@ export function AdminAuditLogsPageContent({
             {t.auditEventFilter}
             <select
               value={filters.eventCode}
-              onChange={(event) => setFilters({ ...filters, eventCode: event.target.value })}
+              onChange={(event) => updateFilters({ ...filters, eventCode: event.target.value })}
             >
               <option value="all">{t.allEvents}</option>
               {eventOptions.map((eventCode) => (

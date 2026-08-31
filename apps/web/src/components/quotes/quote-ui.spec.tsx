@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Quote, QuoteSummary } from "../../lib/quote-types";
+import { CommercialShell } from "../commercial-shell";
 import { QuoteDetail } from "./quote-detail";
 import { QuoteList } from "./quote-list";
 import { QuoteShell } from "./quote-shell";
@@ -18,7 +19,9 @@ function quote(status: Quote["status"] = "DRAFT"): Quote {
     currency: "SAR",
     issueDate: null,
     validUntil: "2026-07-22T00:00:00.000Z",
+    approvedAt: null,
     acceptedAt: null,
+    payment: null,
     rejectedAt: null,
     expiredAt: null,
     cancelledAt: null,
@@ -190,6 +193,8 @@ function onboardingOptions() {
         nameAr: "خدمة شهرية",
         nameEn: "Monthly operations",
         serviceLevelLabel: "Growth",
+        serviceLevelLabelAr: "نمو",
+        serviceLevelLabelEn: "Growth",
         hoursAllocated: 20,
         monthlyServiceId: "monthly-service-1",
         monthlyServiceRevisionId: "monthly-service-revision-1",
@@ -288,6 +293,29 @@ describe("Quote snapshot UI", () => {
     expect(screen.getByRole("button", { name: "تسجيل الخروج" })).toBeInTheDocument();
   });
 
+  it("keeps pricing inside the full Admin navigation", () => {
+    render(
+      <CommercialShell
+        activePath="/pricing"
+        displayName="Admin User"
+        locale="ar"
+        permissions={["PERM-USE-PRICING-STUDIO", "PERM-MANAGE-QUOTES", "PERM-MANAGE-INVOICES"]}
+        roles={["ROLE-ADMIN"]}
+      >
+        <p>Pricing content</p>
+      </CommercialShell>,
+    );
+
+    expect(screen.getByRole("link", { name: "نماذج الطلبات" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "قواعد التسعير" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "استوديو التسعير" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("link", { name: "عروض الأسعار" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "الفواتير" })).toBeInTheDocument();
+  });
+
   it("renders snapshotted content and advances lifecycle through explicit backend actions", async () => {
     const fetchMock = jest.mocked(fetch);
     fetchMock
@@ -299,8 +327,23 @@ describe("Quote snapshot UI", () => {
       )
       .mockImplementationOnce(() =>
         jsonResponse({
+          ...quote("APPROVED"),
+          approvedAt: "2026-06-22T01:30:00.000Z",
+          issueDate: "2026-06-22T01:00:00.000Z",
+        }),
+      )
+      .mockImplementationOnce(() =>
+        jsonResponse({
           ...quote("ACCEPTED"),
           acceptedAt: "2026-06-22T02:00:00.000Z",
+          payment: {
+            method: "BANK_TRANSFER",
+            paidAt: "2026-06-22T02:00:00.000Z",
+            reference: "BANK-100",
+            note: null,
+            recordedById: "admin-1",
+            recordedAt: "2026-06-22T02:00:00.000Z",
+          },
           issueDate: "2026-06-22T01:00:00.000Z",
         }),
       )
@@ -324,11 +367,28 @@ describe("Quote snapshot UI", () => {
     });
     expect(await screen.findByText("Quote status changed to Issued.")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Confirm approval & payment" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
-    expect(fetchMock.mock.calls[1]?.[0]).toBe("http://localhost:4000/api/v1/quotes/quote-1/accept");
-    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({});
-    expect(await screen.findByText("Externally confirmed")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Record client approval" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "http://localhost:4000/api/v1/quotes/quote-1/approve",
+    );
+    expect(await screen.findByText("Client approved")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirm payment" }));
+    const paymentDialog = await screen.findByRole("dialog", { name: "Confirm quote payment" });
+    fireEvent.change(within(paymentDialog).getByLabelText("Transaction reference"), {
+      target: { value: "BANK-100" },
+    });
+    fireEvent.click(
+      within(paymentDialog).getByRole("button", { name: "Confirm payment received" }),
+    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    expect(fetchMock.mock.calls[2]?.[0]).toBe("http://localhost:4000/api/v1/quotes/quote-1/accept");
+    expect(JSON.parse(String(fetchMock.mock.calls[2]?.[1]?.body))).toMatchObject({
+      method: "BANK_TRANSFER",
+      reference: "BANK-100",
+    });
+    expect(await screen.findByText("Payment confirmed")).toBeInTheDocument();
     const onboardingDialog = await screen.findByRole("dialog", {
       name: "Activate client services after payment",
     });
@@ -339,18 +399,20 @@ describe("Quote snapshot UI", () => {
 
   it("renders compact lifecycle actions on the quote list", async () => {
     const fetchMock = jest.mocked(fetch);
-    fetchMock.mockImplementationOnce(() => jsonResponse(quote("ACCEPTED")));
+    fetchMock.mockImplementationOnce(() => jsonResponse(quote("APPROVED")));
 
     render(<QuoteList quotes={[quoteSummary("ISSUED")]} />);
 
     expect(screen.getByRole("button", { name: "All statuses" })).toBeInTheDocument();
     expect(screen.getByText("Next step")).toBeInTheDocument();
-    expect(screen.getAllByText("Confirm approval & payment").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Record client approval").length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole("button", { name: "Confirm approval & payment" }));
+    fireEvent.click(screen.getByRole("button", { name: "Record client approval" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    expect(fetchMock.mock.calls[0]?.[0]).toBe("http://localhost:4000/api/v1/quotes/quote-1/accept");
-    expect(await screen.findByText("Externally confirmed")).toBeInTheDocument();
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "http://localhost:4000/api/v1/quotes/quote-1/approve",
+    );
+    expect(await screen.findByText("Client approved")).toBeInTheDocument();
   });
 
   it("creates an invoice from an externally confirmed quote snapshot", async () => {

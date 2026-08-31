@@ -193,6 +193,12 @@ export class UpdateProfilePreferencesDto {
 }
 
 export class ChangePasswordDto {
+  @ApiPropertyOptional({ type: String, format: "password" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(256)
+  currentPassword?: string;
+
   @ApiProperty({ type: String, format: "password", minLength: 8 })
   @Matches(PASSWORD_PATTERN, {
     message: "newPassword must contain upper-case, lower-case, and numeric characters",

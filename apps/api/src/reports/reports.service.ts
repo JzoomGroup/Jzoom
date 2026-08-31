@@ -11,6 +11,7 @@ import { AuthAuditService } from "../auth/audit.service.js";
 import type { AuthenticatedPrincipal, RequestMetadata } from "../auth/auth.types.js";
 import { DatabaseService } from "../database/database.service.js";
 import { NotificationsService } from "../notifications/notifications.service.js";
+import { RuntimePlatformSettingsService } from "../platform-configuration/runtime-platform-settings.service.js";
 import { ACCOUNT_MANAGER_ROLE_CODE, CLIENT_ROLE_CODE, REPORT_EVENT } from "./reports.constants.js";
 import type { MonthlyReportQueryDto, PrepareMonthlyReportDto } from "./reports.dto.js";
 
@@ -30,6 +31,27 @@ interface MonthlyReportRecord {
   summarySnapshot: unknown;
   title: string;
   updatedAt: Date;
+}
+
+interface ClientHealthRules {
+  attentionOverdueDocuments: number;
+  attentionOverdueRequests: number;
+  attentionReturnedOutputs: number;
+  watchOpenRequests: number;
+  watchWaitingClientRequests: number;
+}
+
+const defaultClientHealthRules: ClientHealthRules = {
+  attentionOverdueDocuments: 1,
+  attentionOverdueRequests: 1,
+  attentionReturnedOutputs: 1,
+  watchOpenRequests: 6,
+  watchWaitingClientRequests: 1,
+};
+
+function positiveThreshold(value: unknown, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 1 ? Math.floor(parsed) : fallback;
 }
 
 function json(value: unknown): Prisma.InputJsonValue {
@@ -60,6 +82,8 @@ export class ReportsService {
     @Inject(DatabaseService) private readonly database: DatabaseService,
     @Inject(AuthAuditService) private readonly audit: AuthAuditService,
     @Inject(NotificationsService) private readonly notifications: NotificationsService,
+    @Inject(RuntimePlatformSettingsService)
+    private readonly settings: RuntimePlatformSettingsService,
   ) {}
 
   async listMonthlyReports(query: MonthlyReportQueryDto, principal: AuthenticatedPrincipal) {
@@ -277,6 +301,7 @@ export class ReportsService {
         },
       },
     });
+    const healthRules = await this.clientHealthRules();
     const portfolio = await Promise.all(
       clients.map(async (client) => {
         const [
@@ -350,13 +375,16 @@ export class ReportsService {
             overdueDocumentRequests,
             approvedHoursThisMonth: Number(approvedHours._sum.hours ?? 0),
           },
-          health: this.healthIndicator({
-            openRequests,
-            overdueRequests,
-            overdueDocumentRequests,
-            returnedOutputs,
-            waitingClientRequests,
-          }),
+          health: this.healthIndicator(
+            {
+              openRequests,
+              overdueRequests,
+              overdueDocumentRequests,
+              returnedOutputs,
+              waitingClientRequests,
+            },
+            healthRules,
+          ),
           recentActivity: recentActivity.map((event) => ({
             id: event.id,
             actorRole: event.actorRole,
@@ -727,17 +755,59 @@ export class ReportsService {
     };
   }
 
-  private healthIndicator(input: {
-    openRequests: number;
-    overdueDocumentRequests: number;
-    overdueRequests: number;
-    returnedOutputs: number;
-    waitingClientRequests: number;
-  }) {
+  private async clientHealthRules(): Promise<ClientHealthRules> {
+    const configured = await this.settings.object<Record<string, unknown>>(
+      "client_health.score_rules",
+      {},
+    );
+    const attention =
+      configured.attention &&
+      typeof configured.attention === "object" &&
+      !Array.isArray(configured.attention)
+        ? (configured.attention as Record<string, unknown>)
+        : {};
+    const watch =
+      configured.watch && typeof configured.watch === "object" && !Array.isArray(configured.watch)
+        ? (configured.watch as Record<string, unknown>)
+        : {};
+    return {
+      attentionOverdueDocuments: positiveThreshold(
+        attention.overdueDocumentRequests ?? configured.attentionOverdueDocuments,
+        defaultClientHealthRules.attentionOverdueDocuments,
+      ),
+      attentionOverdueRequests: positiveThreshold(
+        attention.overdueRequests ?? configured.attentionOverdueRequests,
+        defaultClientHealthRules.attentionOverdueRequests,
+      ),
+      attentionReturnedOutputs: positiveThreshold(
+        attention.returnedOutputs ?? configured.attentionReturnedOutputs,
+        defaultClientHealthRules.attentionReturnedOutputs,
+      ),
+      watchOpenRequests: positiveThreshold(
+        watch.openRequests ?? configured.watchOpenRequests,
+        defaultClientHealthRules.watchOpenRequests,
+      ),
+      watchWaitingClientRequests: positiveThreshold(
+        watch.waitingClientRequests ?? configured.watchWaitingClientRequests,
+        defaultClientHealthRules.watchWaitingClientRequests,
+      ),
+    };
+  }
+
+  private healthIndicator(
+    input: {
+      openRequests: number;
+      overdueDocumentRequests: number;
+      overdueRequests: number;
+      returnedOutputs: number;
+      waitingClientRequests: number;
+    },
+    rules: ClientHealthRules,
+  ) {
     if (
-      input.overdueRequests > 0 ||
-      input.overdueDocumentRequests > 0 ||
-      input.returnedOutputs > 0
+      input.overdueRequests >= rules.attentionOverdueRequests ||
+      input.overdueDocumentRequests >= rules.attentionOverdueDocuments ||
+      input.returnedOutputs >= rules.attentionReturnedOutputs
     ) {
       return {
         code: "ATTENTION",
@@ -745,7 +815,10 @@ export class ReportsService {
         reason: "Overdue work, overdue documents, or returned outputs exist.",
       };
     }
-    if (input.waitingClientRequests > 0 || input.openRequests > 5) {
+    if (
+      input.waitingClientRequests >= rules.watchWaitingClientRequests ||
+      input.openRequests >= rules.watchOpenRequests
+    ) {
       return {
         code: "WATCH",
         label: "Watch",

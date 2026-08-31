@@ -22,6 +22,17 @@ import { PageHeader, SectionCard, SmartTable, StatusChip } from "../premium-os";
 import { QuoteLifecycleActions, QuoteOnboardingLauncher } from "./quote-lifecycle-actions";
 import { QuoteOnboardingDialog } from "./quote-onboarding-dialog";
 
+function paymentMethodLabel(method: string, locale: "ar" | "en"): string {
+  const t = commercialCopy[locale];
+  const labels = {
+    BANK_TRANSFER: t.paymentMethodBank,
+    CARD: t.paymentMethodCard,
+    CASH: t.paymentMethodCash,
+    OTHER: t.paymentMethodOther,
+  } as const;
+  return labels[method as keyof typeof labels] ?? t.paymentMethodOther;
+}
+
 export function QuoteDetail({
   initialQuote,
   locale: localeInput = "en",
@@ -70,7 +81,12 @@ export function QuoteDetail({
             {t.viewPdf}
           </a>
           {quote.status === "ACCEPTED" ? (
-            <QuoteOnboardingLauncher compact locale={locale} quoteId={quote.id} />
+            <QuoteOnboardingLauncher
+              compact
+              locale={locale}
+              quoteId={quote.id}
+              onCompleted={() => setQuote((current) => ({ ...current, status: "ACTIVATED" }))}
+            />
           ) : null}
           <CreateInvoiceAction locale={locale} quote={quote} />
           <Link
@@ -85,14 +101,14 @@ export function QuoteDetail({
         </div>
       </PageHeader>
 
-      {quote.status === "DRAFT" || quote.status === "ISSUED" ? (
+      {["DRAFT", "ISSUED", "APPROVED"].includes(quote.status) ? (
         <SectionCard
           eyebrow={t.governance}
           title={t.lifecycle}
           description={
             locale === "ar"
-              ? "إصدار العرض وتأكيد موافقة العميل والدفع خارج النظام أو رفضه أو إنهاء صلاحيته أو إلغاؤه تُسجل ولا تعيد كتابة محتوى العرض."
-              : "Issuing, external approval/payment confirmation, rejection, expiration, and cancellation are audited and never rewrite quote content."
+              ? "إصدار العرض، تسجيل موافقة العميل، ثم تأكيد الدفع خطوات مستقلة ومدققة ولا تعيد كتابة محتوى العرض."
+              : "Issuing, client approval, and payment confirmation are separate audited steps that never rewrite quote content."
           }
         >
           <QuoteLifecycleActions
@@ -115,6 +131,10 @@ export function QuoteDetail({
           locale={locale}
           options={onboardingOptions}
           onClose={() => setOnboardingOptions(null)}
+          onCompleted={() => {
+            setOnboardingOptions(null);
+            setQuote((current) => ({ ...current, status: "ACTIVATED" }));
+          }}
         />
       ) : null}
 
@@ -157,6 +177,18 @@ export function QuoteDetail({
               <dt>{t.additional}</dt>
               <dd>{businessText(quote.terms.additionalTerms, locale, t.none)}</dd>
             </div>
+            {quote.payment ? (
+              <>
+                <div>
+                  <dt>{t.paymentMethod}</dt>
+                  <dd>{paymentMethodLabel(quote.payment.method, locale)}</dd>
+                </div>
+                <div>
+                  <dt>{t.paymentReference}</dt>
+                  <dd>{quote.payment.reference || t.notSpecified}</dd>
+                </div>
+              </>
+            ) : null}
           </dl>
         </SectionCard>
       </section>

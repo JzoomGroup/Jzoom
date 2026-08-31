@@ -33,7 +33,9 @@ export function QuoteList({
     "ALL",
     "DRAFT",
     "ISSUED",
+    "APPROVED",
     "ACCEPTED",
+    "ACTIVATED",
     "REJECTED",
     "EXPIRED",
     "CANCELLED",
@@ -41,8 +43,10 @@ export function QuoteList({
 
   function nextStep(status: QuoteStatus): string {
     if (status === "DRAFT") return t.issueQuote;
-    if (status === "ISSUED") return t.acceptQuote;
-    if (status === "ACCEPTED") return t.readyForInvoice;
+    if (status === "ISSUED") return t.approveQuote;
+    if (status === "APPROVED") return t.readyForPayment;
+    if (status === "ACCEPTED") return t.activateClientServices;
+    if (status === "ACTIVATED") return t.readyForInvoice;
     return t.terminalRecord;
   }
 
@@ -136,7 +140,18 @@ export function QuoteList({
                   }
                 />
                 {quote.status === "ACCEPTED" ? (
-                  <QuoteOnboardingLauncher compact locale={locale} quoteId={quote.id} />
+                  <QuoteOnboardingLauncher
+                    compact
+                    locale={locale}
+                    quoteId={quote.id}
+                    onCompleted={() =>
+                      setItems((current) =>
+                        current.map((item) =>
+                          item.id === quote.id ? { ...item, status: "ACTIVATED" } : item,
+                        ),
+                      )
+                    }
+                  />
                 ) : null}
               </article>
             ))}

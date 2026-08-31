@@ -580,3 +580,53 @@
   font-size: 12px;
   font-weight: 600;
 }
+.system-state-shell {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--color-page, #f6f8fb);
+}
+
+.system-state-card {
+  width: min(100%, 560px);
+  display: grid;
+  gap: 16px;
+  justify-items: start;
+  padding: clamp(24px, 5vw, 44px);
+  border: 1px solid var(--color-border, #dce3ed);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgb(21 38 64 / 8%);
+}
+
+.system-state-card h1,
+.system-state-card p {
+  margin: 0;
+}
+
+.system-state-card > p:not(.eyebrow) {
+  color: var(--color-text-muted, #647086);
+  line-height: 1.8;
+}
+
+.system-state-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e8edf4;
+  border-top-color: var(--color-primary, #ff6259);
+  border-radius: 50%;
+  animation: system-state-spin 800ms linear infinite;
+}
+
+.system-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@keyframes system-state-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

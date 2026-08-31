@@ -20,6 +20,7 @@ import type {
   ProjectTaskStatus,
 } from "../../lib/project-types";
 import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
+import { AppDialog } from "../app-dialog";
 import { EmptyState, MetricCard, PageHeader, SectionCard, StatusChip } from "../premium-os";
 
 const projectStatusLabels = {
@@ -365,6 +366,7 @@ export function ProjectDetail({
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [showOutputForm, setShowOutputForm] = useState(false);
   const [outputTitle, setOutputTitle] = useState("");
   const [outputCode, setOutputCode] = useState("");
   const [outputDescription, setOutputDescription] = useState("");
@@ -458,6 +460,7 @@ export function ProjectDetail({
       setOutputCode("");
       setOutputDescription("");
       setOutputFile(null);
+      setShowOutputForm(false);
     } catch (actionError) {
       setError(projectErrorMessage(actionError));
     } finally {
@@ -577,16 +580,6 @@ export function ProjectDetail({
           {notice}
         </div>
       ) : null}
-      <section className="os-bento-grid compact">
-        <MetricCard
-          label={t.completedTasks}
-          value={`${project.progress.tasksDone}/${project.progress.tasksTotal}`}
-        />
-        <MetricCard label={t.outputs} value={outputProgress} />
-        <MetricCard label={t.estimatedHours} value={project.service.estimatedHours} />
-        <MetricCard accent label={t.due} value={formatDate(project.dueAt, locale, t.notSet)} />
-      </section>
-
       {project.capabilities.canSupervise ? (
         <section className="project-room-actions row-actions" aria-label={t.internalControls}>
           <button
@@ -623,8 +616,8 @@ export function ProjectDetail({
       <SectionCard title={t.overview} eyebrow={t.service}>
         <dl className="entity-meta four-up">
           <div>
-            <dt>{t.service}</dt>
-            <dd>{localizedName(project.service, locale)}</dd>
+            <dt>{t.estimatedHours}</dt>
+            <dd>{project.service.estimatedHours}</dd>
           </div>
           <div>
             <dt>{t.quote}</dt>
@@ -739,52 +732,73 @@ export function ProjectDetail({
         title={t.outputs}
         eyebrow={t.deliverables}
         description={clientMode ? t.outputDecisionHint : t.noOutputsDescription}
+        action={
+          !clientMode && project.capabilities.canDeliver ? (
+            <button
+              className="os-button os-button-primary"
+              type="button"
+              onClick={() => setShowOutputForm(true)}
+            >
+              {t.addOutput}
+            </button>
+          ) : undefined
+        }
       >
-        {!clientMode && project.capabilities.canDeliver ? (
-          <form className="operating-user-form" noValidate onSubmit={submitOutput}>
-            <div className="operating-user-grid">
-              <label>
-                <span>{t.name}</span>
-                <input
-                  placeholder={t.name}
-                  value={outputTitle}
-                  onChange={(event) => setOutputTitle(event.target.value)}
-                />
-              </label>
-              <label>
-                <span>{t.outputFile}</span>
-                <input
-                  type="file"
-                  onChange={(event) => setOutputFile(event.target.files?.[0] ?? null)}
-                />
-              </label>
-              <label>
-                <span>{t.outputCode}</span>
-                <input
-                  placeholder="OUT-01"
-                  value={outputCode}
-                  onChange={(event) => setOutputCode(event.target.value)}
-                />
-              </label>
-              <label>
-                <span>{t.description}</span>
-                <input
-                  placeholder={t.outputReady}
-                  value={outputDescription}
-                  onChange={(event) => setOutputDescription(event.target.value)}
-                />
-              </label>
-            </div>
-            <div className="row-actions">
-              <button
-                className="os-button os-button-primary"
-                type="submit"
-                disabled={saving === "output"}
-              >
-                {t.saveOutput}
-              </button>
-            </div>
-          </form>
+        {showOutputForm && !clientMode && project.capabilities.canDeliver ? (
+          <AppDialog
+            busy={saving === "output"}
+            closeLabel={locale === "ar" ? "إغلاق" : "Close"}
+            description={t.noOutputsDescription}
+            eyebrow={t.deliverables}
+            onClose={() => setShowOutputForm(false)}
+            size="lg"
+            title={t.addOutput}
+          >
+            <form className="operating-user-form" noValidate onSubmit={submitOutput}>
+              <div className="operating-user-grid">
+                <label>
+                  <span>{t.name}</span>
+                  <input
+                    placeholder={t.name}
+                    value={outputTitle}
+                    onChange={(event) => setOutputTitle(event.target.value)}
+                  />
+                </label>
+                <label>
+                  <span>{t.outputFile}</span>
+                  <input
+                    type="file"
+                    onChange={(event) => setOutputFile(event.target.files?.[0] ?? null)}
+                  />
+                </label>
+                <label>
+                  <span>{t.outputCode}</span>
+                  <input
+                    placeholder="OUT-01"
+                    value={outputCode}
+                    onChange={(event) => setOutputCode(event.target.value)}
+                  />
+                </label>
+                <label>
+                  <span>{t.description}</span>
+                  <input
+                    placeholder={t.outputReady}
+                    value={outputDescription}
+                    onChange={(event) => setOutputDescription(event.target.value)}
+                  />
+                </label>
+              </div>
+              <div className="row-actions">
+                <button
+                  className="os-button os-button-primary"
+                  type="submit"
+                  disabled={saving === "output"}
+                >
+                  {t.saveOutput}
+                </button>
+              </div>
+            </form>
+          </AppDialog>
         ) : null}
         {visibleOutputs.length === 0 ? (
           <EmptyState title={t.noOutputs}>

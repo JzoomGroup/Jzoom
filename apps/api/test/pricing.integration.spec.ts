@@ -312,7 +312,7 @@ describeWithDatabase("PR 6 pricing rules and Pricing Studio APIs", () => {
           {
             monthlyServiceRevisionId: monthly.revision.id,
             serviceLevelId: monthly.revision.levels[0].id,
-            quantity: 1,
+            quantity: 2,
           },
         ],
         oneTimeSelections: [],
@@ -320,6 +320,13 @@ describeWithDatabase("PR 6 pricing rules and Pricing Studio APIs", () => {
       .expect(201);
     expect(preview.body.calculation.totals.finalBeforeTax).toBeGreaterThan(0);
     expect(preview.body.calculation.totals.taxTotal).toBeGreaterThan(0);
+    expect(preview.body.calculation.lines[0]).toEqual(
+      expect.objectContaining({
+        packageHours: monthly.revision.levels[0].hours,
+        hours: monthly.revision.levels[0].hours * 2,
+        quantity: 2,
+      }),
+    );
     expect(preview.body.calculation.appliedRules).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "PR6-TAX-STANDARD" })]),
     );
@@ -387,5 +394,62 @@ describeWithDatabase("PR 6 pricing rules and Pricing Studio APIs", () => {
       expect.arrayContaining(["PRICING_DRAFT_CREATED", "PRICING_DRAFT_UPDATED"]),
     );
     expect(auditCodes.every((entry) => Boolean(entry.requestId))).toBe(true);
+  });
+
+  it("applies the configured default discount only when no discount rule is active", async () => {
+    const admin = await login("admin@pr6.test");
+    await database.platformSetting.deleteMany({
+      where: { key: "pricing.discount.default_pct" },
+    });
+    await database.platformSetting.create({
+      data: {
+        key: "pricing.discount.default_pct",
+        category: "pricing",
+        valueType: "NUMBER",
+        revisions: {
+          create: {
+            version: 1,
+            status: "ACTIVE",
+            value: 10,
+            effectiveFrom: new Date(Date.now() - 60_000),
+          },
+        },
+      },
+    });
+
+    try {
+      const catalog = await admin.agent.get("/api/v1/pricing/catalog").expect(200);
+      const monthly = catalog.body.monthlyServices[0];
+      const preview = await admin.agent
+        .post("/api/v1/pricing/preview")
+        .set("X-CSRF-Token", admin.csrf)
+        .send({
+          clientId: clientAId,
+          title: "Configured default discount",
+          pricingDate: new Date().toISOString(),
+          currency: "SAR",
+          monthlySelections: [
+            {
+              monthlyServiceRevisionId: monthly.revision.id,
+              serviceLevelId: monthly.revision.levels[0].id,
+              quantity: 1,
+            },
+          ],
+          oneTimeSelections: [],
+        })
+        .expect(201);
+      expect(preview.body.calculation.totals.discountTotal).toBe(
+        preview.body.calculation.totals.subtotal * 0.1,
+      );
+      expect(preview.body.calculation.appliedRules).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: "PLATFORM-DEFAULT-DISCOUNT", value: 10 }),
+        ]),
+      );
+    } finally {
+      await database.platformSetting.deleteMany({
+        where: { key: "pricing.discount.default_pct" },
+      });
+    }
   });
 });

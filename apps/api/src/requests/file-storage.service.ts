@@ -1,8 +1,15 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  Optional,
+} from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { access, mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { RuntimePlatformSettingsService } from "../platform-configuration/runtime-platform-settings.service.js";
 
 export interface UploadedRequestFile {
   buffer: Buffer;
@@ -28,6 +35,20 @@ export function requestUploadMaxBytes(): number {
   return 25 * 1024 * 1024;
 }
 
+export const DEFAULT_ALLOWED_UPLOAD_MIME_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/zip",
+  "image/*",
+  "text/csv",
+  "text/plain",
+] as const;
+
 function uploadRoot(): string {
   return resolve(process.env.JZOOM_UPLOAD_ROOT ?? ".jzoom-uploads");
 }
@@ -37,6 +58,16 @@ function safeOriginalName(originalName: string): string {
     .replace(/[^\p{L}\p{N} .()[\]-]+/gu, "_")
     .trim();
   return name || "uploaded-file";
+}
+
+function mimeTypeAllowed(mimeType: string, allowedMimeTypes: readonly string[]): boolean {
+  const normalized = mimeType.trim().toLowerCase();
+  return allowedMimeTypes.some((allowed) => {
+    if (allowed === "*/*" || allowed === normalized) {
+      return true;
+    }
+    return allowed.endsWith("/*") && normalized.startsWith(allowed.slice(0, -1));
+  });
 }
 
 function safeStoragePath(root: string, storageKey: string): string {
@@ -60,7 +91,12 @@ function safeStoragePath(root: string, storageKey: string): string {
 @Injectable()
 export class FileStorageService {
   private readonly root = uploadRoot();
-  private readonly maxBytes = requestUploadMaxBytes();
+
+  constructor(
+    @Optional()
+    @Inject(RuntimePlatformSettingsService)
+    private readonly settings?: RuntimePlatformSettingsService,
+  ) {}
 
   async storeRequestFile(
     requestId: string,
@@ -89,10 +125,33 @@ export class FileStorageService {
         message: "A non-empty file is required",
       });
     }
-    if (actualSize > this.maxBytes) {
+    const infrastructureMaxBytes = requestUploadMaxBytes();
+    const configuredMaxMb = this.settings
+      ? await this.settings.number("attachments.max_size_mb", {
+          fallback: infrastructureMaxBytes / 1024 / 1024,
+          minimum: 1,
+          maximum: infrastructureMaxBytes / 1024 / 1024,
+        })
+      : infrastructureMaxBytes / 1024 / 1024;
+    const maxBytes = Math.floor(configuredMaxMb * 1024 * 1024);
+    if (actualSize > maxBytes) {
       throw new BadRequestException({
         code: "FILE_TOO_LARGE",
-        message: `File size must not exceed ${this.maxBytes} bytes`,
+        message: `File size must not exceed ${maxBytes} bytes`,
+      });
+    }
+
+    const mimeType = (file.mimetype || "application/octet-stream").trim().toLowerCase();
+    const allowedMimeTypes = this.settings
+      ? await this.settings.stringArray(
+          "attachments.allowed_mime_types",
+          DEFAULT_ALLOWED_UPLOAD_MIME_TYPES,
+        )
+      : [...DEFAULT_ALLOWED_UPLOAD_MIME_TYPES];
+    if (!mimeTypeAllowed(mimeType, allowedMimeTypes)) {
+      throw new BadRequestException({
+        code: "FILE_TYPE_NOT_ALLOWED",
+        message: "This file type is not allowed",
       });
     }
 
@@ -104,7 +163,7 @@ export class FileStorageService {
 
     return {
       originalName,
-      mimeType: file.mimetype || "application/octet-stream",
+      mimeType,
       sizeBytes: actualSize,
       sha256: createHash("sha256").update(file.buffer).digest("hex"),
       storageProvider: "local",

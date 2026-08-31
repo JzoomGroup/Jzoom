@@ -1,7 +1,7 @@
 import { BadRequestException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { DatabaseService } from "../database/database.service.js";
 import { AccessService } from "./access.service.js";
-import { AUTH_ENVIRONMENT, DEFAULT_TEMPORARY_PASSWORD } from "./auth.constants.js";
+import { AUTH_ENVIRONMENT, temporaryPassword } from "./auth.constants.js";
 import { AuthAuditService } from "./audit.service.js";
 import { PasswordHasherService } from "./password-hasher.service.js";
 import { TokenService } from "./token.service.js";
@@ -136,6 +136,7 @@ export class AuthService {
 
   async changePassword(
     userId: string,
+    currentPassword: string | undefined,
     newPassword: string,
     confirmPassword: string,
     metadata: RequestMetadata,
@@ -146,10 +147,35 @@ export class AuthService {
         message: "The password confirmation does not match",
       });
     }
-    if (newPassword === DEFAULT_TEMPORARY_PASSWORD) {
+    if (newPassword === temporaryPassword()) {
       throw new BadRequestException({
         code: "PASSWORD_CANNOT_BE_DEFAULT",
         message: "Choose a password different from the temporary default password",
+      });
+    }
+
+    const user = await this.database.prisma.user.findUnique({
+      where: { id: userId },
+      select: { passwordChangedAt: true, passwordHash: true },
+    });
+    if (!user?.passwordHash) {
+      throw new UnauthorizedException(GENERIC_LOGIN_ERROR);
+    }
+
+    if (
+      user.passwordChangedAt &&
+      (!currentPassword || !(await this.passwords.verify(currentPassword, user.passwordHash)))
+    ) {
+      throw new BadRequestException({
+        code: "CURRENT_PASSWORD_INVALID",
+        message: "The current password is incorrect",
+      });
+    }
+
+    if (await this.passwords.verify(newPassword, user.passwordHash)) {
+      throw new BadRequestException({
+        code: "PASSWORD_UNCHANGED",
+        message: "Choose a password different from the current password",
       });
     }
 

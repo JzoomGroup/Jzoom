@@ -36,8 +36,9 @@ const apiEnvironmentSchema = z
     AUTH_EXPOSE_TEST_TOKENS: optionalBooleanSchema,
     AUTH_MAX_LOGIN_ATTEMPTS: z.coerce.number().int().min(3).max(20).default(5),
     AUTH_LOCKOUT_MINUTES: z.coerce.number().int().min(1).max(1_440).default(15),
+    AUTH_DEFAULT_TEMPORARY_PASSWORD: z.string().min(8).optional(),
     BOOTSTRAP_ADMIN_EMAIL: z.string().trim().email().optional(),
-    BOOTSTRAP_ADMIN_PASSWORD: z.string().min(12).optional(),
+    BOOTSTRAP_ADMIN_PASSWORD: z.string().min(8).optional(),
   })
   .superRefine((environment, context) => {
     const hasEmail = environment.BOOTSTRAP_ADMIN_EMAIL !== undefined;
@@ -87,6 +88,7 @@ export interface ApiEnvironment {
     exposeTestTokens: boolean;
     maxLoginAttempts: number;
     lockoutMinutes: number;
+    defaultTemporaryPassword?: string;
   };
   bootstrapAdmin?: {
     email: string;
@@ -153,6 +155,9 @@ export function parseApiEnvironment(input: NodeJS.ProcessEnv): ApiEnvironment {
       exposeTestTokens: environment.AUTH_EXPOSE_TEST_TOKENS ?? false,
       maxLoginAttempts: environment.AUTH_MAX_LOGIN_ATTEMPTS,
       lockoutMinutes: environment.AUTH_LOCKOUT_MINUTES,
+      ...(environment.AUTH_DEFAULT_TEMPORARY_PASSWORD
+        ? { defaultTemporaryPassword: environment.AUTH_DEFAULT_TEMPORARY_PASSWORD }
+        : {}),
     },
     ...(bootstrapAdmin ? { bootstrapAdmin } : {}),
   };

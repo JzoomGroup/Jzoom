@@ -5,9 +5,16 @@ import type { Reflector } from "@nestjs/core";
 import { jest } from "@jest/globals";
 import type { AccessService } from "../src/auth/access.service.js";
 import type { AuthAuditService } from "../src/auth/audit.service.js";
-import type { AuthenticatedPrincipal, ScopeRequirement } from "../src/auth/auth.types.js";
+import { AuthGuard } from "../src/auth/auth.guard.js";
+import { ALLOW_PASSWORD_CHANGE_REQUIRED_KEY, IS_PUBLIC_KEY } from "../src/auth/auth.constants.js";
+import type {
+  AuthenticatedPrincipal,
+  AuthRuntimeEnvironment,
+  ScopeRequirement,
+} from "../src/auth/auth.types.js";
 import { PasswordHasherService } from "../src/auth/password-hasher.service.js";
 import { ScopeGuard } from "../src/auth/scope.guard.js";
+import { TokenService } from "../src/auth/token.service.js";
 
 function principal(overrides: Partial<AuthenticatedPrincipal> = {}): AuthenticatedPrincipal {
   return {
@@ -116,5 +123,63 @@ describe("PR 3 security primitives", () => {
     await expect(
       guard.canActivate(contextFor(principal({ roles: ["ROLE-ADMIN"] }), {})),
     ).resolves.toBe(true);
+  });
+
+  it("blocks every protected method until the temporary password is changed", async () => {
+    const reflector = {
+      getAllAndOverride: jest.fn((key: string) => {
+        if (key === IS_PUBLIC_KEY) return false;
+        if (key === ALLOW_PASSWORD_CHANGE_REQUIRED_KEY) return false;
+        return undefined;
+      }),
+    } as unknown as Reflector;
+    const access = {
+      resolveSession: jest.fn(async () => principal({ mustChangePassword: true })),
+    } as unknown as AccessService;
+    const environment = {
+      auth: { cookieName: "jzoom_session" },
+    } as AuthRuntimeEnvironment;
+    const guard = new AuthGuard(reflector, access, new TokenService(), environment);
+    const context = {
+      getHandler: () => function handler() {},
+      getClass: () => class Controller {},
+      switchToHttp: () => ({
+        getRequest: () => ({
+          headers: { cookie: "jzoom_session=session-token" },
+          method: "GET",
+        }),
+      }),
+    } as unknown as ExecutionContext;
+
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it("allows explicitly approved authentication routes during password change", async () => {
+    const reflector = {
+      getAllAndOverride: jest.fn((key: string) => {
+        if (key === IS_PUBLIC_KEY) return false;
+        if (key === ALLOW_PASSWORD_CHANGE_REQUIRED_KEY) return true;
+        return undefined;
+      }),
+    } as unknown as Reflector;
+    const access = {
+      resolveSession: jest.fn(async () => principal({ mustChangePassword: true })),
+    } as unknown as AccessService;
+    const environment = {
+      auth: { cookieName: "jzoom_session" },
+    } as AuthRuntimeEnvironment;
+    const guard = new AuthGuard(reflector, access, new TokenService(), environment);
+    const context = {
+      getHandler: () => function handler() {},
+      getClass: () => class Controller {},
+      switchToHttp: () => ({
+        getRequest: () => ({
+          headers: { cookie: "jzoom_session=session-token" },
+          method: "GET",
+        }),
+      }),
+    } as unknown as ExecutionContext;
+
+    await expect(guard.canActivate(context)).resolves.toBe(true);
   });
 });

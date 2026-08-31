@@ -16,7 +16,7 @@ import {
   ValidateNested,
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { QUOTE_PUBLIC_STATUSES } from "./quotes.constants.js";
+import { QUOTE_PAYMENT_METHODS, QUOTE_PUBLIC_STATUSES } from "./quotes.constants.js";
 
 export class QuoteTermsDto {
   @ApiProperty({ type: String })
@@ -85,6 +85,30 @@ export class QuoteLifecycleActionDto {
     description: "Optional internal note for the lifecycle decision.",
     type: String,
   })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  note?: string;
+}
+
+export class ConfirmQuotePaymentDto {
+  @ApiPropertyOptional({ enum: QUOTE_PAYMENT_METHODS, default: "OTHER" })
+  @IsOptional()
+  @IsIn(QUOTE_PAYMENT_METHODS)
+  method?: (typeof QUOTE_PAYMENT_METHODS)[number];
+
+  @ApiPropertyOptional({ type: String, format: "date-time" })
+  @IsOptional()
+  @IsDateString()
+  paidAt?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  reference?: string;
+
+  @ApiPropertyOptional({ type: String })
   @IsOptional()
   @IsString()
   @MaxLength(2_000)
