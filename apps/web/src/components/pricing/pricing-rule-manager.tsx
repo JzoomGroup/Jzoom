@@ -23,6 +23,7 @@ import {
 } from "../catalog/catalog-shared";
 import { MetricCard, SectionCard } from "../premium-os";
 import { AppDialog } from "../app-dialog";
+import { LocalizedDateTimeInput } from "../localized-date-input";
 
 const statusLabels = {
   ACTIVE: { ar: "نشطة", en: "Active" },
@@ -274,18 +275,20 @@ export function PricingRuleManager({
             </label>
             <label>
               {t.effectiveFrom}
-              <input
+              <LocalizedDateTimeInput
+                aria-label={t.effectiveFrom}
+                locale={locale}
                 name="effectiveFrom"
-                type="datetime-local"
                 required
                 defaultValue={dateTimeInput(current?.effectiveFrom)}
               />
             </label>
             <label>
               {t.effectiveTo}
-              <input
+              <LocalizedDateTimeInput
+                aria-label={t.effectiveTo}
+                locale={locale}
                 name="effectiveTo"
-                type="datetime-local"
                 defaultValue={current?.effectiveTo ? dateTimeInput(current.effectiveTo) : ""}
               />
             </label>

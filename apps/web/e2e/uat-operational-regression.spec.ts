@@ -167,6 +167,14 @@ test("completes the monthly request, document, hours, output, and client decisio
   await clientComments.getByRole("button", { name: "إضافة تعليق" }).click();
   await expect(clientComments).toContainText(visibleComment);
 
+  await reloadInteractive(specialist.page);
+  const specialistDocument = specialist.page
+    .locator("#request-documents article")
+    .filter({ hasText: documentTitle });
+  await expect(specialistDocument).toContainText(`client-${runId}-v2.txt`);
+  await specialistDocument.getByRole("button", { name: "إغلاق" }).click();
+  await expect(specialistDocument).toContainText("مغلق");
+
   const supervisor = await authenticatedPage(browser, supervisorEmail!);
   await gotoInteractive(supervisor.page, `/requests/${requestId}`);
   await expect(supervisor.page.getByRole("heading", { level: 1 })).toContainText(requestTitle);
@@ -266,11 +274,6 @@ test("completes the monthly request, document, hours, output, and client decisio
   await expect(client.page.locator("#client-timeline")).toContainText("اعتمد العميل المخرج");
 
   await reloadInteractive(specialist.page);
-  const specialistDocument = specialist.page
-    .locator("#request-documents article")
-    .filter({ hasText: documentTitle });
-  await expect(specialistDocument).toContainText(`client-${runId}-v2.txt`);
-  await specialistDocument.getByRole("button", { name: "إغلاق" }).click();
   await expect(specialist.page.locator("#request-comments")).toContainText(visibleComment);
 
   await Promise.all([

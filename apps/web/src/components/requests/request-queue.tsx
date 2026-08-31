@@ -15,6 +15,7 @@ import type {
 } from "../../lib/request-types";
 import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
 import { replaceCurrentUrlQuery } from "../../lib/url-state";
+import { LocalizedDateTimeInput } from "../localized-date-input";
 import {
   BentoGrid,
   EmptyState,
@@ -399,8 +400,9 @@ export function RequestQueue({
             </label>
             <label>
               {t.dueBefore}
-              <input
-                type="datetime-local"
+              <LocalizedDateTimeInput
+                aria-label={t.dueBefore}
+                locale={locale}
                 value={filters.dueTo}
                 onChange={(event) => setFilters({ ...filters, dueTo: event.target.value })}
               />

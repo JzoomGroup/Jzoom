@@ -38,7 +38,7 @@ import type {
 import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
 import { riyadhDateInputValue } from "../../lib/stable-date";
 import { PageHeader, PriorityChip, StatusChip } from "../premium-os";
-import { LocalizedDateInput } from "../localized-date-input";
+import { LocalizedDateInput, LocalizedDateTimeInput } from "../localized-date-input";
 
 const statuses: RequestStatus[] = [
   "NEW",
@@ -1236,8 +1236,9 @@ export function RequestDetail({
               </label>
               <label>
                 {t.dueAt}
-                <input
-                  type="datetime-local"
+                <LocalizedDateTimeInput
+                  aria-label={t.dueAt}
+                  locale={locale}
                   value={taskForm.dueAt}
                   onChange={(event) => setTaskForm({ ...taskForm, dueAt: event.target.value })}
                 />
@@ -1532,8 +1533,9 @@ export function RequestDetail({
               </label>
               <label>
                 {t.dueAt}
-                <input
-                  type="datetime-local"
+                <LocalizedDateTimeInput
+                  aria-label={t.dueAt}
+                  locale={locale}
                   value={documentForm.dueAt}
                   onChange={(event) =>
                     setDocumentForm({ ...documentForm, dueAt: event.target.value })

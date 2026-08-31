@@ -764,9 +764,14 @@ export function ProjectDetail({
                     onChange={(event) => setOutputTitle(event.target.value)}
                   />
                 </label>
-                <label>
+                <label className="project-file-picker">
                   <span>{t.outputFile}</span>
+                  <span className="project-file-picker-control" aria-hidden="true">
+                    <span>{outputFile?.name ?? t.fileRequired}</span>
+                    <strong>{t.chooseFile}</strong>
+                  </span>
                   <input
+                    aria-label={t.outputFile}
                     type="file"
                     onChange={(event) => setOutputFile(event.target.files?.[0] ?? null)}
                   />
@@ -887,8 +892,12 @@ export function ProjectDetail({
                 {project.capabilities.canDeliver &&
                 ["DRAFT", "RETURNED_BY_CLIENT"].includes(output.status) ? (
                   <div className="project-output-upload">
-                    <label>
+                    <label className="project-file-picker">
                       <span>{t.outputFile}</span>
+                      <span className="project-file-picker-control" aria-hidden="true">
+                        <span>{outputFiles[output.id]?.name ?? t.fileRequired}</span>
+                        <strong>{t.chooseFile}</strong>
+                      </span>
                       <input
                         type="file"
                         aria-label={`${t.outputFile} - ${localizedOutputTitle(output, locale)}`}
@@ -900,7 +909,6 @@ export function ProjectDetail({
                           }));
                         }}
                       />
-                      {outputFiles[output.id] ? <small>{outputFiles[output.id]?.name}</small> : null}
                     </label>
                     <button
                       className="os-button os-button-secondary"

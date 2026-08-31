@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { confirmQuotePayment, quoteErrorMessage } from "../../lib/quote-client";
 import type { Quote, QuotePaymentMethod } from "../../lib/quote-types";
 import { commercialCopy, commercialLocale } from "../commercial-i18n";
+import { LocalizedDateTimeInput } from "../localized-date-input";
 
 function localDateTimeInput(): string {
   const now = new Date();
@@ -79,11 +80,12 @@ export function QuotePaymentDialog({
             </label>
             <label>
               {t.paymentDate}
-              <input
+              <LocalizedDateTimeInput
+                aria-label={t.paymentDate}
                 defaultValue={localDateTimeInput()}
+                locale={locale}
                 max={localDateTimeInput()}
                 name="paidAt"
-                type="datetime-local"
               />
             </label>
             <label className="form-span">

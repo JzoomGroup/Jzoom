@@ -26,6 +26,7 @@ import type {
   RequestSummary,
 } from "../../lib/request-types";
 import { AppDialog } from "../app-dialog";
+import { LocalizedDateTimeInput } from "../localized-date-input";
 import { EmptyState, PageHeader, PriorityChip, SectionCard, StatusChip } from "../premium-os";
 import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
 
@@ -626,8 +627,9 @@ export function RequestList({
                 </label>
                 <label>
                   {t.dueAt}
-                  <input
-                    type="datetime-local"
+                  <LocalizedDateTimeInput
+                    aria-label={t.dueAt}
+                    locale={locale}
                     value={form.dueAt}
                     onChange={(event) => setForm({ ...form, dueAt: event.target.value })}
                   />

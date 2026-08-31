@@ -9,6 +9,7 @@ export const projectBoardCopy = {
       "تابع مشاريع البناء والخدمات ذات المرة الواحدة من بداية التفعيل حتى تسليم المخرجات.",
     clientReviewActions: "قرار العميل",
     completedTasks: "المهام المنجزة",
+    chooseFile: "اختيار ملف",
     deliverables: "المخرجات المتوقعة",
     deliveryPath: "مسار التسليم",
     deliveryPathDescription:
@@ -99,6 +100,7 @@ export const projectBoardCopy = {
       "Track one-time build and delivery projects from activation through outputs.",
     clientReviewActions: "Client decision",
     completedTasks: "Completed tasks",
+    chooseFile: "Choose file",
     deliverables: "Expected deliverables",
     deliveryPath: "Delivery path",
     deliveryPathDescription:

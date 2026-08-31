@@ -22,6 +22,7 @@ import type {
 } from "../../lib/client-portal-types";
 import type { RequestTemplateVersion, TemplateAnswerValue } from "../../lib/request-template-types";
 import type { RequestStatus, RequestSummary } from "../../lib/request-types";
+import { LocalizedDateTimeInput } from "../localized-date-input";
 import { EmptyState, PageHeader, PriorityChip, SectionCard, StatusChip } from "../premium-os";
 import {
   clientDate,
@@ -410,8 +411,9 @@ export function ClientRequestList({
                 </label>
                 <label>
                   {t.dueAt}
-                  <input
-                    type="datetime-local"
+                  <LocalizedDateTimeInput
+                    aria-label={t.dueAt}
+                    locale={locale}
                     value={form.dueAt}
                     onChange={(event) => setForm({ ...form, dueAt: event.target.value })}
                   />

@@ -31,11 +31,10 @@ async function reloadInteractive(page: Page) {
 
 async function chooseProjectRevisionFile(
   outputCard: ReturnType<Page["locator"]>,
-  outputTitle: string,
   name: string,
   contents: string,
 ) {
-  const revisionInput = outputCard.getByLabel(new RegExp(`ملف المخرج - ${outputTitle}`));
+  const revisionInput = outputCard.locator('input[type="file"]');
   for (let attempt = 0; attempt < 5; attempt += 1) {
     await revisionInput.setInputFiles([]);
     await revisionInput.setInputFiles({
@@ -83,6 +82,14 @@ test("completes one-time quote onboarding and project output approval", async ({
   const outputTitle = `مخرج مشروع تحقق ${runId}`;
   const serviceName = "أتمتة سير عمل داخلي";
 
+  const specialist = await authenticatedPage(browser, projectSpecialistEmail!);
+  await gotoInteractive(specialist.page, "/projects");
+  const existingProjectPaths = new Set(
+    await specialist.page.locator('a[href^="/projects/"]').evaluateAll((links) =>
+      links.map((link) => link.getAttribute("href")).filter((href): href is string => Boolean(href)),
+    ),
+  );
+
   const admin = await authenticatedPage(browser, adminEmail!);
   await gotoInteractive(admin.page, "/pricing");
   await admin.page
@@ -92,7 +99,7 @@ test("completes one-time quote onboarding and project output approval", async ({
   await admin.page.getByRole("tab", { name: /خدمات المرة الواحدة/ }).click();
   await admin.page.getByLabel(`اختيار ${serviceName}`).check();
   await admin.page.getByRole("button", { name: "إعادة حساب المعاينة" }).click();
-  await expect(admin.page.getByText("تم تحديث معاينة التسعير من محرك النظام.")).toBeVisible();
+  await expect(admin.page.getByText("تمت إعادة حساب معاينة التسعير.")).toBeVisible();
   await admin.page.getByRole("button", { name: "حفظ مسودة التسعير" }).click();
   await admin.page.waitForURL(/\/pricing\/[a-z0-9-]+$/i, { timeout: 20_000 });
 
@@ -110,8 +117,8 @@ test("completes one-time quote onboarding and project output approval", async ({
   await admin.page.getByRole("button", { name: "تسجيل موافقة العميل" }).click();
   await expect(admin.page.getByRole("button", { name: "تأكيد الدفع" })).toBeVisible();
   await admin.page.getByRole("button", { name: "تأكيد الدفع" }).click();
-  const paymentDialog = admin.page.getByRole("dialog", { name: "تأكيد استلام الدفع" });
-  await paymentDialog.getByLabel("مرجع الدفعة").fill(`UAT-${runId}`);
+  const paymentDialog = admin.page.getByRole("dialog", { name: "تأكيد دفع عرض السعر" });
+  await paymentDialog.getByLabel("مرجع العملية").fill(`UAT-${runId}`);
   await paymentDialog.getByRole("button", { name: "تأكيد استلام الدفع" }).click();
 
   const onboardingDialog = admin.page.getByRole("dialog", { name: "تفعيل خدمات العميل" });
@@ -125,20 +132,21 @@ test("completes one-time quote onboarding and project output approval", async ({
   await onboardingDialog.getByRole("button", { name: "تفعيل وحفظ الإسناد" }).click();
   await expect(onboardingDialog).toBeHidden({ timeout: 20_000 });
 
-  const specialist = await authenticatedPage(browser, projectSpecialistEmail!);
-  await gotoInteractive(specialist.page, "/projects");
-  const projectLink = specialist.page.getByRole("link", { name: new RegExp(serviceName) }).first();
-  await expect(projectLink).toBeVisible();
-  await projectLink.click();
-  await specialist.page.waitForURL(/\/projects\/[a-z0-9-]+$/i, { timeout: 20_000 });
-  const projectPath = new URL(specialist.page.url()).pathname;
+  await reloadInteractive(specialist.page);
+  const projectPaths = await specialist.page.locator('a[href^="/projects/"]').evaluateAll((links) =>
+    links.map((link) => link.getAttribute("href")).filter((href): href is string => Boolean(href)),
+  );
+  const projectPath = projectPaths.find((path) => !existingProjectPaths.has(path));
+  expect(projectPath).toBeTruthy();
+  await gotoInteractive(specialist.page, projectPath!);
+  await expect(specialist.page.getByRole("heading", { level: 1 })).toContainText(serviceName);
 
   await specialist.page.getByRole("button", { name: "إضافة مخرج" }).click();
   const outputDialog = specialist.page.getByRole("dialog", { name: "إضافة مخرج" });
-  await outputDialog.getByLabel("الاسم").fill(outputTitle);
-  await outputDialog.getByLabel("رمز المخرج").fill(`PRJ-${runId}`);
+  await outputDialog.getByLabel("اسم المخرج").fill(outputTitle);
+  await outputDialog.getByLabel("رمز اختياري").fill(`PRJ-${runId}`);
   await outputDialog.getByLabel("الوصف").fill("نسخة أولى لاختبار المراجعة والتخزين.");
-  await outputDialog.locator('input[type="file"]').setInputFiles({
+  await outputDialog.getByLabel("ملف المخرج").setInputFiles({
     name: `project-${runId}-v1.txt`,
     mimeType: "text/plain",
     buffer: Buffer.from(`Jzoom project ${runId} revision 1`),
@@ -149,9 +157,10 @@ test("completes one-time quote onboarding and project output approval", async ({
   await expect(outputCard).toContainText(`project-${runId}-v1.txt`);
   await expectDownloadAvailable(
     specialist.page,
-    outputCard.getByRole("link", { name: "تحميل الملف" }).last(),
+    outputCard.getByRole("link", { name: "تنزيل الملف" }).last(),
   );
   await outputCard.getByRole("button", { name: "إرسال للمراجعة" }).click();
+  await expect(outputCard).toContainText("مراجعة داخلية");
 
   const supervisor = await authenticatedPage(browser, supervisorEmail!);
   await gotoInteractive(supervisor.page, projectPath);
@@ -159,22 +168,26 @@ test("completes one-time quote onboarding and project output approval", async ({
   await expect(supervisorOutput).toBeVisible();
   await supervisorOutput.getByLabel("ملاحظة المراجعة").fill("أعد النسخة الأولى للمشروع.");
   await supervisorOutput.getByRole("button", { name: "إعادة للمختص" }).click();
+  await expect(supervisorOutput).toContainText("مسودة");
 
   await reloadInteractive(specialist.page);
   outputCard = specialist.page.locator("article.entity-card").filter({ hasText: outputTitle });
   await chooseProjectRevisionFile(
     outputCard,
-    outputTitle,
     `project-${runId}-v2.txt`,
     `Jzoom project ${runId} revision 2`,
   );
-  await outputCard.getByRole("button", { name: "رفع ملف" }).click();
+  await outputCard.getByRole("button", { name: "رفع نسخة جديدة" }).click();
+  await expect(outputCard).toContainText(`project-${runId}-v2.txt`);
   await outputCard.getByRole("button", { name: "إرسال للمراجعة" }).click();
+  await expect(outputCard).toContainText("مراجعة داخلية");
 
   await reloadInteractive(supervisor.page);
   supervisorOutput = supervisor.page.locator("article.entity-card").filter({ hasText: outputTitle });
   await supervisorOutput.getByRole("button", { name: "اعتماد داخلي" }).click();
+  await expect(supervisorOutput.getByRole("button", { name: "مشاركة المخرج" })).toBeVisible();
   await supervisorOutput.getByRole("button", { name: "مشاركة المخرج" }).click();
+  await expect(supervisorOutput).toContainText("مشارك مع العميل");
 
   const client = await authenticatedPage(browser, clientEmail!);
   await gotoInteractive(client.page, projectPath.replace("/projects/", "/client/projects/"));
@@ -182,26 +195,30 @@ test("completes one-time quote onboarding and project output approval", async ({
   await expect(clientOutput).toBeVisible();
   await expectDownloadAvailable(
     client.page,
-    clientOutput.getByRole("link", { name: "تحميل الملف" }).last(),
+    clientOutput.getByRole("link", { name: "تنزيل الملف" }).last(),
   );
   await clientOutput.getByLabel("سبب طلب التعديل").fill("أضف خاتمة تنفيذية واضحة.");
   await clientOutput.getByRole("button", { name: "طلب تعديل" }).click();
+  await expect(clientOutput).toContainText("معاد من العميل");
 
   await reloadInteractive(specialist.page);
   outputCard = specialist.page.locator("article.entity-card").filter({ hasText: outputTitle });
   await chooseProjectRevisionFile(
     outputCard,
-    outputTitle,
     `project-${runId}-v3.txt`,
     `Jzoom project ${runId} revision 3`,
   );
-  await outputCard.getByRole("button", { name: "رفع ملف" }).click();
+  await outputCard.getByRole("button", { name: "رفع نسخة جديدة" }).click();
+  await expect(outputCard).toContainText(`project-${runId}-v3.txt`);
   await outputCard.getByRole("button", { name: "إرسال للمراجعة" }).click();
+  await expect(outputCard).toContainText("مراجعة داخلية");
 
   await reloadInteractive(supervisor.page);
   supervisorOutput = supervisor.page.locator("article.entity-card").filter({ hasText: outputTitle });
   await supervisorOutput.getByRole("button", { name: "اعتماد داخلي" }).click();
+  await expect(supervisorOutput.getByRole("button", { name: "مشاركة المخرج" })).toBeVisible();
   await supervisorOutput.getByRole("button", { name: "مشاركة المخرج" }).click();
+  await expect(supervisorOutput).toContainText("مشارك مع العميل");
 
   await reloadInteractive(client.page);
   clientOutput = client.page.locator("article.entity-card").filter({ hasText: outputTitle });
