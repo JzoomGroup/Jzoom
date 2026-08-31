@@ -25,12 +25,22 @@ export function number(value: number, locale: SupportedLocale): string {
 }
 
 export function roleLabel(
-  role: Pick<AdminAccessRole, "name" | "nameAr" | "nameEn">,
+  role: Pick<AdminAccessRole, "code" | "name" | "nameAr" | "nameEn">,
   locale: SupportedLocale,
 ) {
-  return locale === "ar"
-    ? (role.nameAr ?? formatCode(role.name, locale))
-    : (role.nameEn ?? role.name);
+  if (locale === "ar") {
+    const labels: Record<string, string> = {
+      "ROLE-ADMIN": "مدير النظام",
+      "ROLE-AM": "مدير الحساب",
+      "ROLE-CLIENT": "العميل",
+      "ROLE-MGMT": "الإدارة",
+      "ROLE-PROJECT-SPECIALIST": "مختص مشاريع",
+      "ROLE-SPECIALIST": "مختص",
+      "ROLE-SUPERVISOR": "مشرف",
+    };
+    return role.nameAr?.trim() || labels[role.code] || formatCode(role.code, locale);
+  }
+  return role.nameEn?.trim() || role.name;
 }
 
 export function formatCode(
@@ -377,7 +387,10 @@ export function scopesLabel(user: AdminAccessUser, locale: SupportedLocale): str
   }
   if (user.scopes.length > 0) {
     return user.scopes
-      .map((scope) => scope.client?.code ?? scope.teamCode ?? scope.domain ?? scope.scopeType)
+      .map((scope) => {
+        const assignedScope = scope.client?.code ?? scope.teamCode ?? scope.domain;
+        return assignedScope || formatCode(scope.scopeType, locale);
+      })
       .join(", ");
   }
   return t.noAssignments;

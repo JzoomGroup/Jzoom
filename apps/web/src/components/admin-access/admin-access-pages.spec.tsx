@@ -11,6 +11,7 @@ import type {
   AdminAccessUser,
   AdminAuditLog,
 } from "../../lib/admin-access-types";
+import { roleLabel, scopesLabel } from "./admin-access-formatters";
 
 const permission: AdminAccessPermission = {
   action: "manage",
@@ -89,6 +90,32 @@ const auditLog: AdminAuditLog = {
 };
 
 describe("Admin access pages", () => {
+  it("localizes system role and scope codes when Arabic source labels are missing", () => {
+    const managementRole = {
+      ...role,
+      code: "ROLE-MGMT",
+      name: "Jzoom Management",
+      nameAr: null,
+      nameEn: "Jzoom Management",
+    };
+    const globallyScopedUser = {
+      ...user,
+      clientAssignments: [],
+      roles: [managementRole],
+      scopes: [
+        {
+          client: null,
+          domain: null,
+          scopeType: "GLOBAL",
+          teamCode: null,
+        },
+      ],
+    };
+
+    expect(roleLabel(managementRole, "ar")).toBe("الإدارة");
+    expect(scopesLabel(globallyScopedUser, "ar")).toBe("عام");
+  });
+
   it("renders portal users as access cards with roles and overrides", () => {
     render(
       <AdminUsersPageContent
