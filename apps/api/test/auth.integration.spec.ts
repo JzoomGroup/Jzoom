@@ -392,20 +392,45 @@ describeWithDatabase("PR 3 PostgreSQL authentication and RBAC", () => {
   });
 
   it("prevents disabling or de-roling the last active Admin", async () => {
-    const { agent, csrf } = await login("admin@pr3.test");
-    const disable = await agent
-      .patch(`/api/v1/auth/admin/users/${adminId}/status`)
-      .set("X-CSRF-Token", csrf)
-      .send({ status: "DISABLED" })
-      .expect(409);
-    expect(disable.body.code).toBe("LAST_ADMIN_PROTECTED");
+    const otherActiveAdmins = await database.user.findMany({
+      where: {
+        id: { not: adminId },
+        status: "ACTIVE",
+        roles: { some: { roleId: adminRoleId } },
+      },
+      select: { id: true },
+    });
+    const otherActiveAdminIds = otherActiveAdmins.map((user) => user.id);
+    if (otherActiveAdminIds.length > 0) {
+      await database.user.updateMany({
+        where: { id: { in: otherActiveAdminIds } },
+        data: { status: "DISABLED" },
+      });
+    }
 
-    const roles = await agent
-      .put(`/api/v1/auth/admin/users/${adminId}/roles`)
-      .set("X-CSRF-Token", csrf)
-      .send({ roleCodes: ["ROLE-CLIENT"] })
-      .expect(409);
-    expect(roles.body.code).toBe("LAST_ADMIN_PROTECTED");
+    try {
+      const { agent, csrf } = await login("admin@pr3.test");
+      const disable = await agent
+        .patch(`/api/v1/auth/admin/users/${adminId}/status`)
+        .set("X-CSRF-Token", csrf)
+        .send({ status: "DISABLED" })
+        .expect(409);
+      expect(disable.body.code).toBe("LAST_ADMIN_PROTECTED");
+
+      const roles = await agent
+        .put(`/api/v1/auth/admin/users/${adminId}/roles`)
+        .set("X-CSRF-Token", csrf)
+        .send({ roleCodes: ["ROLE-CLIENT"] })
+        .expect(409);
+      expect(roles.body.code).toBe("LAST_ADMIN_PROTECTED");
+    } finally {
+      if (otherActiveAdminIds.length > 0) {
+        await database.user.updateMany({
+          where: { id: { in: otherActiveAdminIds } },
+          data: { status: "ACTIVE" },
+        });
+      }
+    }
   });
 
   it("allows Admin session invalidation and blocks the invalidated user", async () => {
