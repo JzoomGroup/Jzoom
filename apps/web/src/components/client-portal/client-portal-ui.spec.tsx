@@ -536,6 +536,7 @@ describe("Client portal UI", () => {
     );
     expect(screen.getByText("Waiting for your review")).toBeInTheDocument();
     expect(screen.getByText("Accepted by you")).toBeInTheDocument();
+    expect(screen.getByText("Client accepted output")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Accept output" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Return output" })).toHaveLength(1);
     expect(screen.getByText("Upload required")).toBeInTheDocument();

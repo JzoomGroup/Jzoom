@@ -358,12 +358,31 @@ export function ClientRequestDetail({
     },
     ...sharedOutputs
       .filter((output) => output.sharedAt || output.createdAt)
-      .map((output) => ({
-        at: output.sharedAt ?? output.createdAt,
-        detail: `${t.revision} ${clientNumber(output.revision, locale)}`,
-        id: `output-${output.id}`,
-        label: t.outputShared,
-      })),
+      .flatMap((output) => {
+        const revision = `${t.revision} ${clientNumber(output.revision, locale)}`;
+        const sharedEvent = {
+          at: output.sharedAt ?? output.createdAt,
+          detail: revision,
+          id: `output-${output.id}`,
+          label: t.outputShared,
+        };
+        if (!output.clientDecidedAt) {
+          return [sharedEvent];
+        }
+
+        const wasReturned =
+          output.status === "RETURNED_BY_CLIENT" ||
+          (output.status === "CLOSED" && Boolean(output.clientReturnReason));
+        return [
+          sharedEvent,
+          {
+            at: output.clientDecidedAt,
+            detail: wasReturned && output.clientReturnReason ? output.clientReturnReason : revision,
+            id: `output-decision-${output.id}`,
+            label: wasReturned ? t.outputReturnedTimeline : t.outputAcceptedTimeline,
+          },
+        ];
+      }),
     ...request.documentRequests.map((documentRequest) => ({
       at:
         documentRequest.fulfilledAt ??

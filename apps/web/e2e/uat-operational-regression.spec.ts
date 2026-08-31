@@ -14,6 +14,7 @@ async function authenticatedPage(browser: Browser, email: string) {
   await page.getByLabel("كلمة المرور").fill(password!);
   await page.getByRole("button", { name: "تسجيل الدخول" }).click();
   await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 20_000 });
+  await page.waitForLoadState("networkidle");
   return { context, page };
 }
 
@@ -22,8 +23,9 @@ async function acceptNextDialog(page: Page) {
 }
 
 async function expectDownloadAvailable(page: Page, link: ReturnType<Page["locator"]>) {
-  await expect(link).toBeVisible();
-  const href = await link.getAttribute("href");
+  const latestLink = link.last();
+  await expect(latestLink).toBeVisible();
+  const href = await latestLink.getAttribute("href");
   expect(href).toBeTruthy();
   const response = await page.request.get(new URL(href!, page.url()).toString());
   expect(response.status()).toBe(200);
@@ -36,18 +38,33 @@ async function chooseRevisionFile(
   contents: string,
 ) {
   const revisionInput = outputCard.getByLabel(/اختر ملف النسخة الجديدة قبل المتابعة/);
-  await revisionInput.setInputFiles({
-    name,
-    mimeType: "text/plain",
-    buffer: Buffer.from(contents),
-  });
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await revisionInput.setInputFiles([]);
+    await revisionInput.setInputFiles({
+      name,
+      mimeType: "text/plain",
+      buffer: Buffer.from(contents),
+    });
+    if ((await outputCard.innerText()).includes(name)) return;
+    await outputCard.page().waitForTimeout(400);
+  }
   await expect(outputCard).toContainText(name);
+}
+
+async function reloadInteractive(page: Page) {
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+}
+
+async function gotoInteractive(page: Page, path: string) {
+  await page.goto(path);
+  await page.waitForLoadState("networkidle");
 }
 
 test("completes the monthly request, document, hours, output, and client decision cycle", async ({
   browser,
 }, testInfo) => {
-  test.setTimeout(240_000);
+  test.setTimeout(360_000);
   test.skip(testInfo.project.name !== "desktop", "Operational mutation coverage runs once.");
   test.skip(!allowMutations, "Explicit UAT mutation opt-in is required.");
   test.skip(
@@ -62,7 +79,7 @@ test("completes the monthly request, document, hours, output, and client decisio
   const visibleComment = `تعليق عميل ظاهر ${runId}`;
 
   const client = await authenticatedPage(browser, clientEmail!);
-  await client.page.goto("/client/requests");
+  await gotoInteractive(client.page, "/client/requests");
   const intake = client.page.locator("form.client-request-form");
   await expect(intake).toBeVisible();
   await expect(intake.locator("select").first()).not.toHaveValue("");
@@ -74,7 +91,7 @@ test("completes the monthly request, document, hours, output, and client decisio
   await expect(client.page.getByRole("heading", { level: 1 })).toContainText(requestTitle);
 
   const specialist = await authenticatedPage(browser, specialistEmail!);
-  await specialist.page.goto(`/requests/${requestId}`);
+  await gotoInteractive(specialist.page, `/requests/${requestId}`);
   await expect(specialist.page.getByRole("heading", { level: 1 })).toContainText(requestTitle);
   const startWork = specialist.page.getByRole("button", { name: "بدء العمل" });
   if (await startWork.isVisible()) await startWork.click();
@@ -114,8 +131,9 @@ test("completes the monthly request, document, hours, output, and client decisio
   await expect(outputCard).toBeVisible();
   await acceptNextDialog(specialist.page);
   await outputCard.getByRole("button", { name: "إرسال" }).click();
+  await expect(outputCard).toContainText("مراجعة داخلية");
 
-  await client.page.reload();
+  await reloadInteractive(client.page);
   await expect(client.page.locator("#client-documents")).toContainText(documentTitle);
   const clientDocuments = client.page.locator("#client-documents");
   await clientDocuments.getByLabel("الطلب").selectOption({ index: 1 });
@@ -150,7 +168,7 @@ test("completes the monthly request, document, hours, output, and client decisio
   await expect(clientComments).toContainText(visibleComment);
 
   const supervisor = await authenticatedPage(browser, supervisorEmail!);
-  await supervisor.page.goto(`/requests/${requestId}`);
+  await gotoInteractive(supervisor.page, `/requests/${requestId}`);
   await expect(supervisor.page.getByRole("heading", { level: 1 })).toContainText(requestTitle);
   let supervisorOutput = supervisor.page
     .locator("#request-outputs article")
@@ -159,12 +177,13 @@ test("completes the monthly request, document, hours, output, and client decisio
   await supervisorOutput.getByLabel(`سبب مراجعة المشرف - ${outputTitle}`).fill("أعد النسخة الأولى.");
   await acceptNextDialog(supervisor.page);
   await supervisorOutput.getByRole("button", { name: "إرجاع للتعديل" }).click();
+  await expect(supervisorOutput).toContainText("مطلوب تعديل");
   const supervisorTime = supervisor.page
     .locator("#request-hours article")
     .filter({ hasText: `ساعات تحقق ${runId}` });
   await supervisorTime.getByRole("button", { name: "اعتماد" }).click();
 
-  await specialist.page.reload();
+  await reloadInteractive(specialist.page);
   outputCard = specialist.page
     .locator("#request-outputs article")
     .filter({ hasText: outputTitle })
@@ -179,18 +198,21 @@ test("completes the monthly request, document, hours, output, and client decisio
   await expect(outputCard.getByRole("button", { name: "إرسال" })).toBeVisible();
   await acceptNextDialog(specialist.page);
   await outputCard.getByRole("button", { name: "إرسال" }).click();
+  await expect(outputCard).toContainText("مراجعة داخلية");
 
-  await supervisor.page.reload();
+  await reloadInteractive(supervisor.page);
   supervisorOutput = supervisor.page
     .locator("#request-outputs article")
     .filter({ hasText: outputTitle })
     .first();
   await acceptNextDialog(supervisor.page);
   await supervisorOutput.getByRole("button", { name: "اعتماد" }).click();
+  await expect(supervisorOutput.getByRole("button", { name: "مشاركة مع العميل" })).toBeVisible();
   await acceptNextDialog(supervisor.page);
   await supervisorOutput.getByRole("button", { name: "مشاركة مع العميل" }).click();
+  await expect(supervisorOutput).toContainText("مشارك مع العميل");
 
-  await client.page.reload();
+  await reloadInteractive(client.page);
   let clientOutput = client.page
     .locator("#client-deliverables article")
     .filter({ hasText: outputTitle })
@@ -202,8 +224,9 @@ test("completes the monthly request, document, hours, output, and client decisio
   await clientOutput.getByLabel("ملاحظة الإرجاع").fill("يرجى تحديث النسخة النهائية.");
   await acceptNextDialog(client.page);
   await clientOutput.getByRole("button", { name: "إرجاع المخرج" }).click();
+  await expect(clientOutput.getByRole("button", { name: "إرجاع المخرج" })).toBeHidden();
 
-  await specialist.page.reload();
+  await reloadInteractive(specialist.page);
   outputCard = specialist.page
     .locator("#request-outputs article")
     .filter({ hasText: outputTitle })
@@ -218,18 +241,21 @@ test("completes the monthly request, document, hours, output, and client decisio
   await expect(outputCard.getByRole("button", { name: "إرسال" })).toBeVisible();
   await acceptNextDialog(specialist.page);
   await outputCard.getByRole("button", { name: "إرسال" }).click();
+  await expect(outputCard).toContainText("مراجعة داخلية");
 
-  await supervisor.page.reload();
+  await reloadInteractive(supervisor.page);
   supervisorOutput = supervisor.page
     .locator("#request-outputs article")
     .filter({ hasText: outputTitle })
     .first();
   await acceptNextDialog(supervisor.page);
   await supervisorOutput.getByRole("button", { name: "اعتماد" }).click();
+  await expect(supervisorOutput.getByRole("button", { name: "مشاركة مع العميل" })).toBeVisible();
   await acceptNextDialog(supervisor.page);
   await supervisorOutput.getByRole("button", { name: "مشاركة مع العميل" }).click();
+  await expect(supervisorOutput).toContainText("مشارك مع العميل");
 
-  await client.page.reload();
+  await reloadInteractive(client.page);
   clientOutput = client.page
     .locator("#client-deliverables article")
     .filter({ hasText: outputTitle })
@@ -239,7 +265,7 @@ test("completes the monthly request, document, hours, output, and client decisio
   await expect(clientOutput).toContainText("تم اعتماد هذا المخرج");
   await expect(client.page.locator("#client-timeline")).toContainText("اعتمد العميل المخرج");
 
-  await specialist.page.reload();
+  await reloadInteractive(specialist.page);
   const specialistDocument = specialist.page
     .locator("#request-documents article")
     .filter({ hasText: documentTitle });
