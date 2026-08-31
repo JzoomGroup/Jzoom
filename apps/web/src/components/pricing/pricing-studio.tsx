@@ -431,7 +431,7 @@ export function PricingStudio({
             <Link href="/pricing/quotes">{t.quotes}</Link>
             <Link href="/profile">{t.profile}</Link>
             <span>{displayName}</span>
-            <LogoutButton />
+            <LogoutButton label={locale === "ar" ? "تسجيل الخروج" : "Sign out"} />
           </nav>
         </header>
       )}

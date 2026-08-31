@@ -4,6 +4,7 @@ import { Search, SlidersHorizontal } from "lucide-react";
 import { useMemo, useState } from "react";
 import { pricingCopy } from "../../i18n/dictionaries/catalog";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { localizedCatalogLabel } from "../../lib/localized-content";
 import type { PricingStudioCatalog } from "../../lib/pricing-types";
 import { EmptyState } from "../premium-os";
 
@@ -54,13 +55,14 @@ function categoryName(
   },
   locale: SupportedLocale,
 ): string {
-  if (locale === "ar") {
-    return (
-      service.categoryNameAr ||
-      (/[؀-ۿ]/.test(service.categoryName) ? service.categoryName : "غير مصنف")
-    );
-  }
-  return service.categoryNameEn || service.categoryName || "Uncategorized";
+  return localizedCatalogLabel(
+    {
+      code: service.categoryName,
+      nameAr: service.categoryNameAr,
+      nameEn: service.categoryNameEn || service.categoryName,
+    },
+    locale,
+  );
 }
 
 function description(value: string, locale: SupportedLocale): string {

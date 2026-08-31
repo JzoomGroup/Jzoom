@@ -325,6 +325,24 @@ describe("PR 6 pricing UI", () => {
     expect(container.querySelector(".pricing-layout")).toHaveClass("drafts-open");
   });
 
+  it("localizes legacy English catalog categories in the Arabic pricing experience", () => {
+    render(
+      <PricingStudio
+        displayName="مسؤول التسعير"
+        isAdmin
+        initialCatalog={studioCatalog()}
+        initialDrafts={[]}
+        locale="ar"
+      />,
+    );
+
+    expect(screen.getAllByText("العمليات").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Operations")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /خدمات المرة الواحدة/ }));
+    expect(screen.getAllByText("البناء والتطوير").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Build")).not.toBeInTheDocument();
+  });
+
   it("creates a new client inside pricing and selects it for the draft", async () => {
     const fetchMock = jest.mocked(fetch);
     fetchMock.mockImplementationOnce(() =>

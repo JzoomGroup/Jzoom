@@ -996,7 +996,7 @@ export const pricingStudioCopy = {
     pricingImpactTitle: "أثر التسعير",
     pricingImpactDescription:
       "الإجمالي النهائي = الخدمات الشهرية + رسوم التأسيس + خدمات المرة الواحدة - الخصومات + الضريبة. جدول البنود يوضح أثر كل خدمة وكمية على الأساس ورسوم التأسيس.",
-    profile: "الملف الشخصي",
+    profile: "حسابي",
     previewDescription: "الإجماليات لا تُعتمد إلا بعد إعادة الحساب عبر محرك التسعير.",
     previewSuccess: "تمت إعادة حساب معاينة التسعير.",
     quantity: "الكمية",

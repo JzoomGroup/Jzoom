@@ -14,7 +14,23 @@ const arabicCatalogLabels: Record<string, string> = {
   "CAT-EXECUTIVE-SUPPORT": "الدعم التنفيذي",
   "OT-CAT-BUILD": "البناء والتطوير",
   "OT-CAT-DIGITAL": "الحلول الرقمية",
+  HR: "الموارد البشرية",
+  FINANCE: "المالية والمحاسبة",
+  LEGAL: "الشؤون القانونية",
+  "ADMIN-SUPPORT": "الدعم الإداري",
+  MEDIA: "الإعلام",
+  SYSTEMS: "الأنظمة",
+  REPORTS: "التقارير",
+  OPERATIONS: "العمليات",
+  "EXECUTIVE-SUPPORT": "الدعم التنفيذي",
+  BUILD: "البناء والتطوير",
+  DIGITAL: "الحلول الرقمية",
 };
+
+function normalizedCatalogKey(value: string | null | undefined): string | undefined {
+  const normalized = value?.trim().toUpperCase().replace(/[\s_]+/g, "-");
+  return normalized || undefined;
+}
 
 export function localizedDescription(
   value: string | null | undefined,
@@ -28,7 +44,11 @@ export function localizedDescription(
 }
 
 export function localizedCatalogLabel(
-  value: { code?: string; nameAr?: string; nameEn?: string },
+  value: {
+    code?: string | null | undefined;
+    nameAr?: string | null | undefined;
+    nameEn?: string | null | undefined;
+  },
   locale: SupportedLocale,
 ): string {
   if (locale === "en") {
@@ -40,6 +60,12 @@ export function localizedCatalogLabel(
     return arabicName;
   }
 
-  const code = value.code?.trim().toUpperCase();
-  return (code && arabicCatalogLabels[code]) || code || "غير مسمى";
+  const candidates = [value.code, value.nameAr, value.nameEn]
+    .map(normalizedCatalogKey)
+    .filter((candidate): candidate is string => Boolean(candidate));
+  const translated = candidates
+    .map((candidate) => arabicCatalogLabels[candidate])
+    .find(Boolean);
+  const code = normalizedCatalogKey(value.code);
+  return translated || code || "غير مسمى";
 }
