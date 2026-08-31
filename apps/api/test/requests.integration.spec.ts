@@ -73,11 +73,11 @@ describeWithDatabase("PR 13 request lifecycle foundation", () => {
   beforeAll(async () => {
     database = createDatabaseClient(environment.databaseUrl);
     const passwordHash = await new PasswordHasherService().hash(password);
-    const [accountManagerRole, specialistRole, clientRole] = await Promise.all([
+    const [adminRole, accountManagerRole, specialistRole, clientRole] = await Promise.all([
+      role("ROLE-ADMIN", "Admin"),
       role("ROLE-AM", "Account Manager"),
       role("ROLE-SPECIALIST", "Specialist"),
       role("ROLE-CLIENT", "Client", "EXTERNAL"),
-      role("ROLE-SUPERVISOR", "Supervisor"),
     ]);
 
     const [client, otherClient] = await Promise.all([
@@ -176,7 +176,18 @@ describeWithDatabase("PR 13 request lifecycle foundation", () => {
     });
     subscriptionServiceId = subscriptionService.id;
 
-    const [accountManager, specialist, clientUser, otherClientUser] = await Promise.all([
+    const [admin, accountManager, specialist, clientUser, otherClientUser] = await Promise.all([
+      database.user.create({
+        data: {
+          email: `admin-${runId}@pr13.test`,
+          passwordHash,
+          displayName: "PR13 Admin",
+          userType: "INTERNAL",
+          status: "ACTIVE",
+          passwordChangedAt: new Date(),
+          roles: { create: { roleId: adminRole.id } },
+        },
+      }),
       database.user.create({
         data: {
           email: `am-${runId}@pr13.test`,
@@ -226,6 +237,7 @@ describeWithDatabase("PR 13 request lifecycle foundation", () => {
       }),
     ]);
     specialistId = specialist.id;
+    expect(admin.id).toBeDefined();
     expect(accountManager.id).toBeDefined();
     expect(clientUser.id).toBeDefined();
     expect(otherClientUser.id).toBeDefined();
@@ -251,7 +263,7 @@ describeWithDatabase("PR 13 request lifecycle foundation", () => {
   });
 
   it("creates, assigns, advances, and audits an internal request", async () => {
-    const { agent, csrf } = await login(`am-${runId}@pr13.test`);
+    const { agent, csrf } = await login(`admin-${runId}@pr13.test`);
     const createResponse = await agent
       .post("/api/v1/requests")
       .set("X-CSRF-Token", csrf)
@@ -371,8 +383,8 @@ describeWithDatabase("PR 13 request lifecycle foundation", () => {
   });
 
   it("keeps internal notes hidden from client users and blocks cross-client access", async () => {
-    const { agent: amAgent, csrf } = await login(`am-${runId}@pr13.test`);
-    const created = await amAgent
+    const { agent: specialistAgent, csrf } = await login(`specialist-${runId}@pr13.test`);
+    const created = await specialistAgent
       .post("/api/v1/requests")
       .set("X-CSRF-Token", csrf)
       .send({
@@ -384,17 +396,17 @@ describeWithDatabase("PR 13 request lifecycle foundation", () => {
       .expect(201);
     const requestId = created.body.id as string;
 
-    await amAgent
+    await specialistAgent
       .post(`/api/v1/requests/${requestId}/internal-notes`)
       .set("X-CSRF-Token", csrf)
       .send({ body: "Internal escalation note" })
       .expect(200);
-    await amAgent
+    await specialistAgent
       .post(`/api/v1/requests/${requestId}/comments`)
       .set("X-CSRF-Token", csrf)
       .send({ body: "Client-visible update", isClientVisible: true })
       .expect(200);
-    await amAgent
+    await specialistAgent
       .post(`/api/v1/requests/${requestId}/comments`)
       .set("X-CSRF-Token", csrf)
       .send({ body: "Hidden internal comment", isClientVisible: false })

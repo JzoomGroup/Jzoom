@@ -34,7 +34,11 @@ export class RuntimePlatformSettingsService {
   }
 
   async number(key: string, options: NumberSettingOptions): Promise<number> {
-    const configured = Number(await this.value(key));
+    const value = await this.value(key);
+    const configured =
+      typeof value === "number" || (typeof value === "string" && value.trim())
+        ? Number(value)
+        : Number.NaN;
     if (!Number.isFinite(configured)) {
       return options.fallback;
     }

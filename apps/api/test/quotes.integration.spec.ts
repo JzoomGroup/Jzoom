@@ -67,6 +67,11 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
   let clientId: string;
   let otherClientId: string;
   let accountManagerId: string;
+  const runId = randomUUID().slice(0, 8);
+  const accountManagerEmail = `am-${runId}@pr7.test`;
+  const clientEmail = `client-${runId}@pr7.test`;
+  const clientCode = `PR7-CLIENT-A-${runId}`;
+  const otherClientCode = `PR7-CLIENT-B-${runId}`;
 
   async function login(email: string) {
     const agent = request.agent(app.getHttpServer());
@@ -92,7 +97,7 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
         validUntil,
         clientSnapshot: {
           id: clientId,
-          code: "PR7-CLIENT-A",
+          code: clientCode,
           name: "PR7 Client A",
           legalName: "PR7 Client A LLC",
         },
@@ -154,7 +159,7 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
     const [client, otherClient] = await Promise.all([
       database.client.create({
         data: {
-          code: "PR7-CLIENT-A",
+          code: clientCode,
           name: "PR7 Client A",
           legalName: "PR7 Client A LLC",
           sector: "Technology",
@@ -164,7 +169,7 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
       }),
       database.client.create({
         data: {
-          code: "PR7-CLIENT-B",
+          code: otherClientCode,
           name: "PR7 Client B",
           sector: "Retail",
           authorizedApprover: "Approver B",
@@ -177,7 +182,7 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
     const [accountManager, clientUser] = await Promise.all([
       database.user.create({
         data: {
-          email: "am@pr7.test",
+          email: accountManagerEmail,
           displayName: "PR7 Account Manager",
           userType: "INTERNAL",
           status: "ACTIVE",
@@ -187,7 +192,7 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
       }),
       database.user.create({
         data: {
-          email: "client@pr7.test",
+          email: clientEmail,
           displayName: "PR7 Client User",
           userType: "EXTERNAL",
           status: "ACTIVE",
@@ -224,18 +229,18 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
 
   it("enforces authentication, role, and assigned-client scope", async () => {
     await request(app.getHttpServer()).get("/api/v1/quotes").expect(401);
-    const clientUser = await login("client@pr7.test");
+    const clientUser = await login(clientEmail);
     await clientUser.agent.get("/api/v1/quotes").expect(403);
 
     const inaccessibleDraft = await database.pricingDraft.create({
       data: {
-        draftNumber: "PR7-OTHER-DRAFT",
+        draftNumber: `PR7-OTHER-DRAFT-${runId}`,
         clientId: otherClientId,
         createdById: accountManagerId,
         currency: "SAR",
         pricingDate: new Date(),
         title: "Other client draft",
-        clientSnapshot: { id: otherClientId, code: "PR7-CLIENT-B", name: "PR7 Client B" },
+        clientSnapshot: { id: otherClientId, code: otherClientCode, name: "PR7 Client B" },
         calculationSnapshot: {
           calculatedAt: new Date().toISOString(),
           pricingDate: new Date().toISOString(),
@@ -248,7 +253,7 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
         lastCalculatedAt: new Date(),
       },
     });
-    const accountManager = await login("am@pr7.test");
+    const accountManager = await login(accountManagerEmail);
     await accountManager.agent
       .post("/api/v1/quotes")
       .set("X-CSRF-Token", accountManager.csrf)
@@ -310,7 +315,7 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
       },
     });
 
-    const accountManager = await login("am@pr7.test");
+    const accountManager = await login(accountManagerEmail);
     const catalog = await accountManager.agent.get("/api/v1/pricing/catalog").expect(200);
     const monthly = catalog.body.monthlyServices[0];
     const oneTime = catalog.body.oneTimeServices[0];
@@ -364,7 +369,7 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
       sourceDraftVersion: 1,
       client: {
         id: clientId,
-        code: "PR7-CLIENT-A",
+        code: clientCode,
         legalName: "PR7 Client A LLC",
       },
       terms: {

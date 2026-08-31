@@ -283,9 +283,8 @@ describeWithDatabase("Project delivery access and client review flows", () => {
     process.env.JZOOM_UPLOAD_ROOT = uploadRoot;
     database = createDatabaseClient(environment.databaseUrl);
     const passwordHash = await new PasswordHasherService().hash(password);
-    const [clientRole, specialistRole, projectSpecialistRole, supervisorRole] = await Promise.all([
+    const [clientRole, projectSpecialistRole, supervisorRole] = await Promise.all([
       role("ROLE-CLIENT", "Client", "EXTERNAL"),
-      role("ROLE-SPECIALIST", "Specialist"),
       role("ROLE-PROJECT-SPECIALIST", "Project Specialist"),
       role("ROLE-SUPERVISOR", "Supervisor"),
     ]);
@@ -365,7 +364,7 @@ describeWithDatabase("Project delivery access and client review flows", () => {
             userType: "INTERNAL",
             status: "ACTIVE",
             passwordChangedAt: new Date(),
-            roles: { create: { roleId: specialistRole.id } },
+            roles: { create: { roleId: projectSpecialistRole.id } },
           },
         }),
         database.user.create({

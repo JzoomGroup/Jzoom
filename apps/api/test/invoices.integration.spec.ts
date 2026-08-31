@@ -294,7 +294,7 @@ describeWithDatabase("PR 10 invoice foundation", () => {
       .expect(404);
   });
 
-  it("creates immutable invoices only from accepted quote snapshots", async () => {
+  it("creates immutable invoices only from client-approved quote snapshots", async () => {
     const accountManager = await login(accountManagerEmail);
     const acceptedQuote = await createQuoteFixture("ACCEPTED");
     const draftQuote = await createQuoteFixture("DRAFT", "DRAFT");
@@ -304,7 +304,7 @@ describeWithDatabase("PR 10 invoice foundation", () => {
       .set("X-CSRF-Token", accountManager.csrf)
       .send({ quoteId: draftQuote.id })
       .expect(409);
-    expect(invalid.body.code).toBe("ACCEPTED_QUOTE_REQUIRED_FOR_INVOICE");
+    expect(invalid.body.code).toBe("APPROVED_QUOTE_REQUIRED_FOR_INVOICE");
 
     const invoice = await accountManager.agent
       .post("/api/v1/invoices")

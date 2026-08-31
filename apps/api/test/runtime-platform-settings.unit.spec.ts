@@ -44,6 +44,20 @@ describe("RuntimePlatformSettingsService", () => {
         maximum: 365,
       }),
     ).resolves.toBe(7);
+    await expect(
+      serviceWith(null).service.number("pricing.tax.default_pct", {
+        fallback: 15,
+        minimum: 0,
+        maximum: 100,
+      }),
+    ).resolves.toBe(15);
+    await expect(
+      serviceWith("").service.number("pricing.tax.default_pct", {
+        fallback: 15,
+        minimum: 0,
+        maximum: 100,
+      }),
+    ).resolves.toBe(15);
   });
 
   it("normalizes MIME arrays and rejects empty configured arrays", async () => {

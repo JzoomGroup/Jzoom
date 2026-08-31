@@ -398,6 +398,17 @@ describeWithDatabase("PR 6 pricing rules and Pricing Studio APIs", () => {
 
   it("applies the configured default discount only when no discount rule is active", async () => {
     const admin = await login("admin@pr6.test");
+    const activeDiscountRevisions = await database.pricingRuleRevision.findMany({
+      where: { status: "ACTIVE", isEnabled: true, ruleType: "DISCOUNT" },
+      select: { id: true },
+    });
+    const activeDiscountRevisionIds = activeDiscountRevisions.map((revision) => revision.id);
+    if (activeDiscountRevisionIds.length > 0) {
+      await database.pricingRuleRevision.updateMany({
+        where: { id: { in: activeDiscountRevisionIds } },
+        data: { status: "DRAFT" },
+      });
+    }
     await database.platformSetting.deleteMany({
       where: { key: "pricing.discount.default_pct" },
     });
@@ -450,6 +461,12 @@ describeWithDatabase("PR 6 pricing rules and Pricing Studio APIs", () => {
       await database.platformSetting.deleteMany({
         where: { key: "pricing.discount.default_pct" },
       });
+      if (activeDiscountRevisionIds.length > 0) {
+        await database.pricingRuleRevision.updateMany({
+          where: { id: { in: activeDiscountRevisionIds } },
+          data: { status: "ACTIVE" },
+        });
+      }
     }
   });
 });
