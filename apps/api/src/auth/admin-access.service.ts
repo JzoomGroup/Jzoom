@@ -832,6 +832,14 @@ export class AdminAccessService {
         message: "The user could not be found",
       });
     }
+    const oldRoleCodes = user.roles.map(({ role }) => role.code);
+    if (
+      user.status === "ACTIVE" &&
+      oldRoleCodes.includes(ADMIN_ROLE_CODE) &&
+      !roleCodes.includes(ADMIN_ROLE_CODE)
+    ) {
+      await this.assertAnotherActiveAdmin(userId);
+    }
     if (roles.length !== new Set(roleCodes).size) {
       throw new BadRequestException({
         code: "INVALID_ROLE_SELECTION",
@@ -843,15 +851,6 @@ export class AdminAccessService {
         code: "ROLE_USER_TYPE_MISMATCH",
         message: "Selected roles must match the user's internal or external account type",
       });
-    }
-
-    const oldRoleCodes = user.roles.map(({ role }) => role.code);
-    if (
-      user.status === "ACTIVE" &&
-      oldRoleCodes.includes(ADMIN_ROLE_CODE) &&
-      !roleCodes.includes(ADMIN_ROLE_CODE)
-    ) {
-      await this.assertAnotherActiveAdmin(userId);
     }
 
     await this.database.prisma.$transaction(async (transaction) => {

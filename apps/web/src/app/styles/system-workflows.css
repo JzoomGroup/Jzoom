@@ -274,6 +274,26 @@
   background: var(--polish-surface-soft);
 }
 
+.output-revision-upload > label {
+  position: relative;
+  display: grid;
+  min-height: 56px;
+  place-items: center;
+  padding: 10px 12px;
+  border: 1px dashed var(--polish-line-strong);
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.output-revision-upload > label input[type="file"] {
+  inset: 0;
+}
+
+.output-revision-upload > .os-button {
+  position: relative;
+  z-index: 1;
+}
+
 @media (max-width: 640px) {
   .project-output-files > div,
   .project-output-upload {

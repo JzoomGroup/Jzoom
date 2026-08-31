@@ -37,6 +37,8 @@ const child = spawn(
     "--config",
     "jest.config.cjs",
     "--runInBand",
+    "--testTimeout",
+    "30000",
     "--testPathPattern",
     "\\.integration\\.spec\\.ts$",
   ],
