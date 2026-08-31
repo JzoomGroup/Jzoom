@@ -315,6 +315,7 @@ describe("PR 6 pricing UI", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(container.querySelector(".pricing-layout")).not.toHaveClass("drafts-open");
     expect(screen.getByText(/٢٢.*٠٦.*٢٠٢٦/)).toBeInTheDocument();
+    expect(screen.queryByText("06/22/2026")).not.toBeInTheDocument();
 
     fireEvent.click(toggle);
     expect(screen.getByRole("button", { name: "إخفاء المسودات" })).toHaveAttribute(

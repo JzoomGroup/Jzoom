@@ -1,6 +1,7 @@
 "use client";
 
 import type { ChangeEvent, InputHTMLAttributes } from "react";
+import { CalendarDays } from "lucide-react";
 import type { SupportedLocale } from "../lib/i18n";
 
 type LocalizedDateInputProps = Omit<
@@ -29,15 +30,20 @@ export function LocalizedDateInput({ locale, value, ...props }: LocalizedDateInp
   const preview = formattedDate(value, locale);
 
   return (
-    <span className="localized-date-input">
-      <input
-        {...props}
-        dir={locale === "ar" ? "rtl" : "ltr"}
-        lang={locale === "ar" ? "ar-SA" : "en-GB"}
-        type="date"
-        value={value}
-      />
-      {preview ? <small aria-hidden="true">{preview}</small> : null}
+    <span className="localized-date-field">
+      <span className="localized-date-input">
+        <span className="localized-date-display" aria-hidden="true">
+          <span>{preview || (locale === "ar" ? "يوم / شهر / سنة" : "DD / MM / YYYY")}</span>
+          <CalendarDays size={16} />
+        </span>
+        <input
+          {...props}
+          dir={locale === "ar" ? "rtl" : "ltr"}
+          lang={locale === "ar" ? "ar-SA" : "en-GB"}
+          type="date"
+          value={value}
+        />
+      </span>
     </span>
   );
 }
