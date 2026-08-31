@@ -533,7 +533,7 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
     const [monthlySpecialist, projectSpecialist] = await Promise.all([
       database.user.create({
         data: {
-          email: "monthly.specialist@pr7.test",
+          email: `monthly.specialist-${runId}@pr7.test`,
           displayName: "PR7 Monthly Specialist",
           userType: "INTERNAL",
           status: "ACTIVE",
@@ -551,7 +551,7 @@ describeWithDatabase("PR 7 immutable quote snapshots", () => {
       }),
       database.user.create({
         data: {
-          email: "project.specialist@pr7.test",
+          email: `project.specialist-${runId}@pr7.test`,
           displayName: "PR7 Project Specialist",
           userType: "INTERNAL",
           status: "ACTIVE",
