@@ -11,7 +11,7 @@ import type {
   AdminAccessUser,
   AdminAuditLog,
 } from "../../lib/admin-access-types";
-import { roleLabel, scopesLabel } from "./admin-access-formatters";
+import { eventLabel, roleLabel, scopesLabel } from "./admin-access-formatters";
 
 const permission: AdminAccessPermission = {
   action: "manage",
@@ -90,6 +90,20 @@ const auditLog: AdminAuditLog = {
 };
 
 describe("Admin access pages", () => {
+  it("localizes operational audit events in the Arabic interface", () => {
+    expect(eventLabel("CLIENT_PROJECT_VIEWED", "ar")).toBe("عرض مشروع العميل");
+    expect(eventLabel("CLIENT_REQUEST_VIEWED", "ar")).toBe("عرض طلب العميل");
+    expect(eventLabel("HOURS_LEDGER_USAGE_SUMMARY_VIEWED", "ar")).toBe(
+      "عرض ملخص استخدام سجل الساعات",
+    );
+    expect(eventLabel("PROJECT_OUTPUT_CREATED", "ar")).toBe("إنشاء مخرج مشروع");
+    expect(eventLabel("PROJECT_OUTPUT_FILE_UPLOADED", "ar")).toBe("رفع ملف مخرج مشروع");
+    expect(eventLabel("PROJECT_OUTPUT_STATUS_CHANGED", "ar")).toBe("تغيير حالة مخرج مشروع");
+    expect(eventLabel("QUOTE_ACTIVATED", "ar")).toBe("تفعيل عرض سعر");
+    expect(eventLabel("QUOTE_APPROVED", "ar")).toBe("اعتماد عرض سعر");
+    expect(eventLabel("QUOTE_PAYMENT_CONFIRMED", "ar")).toBe("تأكيد دفع عرض سعر");
+  });
+
   it("localizes system role and scope codes when Arabic source labels are missing", () => {
     const managementRole = {
       ...role,
