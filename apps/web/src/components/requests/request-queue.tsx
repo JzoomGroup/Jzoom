@@ -282,6 +282,11 @@ export function RequestQueue({
             accent
           />
           <MetricCard
+            label={t.overdue}
+            value={queue.counters.overdue}
+            detail={t.needsAttention}
+          />
+          <MetricCard
             label={t.specialist}
             value={queue.counters.specialist}
             detail={t.executionQueue}
@@ -291,12 +296,6 @@ export function RequestQueue({
             value={queue.counters.supervisor}
             detail={t.reviewQueue}
           />
-          <MetricCard
-            label={t.accountManager}
-            value={queue.counters.accountManager}
-            detail={t.clientFollowUp}
-          />
-          <MetricCard label={t.overdue} value={queue.counters.overdue} detail={t.needsAttention} />
         </BentoGrid>
       </div>
 

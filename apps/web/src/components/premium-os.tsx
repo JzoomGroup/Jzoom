@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUpLeft, Inbox } from "lucide-react";
-import type { ReactNode } from "react";
+import { Children, type ReactNode } from "react";
 
 type Action = {
   href?: string;
@@ -200,8 +200,12 @@ export function BentoGrid({
   children: ReactNode;
   compact?: boolean;
 }) {
+  const visibleMetrics = Children.toArray(children).slice(0, 4);
+
   return (
-    <section className={compact ? "os-bento-grid compact" : "os-bento-grid"}>{children}</section>
+    <section className={compact ? "os-bento-grid compact" : "os-bento-grid"}>
+      {visibleMetrics}
+    </section>
   );
 }
 

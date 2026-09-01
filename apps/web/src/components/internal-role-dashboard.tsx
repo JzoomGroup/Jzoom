@@ -221,45 +221,48 @@ export function InternalRoleDashboard({
           value={number(queue.counters.overdue, language)}
           detail={t.metrics.needsAttention}
         />
-        {mode === "supervisor" ? (
-          <MetricCard
-            label={t.metrics.waitingSupervisor}
-            value={number(waitingSupervisor.length, language)}
-            detail={t.metrics.reviewAction}
-          />
+        {mode === "management" ? (
+          <>
+            <MetricCard
+              label={t.metrics.monthlyReports}
+              value={number(reports.length, language)}
+              detail={t.metrics.preparedReports}
+            />
+            <MetricCard
+              label={t.metrics.healthWatch}
+              value={number(attentionClients.length, language)}
+              detail={t.metrics.clientPortfolio}
+            />
+          </>
         ) : (
-          <MetricCard
-            label={t.metrics.waitingClient}
-            value={number(waitingClient.length, language)}
-            detail={t.metrics.clientAction}
-          />
-        )}
-        {mode === "supervisor" ? (
-          <MetricCard
-            label={t.metrics.submittedHours}
-            value={hours(usage.totals.submittedHours, language)}
-            detail={t.metrics.pendingApproval}
-          />
-        ) : (
-          <MetricCard
-            label={t.metrics.approvedHours}
-            value={hours(usage.totals.approvedHours, language)}
-            detail={`${t.metrics.period} ${usage.period.key}`}
-          />
-        )}
-        {mode === "management" && (
-          <MetricCard
-            label={t.metrics.monthlyReports}
-            value={number(reports.length, language)}
-            detail={t.metrics.preparedReports}
-          />
-        )}
-        {mode === "management" && (
-          <MetricCard
-            label={t.metrics.healthWatch}
-            value={number(attentionClients.length, language)}
-            detail={t.metrics.clientPortfolio}
-          />
+          <>
+            {mode === "supervisor" ? (
+              <MetricCard
+                label={t.metrics.waitingSupervisor}
+                value={number(waitingSupervisor.length, language)}
+                detail={t.metrics.reviewAction}
+              />
+            ) : (
+              <MetricCard
+                label={t.metrics.waitingClient}
+                value={number(waitingClient.length, language)}
+                detail={t.metrics.clientAction}
+              />
+            )}
+            {mode === "supervisor" ? (
+              <MetricCard
+                label={t.metrics.submittedHours}
+                value={hours(usage.totals.submittedHours, language)}
+                detail={t.metrics.pendingApproval}
+              />
+            ) : (
+              <MetricCard
+                label={t.metrics.approvedHours}
+                value={hours(usage.totals.approvedHours, language)}
+                detail={`${t.metrics.period} ${usage.period.key}`}
+              />
+            )}
+          </>
         )}
       </BentoGrid>
 

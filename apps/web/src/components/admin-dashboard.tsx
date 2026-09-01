@@ -52,7 +52,6 @@ export function AdminDashboard({
   clientsSnapshot,
   locale = "en",
   portfolio,
-  reports,
   requestQueue,
   requests,
   usage,
@@ -68,16 +67,11 @@ export function AdminDashboard({
   const language = normalizeLocale(locale);
   const t = copy[language];
   const activeClients = clientsSnapshot.clients.filter((client) => client.status === "ACTIVE");
-  const portalUsers = clientsSnapshot.clients.reduce((sum, client) => sum + client.users.length, 0);
-  const waitingClientRequests = requests.filter(
-    (request) => request.status === "WAITING_CLIENT",
-  ).length;
   const completedRequests = requests.filter((request) =>
     completedStatuses.has(request.status),
   ).length;
   const highRiskClients = portfolio.portfolio.filter((entry) => entry.health.code === "ATTENTION");
   const watchClients = portfolio.portfolio.filter((entry) => entry.health.code === "WATCH");
-  const publishedReports = reports.filter((report) => report.status === "PUBLISHED").length;
   const latestRequests = [...requests]
     .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
     .slice(0, 5);
@@ -108,26 +102,6 @@ export function AdminDashboard({
           label={t.metrics.usedHours}
           value={hours(usage.totals.approvedHours, language)}
           detail={`${t.metrics.period} ${usage.period.key}`}
-        />
-        <MetricCard
-          label={t.metrics.clientAction}
-          value={number(waitingClientRequests, language)}
-          detail={t.metrics.waitingClient}
-        />
-        <MetricCard
-          label={t.metrics.portalUsers}
-          value={number(portalUsers, language)}
-          detail={t.metrics.linkedClients}
-        />
-        <MetricCard
-          label={t.metrics.clientHealth}
-          value={number(highRiskClients.length, language)}
-          detail={`${number(watchClients.length, language)} ${t.metrics.watch}`}
-        />
-        <MetricCard
-          label={t.metrics.monthlyReports}
-          value={number(reports.length, language)}
-          detail={`${number(publishedReports, language)} ${t.metrics.published}`}
         />
       </BentoGrid>
 

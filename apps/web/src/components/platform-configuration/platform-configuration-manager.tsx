@@ -827,11 +827,6 @@ export function PlatformConfigurationManager({
           detail={t.inAppTemplates}
         />
         <MetricCard
-          label={t.pdfTemplates}
-          value={number(snapshot.pdfTemplates.length, locale)}
-          detail={t.documentOutputs}
-        />
-        <MetricCard
           label={t.workflows}
           value={number(snapshot.workflows.length, locale)}
           detail={t.checklistFoundations}

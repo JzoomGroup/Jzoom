@@ -40,7 +40,6 @@ export function AdminAuditLogsPageContent({
   const lang = language(locale);
   const t = adminAccessCopy[lang];
   const criticalLogs = logs.filter((log) => log.severity === "CRITICAL");
-  const highLogs = logs.filter((log) => log.severity === "HIGH");
   const deniedLogs = logs.filter(isDeniedEvent);
   const sensitiveLogs = logs.filter(
     (log) => log.severity === "CRITICAL" || log.severity === "HIGH",
@@ -109,7 +108,6 @@ export function AdminAuditLogsPageContent({
           value={number(criticalLogs.length, lang)}
           detail={t.severity}
         />
-        <MetricCard label={t.high} value={number(highLogs.length, lang)} detail={t.severity} />
         <MetricCard
           label={t.unauthorized}
           value={number(deniedLogs.length, lang)}

@@ -92,7 +92,7 @@ export function AdminUsersPageContent({
     supervisors,
     visibleServiceItems,
   } = useOperatingUsers({ currentUserId, initialSetup: setup, initialUsers: users, locale: lang });
-  const { activeUsers, disabledUsers, lockedUsers, usersWithOverrides } = metrics;
+  const { activeUsers, lockedUsers, usersWithOverrides } = metrics;
   const filteredUsers = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase(lang === "ar" ? "ar" : "en");
     return currentUsers.filter((user) => {
@@ -422,7 +422,6 @@ export function AdminUsersPageContent({
           detail={t.portalUsers}
         />
         <MetricCard label={t.active} value={number(activeUsers, lang)} detail={t.status} />
-        <MetricCard label={t.disabled} value={number(disabledUsers, lang)} detail={t.security} />
         <MetricCard label={t.lockedUsers} value={number(lockedUsers, lang)} detail={t.security} />
         <MetricCard
           label={t.usersWithOverrides}
