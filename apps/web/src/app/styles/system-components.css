@@ -428,13 +428,26 @@
     .one-time-category-actions,
     .entity-card-actions
   ) {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: center;
-  justify-content: flex-start;
   gap: 8px;
   padding: 0;
   border: 0;
+}
+
+.catalog-card-footer
+  :is(
+    .service-admin-actions,
+    .item-admin-actions,
+    .package-admin-actions,
+    .one-time-service-actions,
+    .one-time-category-actions,
+    .entity-card-actions
+  )
+  > .row-actions {
+  display: contents;
 }
 
 .catalog-card-footer .row-actions {
@@ -448,7 +461,7 @@
 
 .catalog-card-footer :is(.os-button, .os-button-danger) {
   display: inline-flex;
-  width: auto;
+  width: 100%;
   min-height: 36px;
   align-items: center;
   justify-content: center;
