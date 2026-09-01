@@ -432,7 +432,11 @@ describe("Client portal UI", () => {
     expect(container.firstElementChild).toHaveAttribute("lang", "ar");
     expect(screen.getByRole("navigation", { name: "تنقل بوابة العميل" })).toBeInTheDocument();
     expect(screen.getByText("مرحبًا، Faisal")).toBeInTheDocument();
-    expect(screen.getByText("بوابة العميل")).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("img", {
+        name: "مجموعة جزوم لخدمات الأعمال - Jzoom Group Business Services",
+      }),
+    ).not.toHaveLength(0);
     expect(screen.getByRole("link", { name: "الطلبات" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "حسابي" })).toHaveAttribute("href", "/profile");
     expect(screen.getByRole("button", { name: "تسجيل الخروج" })).toBeInTheDocument();

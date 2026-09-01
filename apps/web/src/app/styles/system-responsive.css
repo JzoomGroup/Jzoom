@@ -89,7 +89,7 @@
   }
 
   .premium-mobile-brand .premium-brand-wordmark {
-    width: 100px;
+    width: min(48vw, 190px);
   }
 
   .premium-nav {
@@ -250,6 +250,18 @@
 }
 
 @media (max-width: 560px) {
+  .auth-stage {
+    gap: 14px;
+  }
+
+  .auth-page-brand {
+    padding-inline: 22px;
+  }
+
+  .auth-page-logo {
+    width: min(100%, 270px);
+  }
+
   .premium-mobile-brand .premium-brand-mark {
     width: 34px;
     height: 34px;

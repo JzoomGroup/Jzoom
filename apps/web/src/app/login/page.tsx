@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { LanguageSwitcher } from "../../components/language-switcher";
 import { LocaleDocumentSync } from "../../components/locale-document-sync";
 import { LoginForm } from "../../components/login-form";
@@ -18,18 +19,27 @@ export default async function LoginPage({
   return (
     <main className="auth-shell" dir={directionForLocale(locale)} lang={htmlLangForLocale(locale)}>
       <LocaleDocumentSync locale={locale} />
-      <section className="auth-card" aria-labelledby="login-title">
-        <div className="auth-language-actions">
-          <LanguageSwitcher locale={locale} persist="cookie" />
+      <div className="auth-stage">
+        <div className="auth-page-brand">
+          <Image
+            alt="مجموعة جزوم لخدمات الأعمال - Jzoom Group Business Services"
+            className="auth-page-logo"
+            height={59}
+            priority
+            src="/branding/jzoom-wordmark.png"
+            width={308}
+          />
         </div>
-        <div className="brand-mark" aria-hidden="true">
-          J
-        </div>
-        <p className="eyebrow">{copy.eyebrow}</p>
-        <h1 id="login-title">{copy.title}</h1>
-        <p className="lead">{copy.lead}</p>
-        <LoginForm locale={locale} {...(returnTo ? { returnTo } : {})} />
-      </section>
+        <section className="auth-card" aria-labelledby="login-title">
+          <div className="auth-language-actions">
+            <LanguageSwitcher locale={locale} persist="cookie" />
+          </div>
+          <p className="eyebrow">{copy.eyebrow}</p>
+          <h1 id="login-title">{copy.title}</h1>
+          <p className="lead">{copy.lead}</p>
+          <LoginForm locale={locale} {...(returnTo ? { returnTo } : {})} />
+        </section>
+      </div>
     </main>
   );
 }

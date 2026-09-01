@@ -59,18 +59,17 @@ type ShellContext = {
   roles: string[];
 };
 
-function JzoomWordmark({ subtitle }: { subtitle?: string }) {
+function JzoomWordmark() {
   return (
     <span className="premium-brand-wordmark-wrap">
       <Image
-        alt="Jzoom"
+        alt="مجموعة جزوم لخدمات الأعمال - Jzoom Group Business Services"
         className="premium-brand-wordmark"
-        height={25}
+        height={40}
         priority
         src="/branding/jzoom-wordmark.png"
-        width={117}
+        width={211}
       />
-      {subtitle ? <small>{subtitle}</small> : null}
     </span>
   );
 }
@@ -577,7 +576,7 @@ export function AppShell({
           href={mode === "client" ? "/client" : isAdmin ? "/admin" : "/profile"}
           onClick={closeMobileNavigation}
         >
-          <JzoomWordmark subtitle={copy.brandSubtitle} />
+          <JzoomWordmark />
         </Link>
 
         <nav className="premium-nav" aria-label={copy.navigationLabel}>

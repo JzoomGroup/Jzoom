@@ -69,7 +69,7 @@ body {
 
 .premium-brand-wordmark {
   display: block;
-  width: 117px;
+  width: 205px;
   height: auto;
   object-fit: contain;
 }
@@ -77,6 +77,29 @@ body {
 .premium-brand-wordmark-wrap small {
   margin: 0;
   padding-inline: 2px;
+}
+
+.auth-stage {
+  display: grid;
+  width: min(100%, 480px);
+  gap: 20px;
+}
+
+.auth-page-brand {
+  display: flex;
+  justify-content: center;
+  padding-inline: 18px;
+}
+
+.auth-page-logo {
+  display: block;
+  width: min(100%, 308px);
+  height: auto;
+  object-fit: contain;
+}
+
+.auth-stage .auth-card {
+  width: 100%;
 }
 
 .premium-brand-mark {

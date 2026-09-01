@@ -173,7 +173,11 @@ describe("Admin catalog UI", () => {
       </AdminShell>,
     );
 
-    expect(screen.getByText("Admin Console")).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("img", {
+        name: "مجموعة جزوم لخدمات الأعمال - Jzoom Group Business Services",
+      }),
+    ).not.toHaveLength(0);
     expect(screen.getByRole("link", { name: "Service items" })).toHaveAttribute(
       "aria-current",
       "page",

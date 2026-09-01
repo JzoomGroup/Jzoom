@@ -246,6 +246,24 @@ export function PricingStudio({
     }
   }
 
+  function startNewDraft() {
+    clearFeedback();
+    setShowDrafts(false);
+    setShowDeleteDraft(false);
+    setShowClientCreator(false);
+    setShowQuoteForm(false);
+    setCurrentDraft(null);
+    setClientId(catalog.clients[0]?.id ?? "");
+    setTitle(locale === "ar" ? "مسودة تسعير" : "Pricing draft");
+    setNotes("");
+    setPricingDate(pricingDateInput());
+    setMonthlySelections(new Map());
+    setOneTimeSelections(new Map());
+    setCalculation(null);
+    setIsDirty(false);
+    router.replace("/pricing");
+  }
+
   async function createClient(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearFeedback();
@@ -458,10 +476,14 @@ export function PricingStudio({
                 <span className="pricing-drafts-count">{number(drafts.length, locale)}</span>
               </button>
               {currentDraft ? (
-                <Link className="os-button os-button-secondary" href="/pricing">
+                <button
+                  className="os-button os-button-secondary"
+                  type="button"
+                  onClick={startNewDraft}
+                >
                   <Plus aria-hidden="true" size={17} />
                   {t.newDraft}
-                </Link>
+                </button>
               ) : null}
               {currentDraft && !isArchived ? (
                 <button
@@ -828,10 +850,10 @@ export function PricingStudio({
           description={t.draftLibraryDescription}
           eyebrow={t.savedWork}
           headerAside={
-            <Link className="os-button os-button-primary" href="/pricing">
+            <button className="os-button os-button-primary" type="button" onClick={startNewDraft}>
               <Plus aria-hidden="true" size={17} />
               {t.newDraft}
-            </Link>
+            </button>
           }
           onClose={() => setShowDrafts(false)}
           size="lg"

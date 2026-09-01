@@ -319,6 +319,12 @@ describe("PR 6 pricing UI", () => {
     const dialog = await screen.findByRole("dialog", { name: "مسودات التسعير" });
     expect(within(dialog).getByText("Pricing draft")).toBeInTheDocument();
     expect(within(dialog).getByText("PD-20260622-ABC12345")).toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "جديد" }));
+
+    expect(screen.queryByRole("dialog", { name: "مسودات التسعير" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "مسودة تسعير جديدة" })).toBeInTheDocument();
+    expect(replaceMock).toHaveBeenCalledWith("/pricing");
   });
 
   it("deletes the open pricing draft after a dedicated confirmation", async () => {

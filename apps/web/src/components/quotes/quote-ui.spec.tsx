@@ -287,7 +287,11 @@ describe("Quote snapshot UI", () => {
     expect(container.firstElementChild).toHaveAttribute("dir", "rtl");
     expect(container.firstElementChild).toHaveAttribute("lang", "ar");
     expect(screen.getByRole("navigation", { name: "تنقل منصة التشغيل" })).toBeInTheDocument();
-    expect(screen.getByText("منصة التشغيل")).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("img", {
+        name: "مجموعة جزوم لخدمات الأعمال - Jzoom Group Business Services",
+      }),
+    ).not.toHaveLength(0);
     expect(screen.getByRole("link", { name: "المختص" })).toHaveAttribute("href", "/specialist");
     expect(screen.getByRole("link", { name: "الطلبات" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("button", { name: "تسجيل الخروج" })).toBeInTheDocument();

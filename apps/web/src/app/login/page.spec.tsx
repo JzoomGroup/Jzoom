@@ -24,6 +24,11 @@ describe("LoginPage", () => {
     render(await LoginPage());
 
     expect(screen.getByRole("heading", { name: "Welcome back." })).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", {
+        name: "مجموعة جزوم لخدمات الأعمال - Jzoom Group Business Services",
+      }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveAttribute("dir", "ltr");
     expect(screen.getByRole("button", { name: "Switch language to Arabic" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign in" }).closest("form")).toHaveAttribute(
