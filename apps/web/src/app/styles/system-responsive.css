@@ -136,12 +136,6 @@
     display: block;
   }
 
-  .pricing-shell-embedded .pricing-drafts {
-    padding: 14px 13px;
-    border-inline-end: 0;
-    border-block-end: 1px solid var(--polish-line);
-  }
-
   .os-page-header,
   .catalog-header {
     grid-template-columns: minmax(0, 1fr);

@@ -394,6 +394,21 @@ describeWithDatabase("PR 6 pricing rules and Pricing Studio APIs", () => {
       expect.arrayContaining(["PRICING_DRAFT_CREATED", "PRICING_DRAFT_UPDATED"]),
     );
     expect(auditCodes.every((entry) => Boolean(entry.requestId))).toBe(true);
+
+    const deleted = await accountManager.agent
+      .delete(`/api/v1/pricing/drafts/${created.body.id}`)
+      .set("X-CSRF-Token", accountManager.csrf)
+      .expect(200);
+    expect(deleted.body).toEqual({
+      id: created.body.id,
+      draftNumber: created.body.draftNumber,
+    });
+    expect(await database.pricingDraft.findUnique({ where: { id: created.body.id } })).toBeNull();
+    expect(
+      await database.auditLog.findFirst({
+        where: { entityId: created.body.id, eventCode: "PRICING_DRAFT_DELETED" },
+      }),
+    ).not.toBeNull();
   });
 
   it("applies the configured default discount only when no discount rule is active", async () => {

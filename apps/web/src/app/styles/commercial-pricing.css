@@ -1,11 +1,7 @@
-.pricing-shell-embedded .pricing-layout {
+.pricing-shell .pricing-layout {
   min-height: auto;
   grid-template-columns: minmax(0, 1fr);
   gap: 16px;
-}
-
-.pricing-shell-embedded .pricing-layout.drafts-open {
-  grid-template-columns: minmax(220px, 250px) minmax(0, 1fr);
 }
 
 .pricing-shell-embedded .pricing-main {
@@ -13,61 +9,108 @@
   padding: 0;
 }
 
-.pricing-shell-embedded .pricing-drafts {
-  align-self: start;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  scrollbar-width: none;
+.pricing-header-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
-.pricing-shell-embedded .pricing-layout.drafts-open .pricing-drafts {
-  position: sticky;
-  top: 16px;
-  max-height: calc(100vh - 32px);
-  overflow: auto;
+.pricing-header-toolbar .pricing-draft-identity {
+  min-width: 0;
+  padding: 8px 11px;
+  box-shadow: none;
+}
+
+.pricing-drafts-trigger {
+  white-space: nowrap;
+}
+
+.pricing-drafts-count {
+  display: inline-grid;
+  min-width: 22px;
+  min-height: 22px;
+  place-items: center;
+  padding-inline: 6px;
+  border-radius: 6px;
+  background: rgba(255, 90, 77, 0.12);
+  color: var(--jzoom-coral-strong, #d83f34);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pricing-draft-dialog-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.pricing-draft-dialog-card {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #ffffff;
-}
-
-.pricing-shell-embedded .pricing-drafts::-webkit-scrollbar {
-  display: none;
-}
-
-.pricing-drafts-toggle {
-  display: inline-flex;
-  width: auto;
-  min-height: 38px;
-  align-items: center;
-  justify-content: center;
-  margin-block-end: 0;
-  padding-inline: 14px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: var(--surface-muted);
   color: var(--ink);
-  font: inherit;
+  text-decoration: none;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.pricing-draft-dialog-card:hover {
+  border-color: rgba(255, 90, 77, 0.42);
+  box-shadow: 0 8px 20px rgba(13, 19, 33, 0.07);
+}
+
+.pricing-draft-dialog-card.active {
+  border-color: var(--jzoom-coral);
+  background: #fff8f7;
+}
+
+.pricing-draft-client {
+  overflow: hidden;
+  color: var(--muted-strong);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pricing-draft-dialog-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.pricing-draft-dialog-value {
+  padding-block-start: 9px;
+  border-block-start: 1px solid var(--line-soft, var(--line));
   font-size: 12px;
-  font-weight: 600;
 }
 
-.pricing-shell-embedded .pricing-layout:not(.drafts-open) .pricing-aside-heading {
-  display: none;
+.pricing-delete-summary {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid rgba(208, 48, 39, 0.22);
+  border-radius: 8px;
+  background: rgba(208, 48, 39, 0.05);
 }
 
-.pricing-drafts-content {
-  display: none;
+.pricing-delete-summary > span,
+.pricing-delete-summary > small {
+  color: var(--muted-strong);
 }
 
-.pricing-drafts-content.is-open {
-  display: block;
-}
-
-.pricing-shell-embedded .pricing-layout.drafts-open .pricing-drafts-toggle {
-  width: 100%;
-  margin-block-end: 10px;
+.pricing-delete-summary > small {
+  margin-block-start: 7px;
+  line-height: 1.7;
 }
 
 .pricing-picker-heading {
@@ -395,23 +438,23 @@
   .pricing-shell-embedded .pricing-layout {
     display: block;
   }
-
-  .pricing-shell-embedded .pricing-drafts {
-    position: static;
-    max-height: none;
-    margin-block-end: 14px;
-  }
-
-  .pricing-drafts-toggle {
-    display: flex;
-  }
 }
 
 @media (max-width: 760px) {
+  .pricing-header-toolbar,
   .pricing-picker-heading,
   .pricing-unsaved-notice {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .pricing-header-toolbar > *,
+  .pricing-header-toolbar .os-button {
+    width: 100%;
+  }
+
+  .pricing-draft-dialog-list {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .pricing-service-tabs,

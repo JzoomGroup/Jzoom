@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Inject, Param, Patch, Post, Put, Req } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Req,
+} from "@nestjs/common";
 import { ApiCookieAuth, ApiExtraModels, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ADMIN_ROLE_CODE, MANAGEMENT_ROLE_CODE } from "../auth/auth.constants.js";
 import { RequirePermissions, RequireRoles } from "../auth/auth.decorators.js";
@@ -148,6 +159,11 @@ export class PricingStudioController {
     @Req() request: RequestWithId,
   ) {
     return this.pricing.updateDraft(id, input, request.auth!, metadata(request));
+  }
+
+  @Delete("drafts/:id")
+  deleteDraft(@Param("id") id: string, @Req() request: RequestWithId) {
+    return this.pricing.deleteDraft(id, request.auth!, metadata(request));
   }
 
   @Post("drafts/:id/archive")

@@ -269,6 +269,7 @@ export function eventLabel(eventCode: string, locale: SupportedLocale): string {
     },
     PRICING_DRAFT_ARCHIVED: { ar: "أرشفة مسودة تسعير", en: "Pricing draft archived" },
     PRICING_DRAFT_CREATED: { ar: "إنشاء مسودة تسعير", en: "Pricing draft created" },
+    PRICING_DRAFT_DELETED: { ar: "حذف مسودة تسعير", en: "Pricing draft deleted" },
     PRICING_DRAFT_UPDATED: { ar: "تحديث مسودة تسعير", en: "Pricing draft updated" },
     PRICING_PREVIEW_CALCULATED: { ar: "حساب معاينة التسعير", en: "Pricing preview calculated" },
     PRICING_RULE_CREATED: { ar: "إنشاء قاعدة تسعير", en: "Pricing rule created" },

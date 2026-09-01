@@ -29,6 +29,12 @@ export function fetchPricingDraft(id: string): Promise<PricingDraft> {
   return pricingRequest<PricingDraft>(`pricing/drafts/${id}`);
 }
 
+export function deletePricingDraft(id: string): Promise<{ id: string; draftNumber: string }> {
+  return pricingRequest<{ id: string; draftNumber: string }>(`pricing/drafts/${id}`, {
+    method: "DELETE",
+  });
+}
+
 export function previewPricing(input: PricingInput): Promise<PricingPreview> {
   return pricingRequest<PricingPreview>("pricing/preview", {
     method: "POST",

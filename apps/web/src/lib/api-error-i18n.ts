@@ -3,6 +3,7 @@ import type { ApiErrorBody } from "./catalog-types";
 const arabicMessages: Record<string, string> = {
   ACCEPTED_QUOTE_REQUIRED_FOR_ONBOARDING: "لا يمكن تفعيل الخدمات قبل تأكيد الدفع.",
   ARCHIVED_CLIENT_IMMUTABLE: "العميل المؤرشف متاح للقراءة فقط ولا يمكن تعديله.",
+  ARCHIVED_PRICING_DRAFT_CANNOT_BE_DELETED: "لا يمكن حذف مسودة مؤرشفة؛ ستبقى محفوظة كسجل تاريخي.",
   CLIENT_CODE_ALREADY_EXISTS: "رمز العميل مستخدم مسبقًا. اختر رمزًا آخر.",
   CLIENT_PORTAL_USER_EMAIL_ALREADY_EXISTS: "البريد الإلكتروني مرتبط بمستخدم آخر بالفعل.",
   FILE_REQUIRED: "اختر ملفًا غير فارغ ثم أعد المحاولة.",
@@ -14,6 +15,9 @@ const arabicMessages: Record<string, string> = {
   LAST_ADMIN_PROTECTED: "لا يمكن تنفيذ التغيير لأنه سيزيل آخر مسار فعال لإدارة النظام.",
   PORTAL_USER_EMAIL_ALREADY_INTERNAL:
     "البريد الإلكتروني مرتبط بمستخدم داخلي ولا يمكن استخدامه للعميل.",
+  PRICING_DRAFT_HAS_QUOTES:
+    "لا يمكن حذف مسودة مرتبطة بعرض سعر. استخدم الأرشفة للحفاظ على السجل التجاري.",
+  PRICING_DRAFT_NOT_FOUND: "تعذر العثور على المسودة أو لا تملك صلاحية الوصول إليها.",
   PROJECT_OUTPUT_FILE_REQUIRED: "أرفق ملفًا واحدًا على الأقل قبل إرسال المخرج للمراجعة.",
   PROJECT_OUTPUT_FILE_LOCKED: "لا يمكن تعديل ملفات هذا المخرج في حالته الحالية.",
   PROJECT_OUTPUT_RETURN_REASON_REQUIRED: "اكتب سببًا واضحًا قبل إعادة المخرج للتعديل.",

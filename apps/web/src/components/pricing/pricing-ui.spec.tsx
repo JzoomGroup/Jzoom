@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type {
   PricingDraft,
   PricingRulesSnapshot,
@@ -283,7 +283,7 @@ describe("PR 6 pricing UI", () => {
     expect(replaceMock).toHaveBeenCalledWith(`/pricing/${draft.id}`);
   });
 
-  it("keeps saved drafts collapsed by default and exposes an Arabic date preview", () => {
+  it("opens saved drafts in a focused dialog and exposes an Arabic date preview", async () => {
     const draft = savedDraft();
     const summary = {
       calculationVersion: draft.calculationVersion,
@@ -299,7 +299,7 @@ describe("PR 6 pricing UI", () => {
       totals: draft.calculation?.totals ?? null,
       updatedAt: draft.updatedAt,
     };
-    const { container } = render(
+    render(
       <PricingStudio
         displayName="Pricing Admin"
         isAdmin
@@ -310,18 +310,47 @@ describe("PR 6 pricing UI", () => {
       />,
     );
 
-    const toggle = screen.getByRole("button", { name: "عرض المسودات المحفوظة" });
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(container.querySelector(".pricing-layout")).not.toHaveClass("drafts-open");
+    const trigger = screen.getByRole("button", { name: /مسودات التسعير/ });
+    expect(screen.queryByRole("dialog", { name: "مسودات التسعير" })).not.toBeInTheDocument();
     expect(screen.getByText(/22.*06.*2026/)).toBeInTheDocument();
     expect(screen.queryByText("06/22/2026")).not.toBeInTheDocument();
 
-    fireEvent.click(toggle);
-    expect(screen.getByRole("button", { name: "إخفاء المسودات" })).toHaveAttribute(
-      "aria-expanded",
-      "true",
+    fireEvent.click(trigger);
+    const dialog = await screen.findByRole("dialog", { name: "مسودات التسعير" });
+    expect(within(dialog).getByText("Pricing draft")).toBeInTheDocument();
+    expect(within(dialog).getByText("PD-20260622-ABC12345")).toBeInTheDocument();
+  });
+
+  it("deletes the open pricing draft after a dedicated confirmation", async () => {
+    const draft = savedDraft();
+    const fetchMock = jest.mocked(fetch);
+    fetchMock.mockImplementationOnce(() =>
+      jsonResponse({ id: draft.id, draftNumber: draft.draftNumber }),
     );
-    expect(container.querySelector(".pricing-layout")).toHaveClass("drafts-open");
+
+    render(
+      <PricingStudio
+        displayName="مسؤول التسعير"
+        isAdmin
+        initialCatalog={studioCatalog()}
+        initialDraft={draft}
+        initialDrafts={[]}
+        locale="ar"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "حذف المسودة" }));
+    const dialog = await screen.findByRole("dialog", { name: "حذف مسودة التسعير" });
+    expect(within(dialog).getByText(draft.draftNumber)).toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "حذف المسودة نهائيًا" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      `http://localhost:4000/api/v1/pricing/drafts/${draft.id}`,
+    );
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: "DELETE" });
+    expect(replaceMock).toHaveBeenCalledWith("/pricing");
   });
 
   it("localizes legacy English catalog categories in the Arabic pricing experience", () => {

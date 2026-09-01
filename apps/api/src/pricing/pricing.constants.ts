@@ -23,4 +23,5 @@ export const PRICING_EVENT = {
   draftCreated: "PRICING_DRAFT_CREATED",
   draftUpdated: "PRICING_DRAFT_UPDATED",
   draftArchived: "PRICING_DRAFT_ARCHIVED",
+  draftDeleted: "PRICING_DRAFT_DELETED",
 } as const;

@@ -633,6 +633,46 @@ export class PricingService {
     return this.getDraft(id, principal);
   }
 
+  async deleteDraft(id: string, principal: AuthenticatedPrincipal, metadata: RequestMetadata) {
+    const draft = await this.requireAccessibleDraft(id, principal);
+    if (draft.status === "ARCHIVED") {
+      throw new ConflictException({
+        code: "ARCHIVED_PRICING_DRAFT_CANNOT_BE_DELETED",
+        message: "Archived pricing drafts are retained as historical records",
+      });
+    }
+
+    await this.database.prisma.$transaction(async (tx) => {
+      const quoteCount = await tx.quote.count({ where: { sourcePricingDraftId: id } });
+      if (quoteCount > 0) {
+        throw new ConflictException({
+          code: "PRICING_DRAFT_HAS_QUOTES",
+          message: "Pricing drafts linked to quotes cannot be deleted",
+        });
+      }
+      await tx.pricingDraft.delete({ where: { id } });
+    });
+
+    await this.audit.record(
+      {
+        actorId: principal.userId,
+        eventCode: PRICING_EVENT.draftDeleted,
+        entityType: "PricingDraft",
+        entityId: id,
+        before: {
+          draftNumber: draft.draftNumber,
+          clientId: draft.clientId,
+          status: toLifecycleStatus(draft.status),
+          calculationVersion: draft.calculationVersion,
+        },
+        severity: "MEDIUM",
+      },
+      metadata,
+    );
+
+    return { id, draftNumber: draft.draftNumber };
+  }
+
   private async calculate(input: PricingInputDto, principal: AuthenticatedPrincipal) {
     if ((input.currency ?? "SAR") !== "SAR") {
       throw new BadRequestException({

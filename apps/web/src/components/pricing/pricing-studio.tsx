@@ -4,8 +4,10 @@ import { pricingStudioCopy as copy, pricingCopy } from "../../i18n/dictionaries/
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { FolderOpen, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import {
+  deletePricingDraft,
   pricingErrorMessage,
   pricingRequest,
   refreshPricingDrafts,
@@ -26,6 +28,7 @@ import type {
 import { LogoutButton } from "../logout-button";
 import { LocalizedDateInput } from "../localized-date-input";
 import { EmptyState, PageHeader, SmartTable, StatusChip } from "../premium-os";
+import { AppDialog } from "../app-dialog";
 import { PricingServicePicker, type MonthlySelectionState } from "./pricing-service-picker";
 
 function pricingDateInput(value?: string): string {
@@ -187,11 +190,14 @@ export function PricingStudio({
   const [calculation, setCalculation] = useState<PricingCalculation | null>(
     initialDraft?.calculation ?? null,
   );
-  const [submitting, setSubmitting] = useState<"preview" | "save" | "archive" | null>(null);
+  const [submitting, setSubmitting] = useState<"preview" | "save" | "archive" | "delete" | null>(
+    null,
+  );
   const [clientSubmitting, setClientSubmitting] = useState(false);
   const [showClientCreator, setShowClientCreator] = useState(openClientCreator && isAdmin);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [showDrafts, setShowDrafts] = useState(false);
+  const [showDeleteDraft, setShowDeleteDraft] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
@@ -388,6 +394,23 @@ export function PricingStudio({
     }
   }
 
+  async function removeDraft() {
+    if (!currentDraft) return;
+    clearFeedback();
+    setSubmitting("delete");
+    try {
+      await deletePricingDraft(currentDraft.id);
+      setDrafts((savedDrafts) => savedDrafts.filter((draft) => draft.id !== currentDraft.id));
+      setShowDeleteDraft(false);
+      router.replace("/pricing");
+    } catch (deleteError) {
+      setError(pricingErrorMessage(deleteError));
+      setShowDeleteDraft(false);
+    } finally {
+      setSubmitting(null);
+    }
+  }
+
   return (
     <div className={embedded ? "pricing-shell pricing-shell-embedded" : "pricing-shell"}>
       {!embedded && (
@@ -411,73 +434,47 @@ export function PricingStudio({
         </header>
       )}
 
-      <div className={showDrafts ? "pricing-layout drafts-open" : "pricing-layout"}>
-        <aside className="pricing-drafts">
-          <div className="pricing-aside-heading">
-            <div>
-              <p className="eyebrow">{t.savedWork}</p>
-              <h2>{t.pricingDrafts}</h2>
-            </div>
-            <Link className="os-button os-button-primary" href="/pricing">
-              {t.newDraft}
-            </Link>
-          </div>
-          <button
-            aria-controls="pricing-drafts-content"
-            aria-expanded={showDrafts}
-            className="pricing-drafts-toggle"
-            type="button"
-            onClick={() => setShowDrafts((current) => !current)}
-          >
-            {showDrafts ? t.hideDrafts : t.showDrafts}
-          </button>
-          <div
-            className={showDrafts ? "pricing-drafts-content is-open" : "pricing-drafts-content"}
-            id="pricing-drafts-content"
-          >
-            {drafts.length === 0 ? (
-              <p className="pricing-muted">{t.noDrafts}</p>
-            ) : (
-              <div className="pricing-draft-list">
-                {drafts.map((draft) => (
-                  <Link
-                    key={draft.id}
-                    href={`/pricing/${draft.id}`}
-                    className={currentDraft?.id === draft.id ? "active" : undefined}
-                  >
-                    <div className="pricing-draft-list-top">
-                      <strong>{draft.title}</strong>
-                      <StatusChip
-                        status={draft.status}
-                        label={draftStatusLabel(draft.status, locale)}
-                      />
-                    </div>
-                    <span>{draft.client.name}</span>
-                    <small>
-                      {draft.draftNumber} - {number(draft.itemCount, locale)} {t.items}
-                    </small>
-                    <small>
-                      {t.draftValue}: {draft.totals ? sar(draft.totals.finalTotal, locale) : "-"}
-                    </small>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </aside>
-
+      <div className="pricing-layout">
         <main className="pricing-main">
           <PageHeader
             eyebrow={t.pricingStudioFoundation}
             title={currentDraft ? currentDraft.title : t.newPricingDraft}
             description={t.pricingStudioDescription}
           >
-            {currentDraft && (
-              <div className="pricing-draft-identity">
-                <strong>{currentDraft.draftNumber}</strong>
-                <span>{t.calculationVersion(currentDraft.calculationVersion)}</span>
-              </div>
-            )}
+            <div className="pricing-header-toolbar">
+              {currentDraft ? (
+                <div className="pricing-draft-identity">
+                  <strong>{currentDraft.draftNumber}</strong>
+                  <span>{t.calculationVersion(currentDraft.calculationVersion)}</span>
+                </div>
+              ) : null}
+              <button
+                className="os-button os-button-secondary pricing-drafts-trigger"
+                type="button"
+                onClick={() => setShowDrafts(true)}
+              >
+                <FolderOpen aria-hidden="true" size={17} />
+                <span>{t.pricingDrafts}</span>
+                <span className="pricing-drafts-count">{number(drafts.length, locale)}</span>
+              </button>
+              {currentDraft ? (
+                <Link className="os-button os-button-secondary" href="/pricing">
+                  <Plus aria-hidden="true" size={17} />
+                  {t.newDraft}
+                </Link>
+              ) : null}
+              {currentDraft && !isArchived ? (
+                <button
+                  className="os-button os-button-danger"
+                  disabled={submitting !== null}
+                  type="button"
+                  onClick={() => setShowDeleteDraft(true)}
+                >
+                  <Trash2 aria-hidden="true" size={17} />
+                  {t.deleteDraft}
+                </button>
+              ) : null}
+            </div>
           </PageHeader>
 
           {(error || success) && (
@@ -825,6 +822,95 @@ export function PricingStudio({
           </section>
         </main>
       </div>
+
+      {showDrafts ? (
+        <AppDialog
+          description={t.draftLibraryDescription}
+          eyebrow={t.savedWork}
+          headerAside={
+            <Link className="os-button os-button-primary" href="/pricing">
+              <Plus aria-hidden="true" size={17} />
+              {t.newDraft}
+            </Link>
+          }
+          onClose={() => setShowDrafts(false)}
+          size="lg"
+          title={t.pricingDrafts}
+          warnOnUnsavedChanges={false}
+        >
+          {drafts.length === 0 ? (
+            <EmptyState title={t.noDrafts}>{t.noDraftsDescription}</EmptyState>
+          ) : (
+            <div className="pricing-draft-dialog-list">
+              {drafts.map((draft) => (
+                <Link
+                  key={draft.id}
+                  href={`/pricing/${draft.id}`}
+                  className={`pricing-draft-dialog-card${
+                    currentDraft?.id === draft.id ? " active" : ""
+                  }`}
+                >
+                  <div className="pricing-draft-list-top">
+                    <strong>{draft.title}</strong>
+                    <StatusChip
+                      status={draft.status}
+                      label={draftStatusLabel(draft.status, locale)}
+                    />
+                  </div>
+                  <span className="pricing-draft-client">{draft.client.name}</span>
+                  <div className="pricing-draft-dialog-meta">
+                    <span>{draft.draftNumber}</span>
+                    <span>
+                      {number(draft.itemCount, locale)} {t.items}
+                    </span>
+                  </div>
+                  <strong className="pricing-draft-dialog-value">
+                    {t.draftValue}: {draft.totals ? sar(draft.totals.finalTotal, locale) : "-"}
+                  </strong>
+                </Link>
+              ))}
+            </div>
+          )}
+        </AppDialog>
+      ) : null}
+
+      {showDeleteDraft && currentDraft ? (
+        <AppDialog
+          busy={submitting === "delete"}
+          description={t.deleteDraftDescription}
+          eyebrow={t.deleteDraftEyebrow}
+          onClose={() => setShowDeleteDraft(false)}
+          size="sm"
+          title={t.deleteDraftTitle}
+          warnOnUnsavedChanges={false}
+        >
+          <div className="pricing-delete-summary">
+            <strong>{currentDraft.title}</strong>
+            <span>{currentDraft.draftNumber}</span>
+            <small>{t.deleteDraftBlockedHint}</small>
+          </div>
+          <div className="form-actions">
+            <button
+              className="os-button os-button-secondary"
+              disabled={submitting === "delete"}
+              type="button"
+              onClick={() => setShowDeleteDraft(false)}
+            >
+              {t.cancel}
+            </button>
+            <button
+              className="os-button os-button-danger"
+              data-dialog-initial-focus
+              disabled={submitting === "delete"}
+              type="button"
+              onClick={() => void removeDraft()}
+            >
+              <Trash2 aria-hidden="true" size={17} />
+              {submitting === "delete" ? t.deletingDraft : t.confirmDeleteDraft}
+            </button>
+          </div>
+        </AppDialog>
+      ) : null}
     </div>
   );
 }
