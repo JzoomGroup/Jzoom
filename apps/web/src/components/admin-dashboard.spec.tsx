@@ -1,11 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { AdminDashboard } from "./admin-dashboard";
 import type { ClientsSnapshot } from "../lib/clients-types";
-import type {
-  AccountManagerPortfolio,
-  MonthlyReport,
-  MonthlyUsageResponse,
-} from "../lib/operations-types";
+import type { MonthlyUsageResponse } from "../lib/operations-types";
 import type { RequestQueueResponse, RequestSummary } from "../lib/request-types";
 
 function clientsSnapshot(): ClientsSnapshot {
@@ -180,71 +176,11 @@ function usage(): MonthlyUsageResponse {
   };
 }
 
-function reports(): MonthlyReport[] {
-  return [
-    {
-      id: "report-1",
-      client: {
-        id: "client-1",
-        code: "CLIENT-1",
-        name: "Client One",
-        sector: "Technology",
-        city: "Riyadh",
-      },
-      periodStart: "2026-06-01T00:00:00.000Z",
-      periodEnd: "2026-06-30T23:59:59.000Z",
-      period: "2026-06",
-      status: "PUBLISHED",
-      title: "June service report",
-      summary: {},
-      preparedBy: null,
-      preparedAt: null,
-      publishedAt: "2026-06-24T00:00:00.000Z",
-      createdAt: "2026-06-24T00:00:00.000Z",
-      updatedAt: "2026-06-24T00:00:00.000Z",
-    },
-  ];
-}
-
-function portfolio(): AccountManagerPortfolio {
-  return {
-    generatedAt: "2026-06-24T00:00:00.000Z",
-    portfolio: [
-      {
-        client: {
-          id: "client-1",
-          code: "CLIENT-1",
-          name: "Client One",
-          sector: "Technology",
-          city: "Riyadh",
-        },
-        accountManagers: [],
-        indicators: {
-          openRequests: 3,
-          overdueRequests: 1,
-          waitingClientRequests: 1,
-          returnedOutputs: 0,
-          overdueDocumentRequests: 0,
-          approvedHoursThisMonth: 7.5,
-        },
-        health: {
-          code: "ATTENTION",
-          label: "Needs attention",
-          reason: "Overdue work exists.",
-        },
-        recentActivity: [],
-      },
-    ],
-  };
-}
-
 describe("AdminDashboard", () => {
   it("renders the read-only operating summary from backend snapshots", () => {
     render(
       <AdminDashboard
         clientsSnapshot={clientsSnapshot()}
-        portfolio={portfolio()}
-        reports={reports()}
         requestQueue={requestQueue()}
         requests={[
           request("NEW"),
@@ -259,12 +195,11 @@ describe("AdminDashboard", () => {
     expect(screen.getByText("Total clients")).toBeInTheDocument();
     expect(screen.getByText("1 active")).toBeInTheDocument();
     expect(screen.getByText("Used hours")).toBeInTheDocument();
-    expect(screen.getAllByText("7.50h")).toHaveLength(3);
+    expect(screen.getAllByText("7.50h")).toHaveLength(2);
     expect(screen.getAllByText("Waiting on client").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByRole("heading", { name: "Client health watchlist" })).toBeInTheDocument();
     expect(
-      screen.getByText("Overdue work or returned outputs require urgent follow-up."),
-    ).toBeInTheDocument();
+      screen.queryByRole("heading", { name: "Client health watchlist" }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Manage clients" })).not.toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "Administration shortcuts" }),

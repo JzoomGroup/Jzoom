@@ -12,7 +12,7 @@ export const adminDashboardCopy = {
     eyebrow: "لوحة الإدارة",
     title: "مركز تشغيل جزوم",
     description:
-      "نظرة تنفيذية موحدة على العملاء، الطلبات، الساعات، التقارير، وصحة الحسابات باستخدام بيانات النظام الحالية.",
+      "نظرة تنفيذية موحدة على العملاء، الطلبات، الساعات والتشغيل باستخدام بيانات النظام الحالية.",
     metrics: {
       totalClients: "إجمالي العملاء",
       activeClients: "عميل نشط",
@@ -26,7 +26,6 @@ export const adminDashboardCopy = {
       waitingClient: "تحتاج إجراء من العميل",
       portalUsers: "مستخدمو البوابة",
       linkedClients: "مرتبطون بالعملاء",
-      clientHealth: "صحة العملاء",
       watch: "تحت المتابعة",
       monthlyReports: "التقارير الشهرية",
       published: "منشور",
@@ -49,17 +48,6 @@ export const adminDashboardCopy = {
       billable: "قابلة للفوترة",
       clients: "عملاء",
     },
-    health: {
-      title: "متابعة صحة العملاء",
-      description: "عملاء يحتاجون متابعة من مدير الحساب أو الإدارة.",
-      action: "المحفظة",
-      stableTitle: "المحفظة مستقرة",
-      stableBody: "لا يوجد عملاء عاليي المخاطر أو تحت المتابعة حاليًا.",
-      open: "مفتوحة",
-      overdue: "متأخرة",
-      waitingClient: "بانتظار العميل",
-      hours: "ساعات",
-    },
     requests: {
       title: "آخر الطلبات المحدثة",
       description: "دخول سريع إلى العمل الجاري دون فتح شاشات العميل.",
@@ -77,7 +65,7 @@ export const adminDashboardCopy = {
     eyebrow: "Admin Console",
     title: "Operating dashboard",
     description:
-      "A premium control room for clients, request queues, hours usage, reports, and client health using the current backend data contracts.",
+      "A focused control room for clients, request queues, hours usage, and live operations.",
     metrics: {
       totalClients: "Total clients",
       activeClients: "active",
@@ -91,7 +79,6 @@ export const adminDashboardCopy = {
       waitingClient: "Waiting on client",
       portalUsers: "Portal users",
       linkedClients: "Linked to managed clients",
-      clientHealth: "Client health",
       watch: "watch",
       monthlyReports: "Monthly reports",
       published: "published",
@@ -113,17 +100,6 @@ export const adminDashboardCopy = {
       submitted: "Submitted",
       billable: "Billable",
       clients: "Clients",
-    },
-    health: {
-      title: "Client health watchlist",
-      description: "Clients that need account-manager or management attention.",
-      action: "Portfolio",
-      stableTitle: "Portfolio is stable",
-      stableBody: "No high-risk or watch clients in the current portfolio.",
-      open: "Open",
-      overdue: "Overdue",
-      waitingClient: "Waiting client",
-      hours: "Hours",
     },
     requests: {
       title: "Recently updated requests",
@@ -259,7 +235,6 @@ export const clientManagerCopy = {
       "إدارة بيانات العملاء، جهات الاعتماد، مستخدمي البوابة، وربط الطلبات بشكل واضح بدون كشف بيانات حساسة.",
     clientCode: "رمز العميل",
     clientCreated: "تم إنشاء العميل.",
-    clientHealth: "حالة العميل",
     clientList: "ملفات العملاء",
     clientListDescription:
       "بطاقات العملاء التشغيلية مع الروابط والعدادات ومستخدمي البوابة والإجراءات المسموحة.",
@@ -343,7 +318,6 @@ export const clientManagerCopy = {
       "Manage client data, approval contacts, portal users, and request links without exposing sensitive data.",
     clientCode: "Client code",
     clientCreated: "Client created.",
-    clientHealth: "Client health",
     clientList: "Client portfolio",
     clientListDescription:
       "Operational client cards with links, counters, portal users, and allowed actions.",
@@ -444,10 +418,6 @@ export const platformConfigurationManagerCopy = {
     configurationMap: "خريطة الإعدادات",
     configurationMapDescription:
       "تنقل سريع بين الإعدادات، التنبيهات، قوالب المستندات، الترجمة، وقوالب Workflow.",
-    configurationReadiness: "جاهزية إعدادات التشغيل",
-    configurationReadinessDescription:
-      "خريطة عملية توضح ما أصبح قابلًا للتحكم من الإعدادات وما يزال يحتاج إعدادًا قبل اعتباره جاهزًا للأبقريد.",
-    configured: "مضبوط",
     createSetting: "إنشاء إعداد",
     createSettingReason: "تم الإنشاء من إعدادات المنصة",
     deepLink: "الرابط الداخلي",
@@ -473,10 +443,8 @@ export const platformConfigurationManagerCopy = {
     locale: "اللغة",
     ltrDirection: "اتجاه LTR",
     maskedValue: "هذه القيمة محمية ولا يمكن تعديلها من الواجهة.",
-    missingSetting: "يحتاج إعداد",
     name: "الاسم",
     namespace: "النطاق",
-    nextAction: "الخطوة التالية",
     noRevision: "لا يوجد إصدار",
     notifications: "التنبيهات",
     notificationsDescription:
@@ -508,7 +476,6 @@ export const platformConfigurationManagerCopy = {
     runtimeApplied: "مطبق فعليًا في التشغيل",
     saveTemplateRevision: "حفظ إصدار القالب",
     settingRevised: (key: string) => `تم إنشاء إصدار جديد للإعداد ${key}.`,
-    settingKeys: "مفاتيح الإعداد",
     settings: "الإعدادات",
     settingsDescription: "قيم الأعمال والهوية والمنصة مع سجل إصدارات.",
     settingsRegistry: "سجل الإعدادات",
@@ -543,10 +510,6 @@ export const platformConfigurationManagerCopy = {
     configurationMap: "Configuration map",
     configurationMapDescription:
       "Jump across settings, notifications, document templates, localization, and workflow foundations.",
-    configurationReadiness: "Operating configuration readiness",
-    configurationReadinessDescription:
-      "A practical map of what is already configurable and what still needs settings before upgrade readiness.",
-    configured: "Configured",
     createSetting: "Create setting",
     createSettingReason: "Created from Admin Platform Configuration",
     deepLink: "Deep link",
@@ -572,10 +535,8 @@ export const platformConfigurationManagerCopy = {
     locale: "Locale",
     ltrDirection: "LTR",
     maskedValue: "This value is masked and cannot be edited from the UI.",
-    missingSetting: "Needs setting",
     name: "Name",
     namespace: "Namespace",
-    nextAction: "Next action",
     noRevision: "No revision",
     notifications: "Notifications",
     notificationsDescription:
@@ -605,7 +566,6 @@ export const platformConfigurationManagerCopy = {
     runtimeApplied: "Applied at runtime",
     saveTemplateRevision: "Save template revision",
     settingRevised: (key: string) => `${key} revised.`,
-    settingKeys: "Setting keys",
     settings: "Settings",
     settingsDescription: "Business, branding, and platform values with revision history.",
     settingsRegistry: "Settings registry",

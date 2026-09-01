@@ -1,14 +1,7 @@
 import { accountManagerPortfolioCopy as copy } from "../../i18n/dictionaries/operations";
 import type { AccountManagerPortfolio as Portfolio } from "../../lib/operations-types";
 import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
-import {
-  BentoGrid,
-  EmptyState,
-  MetricCard,
-  PageHeader,
-  SectionCard,
-  StatusChip,
-} from "../premium-os";
+import { BentoGrid, EmptyState, MetricCard, PageHeader, SectionCard } from "../premium-os";
 
 function number(value: number, locale: SupportedLocale): string {
   return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA", {
@@ -25,14 +18,6 @@ function dateTime(value: string, locale: SupportedLocale): string {
     timeZone: platformTimeZone,
     year: "numeric",
   }).format(new Date(value));
-}
-
-function healthLabel(code: "ATTENTION" | "WATCH" | "HEALTHY", locale: SupportedLocale): string {
-  return copy[locale].healthStatus[code];
-}
-
-function healthReason(code: "ATTENTION" | "WATCH" | "HEALTHY", locale: SupportedLocale): string {
-  return copy[locale].healthReason[code];
 }
 
 function uniqueRecentActivity<
@@ -57,7 +42,6 @@ export function AccountManagerPortfolio({
 }) {
   const language = normalizeLocale(locale);
   const t = copy[language];
-  const attentionClients = portfolio.portfolio.filter((entry) => entry.health.code === "ATTENTION");
   const totals = portfolio.portfolio.reduce(
     (acc, entry) => ({
       approvedHours: acc.approvedHours + entry.indicators.approvedHoursThisMonth,
@@ -83,12 +67,7 @@ export function AccountManagerPortfolio({
       />
 
       <BentoGrid compact>
-        <MetricCard
-          label={t.clients}
-          value={number(portfolio.portfolio.length, language)}
-          detail={`${number(attentionClients.length, language)} ${healthLabel("ATTENTION", language)}`}
-          accent
-        />
+        <MetricCard label={t.clients} value={number(portfolio.portfolio.length, language)} accent />
         <MetricCard
           label={t.overdueRequests}
           value={number(totals.overdueRequests, language)}
@@ -106,7 +85,7 @@ export function AccountManagerPortfolio({
         />
       </BentoGrid>
 
-      <SectionCard title={t.clientHealthActivity}>
+      <SectionCard title={t.clientsActivity}>
         {portfolio.portfolio.length === 0 ? (
           <EmptyState>{t.noClients}</EmptyState>
         ) : (
@@ -117,15 +96,10 @@ export function AccountManagerPortfolio({
                 <article className="entity-card" key={entry.client.id}>
                   <div className="entity-card-heading">
                     <div>
-                      <StatusChip
-                        status={entry.health.code}
-                        label={healthLabel(entry.health.code, language)}
-                      />
                       <h3>{entry.client.name}</h3>
                     </div>
                     <span>{entry.client.code}</span>
                   </div>
-                  <p>{healthReason(entry.health.code, language)}</p>
                   <dl className="entity-meta four-up portfolio-client-signals">
                     <div>
                       <dt>{t.open}</dt>

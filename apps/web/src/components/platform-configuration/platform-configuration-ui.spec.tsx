@@ -145,13 +145,10 @@ describe("Admin platform configuration UI", () => {
     expect(screen.getByRole("heading", { name: "Platform configuration" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Create setting" })).toBeInTheDocument();
     expect(screen.getAllByText("platform.name").length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByRole("heading", { name: "Operating configuration readiness" }).length,
-    ).toBeGreaterThan(0);
-    expect(screen.getByRole("heading", { name: "Pricing defaults" })).toBeInTheDocument();
     expect(screen.getAllByText("pricing.tax.default_pct").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Configured").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Needs setting").length).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole("heading", { name: "Operating configuration readiness" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Notification templates" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "PDF template settings" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Localization labels" })).toBeInTheDocument();

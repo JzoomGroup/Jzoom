@@ -3,7 +3,6 @@
 import { platformConfigurationManagerCopy as copy } from "../../i18n/dictionaries/administration";
 
 import { type FormEvent, useMemo, useState } from "react";
-import Link from "next/link";
 import {
   createPlatformSetting,
   platformConfigurationErrorMessage,
@@ -154,178 +153,6 @@ function settingKeyLabel(key: string, locale: SupportedLocale): string {
   return labels[key]?.[locale] ?? formatCode(key);
 }
 
-interface ReadinessRequirement {
-  action: string;
-  area: string;
-  description: string;
-  href: string;
-  keys: string[];
-}
-
-function readinessRequirements(locale: SupportedLocale): ReadinessRequirement[] {
-  if (locale === "ar") {
-    return [
-      {
-        area: "افتراضيات التسعير",
-        description: "الضريبة، الخصم، ومدة صلاحية عرض السعر يجب أن تكون إعدادات لا قيمًا ثابتة.",
-        href: "/admin/pricing-rules",
-        action: "مراجعة قواعد التسعير",
-        keys: [
-          "pricing.tax.default_pct",
-          "pricing.discount.default_pct",
-          "pricing.quote.validity_days",
-        ],
-      },
-      {
-        area: "الباقات والساعات",
-        description:
-          "الساعات والأسعار الافتراضية للباقات يجب أن تظهر في التسعير والاشتراكات الجديدة.",
-        href: "/admin/packages",
-        action: "مراجعة الباقات",
-        keys: ["pricing.package.default_hours", "pricing.package.default_price"],
-      },
-      {
-        area: "معاملات التسعير",
-        description: "معاملات الموظفين، الفروع، التعقيد، جاهزية البيانات، الحجم، وأولوية البدء.",
-        href: "/admin/pricing-studio",
-        action: "مراجعة الاستوديو",
-        keys: [
-          "pricing.factors.employee_count",
-          "pricing.factors.branch_count",
-          "pricing.factors.complexity",
-          "pricing.factors.data_readiness",
-          "pricing.factors.transaction_volume",
-          "pricing.factors.start_priority",
-        ],
-      },
-      {
-        area: "الخدمات والبنود",
-        description: "ظهور الخدمات وقوالب الحقول الديناميكية الافتراضية للبنود الجديدة.",
-        href: "/admin/request-templates",
-        action: "مراجعة نماذج الطلب",
-        keys: [
-          "services.monthly.default_visibility",
-          "services.one_time.default_visibility",
-          "service_items.dynamic_fields.defaults",
-        ],
-      },
-      {
-        area: "Workflow والاعتمادات",
-        description: "مسارات الطلب، الاعتمادات، وSLA يجب أن تكون قابلة للضبط بدون تغيير كود.",
-        href: "#workflow-templates",
-        action: "مراجعة قوالب Workflow",
-        keys: ["workflow.request.default", "approvals.default_route", "sla.default_days"],
-      },
-      {
-        area: "المرفقات",
-        description: "أنواع الملفات المسموحة والحد الأقصى للرفع يجب أن تكون إعدادات واضحة.",
-        href: "#platform-settings",
-        action: "إضافة إعدادات المرفقات",
-        keys: ["attachments.allowed_mime_types", "attachments.max_size_mb"],
-      },
-      {
-        area: "صحة العميل والتنبيهات",
-        description: "قواعد صحة العميل ووضع التنبيهات الخارجية يجب أن تكون مرئية وآمنة.",
-        href: "#notification-templates",
-        action: "مراجعة التنبيهات",
-        keys: ["client_health.score_rules", "notifications.outbound_mode"],
-      },
-      {
-        area: "الاستيراد والتصدير",
-        description: "معاينة الاستيراد وخطة الرجوع يجب أن تكون مفعلة قبل عمليات Import الحساسة.",
-        href: "#platform-settings",
-        action: "إضافة ضوابط Import",
-        keys: ["import_export.preview_required", "import_export.rollback_required"],
-      },
-    ];
-  }
-  return [
-    {
-      area: "Pricing defaults",
-      description: "Tax, discount, and quote validity should be settings rather than fixed values.",
-      href: "/admin/pricing-rules",
-      action: "Review pricing rules",
-      keys: [
-        "pricing.tax.default_pct",
-        "pricing.discount.default_pct",
-        "pricing.quote.validity_days",
-      ],
-    },
-    {
-      area: "Packages and hours",
-      description:
-        "Default package hours and prices should flow into pricing and new subscriptions.",
-      href: "/admin/packages",
-      action: "Review packages",
-      keys: ["pricing.package.default_hours", "pricing.package.default_price"],
-    },
-    {
-      area: "Pricing factors",
-      description:
-        "Employee, branch, complexity, data readiness, transaction, and start-priority factors.",
-      href: "/admin/pricing-studio",
-      action: "Review studio",
-      keys: [
-        "pricing.factors.employee_count",
-        "pricing.factors.branch_count",
-        "pricing.factors.complexity",
-        "pricing.factors.data_readiness",
-        "pricing.factors.transaction_volume",
-        "pricing.factors.start_priority",
-      ],
-    },
-    {
-      area: "Services and items",
-      description:
-        "Service visibility and default dynamic field templates for newly created items.",
-      href: "/admin/request-templates",
-      action: "Review request templates",
-      keys: [
-        "services.monthly.default_visibility",
-        "services.one_time.default_visibility",
-        "service_items.dynamic_fields.defaults",
-      ],
-    },
-    {
-      area: "Workflow and approvals",
-      description:
-        "Request routes, approvals, and SLA should be configurable without code changes.",
-      href: "#workflow-templates",
-      action: "Review workflow templates",
-      keys: ["workflow.request.default", "approvals.default_route", "sla.default_days"],
-    },
-    {
-      area: "Attachments",
-      description: "Allowed file types and upload size limits should be explicit settings.",
-      href: "#platform-settings",
-      action: "Add attachment settings",
-      keys: ["attachments.allowed_mime_types", "attachments.max_size_mb"],
-    },
-    {
-      area: "Client health and notifications",
-      description: "Client health rules and outbound notification mode should be visible and safe.",
-      href: "#notification-templates",
-      action: "Review notifications",
-      keys: ["client_health.score_rules", "notifications.outbound_mode"],
-    },
-    {
-      area: "Import and export",
-      description:
-        "Import preview and rollback controls should be enabled before sensitive imports.",
-      href: "#platform-settings",
-      action: "Add import controls",
-      keys: ["import_export.preview_required", "import_export.rollback_required"],
-    },
-  ];
-}
-
-function matchedSettingKeys(settings: PlatformSetting[], keys: string[]): string[] {
-  const configured = new Set(
-    settings.filter((setting) => setting.status === "ACTIVE").map((setting) => setting.key),
-  );
-  return keys.filter((key) => configured.has(key));
-}
-
 function currentLabel(
   current: { version: number; status: string } | null,
   locale: SupportedLocale,
@@ -352,53 +179,6 @@ function CardHeader({
       </div>
       <StatusChip status={status ?? "ACTIVE"} label={label} />
     </div>
-  );
-}
-
-function ReadinessCard({
-  configuredLabel,
-  locale,
-  missingLabel,
-  nextActionLabel,
-  requirement,
-  settingKeysLabel,
-  settings,
-}: {
-  configuredLabel: string;
-  locale: SupportedLocale;
-  missingLabel: string;
-  nextActionLabel: string;
-  requirement: ReadinessRequirement;
-  settingKeysLabel: string;
-  settings: PlatformSetting[];
-}) {
-  const matchedKeys = matchedSettingKeys(settings, requirement.keys);
-  const configured = matchedKeys.length > 0;
-
-  return (
-    <article className={`platform-readiness-card ${configured ? "ready" : "missing"}`}>
-      <div className="platform-readiness-heading">
-        <div>
-          <small>{settingKeysLabel}</small>
-          <h3>{requirement.area}</h3>
-        </div>
-        <StatusChip
-          status={configured ? "ACTIVE" : "DRAFT"}
-          label={configured ? configuredLabel : missingLabel}
-        />
-      </div>
-      <p>{requirement.description}</p>
-      <div className="platform-readiness-keys">
-        {requirement.keys.map((key) => (
-          <span className={matchedKeys.includes(key) ? "matched" : undefined} key={key}>
-            {settingKeyLabel(key, locale)}
-          </span>
-        ))}
-      </div>
-      <Link className="os-button os-button-secondary" href={requirement.href}>
-        {nextActionLabel}: {requirement.action}
-      </Link>
-    </article>
   );
 }
 
@@ -746,11 +526,6 @@ export function PlatformConfigurationManager({
     }
     return [...groups.entries()];
   }, [snapshot.settings]);
-  const readiness = useMemo(() => readinessRequirements(locale), [locale]);
-  const configuredReadiness = readiness.filter(
-    (requirement) => matchedSettingKeys(snapshot.settings, requirement.keys).length > 0,
-  ).length;
-
   const activeSettings = snapshot.settings.filter((setting) => setting.status === "ACTIVE").length;
 
   function onSaved(next: PlatformConfigurationSnapshot, message: string) {
@@ -831,11 +606,6 @@ export function PlatformConfigurationManager({
           value={number(snapshot.workflows.length, locale)}
           detail={t.checklistFoundations}
         />
-        <MetricCard
-          label={t.configurationReadiness}
-          value={`${number(configuredReadiness, locale)}/${number(readiness.length, locale)}`}
-          detail={t.configured}
-        />
       </BentoGrid>
 
       <ControlDeck title={t.configurationMap} description={t.configurationMapDescription}>
@@ -869,35 +639,7 @@ export function PlatformConfigurationManager({
           title={t.workflows}
           description={t.workflowDescription}
         />
-        <ControlTile
-          href="#configuration-readiness"
-          meta="06"
-          title={t.configurationReadiness}
-          description={t.configurationReadinessDescription}
-        />
       </ControlDeck>
-
-      <SectionCard
-        id="configuration-readiness"
-        eyebrow={t.configurationMap}
-        title={t.configurationReadiness}
-        description={t.configurationReadinessDescription}
-      >
-        <div className="platform-readiness-grid">
-          {readiness.map((requirement) => (
-            <ReadinessCard
-              key={requirement.area}
-              configuredLabel={t.configured}
-              locale={locale}
-              missingLabel={t.missingSetting}
-              nextActionLabel={t.nextAction}
-              requirement={requirement}
-              settingKeysLabel={t.settingKeys}
-              settings={snapshot.settings}
-            />
-          ))}
-        </div>
-      </SectionCard>
 
       <SectionCard id="platform-settings" eyebrow={t.settingsRegistry} title={t.createSetting}>
         <form

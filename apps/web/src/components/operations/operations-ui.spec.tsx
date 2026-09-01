@@ -325,11 +325,12 @@ describe("Operations foundation UI", () => {
     expect(screen.queryByText("UPLOADED")).not.toBeInTheDocument();
   });
 
-  it("renders account-manager portfolio health indicators", () => {
+  it("renders account-manager portfolio activity without health scoring", () => {
     render(<AccountManagerPortfolio portfolio={portfolio()} />);
 
     expect(screen.getByRole("heading", { name: "Client portfolio" })).toBeInTheDocument();
-    expect(screen.getByText("Needs attention")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Clients and activity" })).toBeInTheDocument();
+    expect(screen.queryByText("Needs attention")).not.toBeInTheDocument();
     expect(screen.getByText("REQ-1")).toBeInTheDocument();
   });
 

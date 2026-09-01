@@ -3,24 +3,17 @@ import { AdminDashboard } from "../../components/admin-dashboard";
 import { AdminShell } from "../../components/admin-shell";
 import { getCurrentUser } from "../../lib/auth";
 import { requireClientsSnapshot } from "../../lib/clients-server";
-import {
-  requireAccountManagerPortfolio,
-  requireMonthlyReports,
-  requireMonthlyUsage,
-} from "../../lib/operations-server";
+import { requireMonthlyUsage } from "../../lib/operations-server";
 import { requireRequestQueue, requireRequests } from "../../lib/request-server";
 
 export default async function AdminDashboardPage() {
-  const [user, clientsSnapshot, requestQueue, requests, usage, reports, portfolio] =
-    await Promise.all([
-      getCurrentUser(),
-      requireClientsSnapshot(),
-      requireRequestQueue("all"),
-      requireRequests(),
-      requireMonthlyUsage(),
-      requireMonthlyReports(),
-      requireAccountManagerPortfolio(),
-    ]);
+  const [user, clientsSnapshot, requestQueue, requests, usage] = await Promise.all([
+    getCurrentUser(),
+    requireClientsSnapshot(),
+    requireRequestQueue("all"),
+    requireRequests(),
+    requireMonthlyUsage(),
+  ]);
 
   if (!user) {
     redirect("/login");
@@ -40,8 +33,6 @@ export default async function AdminDashboardPage() {
       <AdminDashboard
         clientsSnapshot={clientsSnapshot}
         locale={user.preferredLocale}
-        portfolio={portfolio}
-        reports={reports}
         requestQueue={requestQueue}
         requests={requests}
         usage={usage}

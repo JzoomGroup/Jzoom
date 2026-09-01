@@ -556,7 +556,7 @@
   box-shadow: 0 12px 28px rgba(255, 90, 77, 0.11);
 }
 
-.request-workflow-stepper span {
+.request-workflow-stepper li > span {
   display: inline-grid;
   width: 27px;
   height: 27px;
@@ -568,7 +568,7 @@
   font-weight: 900;
 }
 
-.request-workflow-stepper strong {
+.request-workflow-stepper li > strong {
   display: block;
   margin-block-start: 10px;
   color: inherit;

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { InternalRoleDashboard } from "./internal-role-dashboard";
-import type { AccountManagerPortfolio, MonthlyUsageResponse } from "../lib/operations-types";
+import type { MonthlyUsageResponse } from "../lib/operations-types";
 import type { RequestQueueResponse, RequestSummary } from "../lib/request-types";
 
 function request(status: RequestSummary["status"], id = "request-1"): RequestSummary {
@@ -93,38 +93,6 @@ function usage(): MonthlyUsageResponse {
   };
 }
 
-function portfolio(): AccountManagerPortfolio {
-  return {
-    generatedAt: "2026-06-24T00:00:00.000Z",
-    portfolio: [
-      {
-        client: {
-          id: "client-1",
-          code: "CLIENT-1",
-          name: "Client One",
-          sector: "Technology",
-          city: "Riyadh",
-        },
-        accountManagers: [],
-        indicators: {
-          openRequests: 2,
-          overdueRequests: 1,
-          waitingClientRequests: 1,
-          returnedOutputs: 0,
-          overdueDocumentRequests: 0,
-          approvedHoursThisMonth: 4,
-        },
-        health: {
-          code: "ATTENTION",
-          label: "Needs attention",
-          reason: "Delayed work exists.",
-        },
-        recentActivity: [],
-      },
-    ],
-  };
-}
-
 describe("InternalRoleDashboard", () => {
   it("renders a specialist execution dashboard from scoped queue data", () => {
     render(<InternalRoleDashboard mode="specialist" queue={queue()} usage={usage()} />);
@@ -135,11 +103,10 @@ describe("InternalRoleDashboard", () => {
     expect(screen.queryByRole("heading", { name: "Quick actions" })).not.toBeInTheDocument();
   });
 
-  it("renders management health and reporting context when provided", () => {
+  it("renders a focused management reporting context", () => {
     render(
       <InternalRoleDashboard
         mode="management"
-        portfolio={portfolio()}
         queue={{ ...queue(), queue: "all" }}
         reports={[]}
         usage={usage()}
@@ -149,10 +116,7 @@ describe("InternalRoleDashboard", () => {
     expect(
       screen.getByRole("heading", { name: "Executive operating dashboard" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Client health watch" })).toBeInTheDocument();
-    expect(
-      screen.getByText("Overdue work or returned outputs require urgent follow-up."),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Client health watch" })).not.toBeInTheDocument();
     expect(screen.getByText("Monthly reports")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Quick actions" })).not.toBeInTheDocument();
   });

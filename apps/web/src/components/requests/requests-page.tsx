@@ -6,6 +6,7 @@ import {
   requireRequestIntakeOptions,
   requireRequests,
 } from "../../lib/request-server";
+import { AdminShell } from "../admin-shell";
 import { QuoteShell } from "../quotes/quote-shell";
 import { RequestDetail } from "./request-detail";
 import { RequestList } from "./request-list";
@@ -45,32 +46,48 @@ export async function RequestsPage({ requestId }: { requestId?: string }) {
       ? await requireRequestAssignmentCandidates(requestId)
       : null;
   const canCreate = canCreateRequests(user);
+  const isAdmin = user.roles.includes("ROLE-ADMIN");
   const intakeOptions =
     Array.isArray(content) && canCreate ? await requireRequestIntakeOptions() : null;
+  const requestContent = Array.isArray(content) ? (
+    <RequestList
+      canCreate={canCreate}
+      intakeOptions={intakeOptions}
+      locale={user.preferredLocale}
+      requests={content}
+    />
+  ) : (
+    <RequestDetail
+      assignmentCandidates={assignmentCandidates}
+      currentUser={user}
+      initialRequest={content}
+    />
+  );
+
+  if (isAdmin) {
+    return (
+      <AdminShell
+        activePath="/admin"
+        displayName={user.displayName}
+        locale={user.preferredLocale}
+        permissions={user.permissions}
+        roles={user.roles}
+      >
+        {requestContent}
+      </AdminShell>
+    );
+  }
 
   return (
     <QuoteShell
       activePath="/requests"
       displayName={user.displayName}
-      isAdmin={user.roles.includes("ROLE-ADMIN")}
+      isAdmin={false}
       locale={user.preferredLocale}
       permissions={user.permissions}
       roles={user.roles}
     >
-      {Array.isArray(content) ? (
-        <RequestList
-          canCreate={canCreate}
-          intakeOptions={intakeOptions}
-          locale={user.preferredLocale}
-          requests={content}
-        />
-      ) : (
-        <RequestDetail
-          assignmentCandidates={assignmentCandidates}
-          currentUser={user}
-          initialRequest={content}
-        />
-      )}
+      {requestContent}
     </QuoteShell>
   );
 }

@@ -2,13 +2,8 @@ import { adminDashboardCopy as copy } from "../i18n/dictionaries/administration"
 import Link from "next/link";
 import type { ClientsSnapshot } from "../lib/clients-types";
 import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../lib/i18n";
-import type {
-  AccountManagerPortfolio,
-  MonthlyReport,
-  MonthlyUsageResponse,
-} from "../lib/operations-types";
+import type { MonthlyUsageResponse } from "../lib/operations-types";
 import type { RequestQueueResponse, RequestSummary } from "../lib/request-types";
-import { healthReasonText, healthStatusText } from "./operations/health-i18n";
 import {
   BentoGrid,
   EmptyState,
@@ -51,15 +46,12 @@ function serviceName(request: RequestSummary, locale: SupportedLocale): string {
 export function AdminDashboard({
   clientsSnapshot,
   locale = "en",
-  portfolio,
   requestQueue,
   requests,
   usage,
 }: {
   clientsSnapshot: ClientsSnapshot;
   locale?: string;
-  portfolio: AccountManagerPortfolio;
-  reports: MonthlyReport[];
   requestQueue: RequestQueueResponse;
   requests: RequestSummary[];
   usage: MonthlyUsageResponse;
@@ -70,12 +62,9 @@ export function AdminDashboard({
   const completedRequests = requests.filter((request) =>
     completedStatuses.has(request.status),
   ).length;
-  const highRiskClients = portfolio.portfolio.filter((entry) => entry.health.code === "ATTENTION");
-  const watchClients = portfolio.portfolio.filter((entry) => entry.health.code === "WATCH");
   const latestRequests = [...requests]
     .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
     .slice(0, 5);
-  const attentionClients = [...highRiskClients, ...watchClients].slice(0, 4);
 
   return (
     <>
@@ -164,55 +153,6 @@ export function AdminDashboard({
           </div>
         </SectionCard>
       </section>
-
-      <SectionCard
-        title={t.health.title}
-        description={t.health.description}
-        action={
-          <Link className="os-button os-button-secondary" href="/account-manager">
-            {t.health.action}
-          </Link>
-        }
-      >
-        {attentionClients.length === 0 ? (
-          <EmptyState title={t.health.stableTitle}>{t.health.stableBody}</EmptyState>
-        ) : (
-          <div className="entity-grid">
-            {attentionClients.map((entry) => (
-              <article className="entity-card" key={entry.client.id}>
-                <div className="entity-card-heading">
-                  <div>
-                    <span className={`status-pill status-${entry.health.code.toLowerCase()}`}>
-                      {healthStatusText(entry.health.code, language)}
-                    </span>
-                    <h3>{entry.client.name}</h3>
-                  </div>
-                  <span>{entry.client.code}</span>
-                </div>
-                <p>{healthReasonText(entry.health.code, language)}</p>
-                <dl className="entity-meta four-up">
-                  <div>
-                    <dt>{t.health.open}</dt>
-                    <dd>{number(entry.indicators.openRequests, language)}</dd>
-                  </div>
-                  <div>
-                    <dt>{t.health.overdue}</dt>
-                    <dd>{number(entry.indicators.overdueRequests, language)}</dd>
-                  </div>
-                  <div>
-                    <dt>{t.health.waitingClient}</dt>
-                    <dd>{number(entry.indicators.waitingClientRequests, language)}</dd>
-                  </div>
-                  <div>
-                    <dt>{t.health.hours}</dt>
-                    <dd>{hours(entry.indicators.approvedHoursThisMonth, language)}</dd>
-                  </div>
-                </dl>
-              </article>
-            ))}
-          </div>
-        )}
-      </SectionCard>
 
       <SectionCard
         title={t.requests.title}

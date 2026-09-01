@@ -1,12 +1,7 @@
 import Link from "next/link";
 import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../lib/i18n";
-import type {
-  AccountManagerPortfolio,
-  MonthlyReport,
-  MonthlyUsageResponse,
-} from "../lib/operations-types";
+import type { MonthlyReport, MonthlyUsageResponse } from "../lib/operations-types";
 import type { RequestQueueResponse } from "../lib/request-types";
-import { healthReasonText, healthStatusText } from "./operations/health-i18n";
 import {
   BentoGrid,
   EmptyState,
@@ -38,8 +33,7 @@ const content = {
     management: {
       eyebrow: "مساحة الإدارة",
       title: "لوحة القيادة التنفيذية",
-      description:
-        "ملخص عالي المستوى لحجم الطلبات، التعثرات، استخدام الساعات، التقارير، وصحة العملاء.",
+      description: "ملخص عالي المستوى لحجم الطلبات، التعثرات، استخدام الساعات والتقارير.",
       queueLabel: "كل القوائم",
     },
     metrics: {
@@ -58,8 +52,6 @@ const content = {
       preparedReports: "تقارير جاهزة",
       trackedEntries: "قيود مسجلة",
       ledgerEntries: "قيود السجل",
-      healthWatch: "متابعة الصحة",
-      clientPortfolio: "محفظة العملاء",
       billableHours: "ساعات قابلة للفوترة",
       approvedOrSubmitted: "معتمدة أو مقدمة",
     },
@@ -72,16 +64,6 @@ const content = {
       status: "الحالة",
       priority: "الأولوية",
       updated: "آخر تحديث",
-    },
-    health: {
-      title: "متابعة صحة العملاء",
-      description: "عملاء يحتاجون متابعة من الإدارة أو مدير الحساب.",
-      emptyTitle: "لا توجد حسابات عالية المخاطر",
-      emptyBody: "لا يوجد عملاء متعثرون أو تحت المتابعة في المحفظة الحالية.",
-      open: "مفتوحة",
-      overdue: "متأخرة",
-      waitingClient: "بانتظار العميل",
-      hours: "ساعات",
     },
   },
   en: {
@@ -103,7 +85,7 @@ const content = {
       eyebrow: "Management workspace",
       title: "Executive operating dashboard",
       description:
-        "High-level visibility into request volume, delayed work, hours usage, reports, and client health.",
+        "High-level visibility into request volume, delayed work, hours usage, and reports.",
       queueLabel: "All queues",
     },
     metrics: {
@@ -122,8 +104,6 @@ const content = {
       preparedReports: "Prepared reports",
       trackedEntries: "Tracked entries",
       ledgerEntries: "Ledger entries",
-      healthWatch: "Health watch",
-      clientPortfolio: "Client portfolio",
       billableHours: "Billable hours",
       approvedOrSubmitted: "Approved or submitted",
     },
@@ -136,16 +116,6 @@ const content = {
       status: "Status",
       priority: "Priority",
       updated: "Updated",
-    },
-    health: {
-      title: "Client health watch",
-      description: "Portfolio clients that require management or account-manager follow-up.",
-      emptyTitle: "No at-risk clients",
-      emptyBody: "No at-risk clients in the visible portfolio.",
-      open: "Open",
-      overdue: "Overdue",
-      waitingClient: "Waiting client",
-      hours: "Hours",
     },
   },
 } as const;
@@ -173,14 +143,12 @@ function date(value: string, locale: SupportedLocale): string {
 export function InternalRoleDashboard({
   locale = "en",
   mode,
-  portfolio,
   reports = [],
   queue,
   usage,
 }: {
   locale?: string;
   mode: RoleDashboardMode;
-  portfolio?: AccountManagerPortfolio;
   reports?: MonthlyReport[];
   queue: RequestQueueResponse;
   usage: MonthlyUsageResponse;
@@ -195,16 +163,6 @@ export function InternalRoleDashboard({
   const latestRequests = [...queue.requests]
     .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
     .slice(0, 6);
-  const attentionClients =
-    portfolio?.portfolio
-      .filter((entry) => entry.health.code !== "HEALTHY")
-      .sort(
-        (left, right) =>
-          right.indicators.overdueRequests - left.indicators.overdueRequests ||
-          right.indicators.openRequests - left.indicators.openRequests,
-      )
-      .slice(0, 4) ?? [];
-
   return (
     <>
       <PageHeader eyebrow={page.eyebrow} title={page.title} description={page.description} />
@@ -227,11 +185,6 @@ export function InternalRoleDashboard({
               label={t.metrics.monthlyReports}
               value={number(reports.length, language)}
               detail={t.metrics.preparedReports}
-            />
-            <MetricCard
-              label={t.metrics.healthWatch}
-              value={number(attentionClients.length, language)}
-              detail={t.metrics.clientPortfolio}
             />
           </>
         ) : (
@@ -305,49 +258,6 @@ export function InternalRoleDashboard({
           </SmartTable>
         )}
       </SectionCard>
-
-      {mode === "management" && (
-        <SectionCard title={t.health.title} description={t.health.description}>
-          {attentionClients.length === 0 ? (
-            <EmptyState title={t.health.emptyTitle}>{t.health.emptyBody}</EmptyState>
-          ) : (
-            <div className="entity-grid">
-              {attentionClients.map((entry) => (
-                <article className="entity-card" key={entry.client.id}>
-                  <div className="entity-card-heading">
-                    <div>
-                      <span className={`status-pill status-${entry.health.code.toLowerCase()}`}>
-                        {healthStatusText(entry.health.code, language)}
-                      </span>
-                      <h3>{entry.client.name}</h3>
-                    </div>
-                    <span>{entry.client.code}</span>
-                  </div>
-                  <p>{healthReasonText(entry.health.code, language)}</p>
-                  <dl className="entity-meta four-up">
-                    <div>
-                      <dt>{t.health.open}</dt>
-                      <dd>{number(entry.indicators.openRequests, language)}</dd>
-                    </div>
-                    <div>
-                      <dt>{t.health.overdue}</dt>
-                      <dd>{number(entry.indicators.overdueRequests, language)}</dd>
-                    </div>
-                    <div>
-                      <dt>{t.health.waitingClient}</dt>
-                      <dd>{number(entry.indicators.waitingClientRequests, language)}</dd>
-                    </div>
-                    <div>
-                      <dt>{t.health.hours}</dt>
-                      <dd>{hours(entry.indicators.approvedHoursThisMonth, language)}</dd>
-                    </div>
-                  </dl>
-                </article>
-              ))}
-            </div>
-          )}
-        </SectionCard>
-      )}
     </>
   );
 }

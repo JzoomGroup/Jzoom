@@ -2,11 +2,7 @@ import { redirect } from "next/navigation";
 import { InternalRoleDashboard } from "../../components/internal-role-dashboard";
 import { QuoteShell } from "../../components/quotes/quote-shell";
 import { getCurrentUser } from "../../lib/auth";
-import {
-  requireAccountManagerPortfolio,
-  requireMonthlyReports,
-  requireMonthlyUsage,
-} from "../../lib/operations-server";
+import { requireMonthlyReports, requireMonthlyUsage } from "../../lib/operations-server";
 import { requireRequestQueue } from "../../lib/request-server";
 
 const managementRoles = ["ROLE-ADMIN", "ROLE-MGMT"] as const;
@@ -21,11 +17,10 @@ export default async function ManagementDashboardPage() {
   ) {
     redirect("/403");
   }
-  const [queue, usage, reports, portfolio] = await Promise.all([
+  const [queue, usage, reports] = await Promise.all([
     requireRequestQueue("all"),
     requireMonthlyUsage(),
     requireMonthlyReports(),
-    requireAccountManagerPortfolio(),
   ]);
 
   return (
@@ -40,7 +35,6 @@ export default async function ManagementDashboardPage() {
       <InternalRoleDashboard
         locale={user.preferredLocale}
         mode="management"
-        portfolio={portfolio}
         queue={queue}
         reports={reports}
         usage={usage}
