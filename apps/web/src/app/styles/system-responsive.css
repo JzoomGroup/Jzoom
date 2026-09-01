@@ -168,7 +168,13 @@
 
   .os-filter-bar {
     display: grid;
+    width: 100%;
     align-items: stretch;
+    justify-content: stretch;
+  }
+
+  .os-filter-controls {
+    width: 100%;
   }
 
   .os-filter-results {
