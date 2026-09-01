@@ -88,6 +88,10 @@
     display: none;
   }
 
+  .premium-mobile-brand .premium-brand-wordmark {
+    width: 100px;
+  }
+
   .premium-nav {
     margin-block: 0 14px;
   }

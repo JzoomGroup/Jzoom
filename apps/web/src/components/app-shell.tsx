@@ -2,6 +2,7 @@
 
 import { shellCopy } from "../i18n/dictionaries/administration";
 
+import Image from "next/image";
 import Link from "next/link";
 import {
   Bell,
@@ -57,6 +58,22 @@ type ShellContext = {
   permissions: string[];
   roles: string[];
 };
+
+function JzoomWordmark({ subtitle }: { subtitle?: string }) {
+  return (
+    <span className="premium-brand-wordmark-wrap">
+      <Image
+        alt="Jzoom"
+        className="premium-brand-wordmark"
+        height={25}
+        priority
+        src="/branding/jzoom-wordmark.png"
+        width={117}
+      />
+      {subtitle ? <small>{subtitle}</small> : null}
+    </span>
+  );
+}
 
 const adminNavigation: NavItem[] = [
   {
@@ -524,12 +541,7 @@ export function AppShell({
           className="premium-brand premium-mobile-brand"
           href={mode === "client" ? "/client" : isAdmin ? "/admin" : "/profile"}
         >
-          <span className="premium-brand-mark" aria-hidden="true">
-            J
-          </span>
-          <span>
-            <strong>Jzoom</strong>
-          </span>
+          <JzoomWordmark />
         </Link>
         <button
           type="button"
@@ -565,13 +577,7 @@ export function AppShell({
           href={mode === "client" ? "/client" : isAdmin ? "/admin" : "/profile"}
           onClick={closeMobileNavigation}
         >
-          <span className="premium-brand-mark" aria-hidden="true">
-            J
-          </span>
-          <span>
-            <strong>Jzoom</strong>
-            <small>{copy.brandSubtitle}</small>
-          </span>
+          <JzoomWordmark subtitle={copy.brandSubtitle} />
         </Link>
 
         <nav className="premium-nav" aria-label={copy.navigationLabel}>
