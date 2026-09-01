@@ -541,8 +541,8 @@ describe("Client portal UI", () => {
     expect(screen.getAllByRole("button", { name: "Return output" })).toHaveLength(1);
     expect(screen.getByText("Upload required")).toBeInTheDocument();
     expect(screen.getByLabelText("Request")).toHaveValue("document-request-1");
-    expect(screen.getByText("Choose the requested document")).toBeInTheDocument();
-    expect(screen.getByText("Review file details")).toBeInTheDocument();
+    expect(screen.queryByText("Choose the requested document")).not.toBeInTheDocument();
+    expect(screen.queryByText("Review file details")).not.toBeInTheDocument();
     expect(screen.getAllByText("Upload file").length).toBeGreaterThan(0);
     expect(screen.getByText("Choose file from device")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Upload file" })).toBeInTheDocument();

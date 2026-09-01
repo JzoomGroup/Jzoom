@@ -392,12 +392,10 @@
   font-weight: 500;
 }
 
-.request-workflow-stepper li,
-.request-intake-steps div {
+.request-workflow-stepper li {
   border-radius: 7px;
 }
 
-.request-intake-steps,
 .request-queue-tabs,
 .request-queue-result-bar,
 .commercial-filter-bar {

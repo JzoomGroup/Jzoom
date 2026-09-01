@@ -618,11 +618,6 @@ export function ClientRequestDetail({
             <p>{t.noDocumentUpload}</p>
           ) : (
             <form className="catalog-form client-upload-form" noValidate onSubmit={submitUpload}>
-              <div className="client-upload-steps form-span">
-                <span>{t.uploadStepChoose}</span>
-                <span>{t.uploadStepReview}</span>
-                <span>{t.uploadStepSubmit}</span>
-              </div>
               <label>
                 {t.request}
                 <select

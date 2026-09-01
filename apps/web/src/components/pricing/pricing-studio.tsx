@@ -108,24 +108,6 @@ function levelLabel(value: string | null | undefined, locale: SupportedLocale): 
   return labels[value] ?? "مستوى خدمة";
 }
 
-function monthlyName(
-  service: PricingStudioCatalog["monthlyServices"][number],
-  locale: SupportedLocale,
-): string {
-  return locale === "ar"
-    ? service.revision.nameAr || "خدمة شهرية غير مترجمة"
-    : service.revision.nameEn || service.revision.nameAr;
-}
-
-function oneTimeName(
-  service: PricingStudioCatalog["oneTimeServices"][number],
-  locale: SupportedLocale,
-): string {
-  return locale === "ar"
-    ? service.revision.nameAr || "خدمة مرة واحدة غير مترجمة"
-    : service.revision.nameEn || service.revision.nameAr;
-}
-
 function lineName(line: PricingCalculation["lines"][number], locale: SupportedLocale): string {
   return locale === "ar" ? line.nameAr || "خدمة غير مترجمة" : line.nameEn || line.nameAr;
 }
@@ -212,20 +194,7 @@ export function PricingStudio({
   const selectedCount = monthlySelections.size + oneTimeSelections.size;
   const isArchived = currentDraft?.status === "ARCHIVED";
   const canCalculate = Boolean(clientId && title.trim() && selectedCount > 0 && !isArchived);
-  const selectedMonthlyServices = catalog.monthlyServices.filter((service) =>
-    monthlySelections.has(service.revision.id),
-  );
-  const selectedOneTimeServices = catalog.oneTimeServices.filter((service) =>
-    oneTimeSelections.has(service.revision.id),
-  );
   const quoteReady = Boolean(currentDraft && calculation && !isArchived && !isDirty);
-  const quoteReadiness = quoteReady
-    ? t.quoteReady
-    : isDirty
-      ? t.quoteNeedsSave
-      : currentDraft
-        ? t.quoteNeedsPreview
-        : t.quoteNeedsDraft;
 
   const input = useMemo<PricingInput>(
     () => ({
@@ -514,62 +483,6 @@ export function PricingStudio({
             </p>
           )}
           {isArchived && <p className="catalog-feedback error">{t.archivedWarning}</p>}
-
-          <section className="pricing-journey" aria-label={t.commercialJourney}>
-            <div className="pricing-journey-main">
-              <div>
-                <p className="eyebrow">{t.commercialJourney}</p>
-                <h2>{t.serviceSelectionSummary}</h2>
-                <p>{t.commercialJourneyDescription}</p>
-              </div>
-              <ol className="pricing-journey-steps">
-                <li className={clientId ? "active" : undefined}>
-                  <span>01</span>
-                  <strong>{t.clientSetup}</strong>
-                  <small>{t.journeyClientDetail}</small>
-                </li>
-                <li className={selectedCount > 0 ? "active" : undefined}>
-                  <span>02</span>
-                  <strong>{t.selectedServices}</strong>
-                  <small>{t.journeyServicesDetail}</small>
-                </li>
-                <li className={calculation ? "active" : undefined}>
-                  <span>03</span>
-                  <strong>{t.backendPreview}</strong>
-                  <small>{t.journeyPreviewDetail}</small>
-                </li>
-                <li className={quoteReady ? "active" : undefined}>
-                  <span>04</span>
-                  <strong>{t.createQuote}</strong>
-                  <small>{t.journeyQuoteDetail}</small>
-                </li>
-              </ol>
-            </div>
-            <aside className="pricing-journey-summary">
-              <div>
-                <span>{t.quoteReadiness}</span>
-                <strong>{quoteReadiness}</strong>
-              </div>
-              <div>
-                <span>{t.selectedMonthly}</span>
-                <strong>{number(selectedMonthlyServices.length, locale)}</strong>
-                <small>
-                  {selectedMonthlyServices
-                    .map((service) => monthlyName(service, locale))
-                    .join(", ") || t.selected(0)}
-                </small>
-              </div>
-              <div>
-                <span>{t.selectedOneTime}</span>
-                <strong>{number(selectedOneTimeServices.length, locale)}</strong>
-                <small>
-                  {selectedOneTimeServices
-                    .map((service) => oneTimeName(service, locale))
-                    .join(", ") || t.selected(0)}
-                </small>
-              </div>
-            </aside>
-          </section>
 
           <section className="catalog-panel">
             <div className="panel-heading">

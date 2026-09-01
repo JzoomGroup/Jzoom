@@ -242,7 +242,6 @@ h3,
 .item-admin-editor-heading h2,
 .one-time-service-editor-heading h2,
 .one-time-category-editor-heading h2,
-.pricing-journey-main h2,
 .request-workflow-heading h2 {
   font-size: 16px;
   font-weight: 600;
@@ -256,8 +255,7 @@ h3,
 .catalog-panel > p,
 .entity-card p,
 .quote-list-card p,
-.request-panel-heading p,
-.pricing-journey-main p:not(.eyebrow) {
+.request-panel-heading p {
   font-size: 13px;
   line-height: 1.65;
 }
@@ -611,7 +609,6 @@ details,
 
 .catalog-empty,
 .os-empty-state,
-.request-intake-steps,
 .request-queue-tabs,
 .request-queue-result-bar,
 .commercial-filter-bar,

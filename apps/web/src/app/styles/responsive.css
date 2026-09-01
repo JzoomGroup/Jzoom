@@ -52,7 +52,6 @@
   .client-action-grid,
   .client-request-context-grid,
   .operations-report-workspace,
-  .pricing-journey,
   .request-ops-command,
   .request-list-command,
   .access-audit-card {
@@ -63,10 +62,6 @@
   .request-ops-metrics,
   .request-list-metrics,
   .access-module-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .client-upload-steps {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
@@ -148,10 +143,7 @@
   .project-room-progress-grid,
   .project-command-strip,
   .request-filter-bar,
-  .request-intake-steps,
-  .client-upload-steps,
   .request-primary-actions,
-  .pricing-journey-steps,
   .request-field-grid,
   .request-field-grid-three,
   .request-signal-strip,
@@ -179,7 +171,6 @@
     grid-template-columns: 1fr;
   }
 
-  .request-intake-steps span,
   .request-panel-heading > span {
     justify-self: start;
   }

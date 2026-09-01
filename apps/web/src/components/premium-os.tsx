@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpLeft, Inbox } from "lucide-react";
+import { Inbox } from "lucide-react";
 import { Children, type ReactNode } from "react";
 
 type Action = {
@@ -266,29 +266,6 @@ export function SectionCard({
       )}
       {children}
     </section>
-  );
-}
-
-export function ActionCard({
-  description,
-  href,
-  index,
-  title,
-}: {
-  description: ReactNode;
-  href: string;
-  index: string;
-  title: ReactNode;
-}) {
-  return (
-    <Link className="os-action-card" href={href}>
-      <span>{index}</span>
-      <strong>
-        {title}
-        <ArrowUpLeft aria-hidden="true" size={15} strokeWidth={1.8} />
-      </strong>
-      <p>{description}</p>
-    </Link>
   );
 }
 

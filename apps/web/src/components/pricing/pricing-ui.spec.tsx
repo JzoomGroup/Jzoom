@@ -255,9 +255,8 @@ describe("PR 6 pricing UI", () => {
         initialDrafts={[]}
       />,
     );
-    expect(screen.getByRole("heading", { name: "Selection summary" })).toBeInTheDocument();
-    expect(screen.getByText("Quote readiness")).toBeInTheDocument();
-    expect(screen.getByText("Save the draft first.")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Selection summary" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Quote readiness")).not.toBeInTheDocument();
     expect(screen.getByText("Hourly rate")).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("Select Monthly operations"));
     expect(screen.getAllByText("Monthly operations").length).toBeGreaterThan(0);
