@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight, RotateCcw, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { adminAccessCopy } from "../../i18n/admin-access";
+import { usePersistentFilters } from "../../lib/use-persistent-filters";
 import type {
   AdminAccessPermission,
   AdminAccessRole,
@@ -12,6 +13,7 @@ import type {
 import {
   BentoGrid,
   EmptyState,
+  FilterBar,
   MetricCard,
   PageHeader,
   SectionCard,
@@ -63,10 +65,16 @@ export function AdminUsersPageContent({
   const lang = language(locale);
   const t = adminAccessCopy[lang];
   const [userEditorBusy, setUserEditorBusy] = useState(false);
-  const [query, setQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState("ALL");
-  const [statusFilter, setStatusFilter] = useState("ALL");
-  const [typeFilter, setTypeFilter] = useState("ALL");
+  const {
+    filters: { query, roleFilter, statusFilter, typeFilter },
+    resetFilters,
+    setFilters,
+  } = usePersistentFilters("jzoom:admin-users:filters", {
+    query: "",
+    roleFilter: "ALL",
+    statusFilter: "ALL",
+    typeFilter: "ALL",
+  });
   const [page, setPage] = useState(1);
   const {
     applySnapshot,
@@ -123,10 +131,7 @@ export function AdminUsersPageContent({
   );
 
   function resetDirectory() {
-    setQuery("");
-    setRoleFilter("ALL");
-    setStatusFilter("ALL");
-    setTypeFilter("ALL");
+    resetFilters();
     setPage(1);
   }
 
@@ -431,7 +436,13 @@ export function AdminUsersPageContent({
       </BentoGrid>
 
       <SectionCard title={t.portalUsers} eyebrow={t.access}>
-        <div className="access-user-toolbar">
+        <FilterBar
+          results={
+            <>
+              {t.filteredResults}: {number(filteredUsers.length, lang)}
+            </>
+          }
+        >
           <label className="access-user-search">
             <span>{t.searchUsers}</span>
             <span className="access-search-input">
@@ -441,7 +452,7 @@ export function AdminUsersPageContent({
                 value={query}
                 placeholder={t.searchUsersPlaceholder}
                 onChange={(event) => {
-                  setQuery(event.target.value);
+                  setFilters((current) => ({ ...current, query: event.target.value }));
                   setPage(1);
                 }}
               />
@@ -452,7 +463,7 @@ export function AdminUsersPageContent({
             <select
               value={statusFilter}
               onChange={(event) => {
-                setStatusFilter(event.target.value);
+                setFilters((current) => ({ ...current, statusFilter: event.target.value }));
                 setPage(1);
               }}
             >
@@ -469,7 +480,7 @@ export function AdminUsersPageContent({
             <select
               value={roleFilter}
               onChange={(event) => {
-                setRoleFilter(event.target.value);
+                setFilters((current) => ({ ...current, roleFilter: event.target.value }));
                 setPage(1);
               }}
             >
@@ -486,7 +497,7 @@ export function AdminUsersPageContent({
             <select
               value={typeFilter}
               onChange={(event) => {
-                setTypeFilter(event.target.value);
+                setFilters((current) => ({ ...current, typeFilter: event.target.value }));
                 setPage(1);
               }}
             >
@@ -499,13 +510,7 @@ export function AdminUsersPageContent({
             <RotateCcw aria-hidden="true" size={15} />
             {t.resetFilters}
           </button>
-        </div>
-
-        <div className="access-user-results" aria-live="polite">
-          <span>
-            {t.filteredResults}: {number(filteredUsers.length, lang)}
-          </span>
-        </div>
+        </FilterBar>
 
         {currentUsers.length === 0 ? (
           <EmptyState title={t.emptyUsers}>{t.usersDescription}</EmptyState>

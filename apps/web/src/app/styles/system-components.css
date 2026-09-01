@@ -2,14 +2,25 @@
 
 .os-page-header,
 .catalog-header {
-  gap: 20px;
-  margin-block-end: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 16px;
+  margin-block-end: 18px;
   padding: 0;
 }
 
 .os-page-header-copy,
 .catalog-header > div {
   max-width: 780px;
+}
+
+.os-page-header-tools {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .os-eyebrow,
@@ -23,7 +34,7 @@
 .os-page-header h1,
 .catalog-header h1,
 .premium-main .catalog-header h1 {
-  font-size: clamp(25px, 2.2vw, 32px);
+  font-size: clamp(24px, 2vw, 30px);
   font-weight: 700;
   line-height: 1.25;
 }
@@ -37,7 +48,11 @@
 }
 
 .os-page-meta {
-  margin-block-start: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-block-start: 9px;
 }
 
 .os-page-actions,
@@ -45,6 +60,15 @@
 .row-actions,
 .entity-card-actions {
   gap: 7px;
+}
+
+.os-page-header-tools > .os-page-actions,
+.os-page-header-tools > .quote-header-actions {
+  margin: 0;
+}
+
+.os-page-header-tools .os-button-primary {
+  order: -1;
 }
 
 .os-button,
@@ -607,6 +631,78 @@
   place-items: center;
   padding: 24px;
   background: var(--color-page, #f6f8fb);
+}
+
+.os-page-skeleton {
+  width: min(100%, 1480px);
+  margin-inline: auto;
+  padding: clamp(18px, 3vw, 34px);
+}
+
+.os-page-skeleton > header {
+  display: grid;
+  gap: 9px;
+  margin-block-end: 20px;
+}
+
+.os-skeleton-line,
+.os-skeleton-card,
+.os-skeleton-row {
+  display: block;
+  overflow: hidden;
+  border-radius: 7px;
+  background: linear-gradient(90deg, #edf0f4 20%, #f8f9fb 45%, #edf0f4 70%);
+  background-size: 220% 100%;
+  animation: os-skeleton-shimmer 1.35s ease-in-out infinite;
+}
+
+.os-skeleton-line.short {
+  width: 96px;
+  height: 10px;
+}
+
+.os-skeleton-line.title {
+  width: min(360px, 72vw);
+  height: 34px;
+}
+
+.os-skeleton-line.description {
+  width: min(620px, 88vw);
+  height: 13px;
+}
+
+.os-skeleton-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-block-end: 14px;
+}
+
+.os-skeleton-card {
+  height: 92px;
+  border: 1px solid var(--polish-line);
+}
+
+.os-skeleton-surface {
+  display: grid;
+  gap: 1px;
+  padding: 12px;
+  overflow: hidden;
+  border: 1px solid var(--polish-line);
+  border-radius: var(--polish-radius);
+  background: #ffffff;
+}
+
+.os-skeleton-row {
+  height: 52px;
+  border-radius: 0;
+  border-block-end: 1px solid #f0f2f5;
+}
+
+@keyframes os-skeleton-shimmer {
+  to {
+    background-position-x: -220%;
+  }
 }
 
 .system-state-card {

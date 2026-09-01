@@ -589,20 +589,15 @@ describe("Request lifecycle UI", () => {
 
     renderRequestDetail(request);
 
-    expect(screen.getByRole("link", { name: "Comments" })).toHaveAttribute(
-      "href",
-      "#request-comments",
-    );
-    expect(screen.getByRole("link", { name: "Attachments" })).toHaveAttribute(
-      "href",
-      "#request-attachments",
+    expect(screen.getAllByRole("navigation")[0]).toHaveTextContent(
+      "SummaryWorkflowDocumentsActivity",
     );
     expect(
       screen.getByText("No comments have been added to this request yet."),
     ).toBeInTheDocument();
     expect(screen.getByText("No internal notes have been added yet.")).toBeInTheDocument();
     expect(screen.getByText("No attachments are stored on this request yet.")).toBeInTheDocument();
-    expect(screen.getByText("No request activity has been recorded yet.")).toBeInTheDocument();
+    expect(document.querySelector(".os-timeline")).toBeInTheDocument();
   });
 
   it("exposes start work only when the request status can move to in progress", () => {
@@ -646,13 +641,13 @@ describe("Request lifecycle UI", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Specialist workbench" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Checklist" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Workflow" })).toHaveAttribute(
       "href",
-      "#request-checklist",
+      "#request-lifecycle",
     );
-    expect(screen.getByRole("link", { name: "Outputs" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Documents" })).toHaveAttribute(
       "href",
-      "#request-outputs",
+      "#request-documents",
     );
     expect(screen.getByRole("button", { name: "Start work" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create internal output" })).toBeInTheDocument();
@@ -761,11 +756,14 @@ describe("Request lifecycle UI", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Supervisor review" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Outputs" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Workflow" })).toHaveAttribute(
       "href",
-      "#request-outputs",
+      "#request-lifecycle",
     );
-    expect(screen.getByRole("link", { name: "Hours" })).toHaveAttribute("href", "#request-hours");
+    expect(screen.getByRole("link", { name: "Activity" })).toHaveAttribute(
+      "href",
+      "#request-activity",
+    );
     expect(screen.queryByRole("button", { name: "Approve request" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Approve" }).length).toBeGreaterThanOrEqual(2);
     expect(

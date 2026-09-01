@@ -14,6 +14,7 @@ import {
 } from "../../lib/request-client";
 import type { ServiceRequest } from "../../lib/request-types";
 import { PageHeader, StatusChip } from "../premium-os";
+import { ActivityTimeline, FileCard } from "../workflow-ui";
 import {
   clientDateTime,
   clientLabel,
@@ -399,6 +400,12 @@ export function ClientRequestDetail({
       id: `comment-${comment.id}`,
       label: userDisplayWithRole(comment.author, t.teamMessage, locale),
     })),
+    ...request.attachments.map((file) => ({
+      at: file.createdAt,
+      detail: `${file.originalName} - ${fileSize(file.sizeBytes, locale)}`,
+      id: `attachment-${file.id}`,
+      label: t.visibleAttachments,
+    })),
   ]
     .filter((item) => item.at)
     .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
@@ -483,11 +490,10 @@ export function ClientRequestDetail({
       </section>
 
       <nav className="client-detail-tabs" aria-label={t.requestJourney}>
-        <a href="#client-deliverables">{t.deliverables}</a>
-        <a href="#client-documents">{t.documents}</a>
         <a href="#client-summary">{t.requestSnapshot}</a>
+        <a href="#client-deliverables">{t.nextAction}</a>
+        <a href="#client-documents">{t.documents}</a>
         <a href="#client-timeline">{t.requestProgress}</a>
-        <a href="#client-comments">{t.comments}</a>
       </nav>
 
       <section className="client-action-grid">
@@ -540,17 +546,21 @@ export function ClientRequestDetail({
                     </p>
                   )}
                   {output.attachments.length > 0 && (
-                    <div className="client-card-list compact">
+                    <div className="os-file-list">
                       {output.attachments.map((file) => (
-                        <article key={file.id}>
-                          <strong>{file.originalName}</strong>
-                          <small>{fileSize(file.sizeBytes, locale)}</small>
-                          {file.downloadUrl && (
-                            <a className="os-button os-button-secondary" href={file.downloadUrl}>
-                              {t.downloadFile}
-                            </a>
-                          )}
-                        </article>
+                        <FileCard
+                          key={file.id}
+                          locale={locale}
+                          downloadLabel={t.downloadFile}
+                          file={{
+                            id: file.id,
+                            downloadUrl: file.downloadUrl,
+                            mimeType: file.mimeType,
+                            name: file.originalName,
+                            sizeBytes: file.sizeBytes,
+                            version: file.version,
+                          }}
+                        />
                       ))}
                     </div>
                   )}
@@ -733,33 +743,35 @@ export function ClientRequestDetail({
                     </p>
                   )}
                   {documentRequest.file && (
-                    <div>
-                      <p>
-                        {t.uploadedPrefix}: {documentRequest.file.originalName} -{" "}
-                        {fileSize(documentRequest.file.sizeBytes, locale)}
-                      </p>
-                      <div className="row-actions">
-                        {documentRequest.file.downloadUrl && (
-                          <a
-                            className="os-button os-button-secondary"
-                            href={documentRequest.file.downloadUrl}
-                          >
-                            {t.downloadFile}
-                          </a>
-                        )}
-                        {documentRequest.status === "UPLOADED" && isActiveRequest ? (
-                          <button
-                            className="os-button os-button-secondary"
-                            disabled={saving}
-                            type="button"
-                            onClick={() => {
-                              if (documentRequest.file) archiveAttachment(documentRequest.file.id);
-                            }}
-                          >
-                            {t.archiveAttachment}
-                          </button>
-                        ) : null}
-                      </div>
+                    <div className="os-file-list">
+                      <FileCard
+                        locale={locale}
+                        downloadLabel={t.downloadFile}
+                        readyLabel={t.uploaded}
+                        file={{
+                          id: documentRequest.file.id,
+                          downloadUrl: documentRequest.file.downloadUrl,
+                          mimeType: documentRequest.file.mimeType,
+                          name: documentRequest.file.originalName,
+                          sizeBytes: documentRequest.file.sizeBytes,
+                          version: documentRequest.file.version,
+                        }}
+                        actions={
+                          documentRequest.status === "UPLOADED" && isActiveRequest ? (
+                            <button
+                              className="os-button os-button-secondary"
+                              disabled={saving}
+                              type="button"
+                              onClick={() => {
+                                if (documentRequest.file)
+                                  archiveAttachment(documentRequest.file.id);
+                              }}
+                            >
+                              {t.archiveAttachment}
+                            </button>
+                          ) : null
+                        }
+                      />
                     </div>
                   )}
                 </article>
@@ -799,36 +811,38 @@ export function ClientRequestDetail({
 
         <article className="client-context-panel" id="client-timeline">
           <h2>{t.requestProgress}</h2>
-          <ol className="client-timeline-list">
-            {clientTimeline.map((item) => (
-              <li key={item.id}>
-                <span />
-                <div>
-                  <strong>{item.label}</strong>
-                  <small>{clientDateTime(item.at, locale)}</small>
-                  <p>{item.detail}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
+          <ActivityTimeline
+            empty={t.noActionBody}
+            items={clientTimeline.map((item, index) => ({
+              id: item.id,
+              title: item.label,
+              meta: clientDateTime(item.at, locale),
+              description: item.detail,
+              tone: index === 0 ? "accent" : "success",
+            }))}
+          />
         </article>
 
         <article className="client-context-panel">
           <h2>{t.visibleAttachments}</h2>
-          <div className="client-card-list compact">
+          <div className="os-file-list">
             {request.attachments.length === 0 ? (
               <p>{t.noAttachments}</p>
             ) : (
               request.attachments.map((file) => (
-                <article key={file.id}>
-                  <strong>{file.originalName}</strong>
-                  <small>{fileSize(file.sizeBytes, locale)}</small>
-                  {file.downloadUrl && (
-                    <a className="os-button os-button-secondary" href={file.downloadUrl}>
-                      {t.downloadFile}
-                    </a>
-                  )}
-                </article>
+                <FileCard
+                  key={file.id}
+                  locale={locale}
+                  downloadLabel={t.downloadFile}
+                  file={{
+                    id: file.id,
+                    downloadUrl: file.downloadUrl,
+                    mimeType: file.mimeType,
+                    name: file.originalName,
+                    sizeBytes: file.sizeBytes,
+                    version: file.version,
+                  }}
+                />
               ))
             )}
           </div>

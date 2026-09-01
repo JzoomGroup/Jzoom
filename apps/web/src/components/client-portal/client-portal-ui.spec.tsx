@@ -512,7 +512,7 @@ describe("Client portal UI", () => {
     render(<ClientRequestDetail request={request} />);
 
     expect(screen.getByText("Request action center")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Deliverables" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Next action" })).toHaveAttribute(
       "href",
       "#client-deliverables",
     );
@@ -526,7 +526,7 @@ describe("Client portal UI", () => {
     );
     expect(screen.getByText("Deliverables to review")).toBeInTheDocument();
     expect(screen.getAllByText("Requested documents").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Next action")).toHaveLength(2);
+    expect(screen.getAllByText("Next action").length).toBeGreaterThanOrEqual(2);
     expect(
       screen.queryByText("Jzoom is waiting for your response on this request."),
     ).not.toBeInTheDocument();

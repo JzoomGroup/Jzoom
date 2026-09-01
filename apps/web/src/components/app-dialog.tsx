@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 const focusableSelector = [
@@ -20,6 +20,7 @@ export function AppDialog({
   children,
   className,
   closeLabel = "إغلاق",
+  confirmDiscardMessage,
   description,
   dismissOnBackdrop = false,
   eyebrow,
@@ -27,11 +28,13 @@ export function AppDialog({
   onClose,
   size = "lg",
   title,
+  warnOnUnsavedChanges = true,
 }: {
   busy?: boolean;
   children: ReactNode;
   className?: string;
   closeLabel?: string;
+  confirmDiscardMessage?: string;
   description?: ReactNode;
   dismissOnBackdrop?: boolean;
   eyebrow?: ReactNode;
@@ -39,10 +42,13 @@ export function AppDialog({
   onClose: () => void;
   size?: AppDialogSize;
   title: ReactNode;
+  warnOnUnsavedChanges?: boolean;
 }) {
   const [mounted, setMounted] = useState(false);
   const dialogRef = useRef<HTMLElement>(null);
   const busyRef = useRef(busy);
+  const dirtyRef = useRef(false);
+  const confirmDiscardRef = useRef(confirmDiscardMessage);
   const onCloseRef = useRef(onClose);
   const titleId = useId();
   const descriptionId = useId();
@@ -50,8 +56,24 @@ export function AppDialog({
   useEffect(() => setMounted(true), []);
   useEffect(() => {
     busyRef.current = busy;
+    confirmDiscardRef.current = confirmDiscardMessage;
     onCloseRef.current = onClose;
-  }, [busy, onClose]);
+  }, [busy, confirmDiscardMessage, onClose]);
+
+  const requestClose = useCallback(() => {
+    if (busyRef.current) return;
+    if (warnOnUnsavedChanges && dirtyRef.current) {
+      const language = document.documentElement.lang.startsWith("en") ? "en" : "ar";
+      const message =
+        confirmDiscardRef.current ??
+        (language === "ar"
+          ? "لديك تعديلات غير محفوظة. هل تريد إغلاق النافذة وتجاهلها؟"
+          : "You have unsaved changes. Close the dialog and discard them?");
+      if (!window.confirm(message)) return;
+    }
+    dirtyRef.current = false;
+    onCloseRef.current();
+  }, [warnOnUnsavedChanges]);
 
   useEffect(() => {
     if (!mounted) return;
@@ -83,7 +105,7 @@ export function AppDialog({
     function keydown(event: KeyboardEvent) {
       if (event.key === "Escape" && !busyRef.current) {
         event.preventDefault();
-        onCloseRef.current();
+        requestClose();
         return;
       }
       if (event.key !== "Tab" || !dialog) return;
@@ -118,7 +140,7 @@ export function AppDialog({
       });
       previousFocus?.focus();
     };
-  }, [mounted]);
+  }, [mounted, requestClose]);
 
   if (!mounted) return null;
 
@@ -126,7 +148,7 @@ export function AppDialog({
     <div
       className="app-dialog-backdrop"
       onMouseDown={(event) => {
-        if (dismissOnBackdrop && !busy && event.target === event.currentTarget) onClose();
+        if (dismissOnBackdrop && !busy && event.target === event.currentTarget) requestClose();
       }}
     >
       <section
@@ -138,6 +160,15 @@ export function AppDialog({
         ref={dialogRef}
         role="dialog"
         tabIndex={-1}
+        onInputCapture={(event) => {
+          if (
+            event.target instanceof HTMLInputElement ||
+            event.target instanceof HTMLSelectElement ||
+            event.target instanceof HTMLTextAreaElement
+          ) {
+            dirtyRef.current = true;
+          }
+        }}
       >
         <header className="app-dialog-header">
           <div className="app-dialog-heading">
@@ -153,7 +184,7 @@ export function AppDialog({
               disabled={busy}
               title={closeLabel}
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
             >
               <X aria-hidden="true" size={18} />
             </button>

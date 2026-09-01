@@ -7,6 +7,7 @@ import { Archive, Power, PowerOff, Save } from "lucide-react";
 import { catalogErrorMessage, catalogRequest, refreshCatalog } from "../../lib/catalog-client";
 import type { CatalogSnapshot, CatalogStatus } from "../../lib/catalog-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
+import { FeedbackToast } from "../feedback-toast";
 import { EmptyState as PremiumEmptyState, PageHeader, StatusChip } from "../premium-os";
 
 const statusLabels = {
@@ -91,11 +92,7 @@ export function CatalogFeedback({
   if (!error && !success) {
     return null;
   }
-  return (
-    <p className={error ? "catalog-feedback error" : "catalog-feedback success"} role="status">
-      {error ?? success}
-    </p>
-  );
+  return <FeedbackToast error={error} success={success} />;
 }
 
 export function useCatalogMutation<T = CatalogSnapshot>(

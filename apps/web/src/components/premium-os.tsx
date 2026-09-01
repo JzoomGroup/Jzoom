@@ -168,25 +168,33 @@ export function PageHeader({
         {description ? <p>{description}</p> : null}
         {meta ? <div className="os-page-meta">{meta}</div> : null}
       </div>
-      {children}
-      {actions && actions.length > 0 ? (
-        <div className="os-page-actions">
-          {actions.map((action) =>
-            action.href ? (
-              <Link className={actionClass(action.variant)} href={action.href} key={action.label}>
-                {action.label}
-              </Link>
-            ) : (
-              <button
-                className={actionClass(action.variant)}
-                key={action.label}
-                type="button"
-                onClick={action.onClick}
-              >
-                {action.label}
-              </button>
-            ),
-          )}
+      {children || (actions && actions.length > 0) ? (
+        <div className="os-page-header-tools">
+          {children}
+          {actions && actions.length > 0 ? (
+            <div className="os-page-actions">
+              {actions.map((action) =>
+                action.href ? (
+                  <Link
+                    className={actionClass(action.variant)}
+                    href={action.href}
+                    key={action.label}
+                  >
+                    {action.label}
+                  </Link>
+                ) : (
+                  <button
+                    className={actionClass(action.variant)}
+                    key={action.label}
+                    type="button"
+                    onClick={action.onClick}
+                  >
+                    {action.label}
+                  </button>
+                ),
+              )}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </header>
@@ -341,6 +349,46 @@ export function EmptyState({
 
 export function SmartTable({ children }: { children: ReactNode }) {
   return <div className="os-table-wrap">{children}</div>;
+}
+
+export function FilterBar({ children, results }: { children: ReactNode; results?: ReactNode }) {
+  return (
+    <div className="os-filter-bar">
+      <div className="os-filter-controls">{children}</div>
+      {results ? (
+        <output className="os-filter-results" aria-live="polite">
+          {results}
+        </output>
+      ) : null}
+    </div>
+  );
+}
+
+export function PageSkeleton({ variant = "list" }: { variant?: "dashboard" | "detail" | "list" }) {
+  const rows = variant === "detail" ? 4 : variant === "dashboard" ? 3 : 6;
+  return (
+    <main
+      className={`os-page-skeleton os-page-skeleton-${variant}`}
+      aria-busy="true"
+      aria-label="جاري تحميل المحتوى"
+    >
+      <header>
+        <span className="os-skeleton-line short" />
+        <span className="os-skeleton-line title" />
+        <span className="os-skeleton-line description" />
+      </header>
+      <section className="os-skeleton-metrics" aria-hidden="true">
+        {Array.from({ length: 4 }, (_, index) => (
+          <span className="os-skeleton-card" key={index} />
+        ))}
+      </section>
+      <section className="os-skeleton-surface" aria-hidden="true">
+        {Array.from({ length: rows }, (_, index) => (
+          <span className="os-skeleton-row" key={index} />
+        ))}
+      </section>
+    </main>
+  );
 }
 
 export function ControlDeck({

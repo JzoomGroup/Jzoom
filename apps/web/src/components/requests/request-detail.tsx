@@ -39,6 +39,8 @@ import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../l
 import { riyadhDateInputValue } from "../../lib/stable-date";
 import { PageHeader, PriorityChip, StatusChip } from "../premium-os";
 import { LocalizedDateInput, LocalizedDateTimeInput } from "../localized-date-input";
+import { ActivityTimeline, FileCard, type TimelineItem } from "../workflow-ui";
+import { FeedbackToast } from "../feedback-toast";
 
 const statuses: RequestStatus[] = [
   "NEW",
@@ -301,13 +303,7 @@ function RequestDetailNav({ locale }: { locale: SupportedLocale }) {
   const sections = [
     ["#request-context", t.nav.summary],
     ["#request-lifecycle", t.nav.workflow],
-    ["#request-checklist", t.nav.checklist],
-    ["#request-outputs", t.nav.outputs],
     ["#request-documents", t.nav.documents],
-    ["#request-hours", t.nav.hours],
-    ["#request-comments", t.nav.comments],
-    ["#request-notes", t.nav.notes],
-    ["#request-attachments", t.nav.attachments],
     ["#request-activity", t.nav.activity],
   ] as const;
 
@@ -844,6 +840,72 @@ export function RequestDetail({
     );
   }
 
+  const unifiedTimeline: TimelineItem[] = [
+    ...request.activity.map((event) => ({
+      occurredAt: event.occurredAt,
+      item: {
+        id: `state-${event.id}`,
+        title: `${codeLabel(event.fromState?.code ?? "START", locale)} → ${codeLabel(event.toState.code, locale)}`,
+        meta: `${dateTime(event.occurredAt, locale)} - ${activityActorLabel(event, locale)}`,
+        description: activityReasonLabel(event, locale),
+        tone:
+          event.toState.code === "COMPLETED" || event.toState.code === "CLOSED"
+            ? ("success" as const)
+            : ("accent" as const),
+      },
+    })),
+    ...request.comments.map((comment) => ({
+      occurredAt: comment.createdAt,
+      item: {
+        id: `comment-${comment.id}`,
+        title: `${t.comments} - ${userDisplayWithRole(comment.author, t.internalUser, locale)}`,
+        meta: dateTime(comment.createdAt, locale),
+        description: comment.body,
+        tone: "neutral" as const,
+      },
+    })),
+    ...request.attachments.map((file) => ({
+      occurredAt: file.createdAt,
+      item: {
+        id: `file-${file.id}`,
+        title: `${t.nav.attachments} - ${file.originalName}`,
+        meta: `${dateTime(file.createdAt, locale)} - ${userDisplayWithRole(file.uploadedBy, t.internalUser, locale)}`,
+        description: codeLabel(file.visibility, locale),
+        tone: "accent" as const,
+      },
+    })),
+    ...request.timeEntries.map((entry) => ({
+      occurredAt: entry.decidedAt ?? entry.submittedAt ?? entry.createdAt,
+      item: {
+        id: `hours-${entry.id}`,
+        title: `${t.hours} - ${entry.hours}`,
+        meta: `${dateTime(entry.decidedAt ?? entry.submittedAt ?? entry.createdAt, locale)} - ${entry.user.displayName}`,
+        description: entry.decisionReason ?? entry.notes ?? codeLabel(entry.status, locale),
+        tone: entry.status === "APPROVED" ? ("success" as const) : ("warning" as const),
+      },
+    })),
+    ...request.outputs.map((output) => ({
+      occurredAt:
+        output.clientDecidedAt ?? output.sharedAt ?? output.reviewedAt ?? output.updatedAt,
+      item: {
+        id: `output-${output.id}`,
+        title: `${t.nav.outputs} - ${output.title}`,
+        meta: dateTime(
+          output.clientDecidedAt ?? output.sharedAt ?? output.reviewedAt ?? output.updatedAt,
+          locale,
+        ),
+        description:
+          output.clientReturnReason ?? output.reviewReason ?? codeLabel(output.status, locale),
+        tone:
+          output.status === "ACCEPTED_BY_CLIENT" || output.status === "CLOSED"
+            ? ("success" as const)
+            : ("accent" as const),
+      },
+    })),
+  ]
+    .sort((left, right) => Date.parse(right.occurredAt) - Date.parse(left.occurredAt))
+    .map(({ item }) => item);
+
   return (
     <>
       <PageHeader
@@ -867,14 +929,15 @@ export function RequestDetail({
         </div>
       </PageHeader>
 
-      {(error || success) && (
-        <p
-          className={`request-action-feedback ${error ? "error" : "success"}`}
-          role={error ? "alert" : "status"}
-        >
-          {error ?? success}
-        </p>
-      )}
+      <FeedbackToast
+        error={error}
+        success={success}
+        nextStep={success ? t.noActionBody : undefined}
+        onDismiss={() => {
+          setError(null);
+          setSuccess(null);
+        }}
+      />
 
       <RequestDetailNav locale={locale} />
 
@@ -1400,20 +1463,22 @@ export function RequestDetail({
                     </p>
                   )}
                   {output.attachments.length > 0 && (
-                    <div className="activity-list compact">
+                    <div className="os-file-list">
                       {output.attachments.map((file) => (
-                        <article key={file.id}>
-                          <strong>{file.originalName}</strong>
-                          <small>
-                            {file.mimeType} - {file.sizeBytes} {t.bytes} -{" "}
-                            {codeLabel(file.visibility, locale)}
-                          </small>
-                          {file.downloadUrl && (
-                            <a className="os-button os-button-secondary" href={file.downloadUrl}>
-                              {t.downloadFile}
-                            </a>
-                          )}
-                        </article>
+                        <FileCard
+                          key={file.id}
+                          locale={locale}
+                          downloadLabel={t.downloadFile}
+                          readyLabel={codeLabel(file.visibility, locale)}
+                          file={{
+                            id: file.id,
+                            downloadUrl: file.downloadUrl,
+                            mimeType: file.mimeType,
+                            name: file.originalName,
+                            sizeBytes: file.sizeBytes,
+                            version: file.version,
+                          }}
+                        />
                       ))}
                     </div>
                   )}
@@ -1905,24 +1970,26 @@ export function RequestDetail({
           ) : (
             <p>{requestIsLocked ? t.completedReadOnly : t.attachmentUnavailable}</p>
           )}
-          <div className="activity-list">
+          <div className="os-file-list">
             {request.attachments.length === 0 ? (
               <EmptyActivity message={t.noAttachments} />
             ) : (
               request.attachments.map((file) => (
-                <article key={file.id}>
-                  <strong>{file.originalName}</strong>
-                  <small>
-                    {file.mimeType} - {file.sizeBytes} {t.bytes} -{" "}
-                    {codeLabel(file.visibility, locale)}
-                  </small>
-                  <div className="row-actions">
-                    {file.downloadUrl && (
-                      <a className="os-button os-button-secondary" href={file.downloadUrl}>
-                        {t.downloadFile}
-                      </a>
-                    )}
-                    {canAttachMetadata ? (
+                <FileCard
+                  key={file.id}
+                  locale={locale}
+                  downloadLabel={t.downloadFile}
+                  readyLabel={codeLabel(file.visibility, locale)}
+                  file={{
+                    id: file.id,
+                    downloadUrl: file.downloadUrl,
+                    mimeType: file.mimeType,
+                    name: file.originalName,
+                    sizeBytes: file.sizeBytes,
+                    version: file.version,
+                  }}
+                  actions={
+                    canAttachMetadata ? (
                       <button
                         className="os-button os-button-secondary"
                         disabled={saving === "archive-attachment"}
@@ -1931,9 +1998,9 @@ export function RequestDetail({
                       >
                         {t.archiveAttachment}
                       </button>
-                    ) : null}
-                  </div>
-                </article>
+                    ) : null
+                  }
+                />
               ))
             )}
           </div>
@@ -1941,26 +2008,7 @@ export function RequestDetail({
 
         <article className="catalog-panel" id="request-activity">
           <h2>{t.activity}</h2>
-          <div className="activity-list">
-            {request.activity.length === 0 ? (
-              <EmptyActivity message={t.noActivity} />
-            ) : (
-              request.activity.map((event) => (
-                <article key={event.id}>
-                  <strong>
-                    {codeLabel(event.fromState?.code ?? "START", locale)} &gt;{" "}
-                    {codeLabel(event.toState.code, locale)}
-                  </strong>
-                  <small>
-                    {dateTime(event.occurredAt, locale)} - {activityActorLabel(event, locale)}
-                  </small>
-                  {activityReasonLabel(event, locale) ? (
-                    <p>{activityReasonLabel(event, locale)}</p>
-                  ) : null}
-                </article>
-              ))
-            )}
-          </div>
+          <ActivityTimeline empty={t.noActivity} items={unifiedTimeline} />
         </article>
       </section>
     </>

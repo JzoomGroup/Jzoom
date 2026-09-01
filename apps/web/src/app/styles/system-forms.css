@@ -10,6 +10,16 @@
   box-shadow: none;
 }
 
+.os-table-wrap,
+.compact-table-wrap,
+.table-wrap,
+.item-admin-matrix-wrap {
+  position: relative;
+  max-width: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
 .profile-settings-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 0.82fr);
@@ -59,6 +69,9 @@
 .matrix-table th,
 .pricing-lines th,
 .operations-ledger-table th {
+  position: sticky;
+  z-index: 2;
+  top: 0;
   height: 38px;
   padding-block: 9px;
   border-color: var(--polish-line);
@@ -75,6 +88,7 @@
   height: 46px;
   padding-block: 10px;
   border-color: #eceef2;
+  background: #ffffff;
   color: #344054;
   font-size: 12px;
 }
@@ -83,7 +97,90 @@
 .matrix-table tbody tr:hover td,
 .pricing-lines tbody tr:hover td,
 .operations-ledger-table tbody tr:hover td {
-  background: #fafbfc;
+  background: #f8fafc;
+}
+
+.catalog-table tbody tr,
+.matrix-table tbody tr,
+.pricing-lines tbody tr,
+.operations-ledger-table tbody tr {
+  transition: background 140ms ease;
+}
+
+.os-filter-bar {
+  display: flex;
+  min-width: 0;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+  margin-block-end: 12px;
+  padding: 10px;
+  border: 1px solid var(--polish-line);
+  border-radius: var(--polish-radius);
+  background: #f8f9fb;
+}
+
+.os-filter-controls {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+}
+
+.os-filter-controls > label {
+  display: grid;
+  min-width: 138px;
+  gap: 5px;
+  color: #475467;
+  font-size: 10.5px;
+  font-weight: 500;
+}
+
+.os-filter-controls > label:has(input[type="search"]) {
+  flex: 1 1 230px;
+}
+
+.os-filter-controls :is(input, select) {
+  min-height: 36px;
+  padding-inline: 10px;
+  border: 1px solid var(--polish-line-strong);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--polish-ink);
+  font: inherit;
+  font-size: 12px;
+}
+
+.os-filter-results {
+  flex: 0 0 auto;
+  padding-block: 8px;
+  color: var(--polish-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.request-queue-filter-details .request-queue-filter-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  align-items: end;
+  gap: 8px;
+  margin-block-start: 9px;
+  padding: 10px;
+  border: 1px solid var(--polish-line);
+  border-radius: var(--polish-radius);
+  background: #f8f9fb;
+  box-shadow: none;
+}
+
+.request-queue-filter-details .request-queue-filter-form label {
+  gap: 5px;
+  font-size: 10.5px;
+}
+
+.request-queue-filter-details .request-queue-filter-form :is(input, select) {
+  min-height: 36px;
 }
 
 :where(

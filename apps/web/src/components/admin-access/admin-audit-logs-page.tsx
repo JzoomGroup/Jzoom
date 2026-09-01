@@ -7,6 +7,7 @@ import { replaceCurrentUrlQuery } from "../../lib/url-state";
 import {
   BentoGrid,
   EmptyState,
+  FilterBar,
   MetricCard,
   PageHeader,
   SectionCard,
@@ -120,7 +121,13 @@ export function AdminAuditLogsPageContent({
         />
       </BentoGrid>
       <SectionCard title={t.auditTrail} eyebrow={t.security} description={t.auditDescription}>
-        <div className="catalog-form compact">
+        <FilterBar
+          results={
+            <>
+              {t.filteredResults}: {number(filteredLogs.length, lang)} / {number(logs.length, lang)}
+            </>
+          }
+        >
           <label>
             {t.auditSearch}
             <input
@@ -171,10 +178,7 @@ export function AdminAuditLogsPageContent({
               ))}
             </select>
           </label>
-          <p className="eyebrow">
-            {t.filteredResults}: {number(filteredLogs.length, lang)} / {number(logs.length, lang)}
-          </p>
-        </div>
+        </FilterBar>
         {logs.length === 0 ? (
           <EmptyState title={t.emptyAudit}>{t.auditDescription}</EmptyState>
         ) : filteredLogs.length === 0 ? (

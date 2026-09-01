@@ -192,7 +192,7 @@ describe("project delivery UI", () => {
     expect(screen.queryByText("1/2")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "تعليم كمكتمل" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "حفظ المخرج" })).not.toBeInTheDocument();
-    expect(screen.getByText("النشاط")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "النشاط" })).toBeInTheDocument();
   });
 
   it("does not expose legacy English project copy in Arabic workspaces", () => {

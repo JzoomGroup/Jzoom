@@ -66,4 +66,29 @@ describe("AppDialog", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it("warns before discarding user edits", () => {
+    const onClose = jest.fn();
+    const confirm = jest.spyOn(window, "confirm").mockReturnValue(false);
+    render(
+      <AppDialog closeLabel="Close" onClose={onClose} title="Edit user">
+        <label>
+          Name
+          <input aria-label="Name" />
+        </label>
+      </AppDialog>,
+    );
+
+    fireEvent.input(screen.getByRole("textbox", { name: "Name" }), {
+      target: { value: "Updated" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+
+    confirm.mockReturnValue(true);
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    confirm.mockRestore();
+  });
 });

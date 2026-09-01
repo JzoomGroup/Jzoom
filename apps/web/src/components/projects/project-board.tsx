@@ -22,6 +22,8 @@ import type {
 import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../lib/i18n";
 import { AppDialog } from "../app-dialog";
 import { EmptyState, MetricCard, PageHeader, SectionCard, StatusChip } from "../premium-os";
+import { FeedbackToast } from "../feedback-toast";
+import { ActivityTimeline, FileCard } from "../workflow-ui";
 
 const projectStatusLabels = {
   ACTIVE: { ar: "نشط", en: "Active" },
@@ -520,7 +522,13 @@ export function ProjectDetail({
           </div>
         }
       />
-      <section className="project-command-strip" aria-label={t.overview}>
+      <nav className="request-detail-nav" aria-label={t.projectRoom}>
+        <a href="#project-summary">{t.overview}</a>
+        <a href="#project-now">{t.nextStep}</a>
+        <a href="#project-files">{t.files}</a>
+        <a href="#project-activity">{t.activity}</a>
+      </nav>
+      <section className="project-command-strip" id="project-summary" aria-label={t.overview}>
         <div>
           <span>{t.service}</span>
           <strong>{localizedName(project.service, locale)}</strong>
@@ -540,7 +548,7 @@ export function ProjectDetail({
           </strong>
         </div>
       </section>
-      <section className="project-room-board" aria-label={t.projectRoom}>
+      <section className="project-room-board" id="project-now" aria-label={t.projectRoom}>
         <div className="project-room-main">
           <p className="os-eyebrow">{t.projectRoom}</p>
           <h2>{clientMode ? t.fileAndOutputRoom : t.internalControls}</h2>
@@ -570,16 +578,15 @@ export function ProjectDetail({
           <p>{statusGuidance(project.status, locale)}</p>
         </aside>
       </section>
-      {error ? (
-        <div className="access-feedback error" role="alert">
-          {error}
-        </div>
-      ) : null}
-      {notice ? (
-        <div className="access-feedback success" role="status">
-          {notice}
-        </div>
-      ) : null}
+      <FeedbackToast
+        error={error}
+        success={notice}
+        nextStep={notice ? nextStep : undefined}
+        onDismiss={() => {
+          setError(null);
+          setNotice(null);
+        }}
+      />
       {project.capabilities.canSupervise ? (
         <section className="project-room-actions row-actions" aria-label={t.internalControls}>
           <button
@@ -729,6 +736,7 @@ export function ProjectDetail({
       </SectionCard>
 
       <SectionCard
+        id="project-files"
         title={t.outputs}
         eyebrow={t.deliverables}
         description={clientMode ? t.outputDecisionHint : t.noOutputsDescription}
@@ -854,19 +862,21 @@ export function ProjectDetail({
                   </div>
                 </dl>
                 {output.files.length > 0 ? (
-                  <div className="project-output-files" aria-label={t.files}>
+                  <div className="os-file-list" aria-label={t.files}>
                     {output.files.map((file) => (
-                      <div key={file.id}>
-                        <span>{file.originalName}</span>
-                        <small>
-                          {t.outputRevision} {file.version}
-                        </small>
-                        {file.downloadUrl ? (
-                          <a className="os-button os-button-secondary" href={file.downloadUrl}>
-                            {t.downloadFile}
-                          </a>
-                        ) : null}
-                      </div>
+                      <FileCard
+                        key={file.id}
+                        locale={locale}
+                        downloadLabel={t.downloadFile}
+                        file={{
+                          id: file.id,
+                          downloadUrl: file.downloadUrl,
+                          mimeType: file.mimeType,
+                          name: file.originalName,
+                          sizeBytes: file.sizeBytes,
+                          version: file.version,
+                        }}
+                      />
                     ))}
                   </div>
                 ) : null}
@@ -1027,19 +1037,16 @@ export function ProjectDetail({
         )}
       </SectionCard>
 
-      <SectionCard title={t.activity} description={t.noActivityDescription}>
-        {project.activity.length === 0 ? (
-          <EmptyState title={t.noActivity}>{t.noActivityDescription}</EmptyState>
-        ) : (
-          <div className="activity-list">
-            {project.activity.map((event) => (
-              <article key={event.id}>
-                <strong>{activityReason(event, locale, t.projectCreatedFromQuote)}</strong>
-                <span>{formatDateTime(event.occurredAt, locale, t.notSet)}</span>
-              </article>
-            ))}
-          </div>
-        )}
+      <SectionCard id="project-activity" title={t.activity} description={t.noActivityDescription}>
+        <ActivityTimeline
+          empty={t.noActivity}
+          items={project.activity.map((event, index) => ({
+            id: event.id,
+            title: activityReason(event, locale, t.projectCreatedFromQuote),
+            meta: formatDateTime(event.occurredAt, locale, t.notSet),
+            tone: index === 0 ? "accent" : "success",
+          }))}
+        />
       </SectionCard>
     </>
   );
