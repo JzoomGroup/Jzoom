@@ -441,16 +441,29 @@
 }
 
 @media (max-width: 760px) {
-  .pricing-header-toolbar,
   .pricing-picker-heading,
   .pricing-unsaved-notice {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .pricing-header-toolbar > *,
-  .pricing-header-toolbar .os-button {
+  .pricing-header-toolbar {
+    display: grid;
     width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .pricing-header-toolbar .pricing-draft-identity,
+  .pricing-header-toolbar > .os-button-danger,
+  .pricing-header-toolbar > .pricing-drafts-trigger:only-child {
+    grid-column: 1 / -1;
+  }
+
+  .pricing-header-toolbar .os-button {
+    width: auto;
+    min-height: 38px;
+    flex: none;
   }
 
   .pricing-draft-dialog-list {
