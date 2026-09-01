@@ -13,15 +13,20 @@ export function language(locale: string): SupportedLocale {
 
 export function date(value: string | null, locale: SupportedLocale, fallback: string): string {
   if (!value) return fallback;
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: platformTimeZone,
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: platformTimeZone,
+    },
+  ).format(new Date(value));
 }
 
 export function number(value: number, locale: SupportedLocale): string {
-  return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA").format(value);
+  return new Intl.NumberFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+  ).format(value);
 }
 
 export function roleLabel(

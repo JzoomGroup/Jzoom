@@ -29,14 +29,19 @@ const requestStatusLabels = {
 } satisfies Record<RequestSummary["status"], Record<SupportedLocale, string>>;
 
 function formatNumber(value: number, locale: SupportedLocale): string {
-  return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA").format(value);
+  return new Intl.NumberFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+  ).format(value);
 }
 
 function formatDate(value: string | null, locale: SupportedLocale, copy: ClientCopy): string {
   if (!value) return copy.notSet;
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
-    timeZone: platformTimeZone,
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      timeZone: platformTimeZone,
+    },
+  ).format(new Date(value));
 }
 
 function localizedName(value: { nameAr: string; nameEn: string }, locale: SupportedLocale): string {

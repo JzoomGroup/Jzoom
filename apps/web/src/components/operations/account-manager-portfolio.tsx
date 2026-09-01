@@ -4,20 +4,26 @@ import { normalizeLocale, platformTimeZone, type SupportedLocale } from "../../l
 import { BentoGrid, EmptyState, MetricCard, PageHeader, SectionCard } from "../premium-os";
 
 function number(value: number, locale: SupportedLocale): string {
-  return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA", {
-    maximumFractionDigits: 2,
-  }).format(value);
+  return new Intl.NumberFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      maximumFractionDigits: 2,
+    },
+  ).format(value);
 }
 
 function dateTime(value: string, locale: SupportedLocale): string {
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "short",
-    timeZone: platformTimeZone,
-    year: "numeric",
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      month: "short",
+      timeZone: platformTimeZone,
+      year: "numeric",
+    },
+  ).format(new Date(value));
 }
 
 function uniqueRecentActivity<

@@ -313,7 +313,7 @@ describe("PR 6 pricing UI", () => {
     const toggle = screen.getByRole("button", { name: "عرض المسودات المحفوظة" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(container.querySelector(".pricing-layout")).not.toHaveClass("drafts-open");
-    expect(screen.getByText(/٢٢.*٠٦.*٢٠٢٦/)).toBeInTheDocument();
+    expect(screen.getByText(/22.*06.*2026/)).toBeInTheDocument();
     expect(screen.queryByText("06/22/2026")).not.toBeInTheDocument();
 
     fireEvent.click(toggle);

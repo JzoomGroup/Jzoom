@@ -18,7 +18,7 @@ function formattedDate(value: string, locale: SupportedLocale): string {
   const parsed = new Date(`${value}T12:00:00.000Z`);
   if (Number.isNaN(parsed.getTime())) return value;
 
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-arab" : "en-GB", {
+  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-GB", {
     day: "2-digit",
     month: "2-digit",
     timeZone: "UTC",
@@ -39,7 +39,7 @@ export function LocalizedDateInput({ locale, value, ...props }: LocalizedDateInp
         <input
           {...props}
           dir={locale === "ar" ? "rtl" : "ltr"}
-          lang={locale === "ar" ? "ar-SA" : "en-GB"}
+          lang={locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-GB"}
           type="date"
           value={value}
         />
@@ -57,16 +57,13 @@ function formattedDateTime(value: string, locale: SupportedLocale): string {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
 
-  return new Intl.DateTimeFormat(
-    locale === "ar" ? "ar-SA-u-ca-gregory-nu-arab" : "en-GB",
-    {
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      month: "long",
-      year: "numeric",
-    },
-  ).format(parsed);
+  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-GB", {
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(parsed);
 }
 
 export function LocalizedDateTimeInput({
@@ -97,7 +94,7 @@ export function LocalizedDateTimeInput({
           {...props}
           defaultValue={value === undefined ? defaultValue : undefined}
           dir={locale === "ar" ? "rtl" : "ltr"}
-          lang={locale === "ar" ? "ar-SA" : "en-GB"}
+          lang={locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-GB"}
           type="datetime-local"
           value={value}
           onChange={(event) => {

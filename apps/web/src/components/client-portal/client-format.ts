@@ -104,17 +104,23 @@ export function clientLocale(locale: string | null | undefined): ClientDisplayLo
 }
 
 export function clientNumber(value: number, locale: ClientDisplayLocale): string {
-  return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA", {
-    maximumFractionDigits: 2,
-  }).format(value);
+  return new Intl.NumberFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      maximumFractionDigits: 2,
+    },
+  ).format(value);
 }
 
 export function clientCurrency(value: number, locale: ClientDisplayLocale = "en"): string {
-  return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA", {
-    currency: "SAR",
-    maximumFractionDigits: 2,
-    style: "currency",
-  }).format(value);
+  return new Intl.NumberFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      currency: "SAR",
+      maximumFractionDigits: 2,
+      style: "currency",
+    },
+  ).format(value);
 }
 
 export function sar(value: number): string {
@@ -123,9 +129,12 @@ export function sar(value: number): string {
 
 export function clientDate(value: string | null, locale: ClientDisplayLocale = "en"): string {
   if (!value) return locale === "ar" ? "غير محدد" : "Not set";
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
-    timeZone: platformTimeZone,
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      timeZone: platformTimeZone,
+    },
+  ).format(new Date(value));
 }
 
 export function dateLabel(value: string | null): string {
@@ -134,14 +143,17 @@ export function dateLabel(value: string | null): string {
 
 export function clientDateTime(value: string | null, locale: ClientDisplayLocale = "en"): string {
   if (!value) return locale === "ar" ? "غير محدد" : "Not set";
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "short",
-    timeZone: platformTimeZone,
-    year: "numeric",
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      month: "short",
+      timeZone: platformTimeZone,
+      year: "numeric",
+    },
+  ).format(new Date(value));
 }
 
 export function clientName(

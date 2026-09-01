@@ -17,6 +17,20 @@ function filesUnder(directory) {
 for (const path of filesUnder(sourceRoot)) {
   const content = readFileSync(path, "utf8");
   const location = relative(root, path).replaceAll("\\", "/");
+
+  if (/[٠-٩]/.test(content)) {
+    errors.push(`${location}: use Latin digits (0-9) in interface copy and expectations.`);
+  }
+
+  const formatterWithoutLatinDigits =
+    /(?:Intl\.(?:NumberFormat|DateTimeFormat)\s*\(|\.toLocale(?:String|DateString|TimeString)\s*\()[\s\S]{0,180}?['"](?:ar-SA|ar-EG|en-SA)['"]/;
+
+  if (formatterWithoutLatinDigits.test(content) || content.includes("nu-arab")) {
+    errors.push(
+      `${location}: numeric and date format locales must explicitly use Latin digits (nu-latn).`,
+    );
+  }
+
   if (!path.startsWith(i18nRoot)) {
     const localDictionary = /^(?:export\s+)?const\s+(?:copy|[A-Za-z][A-Za-z0-9]*Copy)\s*=\s*\{/m;
     if (localDictionary.test(content)) {
@@ -31,5 +45,7 @@ if (errors.length > 0) {
   console.error(errors.join("\n"));
   process.exitCode = 1;
 } else {
-  console.log("i18n architecture valid: component dictionaries are centralized.");
+  console.log(
+    "i18n architecture valid: component dictionaries are centralized and digits use 0-9.",
+  );
 }

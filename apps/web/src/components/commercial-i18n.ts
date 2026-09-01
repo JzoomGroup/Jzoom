@@ -13,18 +13,24 @@ export function commercialLocale(locale: string | undefined): SupportedLocale {
 }
 
 export function money(value: number, locale: SupportedLocale): string {
-  return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA", {
-    style: "currency",
-    currency: "SAR",
-    maximumFractionDigits: 2,
-  }).format(value);
+  return new Intl.NumberFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      style: "currency",
+      currency: "SAR",
+      maximumFractionDigits: 2,
+    },
+  ).format(value);
 }
 
 export function dateText(value: string | null | undefined, locale: SupportedLocale): string {
   if (!value) return commercialCopy[locale].notAvailable;
-  return new Date(value).toLocaleDateString(locale === "ar" ? "ar-SA" : "en-SA", {
-    timeZone: platformTimeZone,
-  });
+  return new Date(value).toLocaleDateString(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      timeZone: platformTimeZone,
+    },
+  );
 }
 
 export function hashText(value: string | null | undefined, locale: SupportedLocale): string {

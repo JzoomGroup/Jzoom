@@ -1,9 +1,12 @@
 import type { SupportedLocale } from "../lib/i18n";
 
 export function countText(value: number, locale: SupportedLocale): string {
-  return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA", {
-    maximumFractionDigits: 2,
-  }).format(value);
+  return new Intl.NumberFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      maximumFractionDigits: 2,
+    },
+  ).format(value);
 }
 
 export function quoteStatusLabel(status: string, locale: SupportedLocale): string {

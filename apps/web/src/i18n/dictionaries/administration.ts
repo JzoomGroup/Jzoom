@@ -468,7 +468,7 @@ export const platformConfigurationManagerCopy = {
     recipientsJson: "المستلمون JSON",
     revisionLabel: (version?: number, status?: string) =>
       version
-        ? `v${new Intl.NumberFormat("ar-SA").format(version)} - ${status ?? ""}`
+        ? `v${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(version)} - ${status ?? ""}`
         : "لا يوجد إصدار",
     saveDraftRevision: "حفظ مسودة الإصدار",
     savePdfRevision: "حفظ إصدار PDF",
@@ -483,8 +483,8 @@ export const platformConfigurationManagerCopy = {
       "إعدادات آمنة بالإصدارات. القيم المقنعة تبقى محمية ولا تظهر في الواجهة.",
     snapshotRule: "لا تغيير رجعي على المستندات أو الطلبات الصادرة.",
     statesTransitions: (states: number, transitions: number) =>
-      `${new Intl.NumberFormat("ar-SA").format(states)} حالة - ${new Intl.NumberFormat(
-        "ar-SA",
+      `${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(states)} حالة - ${new Intl.NumberFormat(
+        "ar-SA-u-ca-gregory-nu-latn",
       ).format(transitions)} انتقال`,
     technicalRule: "القاعدة التقنية",
     type: "النوع",

@@ -144,19 +144,25 @@ const codeLabels: Record<string, Record<SupportedLocale, string>> = {
 
 function dateTime(value: string | null, locale: SupportedLocale): string {
   if (!value) return copy[locale].notSet;
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: platformTimeZone,
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: platformTimeZone,
+    },
+  ).format(new Date(value));
 }
 
 function dateOnly(value: string | null, locale: SupportedLocale): string {
   if (!value) return copy[locale].notSet;
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
-    dateStyle: "medium",
-    timeZone: platformTimeZone,
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      dateStyle: "medium",
+      timeZone: platformTimeZone,
+    },
+  ).format(new Date(value));
 }
 
 function assignee(

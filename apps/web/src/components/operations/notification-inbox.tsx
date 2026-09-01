@@ -22,11 +22,14 @@ import {
 } from "../premium-os";
 
 function displayDate(value: string, locale: SupportedLocale): string {
-  return new Date(value).toLocaleString(locale === "ar" ? "ar-SA" : "en-SA", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: platformTimeZone,
-  });
+  return new Date(value).toLocaleString(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: platformTimeZone,
+    },
+  );
 }
 
 function notificationMessage(notification: AppNotification, locale: SupportedLocale): string {

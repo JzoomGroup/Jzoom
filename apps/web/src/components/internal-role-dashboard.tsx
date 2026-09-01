@@ -121,23 +121,28 @@ const content = {
 } as const;
 
 function number(value: number, locale: SupportedLocale): string {
-  return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA").format(value);
+  return new Intl.NumberFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+  ).format(value);
 }
 
 function hours(value: number | undefined, locale: SupportedLocale): string {
   const amount = Number(value ?? 0);
   return locale === "ar"
-    ? `${new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(amount)} ساعة`
+    ? `${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn", { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(amount)} ساعة`
     : `${amount.toFixed(2)}h`;
 }
 
 function date(value: string, locale: SupportedLocale): string {
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
-    day: "2-digit",
-    month: "short",
-    timeZone: platformTimeZone,
-    year: "numeric",
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      day: "2-digit",
+      month: "short",
+      timeZone: platformTimeZone,
+      year: "numeric",
+    },
+  ).format(new Date(value));
 }
 
 export function InternalRoleDashboard({

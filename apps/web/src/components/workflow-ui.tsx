@@ -40,9 +40,12 @@ function normalizedLocale(locale: DisplayLocale) {
 
 export function formattedFileSize(sizeBytes: number, locale: DisplayLocale): string {
   const language = normalizedLocale(locale);
-  const formatter = new Intl.NumberFormat(language === "ar" ? "ar-SA" : "en-SA", {
-    maximumFractionDigits: 1,
-  });
+  const formatter = new Intl.NumberFormat(
+    language === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      maximumFractionDigits: 1,
+    },
+  );
   if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) {
     return language === "ar" ? "الحجم غير متاح" : "Size unavailable";
   }

@@ -11,7 +11,7 @@ describe("localized date inputs", () => {
       </label>,
     );
 
-    expect(screen.getByText("٣١‏/٠٨‏/٢٠٢٦")).toBeInTheDocument();
+    expect(screen.getByText("31‏/08‏/2026")).toBeInTheDocument();
     expect(screen.getByLabelText(/^الموعد/)).toHaveValue("2026-08-31");
   });
 
@@ -19,11 +19,7 @@ describe("localized date inputs", () => {
     render(
       <label>
         وقت الدفع
-        <LocalizedDateTimeInput
-          defaultValue="2026-08-31T23:23"
-          locale="ar"
-          name="paidAt"
-        />
+        <LocalizedDateTimeInput defaultValue="2026-08-31T23:23" locale="ar" name="paidAt" />
       </label>,
     );
 

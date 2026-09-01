@@ -65,10 +65,13 @@ const closedStatuses = new Set<RequestStatus>(["CLOSED", "COMPLETED", "REJECTED"
 
 function displayDate(value: string | null, locale: SupportedLocale): string {
   if (!value) return copy[locale].notSet;
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
-    dateStyle: "medium",
-    timeZone: platformTimeZone,
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      dateStyle: "medium",
+      timeZone: platformTimeZone,
+    },
+  ).format(new Date(value));
 }
 
 function localizedServiceName(request: RequestSummary, locale: SupportedLocale): string {
@@ -170,7 +173,9 @@ export function RequestList({
     priority: "NORMAL" as (typeof priorities)[number],
     dueAt: "",
   });
-  const numberFormatter = new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA");
+  const numberFormatter = new Intl.NumberFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+  );
   const selectedClient = useMemo(
     () => options.clients.find((client) => client.id === form.clientId) ?? null,
     [form.clientId, options.clients],

@@ -112,12 +112,12 @@
   min-width: 0;
   align-items: end;
   justify-content: space-between;
-  gap: 10px;
-  margin-block-end: 12px;
-  padding: 10px;
-  border: 1px solid var(--polish-line);
-  border-radius: var(--polish-radius);
-  background: #f8f9fb;
+  gap: 12px;
+  margin-block-end: 14px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .os-filter-controls {
@@ -126,25 +126,25 @@
   flex: 1 1 auto;
   flex-wrap: wrap;
   align-items: end;
-  gap: 8px;
+  gap: 10px;
 }
 
 .os-filter-controls > label {
   display: grid;
-  min-width: 138px;
+  min-width: 160px;
   gap: 5px;
   color: #475467;
-  font-size: 10.5px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .os-filter-controls > label:has(input[type="search"]) {
-  flex: 1 1 230px;
+  flex: 2 1 320px;
 }
 
 .os-filter-controls :is(input, select) {
-  min-height: 36px;
-  padding-inline: 10px;
+  min-height: 40px;
+  padding-inline: 12px;
   border: 1px solid var(--polish-line-strong);
   border-radius: 7px;
   background: #ffffff;
@@ -155,10 +155,63 @@
 
 .os-filter-results {
   flex: 0 0 auto;
-  padding-block: 8px;
+  padding-block: 10px;
   color: var(--polish-muted);
   font-size: 11px;
   font-weight: 600;
+}
+
+.compact-filter {
+  display: grid;
+  width: min(100%, 220px);
+  min-width: 190px;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.compact-filter select {
+  min-height: 40px;
+  padding-inline: 12px 34px;
+}
+
+.os-filter-controls .access-search-input {
+  min-height: 40px;
+  padding-inline: 11px;
+  border: 1px solid var(--polish-line-strong);
+  border-radius: 7px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.os-filter-controls .access-search-input:focus-within {
+  border-color: rgba(241, 95, 85, 0.62);
+  outline: 3px solid rgba(241, 95, 85, 0.1);
+}
+
+.os-filter-controls .access-search-input > input,
+.os-filter-controls .access-search-input > input:focus {
+  min-height: 38px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.pricing-picker-toolbar {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.pricing-picker-toolbar :is(.pricing-search-field, .pricing-category-filter) {
+  min-height: 40px;
+  border-color: var(--polish-line-strong);
 }
 
 .request-queue-filter-details .request-queue-filter-form {
@@ -314,4 +367,17 @@
 .localized-date-input:has(input:disabled) .localized-date-display {
   background: var(--surface-muted);
   color: var(--muted);
+}
+
+@media (max-width: 900px) {
+  .compact-filter {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .os-filter-controls > label,
+  .os-filter-controls > label:has(input[type="search"]) {
+    min-width: min(100%, 220px);
+    flex: 1 1 220px;
+  }
 }

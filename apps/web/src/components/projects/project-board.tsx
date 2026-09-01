@@ -226,19 +226,25 @@ function localizedOptionalDescription(value: string | null, locale: SupportedLoc
 
 function formatDate(value: string | null, locale: SupportedLocale, fallback: string) {
   if (!value) return fallback;
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
-    dateStyle: "medium",
-    timeZone: platformTimeZone,
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      dateStyle: "medium",
+      timeZone: platformTimeZone,
+    },
+  ).format(new Date(value));
 }
 
 function formatDateTime(value: string | null, locale: SupportedLocale, fallback: string) {
   if (!value) return fallback;
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: platformTimeZone,
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: platformTimeZone,
+    },
+  ).format(new Date(value));
 }
 
 function statusLabel(status: ProjectStatus, locale: SupportedLocale) {

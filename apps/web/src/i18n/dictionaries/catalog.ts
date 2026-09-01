@@ -110,7 +110,7 @@ export const categoryManagerCopy = {
     noCategories: "لا توجد تصنيفات حتى الآن.",
     noDescription: "لا يوجد وصف.",
     records: (count: number) =>
-      `${new Intl.NumberFormat("ar-SA").format(count)} سجل مرتبط بقاعدة البيانات.`,
+      `${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(count)} سجل مرتبط بقاعدة البيانات.`,
     saveCategory: "حفظ التصنيف",
     services: "الخدمات",
     serviceCategories: "تصنيفات الخدمات",
@@ -192,7 +192,7 @@ export const itemManagerCopy = {
     requiresFile: "يتطلب ملف",
     revision: "الإصدار",
     saveRevisionDescription: (version: number) =>
-      `الحفظ ينشئ الإصدار v${new Intl.NumberFormat("ar-SA").format(version)}.`,
+      `الحفظ ينشئ الإصدار v${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(version)}.`,
     selectService: "اختر الخدمة",
     serviceItem: "بند الخدمة",
     serviceItemStudio: "استوديو بنود الخدمة",
@@ -387,7 +387,7 @@ export const serviceManagerCopy = {
     configuredServices: "الخدمات المكونة",
     createRevision: "إنشاء إصدار",
     createRevisionDescription: (version: number) =>
-      `الحفظ ينشئ الإصدار v${new Intl.NumberFormat("ar-SA").format(version)}؛ الإصدارات السابقة تبقى مثبتة.`,
+      `الحفظ ينشئ الإصدار v${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(version)}؛ الإصدارات السابقة تبقى مثبتة.`,
     createService: "إنشاء خدمة",
     createServiceDescription: "أنشئ إصدارًا أوليًا كمسودة أو كخدمة نشطة.",
     defaultSlaHours: "ساعات SLA الافتراضية",
@@ -421,7 +421,8 @@ export const serviceManagerCopy = {
     off: "متوقفة",
     packageHours: "ساعات الباقات",
     pricingVisible: "ظاهرة في التسعير",
-    records: (count: number) => `${new Intl.NumberFormat("ar-SA").format(count)} سجل خدمة مستقر.`,
+    records: (count: number) =>
+      `${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(count)} سجل خدمة مستقر.`,
     requiresManagement: "يتطلب الإدارة",
     requiresSupervisor: "يتطلب المشرف",
     revision: "الإصدار",
@@ -537,7 +538,7 @@ export const oneTimeCategoryManagerCopy = {
     oneTimeCategories: "تصنيفات خدمات المرة الواحدة",
     order: "الترتيب",
     records: (count: number) =>
-      `${new Intl.NumberFormat("ar-SA").format(count)} سجل مرتبط بقاعدة البيانات.`,
+      `${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(count)} سجل مرتبط بقاعدة البيانات.`,
     saveCategory: "حفظ التصنيف",
     services: "الخدمات",
     studioRules: "ضوابط التصنيف",
@@ -608,12 +609,13 @@ export const oneTimeServiceManagerCopy = {
     configuredServices: "خدمات المرة الواحدة المفعلة",
     createRevision: "إنشاء إصدار",
     createRevisionDescription: (version: number) =>
-      `الحفظ ينشئ الإصدار v${new Intl.NumberFormat("ar-SA").format(version)}؛ والسجلات الصادرة تبقى ثابتة.`,
+      `الحفظ ينشئ الإصدار v${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(version)}؛ والسجلات الصادرة تبقى ثابتة.`,
     createService: "إنشاء الخدمة",
     createServiceDescription: "إنشاء السجل الثابت وأول إصدار للخدمة.",
     createsProject: "تنشئ مشروعًا بعد التفعيل المستقبلي",
     days: "يوم",
-    deliverable: (index: number) => `المخرج ${new Intl.NumberFormat("ar-SA").format(index + 1)}`,
+    deliverable: (index: number) =>
+      `المخرج ${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(index + 1)}`,
     deliverables: "المخرجات:",
     deliverablesAndTasks: "المخرجات والمهام",
     deliverablesDescription: "كل مهمة مرتبطة بمخرج واحد داخل هذا الإصدار.",
@@ -637,7 +639,7 @@ export const oneTimeServiceManagerCopy = {
       "لم يتم الاستيراد. تأكد من أن الملف صادر من جزوم، وأن التصنيفات موجودة، وأن الرموز غير مكررة.",
     importing: "جاري التحقق والاستيراد...",
     importSuccess: (count: number) =>
-      `تم الاستيراد بنجاح. يحتوي الكتالوج الآن على ${new Intl.NumberFormat("ar-SA").format(count)} خدمة.`,
+      `تم الاستيراد بنجاح. يحتوي الكتالوج الآن على ${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(count)} خدمة.`,
     initialStatus: "الحالة الأولية",
     internalHourlyCost: "التكلفة الداخلية للساعة (ر.س)",
     newService: "خدمة مرة واحدة جديدة",
@@ -655,9 +657,11 @@ export const oneTimeServiceManagerCopy = {
     order: "الترتيب",
     phase: "المرحلة",
     phaseDescription: "رموز المراحل تبقى ثابتة داخل كل إصدار.",
-    phaseLabel: (index: number) => `المرحلة ${new Intl.NumberFormat("ar-SA").format(index + 1)}`,
+    phaseLabel: (index: number) =>
+      `المرحلة ${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(index + 1)}`,
     phases: "المراحل:",
-    records: (count: number) => `${new Intl.NumberFormat("ar-SA").format(count)} سجل خدمة ثابت.`,
+    records: (count: number) =>
+      `${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(count)} سجل خدمة ثابت.`,
     remove: "إزالة",
     removeDeliverable: "إزالة المخرج",
     removePhase: "إزالة المرحلة",
@@ -680,18 +684,19 @@ export const oneTimeServiceManagerCopy = {
     studioSafetyC: "المخرجات والمهام يجب أن تبقى مرتبطة بإصدار الخدمة حتى لا تنكسر رحلة التنفيذ.",
     status: "الحالة",
     taskArabicName: (index: number) =>
-      `اسم المهمة ${new Intl.NumberFormat("ar-SA").format(index + 1)} بالعربية`,
-    taskCode: (index: number) => `رمز المهمة ${new Intl.NumberFormat("ar-SA").format(index + 1)}`,
+      `اسم المهمة ${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(index + 1)} بالعربية`,
+    taskCode: (index: number) =>
+      `رمز المهمة ${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(index + 1)}`,
     taskDescription: (index: number) =>
-      `وصف المهمة ${new Intl.NumberFormat("ar-SA").format(index + 1)}`,
+      `وصف المهمة ${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(index + 1)}`,
     taskEnglishName: (index: number) =>
-      `اسم المهمة ${new Intl.NumberFormat("ar-SA").format(index + 1)} بالإنجليزية`,
+      `اسم المهمة ${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(index + 1)} بالإنجليزية`,
     taskHours: (index: number) =>
-      `ساعات المهمة ${new Intl.NumberFormat("ar-SA").format(index + 1)}`,
+      `ساعات المهمة ${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(index + 1)}`,
     taskOrder: (index: number) =>
-      `ترتيب المهمة ${new Intl.NumberFormat("ar-SA").format(index + 1)}`,
+      `ترتيب المهمة ${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(index + 1)}`,
     taskStatus: (index: number) =>
-      `حالة المهمة ${new Intl.NumberFormat("ar-SA").format(index + 1)}`,
+      `حالة المهمة ${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(index + 1)}`,
     tasks: "المهام",
     templateLinks: "روابط القالب",
     totalServices: "إجمالي الخدمات",
@@ -818,7 +823,7 @@ export const pricingRuleManagerCopy = {
     createRule: "إنشاء القاعدة",
     created: "تم إنشاء قاعدة التسعير.",
     currentVersionDescription: (version?: number) =>
-      `الإصدار الحالي ${version ? new Intl.NumberFormat("ar-SA").format(version) : "-"} يبقى محفوظًا للسجل.`,
+      `الإصدار الحالي ${version ? new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(version) : "-"} يبقى محفوظًا للسجل.`,
     description:
       "إدارة بطاقات الأسعار، رسوم التأسيس، الهوامش، الخصومات، والضرائب بتواريخ فعالية. كل تعديل ينشئ إصدارًا بدل إعادة كتابة الحسابات السابقة.",
     displayOrder: "ترتيب العرض",
@@ -842,7 +847,7 @@ export const pricingRuleManagerCopy = {
     priority: "الأولوية",
     pricingRules: "قواعد التسعير",
     records: (count: number) =>
-      `${new Intl.NumberFormat("ar-SA").format(count)} قاعدة آمنة بالإصدارات.`,
+      `${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(count)} قاعدة آمنة بالإصدارات.`,
     revisionCreated: "تم إنشاء إصدار جديد لقاعدة التسعير.",
     revisionStatus: "حالة الإصدار",
     reviseRule: (code: string) => `مراجعة ${code}`,
@@ -928,7 +933,7 @@ export const pricingStudioCopy = {
     backendPreview: "معاينة التسعير",
     calculating: "جاري الحساب...",
     calculationVersion: (version: number) =>
-      `إصدار الحساب ${new Intl.NumberFormat("ar-SA").format(version)}`,
+      `إصدار الحساب ${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(version)}`,
     cancel: "إلغاء",
     city: "المدينة",
     client: "العميل",
@@ -1002,7 +1007,8 @@ export const pricingStudioCopy = {
     searchServices: "البحث في الخدمات",
     searchServicesPlaceholder: "ابحث باسم الخدمة أو رمزها...",
     sector: "القطاع",
-    selected: (count: number) => `${new Intl.NumberFormat("ar-SA").format(count)} محددة`,
+    selected: (count: number) =>
+      `${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(count)} محددة`,
     selectedOnly: "إظهار المحدد فقط",
     selectedServices: "الخدمات المختارة",
     selectService: (name: string) => `اختيار ${name}`,
@@ -1022,7 +1028,7 @@ export const pricingStudioCopy = {
       "احفظ المسودة بعد المعاينة حتى يعكس عرض السعر آخر اختيار وعنوان وملاحظات.",
     validityDays: "مدة الصلاحية بالأيام",
     visibleServices: (count: number) =>
-      `${new Intl.NumberFormat("ar-SA").format(count)} خدمة ظاهرة`,
+      `${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(count)} خدمة ظاهرة`,
   },
   en: {
     allCategories: "All categories",

@@ -75,7 +75,9 @@ function statusLabel(status: ClientStatus, locale: SupportedLocale): string {
 }
 
 function number(value: number, locale: SupportedLocale): string {
-  return new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA").format(value);
+  return new Intl.NumberFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+  ).format(value);
 }
 
 function initials(name: string): string {

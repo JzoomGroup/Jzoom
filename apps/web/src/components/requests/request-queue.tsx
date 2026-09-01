@@ -138,10 +138,13 @@ function assigneeFilterOptions(options: RequestIntakeOptions): RequestAssignment
 
 function displayDate(value: string | null, locale: SupportedLocale): string {
   if (!value) return copy[locale].notSet;
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", {
-    dateStyle: "medium",
-    timeZone: platformTimeZone,
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+    {
+      dateStyle: "medium",
+      timeZone: platformTimeZone,
+    },
+  ).format(new Date(value));
 }
 
 function datetimeLocalValue(value: string): string {
@@ -216,7 +219,9 @@ export function RequestQueue({
     };
     return { ...values, dueTo: datetimeLocalValue(values.dueTo) };
   });
-  const numberFormatter = new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-SA");
+  const numberFormatter = new Intl.NumberFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA-u-ca-gregory-nu-latn",
+  );
   const activeFilterCount = Object.values(filters).filter((value) => value.trim()).length;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -281,11 +286,7 @@ export function RequestQueue({
             detail={t.visibleActiveWork}
             accent
           />
-          <MetricCard
-            label={t.overdue}
-            value={queue.counters.overdue}
-            detail={t.needsAttention}
-          />
+          <MetricCard label={t.overdue} value={queue.counters.overdue} detail={t.needsAttention} />
           <MetricCard
             label={t.specialist}
             value={queue.counters.specialist}
