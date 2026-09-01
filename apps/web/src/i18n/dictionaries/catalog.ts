@@ -1035,6 +1035,8 @@ export const pricingStudioCopy = {
     unsavedChanges: "توجد تغييرات غير محفوظة",
     unsavedChangesDescription:
       "احفظ المسودة بعد المعاينة حتى يعكس عرض السعر آخر اختيار وعنوان وملاحظات.",
+    discardUnsavedChangesConfirm:
+      "لديك تغييرات غير محفوظة. هل تريد تجاهلها والانتقال إلى مسودة أخرى؟",
     validityDays: "مدة الصلاحية بالأيام",
     visibleServices: (count: number) =>
       `${new Intl.NumberFormat("ar-SA-u-ca-gregory-nu-latn").format(count)} خدمة ظاهرة`,
@@ -1156,6 +1158,8 @@ export const pricingStudioCopy = {
     unsavedChanges: "You have unsaved changes",
     unsavedChangesDescription:
       "Save the draft after previewing so the quote uses the latest services, title, and notes.",
+    discardUnsavedChangesConfirm:
+      "You have unsaved changes. Discard them and continue to another draft?",
     validityDays: "Validity days",
     visibleServices: (count: number) => `${count} services shown`,
   },

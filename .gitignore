@@ -26,3 +26,13 @@ packages/database/src/generated/
 .idea/
 .vscode/
 .agents/
+
+# Local review and exported access artifacts
+/.codex_tmp/
+/audit-artifacts/
+/Jzoom-Access-Accounts*.xlsx
+/Jzoom Portal - Team Presentation.pptx
+/Jzoom Portal - Team Presentation.pptx.inspect.ndjson
+/Jzoom profile.pptx
+/Jzoom-Portal-Presentation.pdf
+/Jzoom-Portal-Presentation.pptx

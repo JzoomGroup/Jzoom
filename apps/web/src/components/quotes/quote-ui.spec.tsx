@@ -318,6 +318,30 @@ describe("Quote snapshot UI", () => {
     );
     expect(screen.getByRole("link", { name: "عروض الأسعار" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "الفواتير" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "الطلبات" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "المشاريع" })).toBeInTheDocument();
+  });
+
+  it("keeps admins in the Admin shell on operational routes", () => {
+    render(
+      <QuoteShell
+        activePath="/requests/queues"
+        displayName="Admin User"
+        isAdmin
+        locale="ar"
+        permissions={[]}
+        roles={["ROLE-ADMIN"]}
+      >
+        <p>Queue content</p>
+      </QuoteShell>,
+    );
+
+    expect(screen.getByRole("navigation", { name: "إدارة المنصة" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "قوائم العمل" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.queryByRole("link", { name: "الأدمن" })).not.toBeInTheDocument();
   });
 
   it("renders snapshotted content and advances lifecycle through explicit backend actions", async () => {

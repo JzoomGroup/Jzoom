@@ -3,6 +3,7 @@ import { BadRequestException, ConsoleLogger, ValidationPipe } from "@nestjs/comm
 import { NestFactory } from "@nestjs/core";
 import type { ApiEnvironment } from "@jzoom/config";
 import type { ApiFieldError } from "@jzoom/contracts";
+import type { NextFunction, Request, Response } from "express";
 import { AppModule } from "./app.module.js";
 import { GlobalExceptionFilter } from "./errors/global-exception.filter.js";
 import { RequestContextService } from "./request-context/request-context.service.js";
@@ -21,6 +22,19 @@ export function configureApiApplication(
 ): void {
   const requestIdMiddleware = new RequestIdMiddleware(app.get(RequestContextService));
 
+  app.use((_request: Request, response: Response, next: NextFunction) => {
+    response.setHeader(
+      "Content-Security-Policy",
+      "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    );
+    response.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+    response.setHeader("Permissions-Policy", "camera=(), geolocation=(), microphone=()");
+    response.setHeader("Referrer-Policy", "no-referrer");
+    response.setHeader("Strict-Transport-Security", "max-age=31536000");
+    response.setHeader("X-Content-Type-Options", "nosniff");
+    response.setHeader("X-Frame-Options", "DENY");
+    next();
+  });
   app.use(requestIdMiddleware.use.bind(requestIdMiddleware));
   app.setGlobalPrefix("api/v1");
   app.enableCors({

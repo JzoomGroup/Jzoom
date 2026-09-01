@@ -327,6 +327,41 @@ describe("PR 6 pricing UI", () => {
     expect(replaceMock).toHaveBeenCalledWith("/pricing");
   });
 
+  it("protects unsaved pricing changes before starting another draft", async () => {
+    const draft = savedDraft();
+    const confirmMock = jest.spyOn(window, "confirm").mockReturnValue(false);
+
+    render(
+      <PricingStudio
+        displayName="Pricing Admin"
+        isAdmin
+        initialCatalog={studioCatalog()}
+        initialDraft={draft}
+        initialDrafts={[]}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Draft title"), {
+      target: { value: "Changed but not saved" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Pricing drafts/ }));
+    const dialog = await screen.findByRole("dialog", { name: "Pricing drafts" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "New" }));
+
+    expect(confirmMock).toHaveBeenCalledWith(
+      "You have unsaved changes. Discard them and continue to another draft?",
+    );
+    expect(screen.getByRole("dialog", { name: "Pricing drafts" })).toBeInTheDocument();
+    expect(replaceMock).not.toHaveBeenCalled();
+
+    confirmMock.mockReturnValue(true);
+    fireEvent.click(within(dialog).getByRole("button", { name: "New" }));
+
+    expect(screen.queryByRole("dialog", { name: "Pricing drafts" })).not.toBeInTheDocument();
+    expect(replaceMock).toHaveBeenCalledWith("/pricing");
+    confirmMock.mockRestore();
+  });
+
   it("deletes the open pricing draft after a dedicated confirmation", async () => {
     const draft = savedDraft();
     const fetchMock = jest.mocked(fetch);

@@ -23,15 +23,15 @@
     "typecheck": "corepack pnpm generate && tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.0.0",
-    "@prisma/client": "^7.0.0",
-    "fast-xml-parser": "^5.0.0",
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "fast-xml-parser": "^5.11.1",
     "fflate": "^0.8.2",
     "pg": "^8.0.0"
   },
   "devDependencies": {
     "@types/pg": "^8.0.0",
     "dotenv": "^17.0.0",
-    "prisma": "^7.0.0"
+    "prisma": "^7.10.0"
   }
 }

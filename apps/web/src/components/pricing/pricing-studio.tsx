@@ -5,7 +5,7 @@ import { pricingStudioCopy as copy, pricingCopy } from "../../i18n/dictionaries/
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FolderOpen, Plus, Trash2 } from "lucide-react";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   deletePricingDraft,
   pricingErrorMessage,
@@ -208,6 +208,17 @@ export function PricingStudio({
   const canCalculate = Boolean(clientId && title.trim() && selectedCount > 0 && !isArchived);
   const quoteReady = Boolean(currentDraft && calculation && !isArchived && !isDirty);
 
+  useEffect(() => {
+    if (!isDirty) return;
+
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [isDirty]);
+
   const input = useMemo<PricingInput>(
     () => ({
       clientId,
@@ -246,7 +257,12 @@ export function PricingStudio({
     }
   }
 
+  function canDiscardChanges() {
+    return !isDirty || window.confirm(t.discardUnsavedChangesConfirm);
+  }
+
   function startNewDraft() {
+    if (!canDiscardChanges()) return;
     clearFeedback();
     setShowDrafts(false);
     setShowDeleteDraft(false);
@@ -868,6 +884,9 @@ export function PricingStudio({
                 <Link
                   key={draft.id}
                   href={`/pricing/${draft.id}`}
+                  onClick={(event) => {
+                    if (!canDiscardChanges()) event.preventDefault();
+                  }}
                   className={`pricing-draft-dialog-card${
                     currentDraft?.id === draft.id ? " active" : ""
                   }`}

@@ -196,6 +196,44 @@ const adminNavigation: NavItem[] = [
     labelAr: "الفواتير",
     labelEn: "Invoices",
   },
+  {
+    href: "/requests",
+    icon: ClipboardList,
+    labelAr: "الطلبات",
+    labelEn: "Requests",
+    sectionAr: "التشغيل والمتابعة",
+    sectionEn: "Operations & follow-up",
+  },
+  {
+    href: "/requests/queues",
+    icon: ListTodo,
+    labelAr: "قوائم العمل",
+    labelEn: "Work queues",
+  },
+  {
+    href: "/projects",
+    icon: FolderKanban,
+    labelAr: "المشاريع",
+    labelEn: "Projects",
+  },
+  {
+    href: "/hours-ledger",
+    icon: Clock3,
+    labelAr: "سجل الساعات",
+    labelEn: "Hours Ledger",
+  },
+  {
+    href: "/reports",
+    icon: ChartNoAxesColumn,
+    labelAr: "التقارير",
+    labelEn: "Reports",
+  },
+  {
+    href: "/notifications",
+    icon: Bell,
+    labelAr: "الإشعارات",
+    labelEn: "Notifications",
+  },
 ];
 
 const clientNavigation: NavItem[] = [

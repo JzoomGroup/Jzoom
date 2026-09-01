@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AdminShell } from "../admin-shell";
 import { AppShell } from "../app-shell";
 
 export function QuoteShell({
@@ -18,10 +19,24 @@ export function QuoteShell({
   permissions?: string[];
   roles?: string[];
 }) {
+  if (isAdmin) {
+    return (
+      <AdminShell
+        activePath={activePath ?? "/admin"}
+        displayName={displayName}
+        locale={locale}
+        permissions={permissions}
+        roles={roles}
+      >
+        {children}
+      </AdminShell>
+    );
+  }
+
   return (
     <AppShell
       displayName={displayName}
-      isAdmin={isAdmin}
+      isAdmin={false}
       locale={locale}
       mode="internal"
       permissions={permissions}

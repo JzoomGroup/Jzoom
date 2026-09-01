@@ -69,6 +69,18 @@ describe("PR 1 API foundation", () => {
     expect(database.ping).not.toHaveBeenCalled();
   });
 
+  it("applies production security headers to API responses", async () => {
+    const response = await request(app.getHttpServer()).get("/api/v1/health/live").expect(200);
+
+    expect(response.headers["content-security-policy"]).toContain("default-src 'none'");
+    expect(response.headers["cross-origin-opener-policy"]).toBe("same-origin");
+    expect(response.headers["permissions-policy"]).toContain("camera=()");
+    expect(response.headers["referrer-policy"]).toBe("no-referrer");
+    expect(response.headers["strict-transport-security"]).toBe("max-age=31536000");
+    expect(response.headers["x-content-type-options"]).toBe("nosniff");
+    expect(response.headers["x-frame-options"]).toBe("DENY");
+  });
+
   it("reports readiness after a successful PostgreSQL query", async () => {
     const response = await request(app.getHttpServer()).get("/api/v1/health/ready").expect(200);
 

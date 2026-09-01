@@ -67,7 +67,7 @@ export async function RequestsPage({ requestId }: { requestId?: string }) {
   if (isAdmin) {
     return (
       <AdminShell
-        activePath="/admin"
+        activePath="/requests"
         displayName={user.displayName}
         locale={user.preferredLocale}
         permissions={user.permissions}

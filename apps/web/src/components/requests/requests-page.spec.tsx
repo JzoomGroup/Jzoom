@@ -16,9 +16,20 @@ jest.mock("../../lib/request-server", () => ({
 }));
 
 jest.mock("../app-shell", () => ({
-  AppShell: ({ children, mode }: { children: ReactNode; mode: string }) => (
+  AppShell: ({
+    children,
+    mode,
+    activePath,
+  }: {
+    children: ReactNode;
+    mode: string;
+    activePath?: string;
+  }) => (
     <>
-      <nav aria-label={mode === "admin" ? "إدارة المنصة" : "تنقل منصة التشغيل"} />
+      <nav
+        aria-label={mode === "admin" ? "إدارة المنصة" : "تنقل منصة التشغيل"}
+        data-active-path={activePath}
+      />
       {children}
     </>
   ),
@@ -61,7 +72,10 @@ describe("RequestsPage shell context", () => {
 
     render(await RequestsPage({}));
 
-    expect(screen.getByRole("navigation", { name: "إدارة المنصة" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "إدارة المنصة" })).toHaveAttribute(
+      "data-active-path",
+      "/requests",
+    );
     expect(screen.queryByRole("navigation", { name: "تنقل منصة التشغيل" })).not.toBeInTheDocument();
   });
 

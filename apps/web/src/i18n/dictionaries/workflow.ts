@@ -263,7 +263,7 @@ export const requestDetailCopy = {
     fileProcessing: "جاري تجهيز الملف...",
     fileReady: "الملف جاهز للرفع",
     fileUploadHint: "اختر ملفا وسيتم حفظه على الطلب مع بياناته تلقائيا.",
-    noAction: "لا يوجد إجراء معطل الآن.",
+    noAction: "لا يوجد إجراء مطلوب الآن.",
     noActionBody: "لا يوجد إجراء مطلوب لهذا الدور في مساحة العمل الحالية.",
     noAnswers: "لا توجد إجابات منظمة مرسلة.",
     noAssignee: "بدون مسؤول",
