@@ -390,7 +390,7 @@
   width: 100%;
   min-height: 36px;
   align-items: end;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
   margin: 0;
   padding: 0;
@@ -461,7 +461,7 @@
 
 .catalog-card-footer :is(.os-button, .os-button-danger) {
   display: inline-flex;
-  width: 100%;
+  width: auto;
   min-height: 36px;
   align-items: center;
   justify-content: center;
@@ -472,6 +472,24 @@
   font-weight: 500;
   line-height: 1;
   box-shadow: none;
+}
+
+.catalog-card-footer
+  :is(
+    .service-admin-actions,
+    .item-admin-actions,
+    .package-admin-actions,
+    .one-time-service-actions,
+    .one-time-category-actions,
+    .entity-card-actions
+  )
+  :is(.os-button, .os-button-danger) {
+  width: 100%;
+}
+
+.catalog-card-footer .order-control .os-button {
+  width: auto;
+  min-width: 118px;
 }
 
 .catalog-card-footer :is(.os-button, .os-button-danger) svg {
