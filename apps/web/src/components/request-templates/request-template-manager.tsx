@@ -425,19 +425,131 @@ export function RequestTemplateManager({
                         : "template-preview-frame"
                     }
                   >
-                    {editor.fields.length === 0 ? (
-                      <EmptyState>
-                        أضف أول حقل إلى النموذج، وستظهر هنا معاينة تجربة العميل مباشرة.
-                      </EmptyState>
-                    ) : (
-                      <RequestTemplateFields
-                        locale="ar"
-                        readOnly
-                        template={previewVersion}
-                        values={{}}
-                        onChange={() => undefined}
-                      />
-                    )}
+                    <div
+                      aria-hidden="true"
+                      className="template-preview-page"
+                      data-testid="request-template-client-preview"
+                    >
+                      <header className="template-preview-page-heading">
+                        <p>مركز خدمة العميل</p>
+                        <h2>إنشاء طلب جديد</h2>
+                        <span>أكمل بيانات الطلب وسيصل مباشرة إلى فريق الخدمة المختص.</span>
+                      </header>
+
+                      <section className="os-section-card template-preview-request-card">
+                        <div className="os-section-heading">
+                          <div>
+                            <p className="os-eyebrow">طلب خدمة</p>
+                            <h2>{itemName(selected)}</h2>
+                            <p>{serviceName(selected)}</p>
+                          </div>
+                        </div>
+
+                        <div className="catalog-form wide-form client-request-form template-preview-form">
+                          <section className="request-intake-panel form-span">
+                            <div className="request-panel-heading">
+                              <span>01</span>
+                              <div>
+                                <h3>اختيار الخدمة</h3>
+                                <p>الخدمة والبند المختاران لهذا النموذج.</p>
+                              </div>
+                            </div>
+                            <div className="request-field-grid">
+                              <div className="template-preview-field">
+                                <span>الخدمة</span>
+                                <input
+                                  aria-label="معاينة الخدمة"
+                                  disabled
+                                  value={serviceName(selected)}
+                                />
+                              </div>
+                              <div className="template-preview-field">
+                                <span>بند الخدمة</span>
+                                <input
+                                  aria-label="معاينة بند الخدمة"
+                                  disabled
+                                  value={itemName(selected)}
+                                />
+                              </div>
+                            </div>
+                          </section>
+
+                          <section className="request-intake-panel request-details-panel form-span">
+                            <div className="request-panel-heading">
+                              <span>02</span>
+                              <div>
+                                <h3>تفاصيل الطلب</h3>
+                                <p>هذه الحقول ثابتة في رحلة إنشاء الطلب لدى العميل.</p>
+                              </div>
+                            </div>
+                            <div className="request-field-grid request-field-grid-three">
+                              <div className="template-preview-field">
+                                <span>عنوان الطلب</span>
+                                <input disabled placeholder="اكتب عنوانًا واضحًا للطلب" />
+                              </div>
+                              <div className="template-preview-field">
+                                <span>الأولوية</span>
+                                <select disabled defaultValue="NORMAL">
+                                  <option value="NORMAL">عادية</option>
+                                </select>
+                              </div>
+                              <div className="template-preview-field">
+                                <span>الموعد المطلوب</span>
+                                <input disabled placeholder="اختر التاريخ" />
+                              </div>
+                            </div>
+                            <div className="template-preview-field">
+                              <span>وصف الطلب</span>
+                              <textarea
+                                disabled
+                                placeholder="اشرح المطلوب والنتيجة المتوقعة"
+                                rows={3}
+                              />
+                            </div>
+                          </section>
+
+                          {editor.fields.length === 0 ? (
+                            <div className="form-span template-preview-empty">
+                              <EmptyState>
+                                أضف أول حقل إلى النموذج، وستظهر هنا تجربة العميل مباشرة.
+                              </EmptyState>
+                            </div>
+                          ) : (
+                            <RequestTemplateFields
+                              locale="ar"
+                              readOnly
+                              template={previewVersion}
+                              values={{}}
+                              onChange={() => undefined}
+                            />
+                          )}
+
+                          <div className="request-review-bar form-span">
+                            <div>
+                              <span>مراجعة الطلب</span>
+                              <strong>{itemName(selected)}</strong>
+                              <small>{serviceName(selected)}</small>
+                            </div>
+                            <div className="form-actions">
+                              <button
+                                className="os-button os-button-secondary"
+                                disabled
+                                type="button"
+                              >
+                                حفظ كمسودة
+                              </button>
+                              <button
+                                className="os-button os-button-primary"
+                                disabled
+                                type="button"
+                              >
+                                إرسال الطلب
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+                    </div>
                   </div>
                 </aside>
               </div>
