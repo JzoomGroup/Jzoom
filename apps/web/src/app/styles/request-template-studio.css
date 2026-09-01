@@ -675,6 +675,10 @@
   opacity: 1;
 }
 
+.template-preview-form .template-file-control input:disabled {
+  opacity: 0;
+}
+
 .template-preview-form input:disabled,
 .template-preview-form select:disabled,
 .template-preview-form textarea:disabled {
