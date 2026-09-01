@@ -397,8 +397,8 @@ const internalNavigation: NavItem[] = [
   {
     href: "/profile",
     icon: UserCircle,
-    labelAr: "الملف الشخصي",
-    labelEn: "Profile",
+    labelAr: "حسابي",
+    labelEn: "My account",
     sectionAr: "الحساب",
     sectionEn: "Account",
   },

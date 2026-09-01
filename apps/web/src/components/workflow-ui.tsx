@@ -56,6 +56,29 @@ function canPreview(mimeType: string) {
   return mimeType.startsWith("image/") || mimeType === "application/pdf";
 }
 
+export function fileTypeLabel(mimeType: string, locale: DisplayLocale): string {
+  const language = normalizedLocale(locale);
+  if (language === "en") {
+    return mimeType.split("/").at(-1)?.toUpperCase() || "File";
+  }
+
+  if (mimeType.startsWith("image/")) return "صورة";
+
+  const arabicLabels: Record<string, string> = {
+    "application/json": "بيانات JSON",
+    "application/msword": "مستند Word",
+    "application/pdf": "مستند PDF",
+    "application/vnd.ms-excel": "جدول Excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "جدول Excel",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "مستند Word",
+    "application/zip": "ملف مضغوط",
+    "text/csv": "جدول CSV",
+    "text/plain": "ملف نصي",
+  };
+
+  return arabicLabels[mimeType] ?? "ملف";
+}
+
 export function FileCard({
   actions,
   downloadLabel,
@@ -80,8 +103,7 @@ export function FileCard({
 }) {
   const language = normalizedLocale(locale);
   const isImage = file.mimeType.startsWith("image/");
-  const typeLabel =
-    file.mimeType.split("/").at(-1)?.toUpperCase() || (language === "ar" ? "ملف" : "File");
+  const typeLabel = fileTypeLabel(file.mimeType, language);
   return (
     <article className="os-file-card">
       <span className="os-file-icon" aria-hidden="true">

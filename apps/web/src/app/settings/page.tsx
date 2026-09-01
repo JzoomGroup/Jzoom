@@ -33,7 +33,7 @@ export default async function SettingsPage() {
     >
       <PageHeader eyebrow={copy.eyebrow} title={copy.title} description={copy.lead} />
 
-      <SectionCard title={copy.title} description={copy.lead}>
+      <SectionCard>
         <div className="row-actions">
           <Link className="os-button os-button-primary" href="/admin/platform-configuration">
             {copy.open}

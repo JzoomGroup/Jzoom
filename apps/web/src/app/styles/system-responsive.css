@@ -305,6 +305,11 @@
     width: 100%;
   }
 
+  .os-page-header-tools > .quote-header-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
   .os-page-header-tools .os-button {
     flex: 1 1 120px;
   }

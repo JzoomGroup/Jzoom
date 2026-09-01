@@ -47,7 +47,7 @@ export function AdminRolesPageContent({
         <MetricCard label={t.customRoles} value={number(customRoles, lang)} detail={t.access} />
       </BentoGrid>
 
-      <SectionCard title={t.roles} eyebrow={t.access}>
+      <SectionCard>
         {roles.length === 0 ? (
           <EmptyState title={t.emptyRoles}>{t.rolesDescription}</EmptyState>
         ) : (

@@ -142,6 +142,7 @@ describe("Admin access pages", () => {
     );
 
     expect(screen.getByRole("heading", { level: 1, name: "Portal users" })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Portal users" })).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Add operating user" })).toBeInTheDocument();
     expect(screen.queryByText("Security notes")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "View audit logs" })).not.toBeInTheDocument();
@@ -189,6 +190,7 @@ describe("Admin access pages", () => {
     render(<AdminRolesPageContent locale="en" permissions={[permission]} roles={[role]} />);
 
     expect(screen.getByRole("heading", { level: 1, name: "Roles" })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Roles" })).toHaveLength(1);
     expect(screen.getByText("ROLE-ADMIN")).toBeInTheDocument();
     expect(screen.getByText("Can manage access records")).toBeInTheDocument();
     expect(screen.getByText("Manage users")).toBeInTheDocument();

@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { ActivityTimeline, FileCard, formattedFileSize } from "./workflow-ui";
+import { ActivityTimeline, FileCard, fileTypeLabel, formattedFileSize } from "./workflow-ui";
 
 describe("workflow UI", () => {
   it("renders unified activity in order supplied by the workflow", () => {
@@ -37,5 +37,11 @@ describe("workflow UI", () => {
     );
     expect(screen.getByText("Version 2")).toBeInTheDocument();
     expect(formattedFileSize(2048, "en")).toContain("KB");
+  });
+
+  it("uses human Arabic file type labels instead of raw MIME subtypes", () => {
+    expect(fileTypeLabel("text/plain", "ar")).toBe("ملف نصي");
+    expect(fileTypeLabel("application/pdf", "ar")).toBe("مستند PDF");
+    expect(fileTypeLabel("application/octet-stream", "ar")).toBe("ملف");
   });
 });

@@ -435,7 +435,7 @@ export function AdminUsersPageContent({
         />
       </BentoGrid>
 
-      <SectionCard title={t.portalUsers} eyebrow={t.access}>
+      <SectionCard>
         <FilterBar
           results={
             <>
