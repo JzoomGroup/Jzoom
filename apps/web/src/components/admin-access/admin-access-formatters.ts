@@ -174,6 +174,14 @@ export function eventLabel(eventCode: string, locale: SupportedLocale): string {
     AUTH_LOGIN_FAILED: { ar: "محاولة دخول فاشلة", en: "Failed login attempt" },
     AUTH_LOGIN_SUCCEEDED: { ar: "تسجيل دخول ناجح", en: "Successful login" },
     AUTH_LOGOUT: { ar: "تسجيل خروج", en: "Sign out" },
+    AUTH_UAT_IMPERSONATION_STARTED: {
+      ar: "بدء اختبار النظام كمستخدم آخر",
+      en: "UAT user test started",
+    },
+    AUTH_UAT_IMPERSONATION_STOPPED: {
+      ar: "إنهاء اختبار المستخدم والعودة للأدمن",
+      en: "UAT user test ended",
+    },
     AUTH_OPERATING_USER_CREATED: {
       ar: "إنشاء مستخدم تشغيلي",
       en: "Operating user created",
