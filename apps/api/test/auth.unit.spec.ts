@@ -2,11 +2,17 @@ import "reflect-metadata";
 import type { ExecutionContext } from "@nestjs/common";
 import { ForbiddenException } from "@nestjs/common";
 import type { Reflector } from "@nestjs/core";
+import { parseApiEnvironment } from "@jzoom/config";
 import { jest } from "@jest/globals";
 import type { AccessService } from "../src/auth/access.service.js";
 import type { AuthAuditService } from "../src/auth/audit.service.js";
 import { AuthGuard } from "../src/auth/auth.guard.js";
-import { ALLOW_PASSWORD_CHANGE_REQUIRED_KEY, IS_PUBLIC_KEY } from "../src/auth/auth.constants.js";
+import {
+  ADMIN_ROLE_CODE,
+  ALLOW_PASSWORD_CHANGE_REQUIRED_KEY,
+  IS_PUBLIC_KEY,
+  MANAGE_USERS_PERMISSION,
+} from "../src/auth/auth.constants.js";
 import type {
   AuthenticatedPrincipal,
   AuthRuntimeEnvironment,
@@ -181,5 +187,96 @@ describe("PR 3 security primitives", () => {
     } as unknown as ExecutionContext;
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
+  });
+
+  it("refuses to enable UAT impersonation for a production deployment", () => {
+    expect(() =>
+      parseApiEnvironment({
+        NODE_ENV: "production",
+        DEPLOYMENT_ENVIRONMENT: "production",
+        DATABASE_URL: "postgresql://user:password@localhost:5432/jzoom",
+        WEB_ORIGIN: "https://portal.jzoom.sa",
+        AUTH_UAT_IMPERSONATION_ENABLED: "true",
+      } as NodeJS.ProcessEnv),
+    ).toThrow(/AUTH_UAT_IMPERSONATION_ENABLED can only be enabled/);
+  });
+
+  it("accepts UAT impersonation only with the approved UAT deployment and origin", () => {
+    const environment = parseApiEnvironment({
+      NODE_ENV: "production",
+      DEPLOYMENT_ENVIRONMENT: "uat",
+      DATABASE_URL: "postgresql://user:password@localhost:5432/jzoom",
+      WEB_ORIGIN: "https://uat-portal.jzoom.sa",
+      AUTH_COOKIE_NAME: "jzoom_uat_session",
+      AUTH_UAT_IMPERSONATION_ENABLED: "true",
+    } as NodeJS.ProcessEnv);
+
+    expect(environment.deploymentEnvironment).toBe("uat");
+    expect(environment.auth.uatImpersonationEnabled).toBe(true);
+    expect(environment.auth.uatImpersonationCookieName).toBe("jzoom_uat_session_uat_admin_return");
+  });
+
+  it("refuses UAT impersonation when the web origin is not the exact approved HTTPS origin", () => {
+    expect(() =>
+      parseApiEnvironment({
+        NODE_ENV: "production",
+        DEPLOYMENT_ENVIRONMENT: "uat",
+        DATABASE_URL: "postgresql://user:password@localhost:5432/jzoom",
+        WEB_ORIGIN: "http://uat-portal.jzoom.sa",
+        AUTH_UAT_IMPERSONATION_ENABLED: "true",
+      } as NodeJS.ProcessEnv),
+    ).toThrow(/approved UAT web origin/);
+  });
+
+  it("bypasses temporary-password gating only with a valid UAT Admin return session", async () => {
+    const reflector = {
+      getAllAndOverride: jest.fn((key: string) => {
+        if (key === IS_PUBLIC_KEY) return false;
+        if (key === ALLOW_PASSWORD_CHANGE_REQUIRED_KEY) return false;
+        return undefined;
+      }),
+    } as unknown as Reflector;
+    const access = {
+      resolveSession: jest
+        .fn<() => Promise<AuthenticatedPrincipal | null>>()
+        .mockResolvedValueOnce(principal({ mustChangePassword: true }))
+        .mockResolvedValueOnce(
+          principal({
+            userId: "5b41e625-8121-4b7e-85ab-51d6280489db",
+            email: "admin@jzoom.sa",
+            displayName: "UAT Admin",
+            roles: [ADMIN_ROLE_CODE],
+            permissions: [MANAGE_USERS_PERMISSION],
+          }),
+        ),
+    } as unknown as AccessService;
+    const environment = {
+      deploymentEnvironment: "uat",
+      auth: {
+        cookieName: "jzoom_uat_session",
+        uatImpersonationEnabled: true,
+        uatImpersonationCookieName: "jzoom_uat_session_uat_admin_return",
+      },
+    } as AuthRuntimeEnvironment;
+    const request = {
+      headers: {
+        cookie: "jzoom_uat_session=target-token; jzoom_uat_session_uat_admin_return=admin-token",
+      },
+      method: "GET",
+    } as Record<string, unknown>;
+    const guard = new AuthGuard(reflector, access, new TokenService(), environment);
+    const context = {
+      getHandler: () => function handler() {},
+      getClass: () => class Controller {},
+      switchToHttp: () => ({ getRequest: () => request }),
+    } as unknown as ExecutionContext;
+
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+    expect(request.auth).toEqual(
+      expect.objectContaining({
+        mustChangePassword: false,
+        impersonation: expect.objectContaining({ displayName: "UAT Admin" }),
+      }),
+    );
   });
 });

@@ -40,6 +40,11 @@ import { directionForLocale, htmlLangForLocale, normalizeLocale } from "../lib/i
 import { LanguageSwitcher } from "./language-switcher";
 import { LocaleDocumentSync } from "./locale-document-sync";
 import { LogoutButton } from "./logout-button";
+import {
+  UatImpersonationBanner,
+  UatImpersonationProvider,
+  UatUserSwitcherTrigger,
+} from "./uat-user-switcher";
 
 type ShellMode = "admin" | "client" | "internal";
 
@@ -572,105 +577,109 @@ export function AppShell({
       dir={directionForLocale(normalizedLocale)}
       lang={htmlLangForLocale(normalizedLocale)}
     >
-      <LocaleDocumentSync locale={normalizedLocale} />
-      <div className="premium-mobile-header">
-        <Link
-          className="premium-brand premium-mobile-brand"
-          href={mode === "client" ? "/client" : isAdmin ? "/admin" : "/profile"}
-        >
-          <JzoomWordmark />
-        </Link>
-        <button
-          type="button"
-          className="premium-mobile-menu-button"
-          aria-controls={navigationId}
-          aria-expanded={isMobileNavigationOpen}
-          onClick={() => setIsMobileNavigationOpen((current) => !current)}
-        >
-          <span>{menuLabel}</span>
-          {isMobileNavigationOpen ? (
-            <X aria-hidden="true" size={17} />
-          ) : (
-            <Menu aria-hidden="true" size={17} />
-          )}
-        </button>
-      </div>
-
-      {isMobileNavigationOpen ? (
-        <button
-          type="button"
-          className="premium-mobile-menu-backdrop"
-          aria-label={closeMenuLabel}
-          onClick={closeMobileNavigation}
-        />
-      ) : null}
-
-      <aside
-        id={navigationId}
-        className={`premium-sidebar${isMobileNavigationOpen ? " is-open" : ""}`}
-      >
-        <Link
-          className="premium-brand"
-          href={mode === "client" ? "/client" : isAdmin ? "/admin" : "/profile"}
-          onClick={closeMobileNavigation}
-        >
-          <JzoomWordmark />
-        </Link>
-
-        <nav className="premium-nav" aria-label={copy.navigationLabel}>
-          {items.map((item, index) => {
-            const Icon = item.icon;
-            const active = isActivePath(activePath, item.href);
-            const sectionLabel = language === "ar" ? item.sectionAr : item.sectionEn;
-            const previousItem = items[index - 1];
-            const previousSectionLabel = previousItem
-              ? language === "ar"
-                ? previousItem.sectionAr
-                : previousItem.sectionEn
-              : undefined;
-            const showSection = sectionLabel && sectionLabel !== previousSectionLabel;
-            return (
-              <Fragment key={item.href}>
-                {showSection ? <span className="premium-nav-section">{sectionLabel}</span> : null}
-                <Link
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={active ? "active" : undefined}
-                  onClick={closeMobileNavigation}
-                >
-                  <Icon aria-hidden="true" size={16} strokeWidth={1.8} />
-                  <span className="premium-nav-label">
-                    {language === "ar" ? item.labelAr : item.labelEn}
-                  </span>
-                </Link>
-              </Fragment>
-            );
-          })}
-        </nav>
-      </aside>
-
-      <div className="premium-workspace">
-        <header className="premium-topbar">
-          <div className="premium-topbar-identity">
-            <strong>{`${copy.greeting} ${displayName}`}</strong>
-          </div>
-          <div className="premium-topbar-actions">
-            <Link href="/profile">
-              <UserCircle aria-hidden="true" size={15} />
-              <span>{copy.profile}</span>
-            </Link>
-            {isAdmin && (
-              <Link href="/settings">
-                <Settings2 aria-hidden="true" size={15} />
-                <span>{copy.settings}</span>
-              </Link>
+      <UatImpersonationProvider locale={normalizedLocale}>
+        <LocaleDocumentSync locale={normalizedLocale} />
+        <div className="premium-mobile-header">
+          <Link
+            className="premium-brand premium-mobile-brand"
+            href={mode === "client" ? "/client" : isAdmin ? "/admin" : "/profile"}
+          >
+            <JzoomWordmark />
+          </Link>
+          <button
+            type="button"
+            className="premium-mobile-menu-button"
+            aria-controls={navigationId}
+            aria-expanded={isMobileNavigationOpen}
+            onClick={() => setIsMobileNavigationOpen((current) => !current)}
+          >
+            <span>{menuLabel}</span>
+            {isMobileNavigationOpen ? (
+              <X aria-hidden="true" size={17} />
+            ) : (
+              <Menu aria-hidden="true" size={17} />
             )}
-            <LanguageSwitcher locale={normalizedLocale} />
-            <LogoutButton label={copy.signOut} submittingLabel={copy.signingOut} />
-          </div>
-        </header>
-        <main className="premium-main">{children}</main>
-      </div>
+          </button>
+        </div>
+
+        {isMobileNavigationOpen ? (
+          <button
+            type="button"
+            className="premium-mobile-menu-backdrop"
+            aria-label={closeMenuLabel}
+            onClick={closeMobileNavigation}
+          />
+        ) : null}
+
+        <aside
+          id={navigationId}
+          className={`premium-sidebar${isMobileNavigationOpen ? " is-open" : ""}`}
+        >
+          <Link
+            className="premium-brand"
+            href={mode === "client" ? "/client" : isAdmin ? "/admin" : "/profile"}
+            onClick={closeMobileNavigation}
+          >
+            <JzoomWordmark />
+          </Link>
+
+          <nav className="premium-nav" aria-label={copy.navigationLabel}>
+            {items.map((item, index) => {
+              const Icon = item.icon;
+              const active = isActivePath(activePath, item.href);
+              const sectionLabel = language === "ar" ? item.sectionAr : item.sectionEn;
+              const previousItem = items[index - 1];
+              const previousSectionLabel = previousItem
+                ? language === "ar"
+                  ? previousItem.sectionAr
+                  : previousItem.sectionEn
+                : undefined;
+              const showSection = sectionLabel && sectionLabel !== previousSectionLabel;
+              return (
+                <Fragment key={item.href}>
+                  {showSection ? <span className="premium-nav-section">{sectionLabel}</span> : null}
+                  <Link
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    className={active ? "active" : undefined}
+                    onClick={closeMobileNavigation}
+                  >
+                    <Icon aria-hidden="true" size={16} strokeWidth={1.8} />
+                    <span className="premium-nav-label">
+                      {language === "ar" ? item.labelAr : item.labelEn}
+                    </span>
+                  </Link>
+                </Fragment>
+              );
+            })}
+          </nav>
+        </aside>
+
+        <div className="premium-workspace">
+          <header className="premium-topbar">
+            <div className="premium-topbar-identity">
+              <strong>{`${copy.greeting} ${displayName}`}</strong>
+            </div>
+            <div className="premium-topbar-actions">
+              <UatUserSwitcherTrigger />
+              <Link href="/profile">
+                <UserCircle aria-hidden="true" size={15} />
+                <span>{copy.profile}</span>
+              </Link>
+              {isAdmin && (
+                <Link href="/settings">
+                  <Settings2 aria-hidden="true" size={15} />
+                  <span>{copy.settings}</span>
+                </Link>
+              )}
+              <LanguageSwitcher locale={normalizedLocale} />
+              <LogoutButton label={copy.signOut} submittingLabel={copy.signingOut} />
+            </div>
+          </header>
+          <UatImpersonationBanner />
+          <main className="premium-main">{children}</main>
+        </div>
+      </UatImpersonationProvider>
     </div>
   );
 }

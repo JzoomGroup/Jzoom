@@ -29,6 +29,12 @@ export class LoginDto {
   password!: string;
 }
 
+export class StartUatImpersonationDto {
+  @ApiProperty({ type: String, format: "uuid" })
+  @IsUUID()
+  userId!: string;
+}
+
 export class PasswordResetRequestDto {
   @ApiProperty({ type: String, example: "person@example.com" })
   @IsEmail()

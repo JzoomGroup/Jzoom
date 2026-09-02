@@ -2,7 +2,14 @@ import type { ApiEnvironment } from "@jzoom/config";
 
 export interface AuthRuntimeEnvironment {
   nodeEnvironment: ApiEnvironment["nodeEnvironment"];
+  deploymentEnvironment: ApiEnvironment["deploymentEnvironment"];
   auth: ApiEnvironment["auth"];
+}
+
+export interface UatImpersonator {
+  userId: string;
+  email: string;
+  displayName: string;
 }
 
 export interface PrincipalScope {
@@ -26,6 +33,17 @@ export interface AuthenticatedPrincipal {
   permissions: string[];
   scopes: PrincipalScope[];
   assignedClientIds: string[];
+  impersonation?: UatImpersonator;
+}
+
+export interface UatImpersonationUser {
+  id: string;
+  email: string;
+  displayName: string;
+  userType: "INTERNAL" | "EXTERNAL";
+  roles: Array<{ code: string; name: string }>;
+  clients: Array<{ id: string; code: string; name: string }>;
+  lastLoginAt: string | null;
 }
 
 export interface RequestMetadata {

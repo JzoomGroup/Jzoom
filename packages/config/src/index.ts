@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const nodeEnvironmentSchema = z.enum(["development", "test", "production"]);
+const deploymentEnvironmentSchema = z.enum(["development", "test", "uat", "production"]);
 
 const databaseUrlSchema = z
   .string()
@@ -24,6 +25,7 @@ const optionalBooleanSchema = z
 const apiEnvironmentSchema = z
   .object({
     NODE_ENV: nodeEnvironmentSchema.default("development"),
+    DEPLOYMENT_ENVIRONMENT: deploymentEnvironmentSchema.optional(),
     API_PORT: z.coerce.number().int().min(1).max(65_535).default(4000),
     DATABASE_URL: databaseUrlSchema,
     OPENAPI_ENABLED: optionalBooleanSchema,
@@ -37,6 +39,8 @@ const apiEnvironmentSchema = z
     AUTH_MAX_LOGIN_ATTEMPTS: z.coerce.number().int().min(3).max(20).default(5),
     AUTH_LOCKOUT_MINUTES: z.coerce.number().int().min(1).max(1_440).default(15),
     AUTH_DEFAULT_TEMPORARY_PASSWORD: z.string().min(8).optional(),
+    AUTH_UAT_IMPERSONATION_ENABLED: optionalBooleanSchema,
+    AUTH_UAT_IMPERSONATION_TTL_MINUTES: z.coerce.number().int().min(5).max(240).default(60),
     BOOTSTRAP_ADMIN_EMAIL: z.string().trim().email().optional(),
     BOOTSTRAP_ADMIN_PASSWORD: z.string().min(8).optional(),
   })
@@ -59,6 +63,29 @@ const apiEnvironmentSchema = z
         path: ["AUTH_EXPOSE_TEST_TOKENS"],
       });
     }
+
+    const deploymentEnvironment =
+      environment.DEPLOYMENT_ENVIRONMENT ??
+      (environment.NODE_ENV === "production" ? "production" : environment.NODE_ENV);
+    if (environment.AUTH_UAT_IMPERSONATION_ENABLED === true && deploymentEnvironment !== "uat") {
+      context.addIssue({
+        code: "custom",
+        message: "AUTH_UAT_IMPERSONATION_ENABLED can only be enabled for the uat deployment",
+        path: ["AUTH_UAT_IMPERSONATION_ENABLED"],
+      });
+    }
+
+    if (
+      environment.AUTH_UAT_IMPERSONATION_ENABLED === true &&
+      environment.NODE_ENV === "production" &&
+      new URL(environment.WEB_ORIGIN).origin !== "https://uat-portal.jzoom.sa"
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "UAT impersonation requires the approved UAT web origin",
+        path: ["WEB_ORIGIN"],
+      });
+    }
   });
 
 const workerEnvironmentSchema = z.object({
@@ -75,6 +102,7 @@ const webEnvironmentSchema = z.object({
 
 export interface ApiEnvironment {
   nodeEnvironment: z.infer<typeof nodeEnvironmentSchema>;
+  deploymentEnvironment: z.infer<typeof deploymentEnvironmentSchema>;
   port: number;
   databaseUrl: string;
   openApiEnabled: boolean;
@@ -89,6 +117,9 @@ export interface ApiEnvironment {
     maxLoginAttempts: number;
     lockoutMinutes: number;
     defaultTemporaryPassword?: string;
+    uatImpersonationEnabled: boolean;
+    uatImpersonationTtlMinutes: number;
+    uatImpersonationCookieName: string;
   };
   bootstrapAdmin?: {
     email: string;
@@ -131,6 +162,9 @@ function parseWithSchema<T>(schema: z.ZodType<T>, input: NodeJS.ProcessEnv): T {
 
 export function parseApiEnvironment(input: NodeJS.ProcessEnv): ApiEnvironment {
   const environment = parseWithSchema(apiEnvironmentSchema, input);
+  const deploymentEnvironment =
+    environment.DEPLOYMENT_ENVIRONMENT ??
+    (environment.NODE_ENV === "production" ? "production" : environment.NODE_ENV);
   const bootstrapAdmin =
     environment.BOOTSTRAP_ADMIN_EMAIL && environment.BOOTSTRAP_ADMIN_PASSWORD
       ? {
@@ -141,6 +175,7 @@ export function parseApiEnvironment(input: NodeJS.ProcessEnv): ApiEnvironment {
 
   return {
     nodeEnvironment: environment.NODE_ENV,
+    deploymentEnvironment,
     port: environment.API_PORT,
     databaseUrl: environment.DATABASE_URL,
     openApiEnabled: environment.OPENAPI_ENABLED ?? environment.NODE_ENV !== ("production" as const),
@@ -158,6 +193,9 @@ export function parseApiEnvironment(input: NodeJS.ProcessEnv): ApiEnvironment {
       ...(environment.AUTH_DEFAULT_TEMPORARY_PASSWORD
         ? { defaultTemporaryPassword: environment.AUTH_DEFAULT_TEMPORARY_PASSWORD }
         : {}),
+      uatImpersonationEnabled: environment.AUTH_UAT_IMPERSONATION_ENABLED ?? false,
+      uatImpersonationTtlMinutes: environment.AUTH_UAT_IMPERSONATION_TTL_MINUTES,
+      uatImpersonationCookieName: `${environment.AUTH_COOKIE_NAME}_uat_admin_return`,
     },
     ...(bootstrapAdmin ? { bootstrapAdmin } : {}),
   };

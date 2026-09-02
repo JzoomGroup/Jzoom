@@ -1,11 +1,28 @@
-import { BadRequestException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { DatabaseService } from "../database/database.service.js";
 import { AccessService } from "./access.service.js";
-import { AUTH_ENVIRONMENT, temporaryPassword } from "./auth.constants.js";
+import {
+  ADMIN_ROLE_CODE,
+  AUTH_ENVIRONMENT,
+  MANAGE_USERS_PERMISSION,
+  temporaryPassword,
+} from "./auth.constants.js";
 import { AuthAuditService } from "./audit.service.js";
 import { PasswordHasherService } from "./password-hasher.service.js";
 import { TokenService } from "./token.service.js";
-import type { AuthRuntimeEnvironment, IssuedSession, RequestMetadata } from "./auth.types.js";
+import type {
+  AuthenticatedPrincipal,
+  AuthRuntimeEnvironment,
+  IssuedSession,
+  RequestMetadata,
+  UatImpersonationUser,
+} from "./auth.types.js";
 
 const GENERIC_LOGIN_ERROR = {
   code: "INVALID_CREDENTIALS",
@@ -87,10 +104,28 @@ export class AuthService {
     return session;
   }
 
-  async logout(sessionId: string, userId: string, metadata: RequestMetadata): Promise<void> {
-    await this.database.prisma.authSession.updateMany({
-      where: { id: sessionId, userId, revokedAt: null },
-      data: { revokedAt: new Date(), revokeReason: "logout" },
+  async logout(
+    sessionId: string,
+    userId: string,
+    metadata: RequestMetadata,
+    impersonator?: { sessionToken: string; userId: string },
+  ): Promise<void> {
+    const now = new Date();
+    await this.database.prisma.$transaction(async (transaction) => {
+      await transaction.authSession.updateMany({
+        where: { id: sessionId, userId, revokedAt: null },
+        data: { revokedAt: now, revokeReason: "logout" },
+      });
+      if (impersonator) {
+        await transaction.authSession.updateMany({
+          where: {
+            tokenHash: this.tokens.hash(impersonator.sessionToken),
+            userId: impersonator.userId,
+            revokedAt: null,
+          },
+          data: { revokedAt: now, revokeReason: "impersonation_logout" },
+        });
+      }
     });
     await this.audit.record(
       {
@@ -101,6 +136,189 @@ export class AuthService {
       },
       metadata,
     );
+  }
+
+  async listUatImpersonationUsers(
+    actor: AuthenticatedPrincipal,
+  ): Promise<{ users: UatImpersonationUser[] }> {
+    this.assertUatImpersonationAvailable();
+    this.assertUatAdmin(actor);
+    const now = new Date();
+    const users = await this.database.prisma.user.findMany({
+      where: {
+        id: { not: actor.userId },
+        status: "ACTIVE",
+        OR: [{ lockedUntil: null }, { lockedUntil: { lte: now } }],
+      },
+      orderBy: [{ displayName: "asc" }, { email: "asc" }],
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        userType: true,
+        lastLoginAt: true,
+        roles: {
+          where: { role: { status: "ACTIVE" } },
+          orderBy: { role: { sortOrder: "asc" } },
+          select: { role: { select: { code: true, name: true } } },
+        },
+        scopes: {
+          where: { clientId: { not: null } },
+          select: { client: { select: { id: true, code: true, name: true } } },
+        },
+        clientAssignments: {
+          where: {
+            startsAt: { lte: now },
+            OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+          },
+          select: { client: { select: { id: true, code: true, name: true } } },
+        },
+      },
+    });
+
+    return {
+      users: users.map((user) => {
+        const clients = new Map<string, { id: string; code: string; name: string }>();
+        for (const relation of [...user.scopes, ...user.clientAssignments]) {
+          if (relation.client) clients.set(relation.client.id, relation.client);
+        }
+        return {
+          id: user.id,
+          email: user.email,
+          displayName: user.displayName,
+          userType: user.userType,
+          roles: user.roles.map(({ role }) => role),
+          clients: [...clients.values()],
+          lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+        };
+      }),
+    };
+  }
+
+  async startUatImpersonation(
+    actor: AuthenticatedPrincipal,
+    targetUserId: string,
+    metadata: RequestMetadata,
+  ): Promise<IssuedSession> {
+    this.assertUatImpersonationAvailable();
+    this.assertUatAdmin(actor);
+    if (targetUserId === actor.userId) {
+      throw new BadRequestException({
+        code: "IMPERSONATION_TARGET_UNCHANGED",
+        message: "Choose a different user to start UAT impersonation",
+      });
+    }
+
+    const target = await this.database.prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { id: true, status: true, lockedUntil: true, sessionVersion: true },
+    });
+    if (
+      !target ||
+      target.status !== "ACTIVE" ||
+      (target.lockedUntil && target.lockedUntil > new Date())
+    ) {
+      throw new BadRequestException({
+        code: "IMPERSONATION_TARGET_UNAVAILABLE",
+        message: "The selected UAT user is unavailable",
+      });
+    }
+
+    const session = await this.issueSession(
+      target.id,
+      target.sessionVersion,
+      metadata,
+      Math.min(
+        this.environment.auth.uatImpersonationTtlMinutes,
+        this.environment.auth.sessionTtlMinutes,
+      ),
+    );
+    await this.audit.record(
+      {
+        actorId: actor.userId,
+        eventCode: "AUTH_UAT_IMPERSONATION_STARTED",
+        entityType: "User",
+        entityId: target.id,
+        after: {
+          effectiveUserId: target.id,
+          effectiveRoles: session.principal.roles,
+          impersonationSessionId: session.principal.sessionId,
+        },
+        reason: "UAT role workflow testing",
+        severity: "HIGH",
+      },
+      metadata,
+    );
+
+    return {
+      ...session,
+      principal: {
+        ...session.principal,
+        mustChangePassword: false,
+        impersonation: {
+          userId: actor.userId,
+          email: actor.email,
+          displayName: actor.displayName,
+        },
+      },
+    };
+  }
+
+  async stopUatImpersonation(
+    actor: AuthenticatedPrincipal,
+    impersonatorSessionToken: string | undefined,
+    metadata: RequestMetadata,
+  ): Promise<IssuedSession> {
+    this.assertUatImpersonationAvailable();
+    if (!actor.impersonation || !impersonatorSessionToken) {
+      throw new UnauthorizedException({
+        code: "IMPERSONATION_SESSION_INVALID",
+        message: "The UAT impersonation session is no longer valid",
+      });
+    }
+
+    const impersonator = await this.access.resolveSession(
+      this.tokens.hash(impersonatorSessionToken),
+    );
+    if (
+      !impersonator ||
+      impersonator.userId !== actor.impersonation.userId ||
+      !impersonator.roles.includes(ADMIN_ROLE_CODE) ||
+      !impersonator.permissions.includes(MANAGE_USERS_PERMISSION)
+    ) {
+      throw new UnauthorizedException({
+        code: "IMPERSONATION_SESSION_INVALID",
+        message: "The UAT impersonation session is no longer valid",
+      });
+    }
+
+    const restoredSession = await this.issueSession(
+      impersonator.userId,
+      impersonator.sessionVersion,
+      metadata,
+    );
+    const now = new Date();
+    await this.database.prisma.authSession.updateMany({
+      where: { id: { in: [actor.sessionId, impersonator.sessionId] }, revokedAt: null },
+      data: { revokedAt: now, revokeReason: "impersonation_completed" },
+    });
+    await this.audit.record(
+      {
+        actorId: impersonator.userId,
+        eventCode: "AUTH_UAT_IMPERSONATION_STOPPED",
+        entityType: "User",
+        entityId: actor.userId,
+        before: {
+          effectiveUserId: actor.userId,
+          impersonationSessionId: actor.sessionId,
+        },
+        after: { restoredAdminSessionId: restoredSession.principal.sessionId },
+        reason: "Returned to the UAT Admin session",
+        severity: "HIGH",
+      },
+      metadata,
+    );
+    return restoredSession;
   }
 
   async updatePreferredLocale(
@@ -379,10 +597,11 @@ export class AuthService {
     userId: string,
     sessionVersion: number,
     metadata: RequestMetadata,
+    ttlMinutes = this.environment.auth.sessionTtlMinutes,
   ): Promise<IssuedSession> {
     const sessionToken = this.tokens.issue();
     const csrfToken = this.tokens.issue();
-    const expiresAt = new Date(Date.now() + this.environment.auth.sessionTtlMinutes * 60_000);
+    const expiresAt = new Date(Date.now() + ttlMinutes * 60_000);
     const session = await this.database.prisma.authSession.create({
       data: {
         userId,
@@ -411,5 +630,30 @@ export class AuthService {
       code: "AUTH_TOKEN_INVALID",
       message: "The token is invalid or has expired",
     });
+  }
+
+  private assertUatImpersonationAvailable(): void {
+    if (
+      this.environment.deploymentEnvironment !== "uat" ||
+      !this.environment.auth.uatImpersonationEnabled
+    ) {
+      throw new NotFoundException({
+        code: "ROUTE_NOT_FOUND",
+        message: "The requested route was not found",
+      });
+    }
+  }
+
+  private assertUatAdmin(actor: AuthenticatedPrincipal): void {
+    if (
+      actor.impersonation ||
+      !actor.roles.includes(ADMIN_ROLE_CODE) ||
+      !actor.permissions.includes(MANAGE_USERS_PERMISSION)
+    ) {
+      throw new UnauthorizedException({
+        code: "UAT_IMPERSONATION_NOT_ALLOWED",
+        message: "UAT impersonation is not available for this session",
+      });
+    }
   }
 }

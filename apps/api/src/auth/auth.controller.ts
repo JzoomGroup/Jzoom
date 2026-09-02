@@ -10,6 +10,7 @@ import {
   Put,
   Req,
   Res,
+  UnauthorizedException,
 } from "@nestjs/common";
 import {
   ApiCookieAuth,
@@ -44,13 +45,20 @@ import {
   ReplaceRolePermissionsDto,
   ReplaceUserPermissionOverridesDto,
   ReplaceUserRolesDto,
+  StartUatImpersonationDto,
   UpdateAdminUserProfileDto,
   UpdateOperatingUserScopeDto,
   UpdateProfilePreferencesDto,
   UpdateUserStatusDto,
 } from "./auth.dto.js";
 import { AuthService } from "./auth.service.js";
-import { clearAuthCookies, setAuthCookies } from "./cookie.js";
+import {
+  clearAuthCookies,
+  clearUatImpersonationReturnCookie,
+  parseCookies,
+  setAuthCookies,
+  setUatImpersonationReturnCookie,
+} from "./cookie.js";
 import type { AuthRuntimeEnvironment, RequestMetadata } from "./auth.types.js";
 import type { RequestWithId } from "../request-context/request-with-id.js";
 
@@ -63,7 +71,15 @@ function metadata(request: RequestWithId): RequestMetadata {
   };
 }
 
-function publicPrincipal(principal: NonNullable<RequestWithId["auth"]>) {
+function publicPrincipal(
+  principal: NonNullable<RequestWithId["auth"]>,
+  uatImpersonationEnabled = false,
+) {
+  const canUseUatUserSwitcher =
+    uatImpersonationEnabled &&
+    !principal.impersonation &&
+    principal.roles.includes(ADMIN_ROLE_CODE) &&
+    principal.permissions.includes(MANAGE_USERS_PERMISSION);
   return {
     id: principal.userId,
     email: principal.email,
@@ -74,6 +90,17 @@ function publicPrincipal(principal: NonNullable<RequestWithId["auth"]>) {
     roles: principal.roles,
     permissions: principal.permissions,
     scopes: principal.scopes,
+    capabilities: { uatUserSwitcher: canUseUatUserSwitcher },
+    impersonation: principal.impersonation
+      ? {
+          active: true,
+          admin: {
+            id: principal.impersonation.userId,
+            email: principal.impersonation.email,
+            displayName: principal.impersonation.displayName,
+          },
+        }
+      : null,
   };
 }
 
@@ -89,6 +116,7 @@ function publicPrincipal(principal: NonNullable<RequestWithId["auth"]>) {
   ReplaceRolePermissionsDto,
   ReplaceUserPermissionOverridesDto,
   ReplaceUserRolesDto,
+  StartUatImpersonationDto,
   UpdateAdminUserProfileDto,
   UpdateOperatingUserScopeDto,
   UpdateProfilePreferencesDto,
@@ -112,6 +140,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ) {
     const session = await this.auth.login(input.email, input.password, metadata(request));
+    clearUatImpersonationReturnCookie(response, this.environment);
     setAuthCookies(
       response,
       this.environment,
@@ -121,7 +150,7 @@ export class AuthController {
     );
 
     return {
-      user: publicPrincipal(session.principal),
+      user: publicPrincipal(session.principal, this.environment.auth.uatImpersonationEnabled),
       expiresAt: session.expiresAt.toISOString(),
     };
   }
@@ -132,8 +161,22 @@ export class AuthController {
   @ApiCookieAuth()
   @ApiOperation({ summary: "Revoke the current session" })
   async logout(@Req() request: RequestWithId, @Res({ passthrough: true }) response: Response) {
-    await this.auth.logout(request.auth!.sessionId, request.auth!.userId, metadata(request));
+    const impersonatorSessionToken = parseCookies(request.headers.cookie)[
+      this.environment.auth.uatImpersonationCookieName
+    ];
+    await this.auth.logout(
+      request.auth!.sessionId,
+      request.auth!.userId,
+      metadata(request),
+      request.auth!.impersonation && impersonatorSessionToken
+        ? {
+            sessionToken: impersonatorSessionToken,
+            userId: request.auth!.impersonation.userId,
+          }
+        : undefined,
+    );
     clearAuthCookies(response, this.environment);
+    clearUatImpersonationReturnCookie(response, this.environment);
     return { loggedOut: true };
   }
 
@@ -142,7 +185,95 @@ export class AuthController {
   @ApiCookieAuth()
   @ApiOperation({ summary: "Return the authenticated profile and effective access" })
   me(@Req() request: RequestWithId) {
-    return { user: publicPrincipal(request.auth!) };
+    return {
+      user: publicPrincipal(request.auth!, this.environment.auth.uatImpersonationEnabled),
+    };
+  }
+
+  @Get("uat/impersonation/users")
+  @RequireRoles(ADMIN_ROLE_CODE)
+  @RequirePermissions(MANAGE_USERS_PERMISSION)
+  @ApiCookieAuth()
+  @ApiOperation({ summary: "List active UAT users available for role testing" })
+  listUatImpersonationUsers(@Req() request: RequestWithId) {
+    return this.auth.listUatImpersonationUsers(request.auth!);
+  }
+
+  @Post("uat/impersonation/start")
+  @HttpCode(200)
+  @RequireRoles(ADMIN_ROLE_CODE)
+  @RequirePermissions(MANAGE_USERS_PERMISSION)
+  @ApiCookieAuth()
+  @ApiOperation({ summary: "Start a short-lived UAT impersonation session" })
+  async startUatImpersonation(
+    @Body() input: StartUatImpersonationDto,
+    @Req() request: RequestWithId,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const originalSessionToken = parseCookies(request.headers.cookie)[
+      this.environment.auth.cookieName
+    ];
+    if (!originalSessionToken) {
+      throw new UnauthorizedException({
+        code: "AUTHENTICATION_REQUIRED",
+        message: "Authentication is required",
+      });
+    }
+    const session = await this.auth.startUatImpersonation(
+      request.auth!,
+      input.userId,
+      metadata(request),
+    );
+    setUatImpersonationReturnCookie(
+      response,
+      this.environment,
+      originalSessionToken,
+      session.expiresAt,
+    );
+    setAuthCookies(
+      response,
+      this.environment,
+      session.sessionToken,
+      session.csrfToken,
+      session.expiresAt,
+    );
+    return {
+      started: true,
+      user: publicPrincipal(session.principal, this.environment.auth.uatImpersonationEnabled),
+      expiresAt: session.expiresAt.toISOString(),
+    };
+  }
+
+  @Post("uat/impersonation/stop")
+  @HttpCode(200)
+  @AllowPasswordChangeRequired()
+  @ApiCookieAuth()
+  @ApiOperation({ summary: "Return from UAT impersonation to the original Admin" })
+  async stopUatImpersonation(
+    @Req() request: RequestWithId,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const impersonatorSessionToken = parseCookies(request.headers.cookie)[
+      this.environment.auth.uatImpersonationCookieName
+    ];
+    const session = await this.auth.stopUatImpersonation(
+      request.auth!,
+      impersonatorSessionToken,
+      metadata(request),
+    );
+    setAuthCookies(
+      response,
+      this.environment,
+      session.sessionToken,
+      session.csrfToken,
+      session.expiresAt,
+    );
+    clearUatImpersonationReturnCookie(response, this.environment);
+    return {
+      stopped: true,
+      user: publicPrincipal(session.principal, this.environment.auth.uatImpersonationEnabled),
+      expiresAt: session.expiresAt.toISOString(),
+    };
   }
 
   @Patch("me/preferences")
@@ -158,7 +289,10 @@ export class AuthController {
       metadata(request),
     );
     return {
-      user: publicPrincipal({ ...request.auth!, preferredLocale: input.preferredLocale }),
+      user: publicPrincipal(
+        { ...request.auth!, preferredLocale: input.preferredLocale },
+        this.environment.auth.uatImpersonationEnabled,
+      ),
     };
   }
 
@@ -175,7 +309,10 @@ export class AuthController {
       metadata(request),
     );
     return {
-      user: publicPrincipal({ ...request.auth!, mustChangePassword: false }),
+      user: publicPrincipal(
+        { ...request.auth!, mustChangePassword: false },
+        this.environment.auth.uatImpersonationEnabled,
+      ),
     };
   }
 

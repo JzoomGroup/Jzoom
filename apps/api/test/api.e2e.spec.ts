@@ -14,6 +14,7 @@ import { createOpenApiDocument } from "../src/swagger/openapi.js";
 
 const environment: ApiEnvironment = {
   nodeEnvironment: "test",
+  deploymentEnvironment: "test",
   port: 4000,
   databaseUrl: "postgresql://user:password@localhost:5432/jzoom",
   openApiEnabled: false,
@@ -26,6 +27,9 @@ const environment: ApiEnvironment = {
     exposeTestTokens: false,
     maxLoginAttempts: 5,
     lockoutMinutes: 15,
+    uatImpersonationEnabled: false,
+    uatImpersonationTtlMinutes: 60,
+    uatImpersonationCookieName: "jzoom_session_uat_admin_return",
   },
 };
 

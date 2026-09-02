@@ -122,6 +122,50 @@
     font-size: 10.5px;
   }
 
+  .premium-topbar-actions .uat-user-switcher-trigger {
+    grid-column: 1 / -1;
+  }
+
+  .uat-impersonation-banner {
+    position: static;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 9px;
+    padding: 10px 13px;
+  }
+
+  .uat-impersonation-banner strong,
+  .uat-impersonation-banner small,
+  .uat-impersonation-banner button {
+    max-width: none;
+    width: 100%;
+  }
+
+  .uat-impersonation-banner button {
+    justify-content: center;
+  }
+
+  .uat-switcher-filters {
+    inset-block-start: -14px;
+    grid-template-columns: 1fr;
+    margin: -14px -14px 0;
+    padding: 13px 14px;
+  }
+
+  .uat-switcher-quick-grid,
+  .uat-switcher-user-list {
+    grid-template-columns: 1fr;
+  }
+
+  .uat-switcher-user-card {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .uat-switcher-use-button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
   .premium-main {
     width: 100%;
     padding-block: 18px 28px;
