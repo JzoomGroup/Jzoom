@@ -22,6 +22,11 @@ export interface UatSessionUser extends CurrentUser {
   } | null;
 }
 
+export interface UatImpersonationDirectory {
+  users: UatImpersonationUser[];
+  recentUserIds: string[];
+}
+
 function cookieValue(name: string): string | undefined {
   return document.cookie
     .split(";")
@@ -56,13 +61,12 @@ export async function loadUatSession(): Promise<UatSessionUser> {
   return body.user;
 }
 
-export async function loadUatImpersonationUsers(): Promise<UatImpersonationUser[]> {
+export async function loadUatImpersonationUsers(): Promise<UatImpersonationDirectory> {
   const response = await fetch(`${apiBaseUrl}/auth/uat/impersonation/users`, {
     cache: "no-store",
     credentials: "include",
   });
-  const body = await responseBody<{ users: UatImpersonationUser[] }>(response);
-  return body.users;
+  return responseBody<UatImpersonationDirectory>(response);
 }
 
 export async function startUatImpersonation(userId: string): Promise<UatSessionUser> {

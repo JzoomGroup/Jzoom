@@ -140,7 +140,7 @@ export class AuthService {
 
   async listUatImpersonationUsers(
     actor: AuthenticatedPrincipal,
-  ): Promise<{ users: UatImpersonationUser[] }> {
+  ): Promise<{ users: UatImpersonationUser[]; recentUserIds: string[] }> {
     this.assertUatImpersonationAvailable();
     this.assertUatAdmin(actor);
     const now = new Date();
@@ -175,8 +175,31 @@ export class AuthService {
         },
       },
     });
+    const recentImpersonations = await this.database.prisma.auditLog.findMany({
+      where: {
+        actorId: actor.userId,
+        eventCode: "AUTH_UAT_IMPERSONATION_STARTED",
+        entityType: "User",
+        entityId: { not: null },
+      },
+      orderBy: { occurredAt: "desc" },
+      take: 50,
+      select: { entityId: true },
+    });
+    const availableUserIds = new Set(users.map((user) => user.id));
+    const recentUserIds = [
+      ...new Set(
+        recentImpersonations
+          .map((event) => event.entityId)
+          .filter(
+            (userId): userId is string =>
+              typeof userId === "string" && availableUserIds.has(userId),
+          ),
+      ),
+    ].slice(0, 6);
 
     return {
+      recentUserIds,
       users: users.map((user) => {
         const clients = new Map<string, { id: string; code: string; name: string }>();
         for (const relation of [...user.scopes, ...user.clientAssignments]) {

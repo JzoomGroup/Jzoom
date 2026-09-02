@@ -67,7 +67,10 @@ describe("UAT user switcher", () => {
 
   it("opens a searchable modal only when the API enables the UAT capability", async () => {
     mockedLoadSession.mockResolvedValue(admin);
-    mockedLoadUsers.mockResolvedValue(users);
+    mockedLoadUsers.mockResolvedValue({
+      users,
+      recentUserIds: ["specialist-1", "client-1"],
+    });
     renderTools();
 
     const trigger = await screen.findByRole("button", { name: "اختبار: UAT Admin" });
@@ -77,6 +80,12 @@ describe("UAT user switcher", () => {
     expect(userList).not.toBeNull();
     expect(within(userList!).getByText("عميل UAT التجريبي")).toBeVisible();
     expect(within(userList!).getByText("مختص UAT")).toBeVisible();
+    const recentAccounts = screen.getByText("آخر الحسابات المستخدمة").closest("section");
+    expect(recentAccounts).not.toBeNull();
+    const recentButtons = within(recentAccounts!).getAllByRole("button");
+    expect(recentButtons).toHaveLength(2);
+    expect(within(recentButtons[0]!).getByText("مختص UAT")).toBeVisible();
+    expect(within(recentButtons[1]!).getByText("عميل UAT التجريبي")).toBeVisible();
 
     fireEvent.change(screen.getByLabelText("البحث عن مستخدم"), {
       target: { value: "شركة الاختبار" },

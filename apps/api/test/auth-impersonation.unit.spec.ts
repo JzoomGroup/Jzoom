@@ -64,6 +64,9 @@ function setup(enabled = true) {
       }),
       updateMany: jest.fn<() => Promise<unknown>>().mockResolvedValue({ count: 2 }),
     },
+    auditLog: {
+      findMany: jest.fn<() => Promise<unknown[]>>().mockResolvedValue([]),
+    },
   };
   const target = principal({
     userId: "917f2731-29ab-48fe-aa9f-2914eb754dc8",
@@ -117,6 +120,52 @@ describe("UAT user impersonation", () => {
       NotFoundException,
     );
     expect(prisma.user.findMany).not.toHaveBeenCalled();
+  });
+
+  it("returns each Admin's most recently impersonated active users in order", async () => {
+    const { admin, prisma, service } = setup();
+    prisma.user.findMany.mockResolvedValueOnce([
+      {
+        id: "client-1",
+        email: "client@example.com",
+        displayName: "Client",
+        userType: "EXTERNAL",
+        lastLoginAt: null,
+        roles: [],
+        scopes: [],
+        clientAssignments: [],
+      },
+      {
+        id: "specialist-1",
+        email: "specialist@example.com",
+        displayName: "Specialist",
+        userType: "INTERNAL",
+        lastLoginAt: null,
+        roles: [],
+        scopes: [],
+        clientAssignments: [],
+      },
+    ]);
+    prisma.auditLog.findMany.mockResolvedValueOnce([
+      { entityId: "specialist-1" },
+      { entityId: "client-1" },
+      { entityId: "specialist-1" },
+      { entityId: "inactive-user" },
+      { entityId: null },
+    ]);
+
+    const result = await service.listUatImpersonationUsers(admin);
+
+    expect(result.recentUserIds).toEqual(["specialist-1", "client-1"]);
+    expect(prisma.auditLog.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          actorId: admin.userId,
+          eventCode: "AUTH_UAT_IMPERSONATION_STARTED",
+        }),
+        orderBy: { occurredAt: "desc" },
+      }),
+    );
   });
 
   it("issues a short-lived effective-user session without changing the target password", async () => {

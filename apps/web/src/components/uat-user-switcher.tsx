@@ -25,15 +25,6 @@ import {
 import { profileRoleLabel } from "../i18n/pages";
 import { AppDialog } from "./app-dialog";
 
-const quickRoleCodes = [
-  "ROLE-CLIENT",
-  "ROLE-SPECIALIST",
-  "ROLE-PROJECT-SPECIALIST",
-  "ROLE-SUPERVISOR",
-  "ROLE-AM",
-  "ROLE-MGMT",
-] as const;
-
 type SwitcherContextValue = {
   locale: SupportedLocale;
   session: UatSessionUser | null;
@@ -47,14 +38,6 @@ const SwitcherContext = createContext<SwitcherContextValue | null>(null);
 
 function useSwitcher() {
   return useContext(SwitcherContext);
-}
-
-function qaAccountScore(user: UatImpersonationUser): number {
-  const email = user.email.toLowerCase();
-  if (email.includes("staging.qa.")) return 0;
-  if (email.startsWith("demo.")) return 1;
-  if (email.includes("uat")) return 2;
-  return 3;
 }
 
 function roleCodes(user: UatImpersonationUser): string[] {
@@ -139,6 +122,7 @@ function SwitcherDialog({
   onClose,
   onRetry,
   onSwitch,
+  recentUserIds,
   users,
 }: {
   busyUserId: string | null;
@@ -148,6 +132,7 @@ function SwitcherDialog({
   onClose: () => void;
   onRetry: () => void;
   onSwitch: (user: UatImpersonationUser) => void;
+  recentUserIds: string[];
   users: UatImpersonationUser[];
 }) {
   const t = uatUserSwitcherCopy[locale];
@@ -163,17 +148,13 @@ function SwitcherDialog({
     users.flatMap((user) => user.clients).forEach((client) => clients.set(client.id, client));
     return [...clients.values()].sort((left, right) => left.name.localeCompare(right.name));
   }, [users]);
-  const quickUsers = useMemo(() => {
-    const used = new Set<string>();
-    return quickRoleCodes.flatMap((roleCode) => {
-      const user = users
-        .filter((candidate) => roleCodes(candidate).includes(roleCode) && !used.has(candidate.id))
-        .sort((left, right) => qaAccountScore(left) - qaAccountScore(right))[0];
-      if (!user) return [];
-      used.add(user.id);
-      return [{ roleCode, user }];
-    });
-  }, [users]);
+  const recentUsers = useMemo(() => {
+    const usersById = new Map(users.map((user) => [user.id, user]));
+    return recentUserIds
+      .map((userId) => usersById.get(userId))
+      .filter((user): user is UatImpersonationUser => Boolean(user))
+      .slice(0, 6);
+  }, [recentUserIds, users]);
   const filteredUsers = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase(locale === "ar" ? "ar" : "en");
     return users.filter((user) => {
@@ -245,7 +226,7 @@ function SwitcherDialog({
           </div>
         ) : null}
 
-        {!loading && !error && quickUsers.length > 0 ? (
+        {!loading && !error ? (
           <section className="uat-switcher-quick-section">
             <header>
               <div>
@@ -253,21 +234,29 @@ function SwitcherDialog({
                 <p>{t.quickAccountsDescription}</p>
               </div>
             </header>
-            <div className="uat-switcher-quick-grid">
-              {quickUsers.map(({ roleCode, user }) => (
-                <button
-                  key={roleCode}
-                  disabled={busyUserId !== null}
-                  type="button"
-                  onClick={() => onSwitch(user)}
-                >
-                  <span>{profileRoleLabel(roleCode, locale)}</span>
-                  <strong>{user.displayName}</strong>
-                  <small dir="ltr">{user.email}</small>
-                  <ArrowRightLeft aria-hidden="true" size={15} />
-                </button>
-              ))}
-            </div>
+            {recentUsers.length > 0 ? (
+              <div className="uat-switcher-quick-grid">
+                {recentUsers.map((user) => (
+                  <button
+                    key={user.id}
+                    disabled={busyUserId !== null}
+                    type="button"
+                    onClick={() => onSwitch(user)}
+                  >
+                    <span>
+                      {user.roles.length > 0
+                        ? user.roles.map((role) => profileRoleLabel(role.code, locale)).join("، ")
+                        : t.noRole}
+                    </span>
+                    <strong>{user.displayName}</strong>
+                    <small dir="ltr">{user.email}</small>
+                    <ArrowRightLeft aria-hidden="true" size={15} />
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="uat-switcher-recent-empty">{t.recentAccountsEmpty}</p>
+            )}
           </section>
         ) : null}
 
@@ -311,6 +300,7 @@ export function UatImpersonationProvider({
   const [session, setSession] = useState<UatSessionUser | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [users, setUsers] = useState<UatImpersonationUser[]>([]);
+  const [recentUserIds, setRecentUserIds] = useState<string[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
@@ -333,7 +323,9 @@ export function UatImpersonationProvider({
     setLoadingUsers(true);
     setLoadError(null);
     try {
-      setUsers(await loadUatImpersonationUsers());
+      const directory = await loadUatImpersonationUsers();
+      setUsers(directory.users);
+      setRecentUserIds(directory.recentUserIds);
     } catch {
       setLoadError(t.loadError);
     } finally {
@@ -391,6 +383,7 @@ export function UatImpersonationProvider({
           onClose={() => setDialogOpen(false)}
           onRetry={() => void loadUsers()}
           onSwitch={(user) => void switchUser(user)}
+          recentUserIds={recentUserIds}
           users={users}
         />
       ) : null}

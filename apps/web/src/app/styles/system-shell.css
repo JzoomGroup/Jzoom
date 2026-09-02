@@ -491,6 +491,16 @@ body {
   gap: 8px;
 }
 
+.uat-switcher-recent-empty {
+  margin: 0;
+  padding: 13px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 7px;
+  background: #f8fafc;
+  color: var(--polish-muted-strong);
+  font-size: 11px;
+}
+
 .uat-switcher-quick-grid button {
   position: relative;
   display: grid;
