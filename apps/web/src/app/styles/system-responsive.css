@@ -250,6 +250,50 @@
 }
 
 @media (max-width: 560px) {
+  .premium-topbar-actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .premium-topbar-actions:not(:has(a[href="/settings"])) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .premium-topbar-actions > * {
+    min-width: 0;
+  }
+
+  .premium-topbar-actions a,
+  .premium-topbar-actions button,
+  .premium-topbar .language-switcher-button {
+    width: 100%;
+    min-height: 42px;
+    gap: 3px;
+    padding-inline: 4px;
+    font-size: 10px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .premium-topbar-actions a svg,
+  .premium-topbar-actions button svg {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+  }
+
+  .premium-topbar-actions a span,
+  .premium-topbar-actions button span {
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+  }
+
+  .premium-topbar-actions > .language-switcher {
+    display: block;
+    width: 100%;
+  }
+
   .auth-stage {
     gap: 14px;
   }
