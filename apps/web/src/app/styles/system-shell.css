@@ -85,10 +85,9 @@ body {
   gap: 20px;
 }
 
-.auth-page-brand {
-  display: flex;
-  justify-content: center;
-  padding-inline: 18px;
+.auth-login-stage {
+  width: min(100%, 560px);
+  gap: 0;
 }
 
 .auth-page-logo {
@@ -98,8 +97,25 @@ body {
   object-fit: contain;
 }
 
+.auth-card-brand {
+  display: flex;
+  justify-content: center;
+  margin-block-end: 24px;
+  padding-block-end: 22px;
+  border-block-end: 1px solid var(--polish-line);
+}
+
 .auth-stage .auth-card {
   width: 100%;
+}
+
+.auth-stage .auth-login-card {
+  min-height: 610px;
+  padding: clamp(30px, 4vw, 42px);
+}
+
+.auth-login-card .auth-page-logo {
+  width: min(100%, 340px);
 }
 
 .premium-brand-mark {

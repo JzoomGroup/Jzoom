@@ -19,18 +19,18 @@ export default async function LoginPage({
   return (
     <main className="auth-shell" dir={directionForLocale(locale)} lang={htmlLangForLocale(locale)}>
       <LocaleDocumentSync locale={locale} />
-      <div className="auth-stage">
-        <div className="auth-page-brand">
-          <Image
-            alt="مجموعة جزوم لخدمات الأعمال - Jzoom Group Business Services"
-            className="auth-page-logo"
-            height={59}
-            priority
-            src="/branding/jzoom-wordmark.png"
-            width={308}
-          />
-        </div>
-        <section className="auth-card" aria-labelledby="login-title">
+      <div className="auth-stage auth-login-stage">
+        <section className="auth-card auth-login-card" aria-labelledby="login-title">
+          <div className="auth-card-brand">
+            <Image
+              alt="مجموعة جزوم لخدمات الأعمال - Jzoom Group Business Services"
+              className="auth-page-logo"
+              height={59}
+              priority
+              src="/branding/jzoom-wordmark.png"
+              width={308}
+            />
+          </div>
           <div className="auth-language-actions">
             <LanguageSwitcher locale={locale} persist="cookie" />
           </div>
