@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import type { ReactNode } from "react";
 import { directionForLocale, htmlLangForLocale } from "../lib/i18n";
 import { getRequestLocale } from "../lib/i18n-server";
+import { resolvePortalMetadataBase } from "../lib/site-metadata";
 import "./styles/globals-foundation.css";
 import "./styles/design-foundation.css";
 import "./styles/application-shell.css";
@@ -21,10 +23,43 @@ import "./styles/system-forms.css";
 import "./styles/system-workflows.css";
 import "./styles/system-responsive.css";
 
-export const metadata: Metadata = {
-  title: "Jzoom | منصة التشغيل",
-  description: "منصة جزوم لإدارة الخدمات والطلبات والمشاريع والمخرجات.",
-};
+const siteTitle = "Jzoom | منصة التشغيل";
+const siteDescription = "منصة جزوم لإدارة الخدمات والطلبات والمشاريع والمخرجات.";
+const socialPreviewPath = "/branding/jzoom-social-preview.png";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const requestHeaders = await headers();
+  const forwardedHost = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+
+  return {
+    metadataBase: resolvePortalMetadataBase(forwardedHost),
+    title: siteTitle,
+    description: siteDescription,
+    applicationName: "Jzoom",
+    openGraph: {
+      title: siteTitle,
+      description: siteDescription,
+      url: "/",
+      siteName: "Jzoom",
+      locale: "ar_SA",
+      type: "website",
+      images: [
+        {
+          url: socialPreviewPath,
+          width: 1200,
+          height: 630,
+          alt: "منصة جزوم للتشغيل",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: siteTitle,
+      description: siteDescription,
+      images: [socialPreviewPath],
+    },
+  };
+}
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   const locale = await getRequestLocale();
