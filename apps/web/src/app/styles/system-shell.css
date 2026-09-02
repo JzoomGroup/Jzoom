@@ -382,6 +382,22 @@ body {
   box-shadow: 0 8px 20px rgba(23, 32, 51, 0.1);
 }
 
+.auth-denied-stack {
+  display: grid;
+  width: min(760px, 100%);
+  gap: 14px;
+}
+
+.auth-denied-stack .auth-card {
+  margin-inline: auto;
+}
+
+.auth-denied-stack .uat-impersonation-banner {
+  position: static;
+  border: 1px solid rgba(255, 90, 77, 0.24);
+  border-radius: var(--radius-md);
+}
+
 .uat-switcher-dialog-content {
   display: grid;
   gap: 22px;
