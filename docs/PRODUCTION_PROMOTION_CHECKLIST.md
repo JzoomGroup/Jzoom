@@ -5,7 +5,7 @@ domains. It does not authorize deployment by itself.
 
 ## Approved Source
 
-- Source branch: `codex/premium-modular-os-staging2-preview`
+- Source branch and immutable commit: record the exact UAT candidate approved for each release.
 - Production target branch: `main`
 - Production web domain: `https://portal.jzoom.sa`
 - Production API domain: `https://api.jzoom.sa`
@@ -33,6 +33,13 @@ API variables must point only to production resources:
 - `AUTH_EXPOSE_TEST_TOKENS=false`
 - `OPENAPI_ENABLED=false`
 - `JZOOM_UPLOAD_ROOT`: persistent production upload storage.
+
+Worker variables must point to the same production database and be configured explicitly:
+
+- `DATABASE_URL`: the production database used by the API.
+- `WORKER_OUTBOX_ENABLED=true`
+- `WORKER_OUTBOX_POLL_INTERVAL_MS`, `WORKER_OUTBOX_BATCH_SIZE`,
+  `WORKER_OUTBOX_MAX_ATTEMPTS`, and `WORKER_OUTBOX_LEASE_MS`: reviewed operational values.
 
 Web variables must point only to production resources:
 
@@ -63,8 +70,10 @@ Web variables must point only to production resources:
 - Account manager portfolio.
 - Management dashboard.
 - File upload and download.
+- File signature/MIME mismatch rejection.
 - Output approval and return.
 - Audit/activity log creation.
+- Worker Outbox processing and protected Admin operations-health status.
 
 ## Rollback
 

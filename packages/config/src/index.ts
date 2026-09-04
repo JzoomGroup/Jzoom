@@ -90,7 +90,13 @@ const apiEnvironmentSchema = z
 
 const workerEnvironmentSchema = z.object({
   NODE_ENV: nodeEnvironmentSchema.default("development"),
+  DATABASE_URL: databaseUrlSchema,
   WORKER_NAME: z.string().trim().min(1).default("jzoom-worker"),
+  WORKER_OUTBOX_ENABLED: optionalBooleanSchema,
+  WORKER_OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().min(1_000).max(300_000).default(5_000),
+  WORKER_OUTBOX_BATCH_SIZE: z.coerce.number().int().min(1).max(100).default(20),
+  WORKER_OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(100).default(10),
+  WORKER_OUTBOX_LEASE_MS: z.coerce.number().int().min(5_000).max(900_000).default(30_000),
 });
 
 const webEnvironmentSchema = z.object({
@@ -129,7 +135,13 @@ export interface ApiEnvironment {
 
 export interface WorkerEnvironment {
   nodeEnvironment: z.infer<typeof nodeEnvironmentSchema>;
+  databaseUrl: string;
   workerName: string;
+  outboxEnabled: boolean;
+  outboxPollIntervalMs: number;
+  outboxBatchSize: number;
+  outboxMaxAttempts: number;
+  outboxLeaseMs: number;
 }
 
 export interface WebEnvironment {
@@ -206,7 +218,13 @@ export function parseWorkerEnvironment(input: NodeJS.ProcessEnv): WorkerEnvironm
 
   return {
     nodeEnvironment: environment.NODE_ENV,
+    databaseUrl: environment.DATABASE_URL,
     workerName: environment.WORKER_NAME,
+    outboxEnabled: environment.WORKER_OUTBOX_ENABLED ?? true,
+    outboxPollIntervalMs: environment.WORKER_OUTBOX_POLL_INTERVAL_MS,
+    outboxBatchSize: environment.WORKER_OUTBOX_BATCH_SIZE,
+    outboxMaxAttempts: environment.WORKER_OUTBOX_MAX_ATTEMPTS,
+    outboxLeaseMs: environment.WORKER_OUTBOX_LEASE_MS,
   };
 }
 

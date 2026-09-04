@@ -58,9 +58,9 @@ Implemented platform modules:
   invitation foundations, backend guards, role checks, permission checks, scope checks, and last
   Admin lockout prevention.
 - Admin Console: protected Admin shell for configuration and catalog administration.
-- Monthly services catalog: categories, services, service items, service levels/packages, package
-  inclusion, hours, rates, ordering, lifecycle status, archive/disable safety.
-- One-time services catalog: categories, services, paths/types, phases, deliverables, tasks, base
+- Monthly services catalog: services, service items, service levels/packages, package inclusion,
+  hours, rates, ordering, lifecycle status, archive/disable safety.
+- One-time services catalog: services, paths/types, phases, deliverables, tasks, base
   price, estimated hours, internal cost/rate inputs, duration, ordering, lifecycle status, archive
   safety.
 - Pricing Studio: rate cards, setup fees, margins, discounts, taxes, effective dates, versioning,
@@ -88,8 +88,8 @@ Implemented platform modules:
 - Hours ledger: time entries, approval/rejection, summaries by client/request/service/user/month,
   monthly usage, and monthly closing snapshots.
 - Monthly closing: closing drafts and finalized immutable monthly snapshots.
-- Notifications/outbox foundation: in-app notifications, read/unread state, outbox/event
-  foundation, external channels future-ready but not sending.
+- Notifications/outbox: in-app notifications, read/unread state, transactional Outbox creation,
+  worker claim/retry/acknowledgement, and external channels future-ready but not sending.
 - Monthly reports: internal report preparation and client-safe report views.
 - Account Manager portfolio: assigned clients, open requests, attention indicators, recent
   activity, simple health indicator.
@@ -107,8 +107,8 @@ Implemented platform modules:
 - Monorepo: pnpm workspace with apps and shared packages.
 - Web app: Next.js app in `apps/web`.
 - API app: NestJS REST API in `apps/api`.
-- Worker: NestJS worker scaffold in `apps/worker`; currently foundation-level with no external
-  channel sending.
+- Worker: NestJS Outbox processor in `apps/worker` with atomic claims, leases, bounded retries, and
+  structured batch logs; no external channel adapters are enabled.
 - Database: PostgreSQL.
 - ORM: Prisma 7, schema and migrations in `packages/database/prisma`.
 - Docker: Dockerfiles for API, web, and worker plus `compose.yaml` for local PostgreSQL/full stack.
@@ -136,7 +136,7 @@ Important folders:
 
 - `apps/web`: Next.js web app, routes, UI components, client-side API wrappers, web tests.
 - `apps/api`: NestJS REST API, auth, guards, controllers, services, OpenAPI generation, API tests.
-- `apps/worker`: Worker scaffold for future PDFs/imports/exports/notifications/outbox processing.
+- `apps/worker`: Outbox processing runtime and tests; future external delivery adapters belong here.
 - `packages/database`: Prisma schema, migrations, generated client, Excel V3 normalizer, seed
   pipeline, schema tests.
 - `packages/config`: environment validation for API, web, and worker.
@@ -155,28 +155,33 @@ Important folders:
 Use `.env.example` as the only committed example. Do not commit `.env`, `.env.production`, real
 passwords, tokens, keys, or connection strings.
 
-| Variable                            | Used by                  | Local                          | Staging/Production          | Purpose                                                                       |
-| ----------------------------------- | ------------------------ | ------------------------------ | --------------------------- | ----------------------------------------------------------------------------- |
-| `NODE_ENV`                          | API/web/worker           | `development`                  | `production`                | Runtime mode. Production changes defaults such as OpenAPI and secure cookies. |
-| `API_PORT`                          | API                      | `4000`                         | Deployment-defined          | API listen port.                                                              |
-| `DATABASE_URL`                      | API/database seed/Prisma | Required                       | Required secret             | PostgreSQL connection string.                                                 |
-| `OPENAPI_ENABLED`                   | API                      | `true`                         | Usually `false`             | Enables Swagger/OpenAPI UI outside production.                                |
-| `WEB_ORIGIN`                        | API                      | `http://localhost:3000`        | Staging/prod web URL        | CORS/cookie origin.                                                           |
-| `AUTH_SESSION_TTL_MINUTES`          | API                      | `480`                          | Security-defined            | Session lifetime.                                                             |
-| `AUTH_COOKIE_NAME`                  | API                      | `jzoom_session`                | Secure unique value allowed | Session cookie name.                                                          |
-| `AUTH_CSRF_COOKIE_NAME`             | API                      | `jzoom_csrf`                   | Match web config            | CSRF cookie name.                                                             |
-| `AUTH_COOKIE_SECURE`                | API                      | `false`                        | `true`                      | Secure cookies over HTTPS.                                                    |
-| `AUTH_EXPOSE_TEST_TOKENS`           | API                      | `false`                        | Must be `false`             | Test-only token exposure; blocked in production.                              |
-| `AUTH_MAX_LOGIN_ATTEMPTS`           | API                      | `5`                            | Security-defined            | Login attempt protection.                                                     |
-| `AUTH_LOCKOUT_MINUTES`              | API                      | `15`                           | Security-defined            | Lockout period.                                                               |
-| `BOOTSTRAP_ADMIN_EMAIL`             | API script only          | Optional one-time              | Optional one-time           | First Admin bootstrap email. Remove after use.                                |
-| `BOOTSTRAP_ADMIN_PASSWORD`          | API script only          | Optional one-time              | Optional one-time secret    | First Admin bootstrap password. Remove after use.                             |
-| `NEXT_PUBLIC_API_BASE_URL`          | Web                      | `http://localhost:4000/api/v1` | Public API URL              | Web-to-API base URL.                                                          |
-| `NEXT_PUBLIC_AUTH_CSRF_COOKIE_NAME` | Web                      | `jzoom_csrf`                   | Match API CSRF cookie       | Lets the web send the correct CSRF header.                                    |
-| `WORKER_NAME`                       | Worker                   | `jzoom-worker`                 | Deployment-defined          | Worker log/process name.                                                      |
-| `POSTGRES_DB`                       | Compose PostgreSQL       | `jzoom`                        | Local/Compose only          | Database name for Compose.                                                    |
-| `POSTGRES_USER`                     | Compose PostgreSQL       | `jzoom`                        | Local/Compose only          | Database user for Compose.                                                    |
-| `POSTGRES_PASSWORD`                 | Compose PostgreSQL       | local password                 | Secret                      | Compose PostgreSQL password.                                                  |
+| Variable                            | Used by             | Local                          | Staging/Production          | Purpose                                                                       |
+| ----------------------------------- | ------------------- | ------------------------------ | --------------------------- | ----------------------------------------------------------------------------- |
+| `NODE_ENV`                          | API/web/worker      | `development`                  | `production`                | Runtime mode. Production changes defaults such as OpenAPI and secure cookies. |
+| `API_PORT`                          | API                 | `4000`                         | Deployment-defined          | API listen port.                                                              |
+| `DATABASE_URL`                      | API/worker/database | Required                       | Required secret             | PostgreSQL connection string.                                                 |
+| `OPENAPI_ENABLED`                   | API                 | `true`                         | Usually `false`             | Enables Swagger/OpenAPI UI outside production.                                |
+| `WEB_ORIGIN`                        | API                 | `http://localhost:3000`        | Staging/prod web URL        | CORS/cookie origin.                                                           |
+| `AUTH_SESSION_TTL_MINUTES`          | API                 | `480`                          | Security-defined            | Session lifetime.                                                             |
+| `AUTH_COOKIE_NAME`                  | API                 | `jzoom_session`                | Secure unique value allowed | Session cookie name.                                                          |
+| `AUTH_CSRF_COOKIE_NAME`             | API                 | `jzoom_csrf`                   | Match web config            | CSRF cookie name.                                                             |
+| `AUTH_COOKIE_SECURE`                | API                 | `false`                        | `true`                      | Secure cookies over HTTPS.                                                    |
+| `AUTH_EXPOSE_TEST_TOKENS`           | API                 | `false`                        | Must be `false`             | Test-only token exposure; blocked in production.                              |
+| `AUTH_MAX_LOGIN_ATTEMPTS`           | API                 | `5`                            | Security-defined            | Login attempt protection.                                                     |
+| `AUTH_LOCKOUT_MINUTES`              | API                 | `15`                           | Security-defined            | Lockout period.                                                               |
+| `BOOTSTRAP_ADMIN_EMAIL`             | API script only     | Optional one-time              | Optional one-time           | First Admin bootstrap email. Remove after use.                                |
+| `BOOTSTRAP_ADMIN_PASSWORD`          | API script only     | Optional one-time              | Optional one-time secret    | First Admin bootstrap password. Remove after use.                             |
+| `NEXT_PUBLIC_API_BASE_URL`          | Web                 | `http://localhost:4000/api/v1` | Public API URL              | Web-to-API base URL.                                                          |
+| `NEXT_PUBLIC_AUTH_CSRF_COOKIE_NAME` | Web                 | `jzoom_csrf`                   | Match API CSRF cookie       | Lets the web send the correct CSRF header.                                    |
+| `WORKER_NAME`                       | Worker              | `jzoom-worker`                 | Deployment-defined          | Worker log/process name.                                                      |
+| `WORKER_OUTBOX_ENABLED`             | Worker              | `true`                         | `true`                      | Enables transactional Outbox processing.                                      |
+| `WORKER_OUTBOX_POLL_INTERVAL_MS`    | Worker              | `5000`                         | Reviewed value              | Delay between Outbox polling cycles.                                          |
+| `WORKER_OUTBOX_BATCH_SIZE`          | Worker              | `20`                           | Reviewed value              | Maximum candidate events per batch.                                           |
+| `WORKER_OUTBOX_MAX_ATTEMPTS`        | Worker              | `10`                           | Reviewed value              | Stops repeatedly failing events from looping forever.                         |
+| `WORKER_OUTBOX_LEASE_MS`            | Worker              | `30000`                        | Reviewed value              | Exclusive claim duration for one worker.                                      |
+| `POSTGRES_DB`                       | Compose PostgreSQL  | `jzoom`                        | Local/Compose only          | Database name for Compose.                                                    |
+| `POSTGRES_USER`                     | Compose PostgreSQL  | `jzoom`                        | Local/Compose only          | Database user for Compose.                                                    |
+| `POSTGRES_PASSWORD`                 | Compose PostgreSQL  | local password                 | Secret                      | Compose PostgreSQL password.                                                  |
 
 Local required variables:
 

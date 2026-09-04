@@ -32,12 +32,11 @@ date in the PR or release notes.
 
 ## Admin Console and configuration
 
-- [ ] Monthly service categories load from PostgreSQL.
-- [ ] Monthly services load from PostgreSQL.
+- [ ] Monthly services load from PostgreSQL without requiring category selection.
 - [ ] Service items load with package inclusion, hours, rates, ordering, and statuses.
 - [ ] Service levels/packages load and remain editable by Admin.
-- [ ] One-time categories and services load with phases, deliverables, tasks, pricing, hours, and
-      duration fields.
+- [ ] One-time services load without category selection and preserve phases, deliverables, tasks,
+      pricing, hours, and duration fields.
 - [ ] Archive/disable actions are non-destructive.
 - [ ] Platform settings are Admin-only and save through backend APIs.
 - [ ] Localization labels and business text templates are Admin-editable.
@@ -75,6 +74,8 @@ date in the PR or release notes.
 - [ ] Client users never see internal outputs, internal notes, internal review comments, or internal
       files.
 - [ ] Client users can upload requested documents only for their own organization’s requests.
+- [ ] Uploaded file signatures, extensions, and declared MIME types must agree; spoofed content is
+      rejected before storage.
 - [ ] Client reports show client-safe information only.
 
 ## Requests, queues, delivery, documents, and hours
@@ -101,6 +102,8 @@ date in the PR or release notes.
 
 - [ ] Notification list loads for authenticated users.
 - [ ] Read/unread status works.
+- [ ] Worker drains supported in-app Outbox events and records retries for failed events.
+- [ ] Admin operations health reports pending, ready, delayed, and last-processed Outbox activity.
 - [ ] Client users see only client-safe notifications.
 - [ ] Monthly report internal preparation view loads.
 - [ ] Published client reports are visible only to the owning client organization.

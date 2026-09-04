@@ -145,11 +145,23 @@ describe("PR 1 API foundation", () => {
     expect(response.headers["x-request-id"]).toBe(response.body.requestId);
   });
 
+  it("keeps operational queue health private to authenticated administrators", async () => {
+    const response = await request(app.getHttpServer())
+      .get("/api/v1/admin/operations-health")
+      .expect(401);
+
+    expect(response.body).toMatchObject({
+      code: "AUTHENTICATION_REQUIRED",
+      path: "/api/v1/admin/operations-health",
+    });
+  });
+
   it("documents health paths and the standard error schema", () => {
     const document = createOpenApiDocument(app);
 
     expect(document.paths["/api/v1/health/live"]).toBeDefined();
     expect(document.paths["/api/v1/health/ready"]).toBeDefined();
+    expect(document.paths["/api/v1/admin/operations-health"]).toBeDefined();
     expect(document.paths["/api/v1/admin/catalog/one-time"]).toBeDefined();
     expect(document.paths["/api/v1/services/one-time"]).toBeDefined();
     expect(document.paths["/api/v1/services/one-time/{id}/template"]).toBeDefined();

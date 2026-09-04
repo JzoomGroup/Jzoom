@@ -19,6 +19,7 @@ describe("FileStorageService", () => {
   const previousRoot = process.env.JZOOM_UPLOAD_ROOT;
   const previousMaxBytes = process.env.JZOOM_UPLOAD_MAX_BYTES;
   let root: string;
+  const pdf = Buffer.from("%PDF-1.7");
 
   beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), "jzoom-upload-test-"));
@@ -34,7 +35,7 @@ describe("FileStorageService", () => {
 
   it("stores request files with sanitized names, hashes, and readable content", async () => {
     const service = new FileStorageService();
-    const buffer = Buffer.from("contract");
+    const buffer = pdf;
 
     const stored = await service.storeRequestFile("request-1", "client-documents", {
       buffer,
@@ -61,7 +62,7 @@ describe("FileStorageService", () => {
 
   it("preserves Arabic letters in sanitized file names", async () => {
     const service = new FileStorageService();
-    const buffer = Buffer.from("arabic");
+    const buffer = pdf;
 
     const stored = await service.storeRequestFile("request-2", "attachments", {
       buffer,
@@ -175,11 +176,74 @@ describe("FileStorageService", () => {
 
     await expect(
       service.storeRequestFile("request-5", "attachments", {
-        buffer: Buffer.from("pdf"),
+        buffer: pdf,
         mimetype: "application/pdf",
         originalname: "document.pdf",
-        size: 3,
+        size: pdf.length,
       }),
     ).resolves.toEqual(expect.objectContaining({ mimeType: "application/pdf" }));
+  });
+
+  it("rejects files whose bytes do not match the declared MIME type", async () => {
+    const service = new FileStorageService();
+
+    await expect(
+      service.storeRequestFile("request-6", "attachments", {
+        buffer: Buffer.from("not-pdf"),
+        mimetype: "application/pdf",
+        originalname: "spoofed.pdf",
+        size: 7,
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: "FILE_CONTENT_MISMATCH" }),
+    });
+  });
+
+  it("rejects binary content disguised as an allowed text file", async () => {
+    const service = new FileStorageService();
+    const executable = Buffer.from("4d5a900003000000", "hex");
+
+    await expect(
+      service.storeRequestFile("request-7", "attachments", {
+        buffer: executable,
+        mimetype: "text/plain",
+        originalname: "payload.txt",
+        size: executable.length,
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: "FILE_CONTENT_MISMATCH" }),
+    });
+  });
+
+  it("rejects a valid file signature when the extension is misleading", async () => {
+    const service = new FileStorageService();
+
+    await expect(
+      service.storeRequestFile("request-8", "attachments", {
+        buffer: pdf,
+        mimetype: "application/pdf",
+        originalname: "document.txt",
+        size: pdf.length,
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: "FILE_CONTENT_MISMATCH" }),
+    });
+  });
+
+  it("accepts safe extension aliases reported by file signature detection", async () => {
+    process.env.JZOOM_UPLOAD_MAX_BYTES = "1024";
+    const service = new FileStorageService();
+    const jpeg = Buffer.from("ffd8ffe000104a4649460001", "hex");
+
+    await expect(
+      service.storeRequestFile("request-9", "attachments", {
+        buffer: jpeg,
+        mimetype: "image/jpeg",
+        originalname: "photo.jpeg",
+        size: jpeg.length,
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({ mimeType: "image/jpeg", originalName: "photo.jpeg" }),
+    );
   });
 });

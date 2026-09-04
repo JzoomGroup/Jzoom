@@ -11,7 +11,7 @@ export async function createWorkerApplication(
     json: true,
     timestamp: true,
   });
-  const app = await NestFactory.createApplicationContext(WorkerModule, {
+  const app = await NestFactory.createApplicationContext(WorkerModule.forRoot(environment), {
     logger,
   });
 
@@ -20,7 +20,7 @@ export async function createWorkerApplication(
     event: "worker_started",
     workerName: environment.workerName,
     environment: environment.nodeEnvironment,
-    jobsRegistered: 0,
+    jobsRegistered: environment.outboxEnabled ? 1 : 0,
   });
 
   return app;
