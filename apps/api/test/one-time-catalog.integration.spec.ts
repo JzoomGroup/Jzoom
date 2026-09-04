@@ -48,10 +48,9 @@ function csrfFrom(response: request.Response): string {
   return decodeURIComponent(csrfCookie.split(";", 1)[0]!.slice("jzoom_csrf=".length));
 }
 
-function servicePayload(categoryId: string) {
+function servicePayload() {
   return {
     code: "PR5-OT-SERVICE",
-    categoryId,
     serviceLine: "Build",
     status: "DRAFT",
     sortOrder: 1,
@@ -118,9 +117,6 @@ describeWithDatabase("PR 5 one-time catalog APIs", () => {
 
   async function cleanCatalogFixtures() {
     await database.oneTimeService.deleteMany({
-      where: { code: { startsWith: "PR5-" } },
-    });
-    await database.oneTimeServiceCategory.deleteMany({
       where: { code: { startsWith: "PR5-" } },
     });
   }
@@ -220,29 +216,17 @@ describeWithDatabase("PR 5 one-time catalog APIs", () => {
 
     const admin = await login("admin@pr5.test");
     const snapshot = await admin.agent.get("/api/v1/admin/catalog/one-time").expect(200);
-    expect(snapshot.body.categories.length).toBeGreaterThan(0);
+    expect(snapshot.body).not.toHaveProperty("categories");
     expect(snapshot.body.services.length).toBeGreaterThan(0);
     expect(snapshot.body.servicePaths).toEqual(["Build", "Digital"]);
   });
 
-  it("creates and revisions categories, services, phases, deliverables, and tasks", async () => {
+  it("creates and revisions services, phases, deliverables, and tasks", async () => {
     const admin = await login("admin@pr5.test");
-    const category = await admin.agent
-      .post("/api/v1/admin/catalog/one-time/categories")
-      .set("X-CSRF-Token", admin.csrf)
-      .send({
-        code: "PR5-CAT-BUILD",
-        nameAr: "بناء",
-        nameEn: "PR5 Build",
-        status: "ACTIVE",
-        sortOrder: 20,
-      })
-      .expect(201);
-
     const created = await admin.agent
       .post("/api/v1/services/one-time")
       .set("X-CSRF-Token", admin.csrf)
-      .send(servicePayload(category.body.id))
+      .send(servicePayload())
       .expect(201);
     expect(created.body.revision).toMatchObject({
       version: 1,
@@ -257,11 +241,11 @@ describeWithDatabase("PR 5 one-time catalog APIs", () => {
       sortOrder: _sortOrder,
       ...updatedPayload
     } = {
-      ...servicePayload(category.body.id),
+      ...servicePayload(),
       basePriceSar: 6500,
       durationDays: 25,
       phases: [
-        ...servicePayload(category.body.id).phases,
+        ...servicePayload().phases,
         {
           code: "PHASE-DELIVERY",
           nameAr: "التسليم",
@@ -312,31 +296,20 @@ describeWithDatabase("PR 5 one-time catalog APIs", () => {
 
   it("validates paths, template ownership, lifecycle transitions, and safe delete", async () => {
     const admin = await login("admin@pr5.test");
-    const category = await admin.agent
-      .post("/api/v1/admin/catalog/one-time/categories")
-      .set("X-CSRF-Token", admin.csrf)
-      .send({
-        code: "PR5-CAT-VALIDATION",
-        nameAr: "اختبار",
-        nameEn: "Validation",
-        status: "ACTIVE",
-      })
-      .expect(201);
-
     await admin.agent
       .post("/api/v1/services/one-time")
       .set("X-CSRF-Token", admin.csrf)
-      .send({ ...servicePayload(category.body.id), serviceLine: "Unknown" })
+      .send({ ...servicePayload(), serviceLine: "Unknown" })
       .expect(400);
 
     await admin.agent
       .post("/api/v1/services/one-time")
       .set("X-CSRF-Token", admin.csrf)
       .send({
-        ...servicePayload(category.body.id),
+        ...servicePayload(),
         deliverables: [
           {
-            ...servicePayload(category.body.id).deliverables[0],
+            ...servicePayload().deliverables[0],
             phaseCode: "PHASE-MISSING",
           },
         ],
@@ -346,7 +319,7 @@ describeWithDatabase("PR 5 one-time catalog APIs", () => {
     const created = await admin.agent
       .post("/api/v1/services/one-time")
       .set("X-CSRF-Token", admin.csrf)
-      .send(servicePayload(category.body.id))
+      .send(servicePayload())
       .expect(201);
     await admin.agent
       .patch(`/api/v1/services/one-time/${created.body.id}/status`)
@@ -376,25 +349,15 @@ describeWithDatabase("PR 5 one-time catalog APIs", () => {
 
   it("reorders services without assigning duplicate positions", async () => {
     const admin = await login("admin@pr5.test");
-    const category = await admin.agent
-      .post("/api/v1/admin/catalog/one-time/categories")
-      .set("X-CSRF-Token", admin.csrf)
-      .send({
-        code: "PR5-CAT-ORDER",
-        nameAr: "ترتيب",
-        nameEn: "Ordering",
-        status: "ACTIVE",
-      })
-      .expect(201);
     const first = await admin.agent
       .post("/api/v1/services/one-time")
       .set("X-CSRF-Token", admin.csrf)
-      .send({ ...servicePayload(category.body.id), code: "PR5-ORDER-A", sortOrder: 0 })
+      .send({ ...servicePayload(), code: "PR5-ORDER-A", sortOrder: 0 })
       .expect(201);
     await admin.agent
       .post("/api/v1/services/one-time")
       .set("X-CSRF-Token", admin.csrf)
-      .send({ ...servicePayload(category.body.id), code: "PR5-ORDER-B", sortOrder: 1 })
+      .send({ ...servicePayload(), code: "PR5-ORDER-B", sortOrder: 1 })
       .expect(201);
 
     await admin.agent
@@ -404,7 +367,7 @@ describeWithDatabase("PR 5 one-time catalog APIs", () => {
       .expect(200);
 
     const records = await database.oneTimeService.findMany({
-      where: { categoryId: category.body.id },
+      where: { code: { startsWith: "PR5-ORDER-" } },
       orderBy: { sortOrder: "asc" },
       select: { code: true, sortOrder: true },
     });
@@ -416,23 +379,10 @@ describeWithDatabase("PR 5 one-time catalog APIs", () => {
 
   it("exports complete templates and imports new services atomically in create-only mode", async () => {
     const admin = await login("admin@pr5.test");
-    await admin.agent
-      .post("/api/v1/admin/catalog/one-time/categories")
-      .set("X-CSRF-Token", admin.csrf)
-      .send({
-        code: "PR5-CAT-IMPORT",
-        nameAr: "استيراد",
-        nameEn: "Import",
-        status: "ACTIVE",
-      })
-      .expect(201);
-
-    const { categoryId: _categoryId, ...exportedService } = {
-      ...servicePayload("00000000-0000-4000-8000-000000000000"),
+    const exportedService = {
+      ...servicePayload(),
       code: "PR5-IMPORT-A",
-      categoryCode: "PR5-CAT-IMPORT",
     };
-    void _categoryId;
     const imported = await admin.agent
       .post("/api/v1/services/one-time/import")
       .set("X-CSRF-Token", admin.csrf)
@@ -460,9 +410,7 @@ describeWithDatabase("PR 5 one-time catalog APIs", () => {
     const exported = await admin.agent.get("/api/v1/services/one-time/export").expect(200);
     expect(exported.body).toMatchObject({ format: "jzoom-one-time-catalog", version: 1 });
     expect(exported.body.services).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: "PR5-IMPORT-A", categoryCode: "PR5-CAT-IMPORT" }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ code: "PR5-IMPORT-A" })]),
     );
 
     await admin.agent

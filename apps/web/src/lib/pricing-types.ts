@@ -71,9 +71,6 @@ export interface PricingClientCreateInput {
 export interface PricingMonthlyService {
   id: string;
   code: string;
-  categoryName: string;
-  categoryNameAr?: string;
-  categoryNameEn?: string;
   revision: {
     id: string;
     version: number;
@@ -96,9 +93,6 @@ export interface PricingOneTimeService {
   id: string;
   code: string;
   serviceLine: string;
-  categoryName: string;
-  categoryNameAr?: string;
-  categoryNameEn?: string;
   revision: {
     id: string;
     version: number;

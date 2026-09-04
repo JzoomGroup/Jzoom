@@ -39,12 +39,6 @@ function project(overrides: Partial<ProjectSummary> = {}): ProjectSummary {
       id: "service-1",
       code: "OT-BLD-002",
       serviceLine: "Build",
-      category: {
-        id: "category-1",
-        code: "BUILD",
-        nameAr: "البناء والتأسيس",
-        nameEn: "Build",
-      },
       revisionId: "revision-1",
       nameAr: "الرؤية والرسالة والقيم",
       nameEn: "Vision, mission, and values",

@@ -48,12 +48,6 @@ function snapshot(): RequestTemplatesSnapshot {
         monthlyService: {
           id: "service-1",
           code: "MS-HR",
-          category: {
-            id: "category-1",
-            code: "HR",
-            nameAr: "الموارد البشرية",
-            nameEn: "Human resources",
-          },
           revisions: [{ nameAr: "الموارد البشرية", nameEn: "Human resources" }],
         },
         latestRevision: {

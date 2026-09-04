@@ -22,7 +22,8 @@ test("keeps the refactored Admin access and catalog screens intact", async ({ pa
     { path: "/admin/roles", heading: "الأدوار" },
     { path: "/admin/permissions", heading: "مركز إدارة الصلاحيات" },
     { path: "/admin/audit-logs", heading: "سجل التدقيق" },
-    { path: "/admin/catalog/categories", heading: "تصنيفات الخدمات" },
+    { path: "/admin/catalog/monthly-services", heading: "الخدمات الشهرية" },
+    { path: "/admin/catalog/one-time-services", heading: "خدمات المرة الواحدة" },
   ] as const;
 
   for (const screen of screens) {

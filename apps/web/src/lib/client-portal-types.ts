@@ -22,13 +22,6 @@ export interface ClientPortalClient {
   authorizedApprover: string | null;
 }
 
-export interface ClientPortalServiceCategory {
-  id: string;
-  code: string;
-  nameAr: string;
-  nameEn: string;
-}
-
 export interface ClientPortalSubscribedMonthlyService {
   id: string;
   subscriptionId: string;
@@ -51,7 +44,6 @@ export interface ClientPortalSubscribedMonthlyService {
     serviceLine: string;
     domain: string;
     description: string;
-    category: ClientPortalServiceCategory;
   };
   serviceLevel: {
     id: string;
@@ -73,7 +65,6 @@ export interface ClientPortalSubscribedMonthlyService {
 export interface ClientPortalAvailableMonthlyService {
   id: string;
   code: string;
-  category: ClientPortalServiceCategory;
   revisionId: string;
   nameAr: string;
   nameEn: string;
@@ -85,7 +76,6 @@ export interface ClientPortalAvailableMonthlyService {
 export interface ClientPortalAvailableOneTimeService {
   id: string;
   code: string;
-  category: ClientPortalServiceCategory;
   revisionId: string;
   nameAr: string;
   nameEn: string;

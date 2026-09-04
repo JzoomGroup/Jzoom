@@ -1,7 +1,5 @@
-import { OneTimeCatalogPage } from "../../../../components/one-time-catalog/one-time-catalog-page";
+import { redirect } from "next/navigation";
 
 export default function OneTimeCategoriesPage() {
-  return (
-    <OneTimeCatalogPage section="categories" activePath="/admin/catalog/one-time-categories" />
-  );
+  redirect("/admin/catalog/one-time-services");
 }

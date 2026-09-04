@@ -2,7 +2,7 @@
 
 import { oneTimeServiceManagerCopy as copy } from "../../i18n/dictionaries/catalog";
 
-import { useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { Download, PencilLine, Upload } from "lucide-react";
 import {
   exportOneTimeCatalog,
@@ -18,7 +18,7 @@ import type {
 } from "../../lib/one-time-catalog-types";
 import type { CatalogStatus } from "../../lib/catalog-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
-import { localizedCatalogLabel, localizedDescription } from "../../lib/localized-content";
+import { localizedDescription } from "../../lib/localized-content";
 import {
   CatalogFeedback,
   EmptyState,
@@ -109,20 +109,6 @@ function nextCode(prefix: string, count: number): string {
   return `${prefix}-${String(count + 1).padStart(2, "0")}`;
 }
 
-const statusLabels = {
-  ACTIVE: { ar: "نشط", en: "Active" },
-  ARCHIVED: { ar: "مؤرشف", en: "Archived" },
-  DRAFT: { ar: "مسودة", en: "Draft" },
-  INACTIVE: { ar: "غير نشط", en: "Inactive" },
-} satisfies Record<CatalogStatus, Record<SupportedLocale, string>>;
-
-function localizedCategoryName(
-  category: { nameAr: string; nameEn: string; code?: string },
-  locale: SupportedLocale,
-): string {
-  return localizedCatalogLabel(category, locale);
-}
-
 function localizedServiceName(service: OneTimeService, locale: SupportedLocale): string {
   return locale === "ar"
     ? service.revision?.nameAr || service.revision?.nameEn || service.code
@@ -166,7 +152,6 @@ export function OneTimeServiceManager({
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [editing, setEditing] = useState<OneTimeService | null>(null);
   const [creating, setCreating] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [phases, setPhases] = useState<EditablePhase[]>([]);
   const [deliverables, setDeliverables] = useState<EditableDeliverable[]>([]);
   const [transferBusy, setTransferBusy] = useState<"export" | "import" | null>(null);
@@ -174,13 +159,6 @@ export function OneTimeServiceManager({
   const [transferSuccess, setTransferSuccess] = useState<string>();
   const importInputRef = useRef<HTMLInputElement>(null);
   const mutation = useCatalogMutation(setSnapshot, refreshOneTimeCatalog);
-  const visibleServices = useMemo(
-    () =>
-      snapshot.services.filter(
-        (service) => categoryFilter === "ALL" || service.categoryId === categoryFilter,
-      ),
-    [categoryFilter, snapshot.services],
-  );
   const activeServices = snapshot.services.filter((service) => service.status === "ACTIVE").length;
   const pricingVisibleServices = snapshot.services.filter(
     (service) => service.revision?.visibleInPricing,
@@ -387,7 +365,6 @@ export function OneTimeServiceManager({
             sortOrder: Number(form.get("sortOrder") ?? 0),
           }
         : {}),
-      categoryId: String(form.get("categoryId") ?? ""),
       serviceLine: String(form.get("serviceLine") ?? ""),
       nameAr: String(form.get("nameAr") ?? "").trim(),
       nameEn: String(form.get("nameEn") ?? "").trim(),
@@ -522,22 +499,6 @@ export function OneTimeServiceManager({
                 />
               </label>
             ) : null}
-            <label>
-              {t.category}
-              <select name="categoryId" required defaultValue={editing?.categoryId ?? ""}>
-                <option value="" disabled>
-                  {t.selectCategory}
-                </option>
-                {snapshot.categories
-                  .filter((category) => category.status !== "ARCHIVED")
-                  .map((category) => (
-                    <option value={category.id} key={category.id}>
-                      {localizedCategoryName(category, locale)} -{" "}
-                      {statusLabels[category.status][locale]}
-                    </option>
-                  ))}
-              </select>
-            </label>
             <label>
               {t.serviceLine}
               <select
@@ -1039,31 +1000,12 @@ export function OneTimeServiceManager({
         </AppDialog>
       ) : null}
 
-      <SectionCard
-        title={t.configuredServices}
-        description={t.records(snapshot.services.length)}
-        action={
-          <label className="compact-filter">
-            {t.category}
-            <select
-              value={categoryFilter}
-              onChange={(event) => setCategoryFilter(event.target.value)}
-            >
-              <option value="ALL">{t.allCategories}</option>
-              {snapshot.categories.map((category) => (
-                <option value={category.id} key={category.id}>
-                  {localizedCategoryName(category, locale)}
-                </option>
-              ))}
-            </select>
-          </label>
-        }
-      >
-        {visibleServices.length === 0 ? (
+      <SectionCard title={t.configuredServices} description={t.records(snapshot.services.length)}>
+        {snapshot.services.length === 0 ? (
           <EmptyState>{t.noServices}</EmptyState>
         ) : (
           <div className="one-time-service-grid">
-            {visibleServices.map((service) => {
+            {snapshot.services.map((service) => {
               const revision = service.revision;
               const deliverableCount = revision?.deliverables.length ?? 0;
               const phasesCount = revision?.phases.length ?? 0;
@@ -1077,8 +1019,7 @@ export function OneTimeServiceManager({
                     </span>
                     <div className="one-time-service-card-title">
                       <small>
-                        {service.code} - {t.servicePath(service.serviceLine)} -{" "}
-                        {localizedCategoryName(service.category, locale)}
+                        {service.code} - {t.servicePath(service.serviceLine)}
                       </small>
                       <h3>{localizedServiceName(service, locale)}</h3>
                       {locale === "en" && revision?.nameAr ? (

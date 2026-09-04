@@ -6,7 +6,6 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   Bell,
-  Blocks,
   BriefcaseBusiness,
   Building2,
   Calculator,
@@ -118,12 +117,6 @@ const adminNavigation: NavItem[] = [
     sectionEn: "Services & packages",
   },
   {
-    href: "/admin/catalog/categories",
-    icon: Blocks,
-    labelAr: "تصنيفات شهرية",
-    labelEn: "Monthly categories",
-  },
-  {
     href: "/admin/catalog/monthly-services",
     icon: BriefcaseBusiness,
     labelAr: "الخدمات الشهرية",
@@ -140,12 +133,6 @@ const adminNavigation: NavItem[] = [
     icon: ClipboardCheck,
     labelAr: "الباقات",
     labelEn: "Packages",
-  },
-  {
-    href: "/admin/catalog/one-time-categories",
-    icon: Blocks,
-    labelAr: "تصنيفات لمرة واحدة",
-    labelEn: "One-time categories",
   },
   {
     href: "/admin/catalog/one-time-services",
@@ -473,11 +460,9 @@ const adminOnlyAdminPaths = new Set([
   "/admin/roles",
   "/admin/permissions",
   "/admin/catalog",
-  "/admin/catalog/categories",
   "/admin/catalog/monthly-services",
   "/admin/catalog/service-items",
   "/admin/catalog/service-levels",
-  "/admin/catalog/one-time-categories",
   "/admin/catalog/one-time-services",
   "/admin/request-templates",
   "/admin/pricing-rules",

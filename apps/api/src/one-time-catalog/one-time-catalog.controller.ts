@@ -19,7 +19,6 @@ import { MANAGE_ONE_TIME_SERVICES_PERMISSION } from "./one-time-catalog.constant
 import {
   ArchiveCatalogEntryDto,
   CatalogStatusDto,
-  CreateOneTimeCategoryDto,
   CreateOneTimeServiceDto,
   ImportOneTimeCatalogDto,
   OneTimeDeliverableDto,
@@ -27,7 +26,6 @@ import {
   OneTimeTaskDto,
   OneTimeTemplateDto,
   ReorderCatalogEntryDto,
-  UpdateOneTimeCategoryDto,
   UpdateOneTimeServiceDto,
 } from "./one-time-catalog.dto.js";
 import { OneTimeCatalogService } from "./one-time-catalog.service.js";
@@ -44,7 +42,6 @@ function metadata(request: RequestWithId): RequestMetadata {
 const documentedModels = [
   ArchiveCatalogEntryDto,
   CatalogStatusDto,
-  CreateOneTimeCategoryDto,
   CreateOneTimeServiceDto,
   ImportOneTimeCatalogDto,
   OneTimeDeliverableDto,
@@ -52,7 +49,6 @@ const documentedModels = [
   OneTimeTaskDto,
   OneTimeTemplateDto,
   ReorderCatalogEntryDto,
-  UpdateOneTimeCategoryDto,
   UpdateOneTimeServiceDto,
 ] as const;
 
@@ -72,69 +68,6 @@ export class AdminOneTimeCatalogController {
   @ApiOperation({ summary: "Return the complete Admin one-time catalog snapshot" })
   getSnapshot() {
     return this.catalog.getSnapshot();
-  }
-
-  @Post("categories")
-  createCategory(@Body() input: CreateOneTimeCategoryDto, @Req() request: RequestWithId) {
-    return this.catalog.createCategory(input, request.auth!.userId, metadata(request));
-  }
-
-  @Put("categories/:id")
-  updateCategory(
-    @Param("id") id: string,
-    @Body() input: UpdateOneTimeCategoryDto,
-    @Req() request: RequestWithId,
-  ) {
-    return this.catalog.updateCategory(id, input, request.auth!.userId, metadata(request));
-  }
-
-  @Patch("categories/:id/status")
-  changeCategoryStatus(
-    @Param("id") id: string,
-    @Body() input: CatalogStatusDto,
-    @Req() request: RequestWithId,
-  ) {
-    return this.catalog.changeCategoryStatus(
-      id,
-      input.status,
-      input.reason,
-      request.auth!.userId,
-      metadata(request),
-    );
-  }
-
-  @Patch("categories/:id/order")
-  reorderCategory(
-    @Param("id") id: string,
-    @Body() input: ReorderCatalogEntryDto,
-    @Req() request: RequestWithId,
-  ) {
-    return this.catalog.reorderCategory(
-      id,
-      input.sortOrder,
-      request.auth!.userId,
-      metadata(request),
-    );
-  }
-
-  @Post("categories/:id/archive")
-  archiveCategory(
-    @Param("id") id: string,
-    @Body() input: ArchiveCatalogEntryDto,
-    @Req() request: RequestWithId,
-  ) {
-    return this.catalog.changeCategoryStatus(
-      id,
-      "ARCHIVED",
-      input.reason,
-      request.auth!.userId,
-      metadata(request),
-    );
-  }
-
-  @Delete("categories/:id")
-  deleteCategory() {
-    return this.catalog.rejectDelete();
   }
 }
 

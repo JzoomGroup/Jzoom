@@ -16,7 +16,7 @@ import {
   MinLength,
   ValidateNested,
 } from "class-validator";
-import { ApiProperty, ApiPropertyOptional, OmitType } from "@nestjs/swagger";
+import { ApiHideProperty, ApiProperty, ApiPropertyOptional, OmitType } from "@nestjs/swagger";
 import {
   ArchiveCatalogEntryDto,
   CatalogStatusDto,
@@ -28,49 +28,6 @@ import { CATALOG_CODE_PATTERN } from "../catalog-admin/catalog.constants.js";
 import { ONE_TIME_SERVICE_PATHS } from "./one-time-catalog.constants.js";
 
 export { ArchiveCatalogEntryDto, CatalogStatusDto, ReorderCatalogEntryDto };
-
-class OneTimeCategoryFieldsDto {
-  @ApiProperty({ type: String })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(160)
-  nameAr!: string;
-
-  @ApiProperty({ type: String })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(160)
-  nameEn!: string;
-
-  @ApiPropertyOptional({ type: String })
-  @IsOptional()
-  @IsString()
-  @MaxLength(2_000)
-  description?: string;
-}
-
-export class CreateOneTimeCategoryDto extends OneTimeCategoryFieldsDto {
-  @ApiProperty({ type: String, example: "OT-CAT-BUILD" })
-  @IsString()
-  @Matches(CATALOG_CODE_PATTERN)
-  @MaxLength(60)
-  code!: string;
-
-  @ApiPropertyOptional({ enum: ["DRAFT", "ACTIVE"], default: "DRAFT" })
-  @IsOptional()
-  @IsIn(["DRAFT", "ACTIVE"])
-  status?: "DRAFT" | "ACTIVE";
-
-  @ApiPropertyOptional({ type: Number, default: 0 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(100_000)
-  sortOrder?: number;
-}
-
-export class UpdateOneTimeCategoryDto extends OneTimeCategoryFieldsDto {}
 
 export class OneTimePhaseDto {
   @ApiProperty({ type: String, example: "PHASE-DISCOVERY" })
@@ -247,9 +204,10 @@ export class OneTimeTemplateDto {
 }
 
 class OneTimeServiceFieldsDto extends OneTimeTemplateDto {
-  @ApiProperty({ type: String, format: "uuid" })
+  @ApiHideProperty()
+  @IsOptional()
   @IsUUID()
-  categoryId!: string;
+  categoryId?: string;
 
   @ApiProperty({ enum: ONE_TIME_SERVICE_PATHS })
   @IsIn(ONE_TIME_SERVICE_PATHS)
@@ -344,11 +302,12 @@ export class ImportOneTimeServiceDto extends OmitType(OneTimeServiceFieldsDto, [
   @MaxLength(80)
   code!: string;
 
-  @ApiProperty({ type: String, example: "OT-CAT-BUILD" })
+  @ApiHideProperty()
+  @IsOptional()
   @IsString()
   @Matches(CATALOG_CODE_PATTERN)
   @MaxLength(60)
-  categoryCode!: string;
+  categoryCode?: string;
 
   @ApiProperty({ enum: catalogStatuses })
   @IsIn(catalogStatuses)

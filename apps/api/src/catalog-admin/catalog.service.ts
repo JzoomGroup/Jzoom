@@ -10,16 +10,14 @@ import { DatabaseService } from "../database/database.service.js";
 import { AuthAuditService } from "../auth/audit.service.js";
 import type { RequestMetadata } from "../auth/auth.types.js";
 import { buildDefaultServiceItemRequestTemplate } from "../request-templates/request-template-defaults.js";
-import { CATALOG_EVENT } from "./catalog.constants.js";
+import { CATALOG_EVENT, MONTHLY_SERVICE_COMPATIBILITY_CATEGORY } from "./catalog.constants.js";
 import type {
   CatalogLifecycleStatus,
-  CreateMonthlyCategoryDto,
   CreateMonthlyServiceDto,
   CreateServiceItemDto,
   CreateServiceLevelDto,
   ServiceItemInclusionDto,
   ServiceLevelConfigDto,
-  UpdateMonthlyCategoryDto,
   UpdateMonthlyServiceDto,
   UpdateServiceItemDto,
   UpdateServiceLevelDto,
@@ -101,18 +99,13 @@ export class CatalogService {
   ) {}
 
   async getSnapshot() {
-    const [categories, levels, services, items] = await Promise.all([
-      this.database.prisma.monthlyServiceCategory.findMany({
-        orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
-        include: { _count: { select: { services: true } } },
-      }),
+    const [levels, services, items] = await Promise.all([
       this.database.prisma.serviceLevel.findMany({
         orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
       }),
       this.database.prisma.monthlyService.findMany({
         orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
         include: {
-          category: true,
           revisions: {
             orderBy: { version: "desc" },
             take: 1,
@@ -156,17 +149,6 @@ export class CatalogService {
     ]);
 
     return {
-      categories: categories.map((category) => ({
-        id: category.id,
-        code: category.code,
-        nameAr: category.nameAr,
-        nameEn: category.nameEn,
-        description: category.description,
-        status: toLifecycleStatus(category.status),
-        sortOrder: category.sortOrder,
-        serviceCount: category._count.services,
-        archivedAt: category.archivedAt?.toISOString() ?? null,
-      })),
       levels: levels.map((level) => ({
         id: level.id,
         code: level.code,
@@ -185,13 +167,6 @@ export class CatalogService {
         const revision = service.revisions[0];
         return {
           id: service.id,
-          categoryId: service.categoryId,
-          category: {
-            id: service.category.id,
-            code: service.category.code,
-            nameAr: service.category.nameAr,
-            nameEn: service.category.nameEn,
-          },
           code: service.code,
           externalId: service.externalId,
           status: toLifecycleStatus(service.status),
@@ -277,141 +252,6 @@ export class CatalogService {
     };
   }
 
-  async createCategory(
-    input: CreateMonthlyCategoryDto,
-    actorId: string,
-    metadata: RequestMetadata,
-  ) {
-    const code = input.code.trim().toUpperCase();
-    await this.assertCodeAvailable("category", code);
-
-    try {
-      const category = await this.database.prisma.monthlyServiceCategory.create({
-        data: {
-          code,
-          nameAr: input.nameAr.trim(),
-          nameEn: input.nameEn.trim(),
-          description: input.description?.trim() || null,
-          status: input.status ?? "DRAFT",
-          sortOrder: input.sortOrder ?? 0,
-        },
-      });
-      const after = this.categoryAuditView(category);
-      await this.audit.record(
-        {
-          actorId,
-          eventCode: CATALOG_EVENT.categoryCreated,
-          entityType: "MonthlyServiceCategory",
-          entityId: category.id,
-          after,
-        },
-        metadata,
-      );
-      return after;
-    } catch (error) {
-      if (isUniqueConstraintError(error)) {
-        throw duplicateCode();
-      }
-      throw error;
-    }
-  }
-
-  async updateCategory(
-    id: string,
-    input: UpdateMonthlyCategoryDto,
-    actorId: string,
-    metadata: RequestMetadata,
-  ) {
-    const existing = await this.requireCategory(id);
-    this.assertNotArchived(existing.status);
-    const before = this.categoryAuditView(existing);
-    const category = await this.database.prisma.monthlyServiceCategory.update({
-      where: { id },
-      data: {
-        nameAr: input.nameAr.trim(),
-        nameEn: input.nameEn.trim(),
-        description: input.description?.trim() || null,
-      },
-    });
-    const after = this.categoryAuditView(category);
-    await this.audit.record(
-      {
-        actorId,
-        eventCode: CATALOG_EVENT.categoryUpdated,
-        entityType: "MonthlyServiceCategory",
-        entityId: id,
-        before,
-        after,
-      },
-      metadata,
-    );
-    return after;
-  }
-
-  async changeCategoryStatus(
-    id: string,
-    status: CatalogLifecycleStatus,
-    reason: string | undefined,
-    actorId: string,
-    metadata: RequestMetadata,
-  ) {
-    const existing = await this.requireCategory(id);
-    const target = toDatabaseStatus(status);
-    assertTransition(existing.status, target);
-    requireReason(target, reason);
-    if (target !== "ACTIVE") {
-      const activeServices = await this.database.prisma.monthlyService.count({
-        where: { categoryId: id, status: "ACTIVE" },
-      });
-      if (activeServices > 0) {
-        throw new ConflictException({
-          code: "CATEGORY_HAS_ACTIVE_SERVICES",
-          message: "Disable or archive active monthly services before changing this category",
-        });
-      }
-    }
-
-    const category = await this.database.prisma.monthlyServiceCategory.update({
-      where: { id },
-      data: {
-        status: target,
-        archivedAt: target === "ARCHIVED" ? new Date() : null,
-      },
-    });
-    await this.audit.record(
-      {
-        actorId,
-        eventCode: CATALOG_EVENT.categoryStatusChanged,
-        entityType: "MonthlyServiceCategory",
-        entityId: id,
-        before: { status: toLifecycleStatus(existing.status) },
-        after: { status: toLifecycleStatus(category.status) },
-        ...(reason ? { reason } : {}),
-      },
-      metadata,
-    );
-    return this.categoryAuditView(category);
-  }
-
-  async reorderCategory(id: string, sortOrder: number, actorId: string, metadata: RequestMetadata) {
-    const existing = await this.requireCategory(id);
-    this.assertNotArchived(existing.status);
-    const category = await this.database.prisma.monthlyServiceCategory.update({
-      where: { id },
-      data: { sortOrder },
-    });
-    await this.recordReorder(
-      actorId,
-      CATALOG_EVENT.categoryReordered,
-      "MonthlyServiceCategory",
-      id,
-      existing.sortOrder,
-      sortOrder,
-      metadata,
-    );
-    return this.categoryAuditView(category);
-  }
-
   async createMonthlyService(
     input: CreateMonthlyServiceDto,
     actorId: string,
@@ -419,14 +259,8 @@ export class CatalogService {
   ) {
     const code = input.code.trim().toUpperCase();
     await this.assertCodeAvailable("service", code);
-    const category = await this.requireCategory(input.categoryId);
+    const category = await this.ensureCompatibilityCategory();
     const stableStatus: DatabaseStatus = input.status ?? "DRAFT";
-    if (stableStatus === "ACTIVE" && category.status !== "ACTIVE") {
-      throw new ConflictException({
-        code: "MONTHLY_CATEGORY_NOT_ACTIVE",
-        message: "An active service requires an active category",
-      });
-    }
     await this.validateLevelConfigs(input.levelConfigs, stableStatus === "ACTIVE");
 
     try {
@@ -449,7 +283,7 @@ export class CatalogService {
             nameEn: input.nameEn.trim(),
             paymentType: "Monthly",
             serviceLine: "Operate",
-            domain: category.nameEn,
+            domain: "General",
             description: input.description.trim(),
             visibleInPricing: input.visibleInPricing ?? true,
             sellingHourlyRateSar: input.sellingHourlyRateSar,
@@ -503,13 +337,6 @@ export class CatalogService {
   ) {
     const existing = await this.requireServiceWithRevision(id);
     this.assertNotArchived(existing.status);
-    const category = await this.requireCategory(input.categoryId);
-    if (category.status === "ARCHIVED") {
-      throw new ConflictException({
-        code: "MONTHLY_CATEGORY_ARCHIVED",
-        message: "An archived category cannot receive monthly services",
-      });
-    }
     await this.validateLevelConfigs(input.levelConfigs, existing.status === "ACTIVE");
     const before = await this.requireServiceView(id);
     const currentRevision = existing.revisions[0]!;
@@ -536,7 +363,7 @@ export class CatalogService {
           nameEn: input.nameEn.trim(),
           paymentType: currentRevision.paymentType,
           serviceLine: currentRevision.serviceLine,
-          domain: category.nameEn,
+          domain: currentRevision.domain,
           description: input.description.trim(),
           visibleInPricing: input.visibleInPricing ?? currentRevision.visibleInPricing,
           sellingHourlyRateSar: input.sellingHourlyRateSar,
@@ -560,10 +387,6 @@ export class CatalogService {
           isEnabled: config.isEnabled,
           sortOrder: config.sortOrder ?? index,
         })),
-      });
-      await transaction.monthlyService.update({
-        where: { id },
-        data: { categoryId: category.id },
       });
     });
 
@@ -633,12 +456,6 @@ export class CatalogService {
     const target = toDatabaseStatus(status);
     assertTransition(existing.status, target);
     requireReason(target, reason);
-    if (target === "ACTIVE" && existing.category.status !== "ACTIVE") {
-      throw new ConflictException({
-        code: "MONTHLY_CATEGORY_NOT_ACTIVE",
-        message: "Enable the monthly service category before enabling this service",
-      });
-    }
     if (target === "ARCHIVED") {
       const childCount = await this.database.prisma.serviceItem.count({
         where: { monthlyServiceId: id, status: { not: "ARCHIVED" } },
@@ -1413,35 +1230,20 @@ export class CatalogService {
   }
 
   private async assertCodeAvailable(
-    type: "category" | "service" | "item" | "level",
+    type: "service" | "item" | "level",
     codeInput: string,
   ): Promise<void> {
     const code = codeInput.trim();
     const where = { code: { equals: code, mode: "insensitive" as const } };
     const existing =
-      type === "category"
-        ? await this.database.prisma.monthlyServiceCategory.findFirst({ where })
-        : type === "service"
-          ? await this.database.prisma.monthlyService.findFirst({ where })
-          : type === "item"
-            ? await this.database.prisma.serviceItem.findFirst({ where })
-            : await this.database.prisma.serviceLevel.findFirst({ where });
+      type === "service"
+        ? await this.database.prisma.monthlyService.findFirst({ where })
+        : type === "item"
+          ? await this.database.prisma.serviceItem.findFirst({ where })
+          : await this.database.prisma.serviceLevel.findFirst({ where });
     if (existing) {
       throw duplicateCode();
     }
-  }
-
-  private async requireCategory(id: string) {
-    const category = await this.database.prisma.monthlyServiceCategory.findUnique({
-      where: { id },
-    });
-    if (!category) {
-      throw new NotFoundException({
-        code: "MONTHLY_CATEGORY_NOT_FOUND",
-        message: "The monthly service category could not be found",
-      });
-    }
-    return category;
   }
 
   private async requireLevel(id: string) {
@@ -1459,7 +1261,6 @@ export class CatalogService {
     const service = await this.database.prisma.monthlyService.findUnique({
       where: { id },
       include: {
-        category: true,
         revisions: {
           orderBy: { version: "desc" },
           include: { levelConfigs: true },
@@ -1473,6 +1274,27 @@ export class CatalogService {
       });
     }
     return service;
+  }
+
+  private async ensureCompatibilityCategory() {
+    const category = MONTHLY_SERVICE_COMPATIBILITY_CATEGORY;
+    return this.database.prisma.monthlyServiceCategory.upsert({
+      where: { code: category.code },
+      create: {
+        code: category.code,
+        nameAr: category.nameAr,
+        nameEn: category.nameEn,
+        description: "Internal compatibility record for uncategorized monthly services.",
+        status: "ACTIVE",
+        sortOrder: 0,
+      },
+      update: {
+        nameAr: category.nameAr,
+        nameEn: category.nameEn,
+        status: "ACTIVE",
+        archivedAt: null,
+      },
+    });
   }
 
   private async requireItemWithRevision(id: string) {
@@ -1526,26 +1348,6 @@ export class CatalogService {
         message: "Archived catalog records cannot be changed",
       });
     }
-  }
-
-  private categoryAuditView(category: {
-    id: string;
-    code: string;
-    nameAr: string;
-    nameEn: string;
-    description: string | null;
-    status: DatabaseStatus;
-    sortOrder: number;
-  }) {
-    return {
-      id: category.id,
-      code: category.code,
-      nameAr: category.nameAr,
-      nameEn: category.nameEn,
-      description: category.description,
-      status: toLifecycleStatus(category.status),
-      sortOrder: category.sortOrder,
-    };
   }
 
   private levelAuditView(level: {

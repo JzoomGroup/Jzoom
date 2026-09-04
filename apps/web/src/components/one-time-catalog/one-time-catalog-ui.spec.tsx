@@ -1,34 +1,13 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { OneTimeCatalogSnapshot } from "../../lib/one-time-catalog-types";
-import { OneTimeCategoryManager } from "./one-time-category-manager";
 import { OneTimeServiceManager } from "./one-time-service-manager";
 
 function snapshot(): OneTimeCatalogSnapshot {
   return {
     servicePaths: ["Build", "Digital"],
-    categories: [
-      {
-        id: "category-1",
-        code: "OT-CAT-BUILD",
-        nameAr: "بناء",
-        nameEn: "Build",
-        description: "Build services",
-        status: "ACTIVE",
-        sortOrder: 0,
-        serviceCount: 1,
-        archivedAt: null,
-      },
-    ],
     services: [
       {
         id: "service-1",
-        categoryId: "category-1",
-        category: {
-          id: "category-1",
-          code: "OT-CAT-BUILD",
-          nameAr: "بناء",
-          nameEn: "Build",
-        },
         code: "OT-BUILD-WEBSITE",
         serviceLine: "Build",
         status: "ACTIVE",
@@ -112,50 +91,6 @@ describe("One-time Admin catalog UI", () => {
     });
   });
 
-  it("creates a localized category through the backend and refreshes data", async () => {
-    const fetchMock = jest.mocked(fetch);
-    fetchMock
-      .mockImplementationOnce(() => jsonResponse({ id: "category-2" }))
-      .mockImplementationOnce(() => jsonResponse(snapshot()));
-
-    render(<OneTimeCategoryManager initialSnapshot={snapshot()} />);
-    expect(screen.queryByText("One-time category studio")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("heading", { name: "Configured categories" })).toHaveLength(1);
-
-    fireEvent.click(screen.getByRole("button", { name: "Add category" }));
-    expect(screen.getByRole("dialog", { name: "New one-time category" })).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Code"), {
-      target: { value: "pr5-cat-digital" },
-    });
-    fireEvent.change(screen.getByLabelText("Arabic name"), {
-      target: { value: "رقمي" },
-    });
-    fireEvent.change(screen.getByLabelText("English name"), {
-      target: { value: "Digital" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Create category" }));
-
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      "http://localhost:4000/api/v1/admin/catalog/one-time/categories",
-    );
-    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
-      code: "PR5-CAT-DIGITAL",
-      nameAr: "رقمي",
-      nameEn: "Digital",
-    });
-  });
-
-  it("shows a safe Arabic category label when legacy Arabic data is English", () => {
-    const data = snapshot();
-    data.categories[0]!.nameAr = "Build";
-
-    render(<OneTimeCategoryManager initialSnapshot={data} locale="ar" />);
-
-    expect(screen.getByRole("heading", { name: "البناء والتطوير" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Build" })).not.toBeInTheDocument();
-  });
-
   it("renders seeded services and saves pricing plus nested templates through APIs", async () => {
     const fetchMock = jest.mocked(fetch);
     fetchMock
@@ -176,6 +111,7 @@ describe("One-time Admin catalog UI", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Edit details & template" }));
     expect(screen.getByRole("dialog", { name: "Edit OT-BUILD-WEBSITE" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Category")).not.toBeInTheDocument();
     expect(screen.getByDisplayValue("Stakeholder interview")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Create revision" }));
 
@@ -185,7 +121,6 @@ describe("One-time Admin catalog UI", () => {
     );
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
     expect(body).toMatchObject({
-      categoryId: "category-1",
       serviceLine: "Build",
       basePriceSar: 12000,
       estimatedHours: 80,

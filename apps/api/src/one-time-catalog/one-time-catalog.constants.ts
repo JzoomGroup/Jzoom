@@ -2,11 +2,13 @@ export const MANAGE_ONE_TIME_SERVICES_PERMISSION = "PERM-MANAGE-ONE-TIME-SERVICE
 
 export const ONE_TIME_SERVICE_PATHS = ["Build", "Digital"] as const;
 
+export const ONE_TIME_SERVICE_COMPATIBILITY_CATEGORY = {
+  code: "JZOOM-INTERNAL-ONE-TIME",
+  nameAr: "خدمات مرة واحدة",
+  nameEn: "One-time services",
+} as const;
+
 export const ONE_TIME_CATALOG_EVENT = {
-  categoryCreated: "CATALOG_ONE_TIME_CATEGORY_CREATED",
-  categoryUpdated: "CATALOG_ONE_TIME_CATEGORY_UPDATED",
-  categoryStatusChanged: "CATALOG_ONE_TIME_CATEGORY_STATUS_CHANGED",
-  categoryReordered: "CATALOG_ONE_TIME_CATEGORY_REORDERED",
   serviceCreated: "CATALOG_ONE_TIME_SERVICE_CREATED",
   serviceUpdated: "CATALOG_ONE_TIME_SERVICE_UPDATED",
   serviceStatusChanged: "CATALOG_ONE_TIME_SERVICE_STATUS_CHANGED",

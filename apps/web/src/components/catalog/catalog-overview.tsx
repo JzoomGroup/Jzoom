@@ -1,7 +1,6 @@
 import { catalogOverviewCopy as copy } from "../../i18n/dictionaries/catalog";
 import type { CatalogSnapshot } from "../../lib/catalog-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
-import { localizedCatalogLabel } from "../../lib/localized-content";
 import { MetricCard, SectionCard, SmartTable } from "../premium-os";
 import { SectionHeader, StatusBadge } from "./catalog-shared";
 
@@ -37,11 +36,6 @@ export function CatalogOverview({
 
       <section className="metric-grid" aria-label={t.catalogSummary}>
         <MetricCard
-          label={t.categories}
-          value={number(snapshot.categories.length, locale)}
-          detail={t.monthlyGroups}
-        />
-        <MetricCard
           label={t.monthlyServices}
           value={number(snapshot.services.length, locale)}
           detail={`${number(activeServices, locale)} ${t.active}`}
@@ -65,7 +59,6 @@ export function CatalogOverview({
             <thead>
               <tr>
                 <th>{t.service}</th>
-                <th>{t.category}</th>
                 <th>{t.revision}</th>
                 <th>{t.status}</th>
                 <th>{t.items}</th>
@@ -82,7 +75,6 @@ export function CatalogOverview({
                     </strong>
                     <small>{service.code}</small>
                   </td>
-                  <td>{localizedCatalogLabel(service.category, locale)}</td>
                   <td>v{service.revision?.version ?? "-"}</td>
                   <td>
                     <StatusBadge locale={locale} status={service.status} />

@@ -36,7 +36,6 @@ export interface ProjectSummary {
     id: string;
     code: string;
     serviceLine: string;
-    category: { id: string; code: string; nameAr: string; nameEn: string };
     revisionId: string;
     nameAr: string;
     nameEn: string;

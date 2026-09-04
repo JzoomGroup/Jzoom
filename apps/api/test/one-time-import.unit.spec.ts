@@ -70,9 +70,11 @@ function setup(existingCodes: string[] = []) {
   const database = {
     prisma: {
       oneTimeServiceCategory: {
-        findMany: jest.fn(async () => [
-          { id: "category-1", code: "OT-CATEGORY", status: "ACTIVE" },
-        ]),
+        upsert: jest.fn(async () => ({
+          id: "compatibility-category",
+          code: "JZOOM-INTERNAL-ONE-TIME",
+          status: "ACTIVE",
+        })),
       },
       oneTimeService: {
         findMany: jest.fn(async () => existingCodes.map((code) => ({ code }))),
@@ -86,7 +88,6 @@ function setup(existingCodes: string[] = []) {
   const service = new OneTimeCatalogService(database, audit);
   jest.spyOn(service, "getSnapshot").mockResolvedValue({
     servicePaths: ["Build", "Digital"],
-    categories: [],
     services: [],
   });
   return { audit, database, service, transaction };

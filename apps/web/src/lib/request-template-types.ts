@@ -142,7 +142,6 @@ export interface RequestTemplateServiceItem {
   monthlyService: {
     id: string;
     code: string;
-    category?: { id: string; code: string; nameAr: string; nameEn: string };
     revisions?: Array<{ nameAr: string; nameEn: string }>;
   };
   latestRevision: {
@@ -183,7 +182,6 @@ export interface ActiveRequestTemplateResponse {
     monthlyService: {
       id: string;
       code: string;
-      category?: { id: string; code: string; nameAr: string; nameEn: string };
       revisions?: Array<{ nameAr: string; nameEn: string }>;
     };
   };
