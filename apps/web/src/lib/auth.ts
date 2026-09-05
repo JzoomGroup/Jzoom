@@ -9,6 +9,11 @@ export interface CurrentUser {
   mustChangePassword: boolean;
   roles: string[];
   permissions: string[];
+  capabilities?: { uatUserSwitcher?: boolean };
+  impersonation?: {
+    active: true;
+    admin: { id: string; email: string; displayName: string };
+  } | null;
 }
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {

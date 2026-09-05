@@ -2,7 +2,6 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { AdminShell } from "../admin-shell";
 import type { CatalogSnapshot } from "../../lib/catalog-types";
 import { CatalogOverview } from "./catalog-overview";
-import { CategoryManager } from "./category-manager";
 import { ItemManager } from "./item-manager";
 import { LevelManager } from "./level-manager";
 import { ServiceManager } from "./service-manager";
@@ -16,19 +15,6 @@ jest.mock("next/navigation", () => ({
 
 function catalogSnapshot(): CatalogSnapshot {
   return {
-    categories: [
-      {
-        id: "category-1",
-        code: "CAT-HR",
-        nameAr: "الموارد البشرية",
-        nameEn: "Human Resources",
-        description: "People operations services.",
-        status: "ACTIVE",
-        sortOrder: 1,
-        serviceCount: 1,
-        archivedAt: null,
-      },
-    ],
     levels: [
       {
         id: "level-basic",
@@ -48,13 +34,6 @@ function catalogSnapshot(): CatalogSnapshot {
     services: [
       {
         id: "service-1",
-        categoryId: "category-1",
-        category: {
-          id: "category-1",
-          code: "CAT-HR",
-          nameAr: "الموارد البشرية",
-          nameEn: "Human Resources",
-        },
         code: "MS-HR",
         externalId: null,
         status: "ACTIVE",
@@ -191,6 +170,8 @@ describe("Admin catalog UI", () => {
       "href",
       "/admin/request-templates",
     );
+    expect(screen.queryByRole("link", { name: "Monthly categories" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "One-time categories" })).not.toBeInTheDocument();
   });
 
   it("localizes the admin shell for Arabic RTL users", () => {
@@ -219,70 +200,10 @@ describe("Admin catalog UI", () => {
   it("renders the current seeded catalog snapshot instead of hardcoded cards", () => {
     render(<CatalogOverview snapshot={catalogSnapshot()} />);
 
-    expect(
-      screen.getByRole("row", { name: /HR Support MS-HR Human Resources/ }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("row", { name: /HR Support MS-HR/ })).toBeInTheDocument();
     expect(screen.getByText("MS-HR")).toBeInTheDocument();
     expect(screen.getAllByText("1 active")).toHaveLength(2);
     expect(screen.queryByText("Administration areas")).not.toBeInTheDocument();
-  });
-
-  it("creates a category through the catalog API and refreshes the snapshot", async () => {
-    const fetchMock = jest.mocked(fetch);
-    fetchMock
-      .mockImplementationOnce(() => jsonResponse({ id: "category-2" }))
-      .mockImplementationOnce(() => jsonResponse(catalogSnapshot()));
-    const setSnapshot = jest.fn();
-
-    render(<CategoryManager snapshot={catalogSnapshot()} setSnapshot={setSnapshot} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Add category" }));
-    expect(screen.getByRole("dialog", { name: "New category" })).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Code"), {
-      target: { value: "cat-finance" },
-    });
-    fireEvent.change(screen.getByLabelText("Arabic name"), {
-      target: { value: "المالية" },
-    });
-    fireEvent.change(screen.getByLabelText("English name"), {
-      target: { value: "Finance" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Create category" }));
-
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      "http://localhost:4000/api/v1/admin/catalog/categories",
-    );
-    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
-      code: "CAT-FINANCE",
-      nameAr: "المالية",
-      nameEn: "Finance",
-      status: "DRAFT",
-    });
-    expect(fetchMock.mock.calls[1]?.[0]).toBe("http://localhost:4000/api/v1/admin/catalog");
-    expect(setSnapshot).toHaveBeenCalledWith(catalogSnapshot());
-  });
-
-  it("keeps Arabic category cards localized and groups their controls in one footer", () => {
-    const { container } = render(
-      <CategoryManager locale="ar" snapshot={catalogSnapshot()} setSnapshot={jest.fn()} />,
-    );
-
-    expect(screen.getByRole("heading", { name: "الموارد البشرية" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Human Resources" })).not.toBeInTheDocument();
-    expect(container.querySelector(".catalog-category-card .catalog-card-footer")).not.toBeNull();
-    expect(screen.getByRole("button", { name: "تعديل" }).querySelector("svg")).not.toBeNull();
-    expect(screen.getByRole("button", { name: "أرشفة" }).querySelector("svg")).not.toBeNull();
-  });
-
-  it("uses the stable category code when the stored Arabic label contains English", () => {
-    const data = catalogSnapshot();
-    data.categories[0]!.nameAr = "HR";
-
-    render(<CategoryManager locale="ar" snapshot={data} setSnapshot={jest.fn()} />);
-
-    expect(screen.getByRole("heading", { name: "الموارد البشرية" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "HR" })).not.toBeInTheDocument();
   });
 
   it("updates package inclusion through the revision-safe matrix API", async () => {
@@ -348,6 +269,7 @@ describe("Admin catalog UI", () => {
     expect(screen.getByRole("dialog", { name: "New monthly service" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "New monthly service" })).toBeInTheDocument();
     expect(screen.getByLabelText("Code")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Category")).not.toBeInTheDocument();
     expect(screen.getByText("Monthly hours by package")).toBeInTheDocument();
   });
 

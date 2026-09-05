@@ -51,3 +51,25 @@ export function clearAuthCookies(response: Response, environment: AuthRuntimeEnv
   response.clearCookie(environment.auth.cookieName, cookieOptions(environment, true));
   response.clearCookie(environment.auth.csrfCookieName, cookieOptions(environment, false));
 }
+
+export function setUatImpersonationReturnCookie(
+  response: Response,
+  environment: AuthRuntimeEnvironment,
+  sessionToken: string,
+  expiresAt: Date,
+): void {
+  response.cookie(environment.auth.uatImpersonationCookieName, sessionToken, {
+    ...cookieOptions(environment, true),
+    expires: expiresAt,
+  });
+}
+
+export function clearUatImpersonationReturnCookie(
+  response: Response,
+  environment: AuthRuntimeEnvironment,
+): void {
+  response.clearCookie(
+    environment.auth.uatImpersonationCookieName,
+    cookieOptions(environment, true),
+  );
+}

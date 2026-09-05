@@ -5,10 +5,11 @@ import {
   NotFoundException,
   Optional,
 } from "@nestjs/common";
+import { fileTypeFromBuffer } from "file-type";
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { access, mkdir, writeFile } from "node:fs/promises";
-import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { RuntimePlatformSettingsService } from "../platform-configuration/runtime-platform-settings.service.js";
 
 export interface UploadedRequestFile {
@@ -68,6 +69,73 @@ function mimeTypeAllowed(mimeType: string, allowedMimeTypes: readonly string[]):
     }
     return allowed.endsWith("/*") && normalized.startsWith(allowed.slice(0, -1));
   });
+}
+
+const TEXT_FILE_EXTENSIONS = new Map([
+  ["text/csv", new Set([".csv"])],
+  ["text/plain", new Set([".log", ".md", ".txt"])],
+]);
+
+const LEGACY_OFFICE_EXTENSIONS = new Map([
+  ["application/msword", new Set([".doc"])],
+  ["application/vnd.ms-excel", new Set([".xls"])],
+  ["application/vnd.ms-powerpoint", new Set([".ppt"])],
+]);
+
+const BINARY_EXTENSION_ALIASES = new Map([
+  ["image/jpeg", new Set([".jpeg", ".jpg"])],
+  ["image/tiff", new Set([".tif", ".tiff"])],
+]);
+
+function invalidFileContent(): BadRequestException {
+  return new BadRequestException({
+    code: "FILE_CONTENT_MISMATCH",
+    message: "The file content does not match its declared type or extension",
+  });
+}
+
+function isValidUtf8Text(buffer: Buffer): boolean {
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(buffer);
+    return !text.includes("\0");
+  } catch {
+    return false;
+  }
+}
+
+async function verifyFileContent(
+  buffer: Buffer,
+  originalName: string,
+  declaredMimeType: string,
+): Promise<void> {
+  const extension = extname(originalName).toLowerCase();
+  const textExtensions = TEXT_FILE_EXTENSIONS.get(declaredMimeType);
+  if (textExtensions) {
+    const detectedBinaryType = await fileTypeFromBuffer(buffer);
+    if (detectedBinaryType || !textExtensions.has(extension) || !isValidUtf8Text(buffer)) {
+      throw invalidFileContent();
+    }
+    return;
+  }
+
+  const detectedType = await fileTypeFromBuffer(buffer);
+  if (!detectedType) {
+    throw invalidFileContent();
+  }
+
+  const legacyExtensions = LEGACY_OFFICE_EXTENSIONS.get(declaredMimeType);
+  if (legacyExtensions) {
+    if (detectedType.mime !== "application/x-cfb" || !legacyExtensions.has(extension)) {
+      throw invalidFileContent();
+    }
+    return;
+  }
+
+  const detectedExtensions =
+    BINARY_EXTENSION_ALIASES.get(detectedType.mime) ?? new Set([`.${detectedType.ext}`]);
+  if (detectedType.mime !== declaredMimeType || !detectedExtensions.has(extension)) {
+    throw invalidFileContent();
+  }
 }
 
 function safeStoragePath(root: string, storageKey: string): string {
@@ -156,6 +224,7 @@ export class FileStorageService {
     }
 
     const originalName = safeOriginalName(file.originalname);
+    await verifyFileContent(file.buffer, originalName, mimeType);
     const storageKey = `${directory}/${randomUUID()}/${originalName}`;
     const absolutePath = safeStoragePath(this.root, storageKey);
     await mkdir(dirname(absolutePath), { recursive: true });

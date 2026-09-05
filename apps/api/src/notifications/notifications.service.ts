@@ -99,6 +99,12 @@ export class NotificationsService {
     const now = new Date();
     const payload = json({
       ...(input.payload ?? {}),
+      delivery: {
+        deepLink: input.deepLink,
+        event: input.event,
+        targetId: input.targetId,
+        targetType: input.targetType,
+      },
       channelReadiness: {
         inApp: true,
         email: false,

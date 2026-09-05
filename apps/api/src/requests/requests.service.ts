@@ -27,6 +27,13 @@ import {
   SUPERVISOR_ROLE_CODE,
 } from "./requests.constants.js";
 import { FileStorageService, type UploadedRequestFile } from "./file-storage.service.js";
+import {
+  documentRequestAuditSnapshot,
+  fileAuditSnapshot,
+  requestAuditSnapshot,
+  requestOutputAuditSnapshot,
+  timeEntryAuditSnapshot,
+} from "./request-audit-snapshots.js";
 import type {
   AddInternalNoteDto,
   AddRequestCommentDto,
@@ -4084,22 +4091,7 @@ export class RequestsService {
   }
 
   private auditSnapshot(request: RequestSummaryRecord) {
-    return {
-      requestNumber: request.requestNumber,
-      clientId: request.clientId,
-      subscriptionServiceId: request.subscriptionServiceId,
-      serviceItemRevisionId: request.serviceItemRevisionId,
-      sourceQuoteId: request.sourceQuoteId,
-      sourceInvoiceId: request.sourceInvoiceId,
-      assignedSpecialistId: request.assignedSpecialistId,
-      assignedSupervisorId: request.assignedSupervisorId,
-      accountManagerId: request.accountManagerId,
-      status: request.status,
-      title: request.title,
-      priority: request.priority,
-      dueAt: request.dueAt?.toISOString() ?? null,
-      closedAt: request.closedAt?.toISOString() ?? null,
-    };
+    return requestAuditSnapshot(request);
   }
 
   private fileAuditSnapshot(file: {
@@ -4115,19 +4107,7 @@ export class RequestsService {
     version: number;
     visibility: string;
   }) {
-    return {
-      id: file.id,
-      requestId: file.requestId,
-      uploadedById: file.uploadedById,
-      storageProvider: file.storageProvider,
-      originalName: file.originalName,
-      mimeType: file.mimeType,
-      sizeBytes: file.sizeBytes.toString(),
-      sha256: file.sha256,
-      visibility: file.visibility,
-      version: file.version,
-      archivedAt: file.archivedAt?.toISOString() ?? null,
-    };
+    return fileAuditSnapshot(file);
   }
 
   private outputAuditSnapshot(output: {
@@ -4149,25 +4129,7 @@ export class RequestsService {
     submittedAt: Date | null;
     title: string;
   }) {
-    return {
-      id: output.id,
-      code: output.code,
-      title: output.title,
-      description: output.description,
-      contentSnapshot: output.contentSnapshot,
-      status: output.status,
-      dueAt: output.dueAt?.toISOString() ?? null,
-      submittedAt: output.submittedAt?.toISOString() ?? null,
-      reviewedAt: output.reviewedAt?.toISOString() ?? null,
-      sharedAt: output.sharedAt?.toISOString() ?? null,
-      clientDecidedAt: output.clientDecidedAt?.toISOString() ?? null,
-      closedAt: output.closedAt?.toISOString() ?? null,
-      reviewedById: output.reviewedById,
-      sharedById: output.sharedById,
-      clientDecisionById: output.clientDecisionById,
-      reviewReason: output.reviewReason,
-      clientReturnReason: output.clientReturnReason,
-    };
+    return requestOutputAuditSnapshot(output);
   }
 
   private documentRequestAuditSnapshot(documentRequest: {
@@ -4185,21 +4147,7 @@ export class RequestsService {
     status: string;
     title: string;
   }) {
-    return {
-      id: documentRequest.id,
-      requestId: documentRequest.requestId,
-      title: documentRequest.title,
-      instructions: documentRequest.instructions,
-      status: documentRequest.status,
-      dueAt: documentRequest.dueAt?.toISOString() ?? null,
-      requestedAt: documentRequest.requestedAt.toISOString(),
-      fulfilledAt: documentRequest.fulfilledAt?.toISOString() ?? null,
-      closedAt: documentRequest.closedAt?.toISOString() ?? null,
-      cancelledAt: documentRequest.cancelledAt?.toISOString() ?? null,
-      requestedById: documentRequest.requestedById,
-      fulfilledById: documentRequest.fulfilledById,
-      fileMetadataId: documentRequest.fileMetadataId,
-    };
+    return documentRequestAuditSnapshot(documentRequest);
   }
 
   private timeEntryAuditSnapshot(entry: {
@@ -4216,19 +4164,6 @@ export class RequestsService {
     userId: string;
     workDate: Date;
   }) {
-    return {
-      id: entry.id,
-      requestId: entry.requestId,
-      userId: entry.userId,
-      workDate: entry.workDate.toISOString(),
-      hours: Number(entry.hours),
-      billable: entry.billable,
-      status: entry.status,
-      notes: entry.notes,
-      submittedAt: entry.submittedAt?.toISOString() ?? null,
-      decidedAt: entry.decidedAt?.toISOString() ?? null,
-      decidedById: entry.decidedById,
-      decisionReason: entry.decisionReason,
-    };
+    return timeEntryAuditSnapshot(entry);
   }
 }

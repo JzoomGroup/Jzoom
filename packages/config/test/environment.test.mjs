@@ -84,14 +84,21 @@ test("invalid environment configuration fails clearly", () => {
   );
 });
 
-test("worker environment remains business-logic free", () => {
+test("worker environment validates database and outbox defaults", () => {
   const environment = parseWorkerEnvironment({
+    DATABASE_URL: "postgresql://jzoom:secret@localhost:5432/jzoom",
     NODE_ENV: "test",
   });
 
   assert.deepEqual(environment, {
     nodeEnvironment: "test",
+    databaseUrl: "postgresql://jzoom:secret@localhost:5432/jzoom",
     workerName: "jzoom-worker",
+    outboxEnabled: true,
+    outboxPollIntervalMs: 5_000,
+    outboxBatchSize: 20,
+    outboxMaxAttempts: 10,
+    outboxLeaseMs: 30_000,
   });
 });
 

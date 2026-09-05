@@ -28,6 +28,7 @@ export class AuthModule {
           provide: AUTH_ENVIRONMENT,
           useValue: {
             nodeEnvironment: environment.nodeEnvironment,
+            deploymentEnvironment: environment.deploymentEnvironment,
             auth: environment.auth,
           },
         },

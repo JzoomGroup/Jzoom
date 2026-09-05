@@ -1,9 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 const adminEmail = process.env.E2E_ADMIN_EMAIL;
 const password = process.env.E2E_PASSWORD;
 
-async function signInAsAdmin(page: import("@playwright/test").Page) {
+async function signInAsAdmin(page: Page) {
   test.skip(!adminEmail || !password, "Missing E2E credentials for Admin.");
 
   await page.goto("/login");
@@ -22,7 +22,8 @@ test("keeps the refactored Admin access and catalog screens intact", async ({ pa
     { path: "/admin/roles", heading: "الأدوار" },
     { path: "/admin/permissions", heading: "مركز إدارة الصلاحيات" },
     { path: "/admin/audit-logs", heading: "سجل التدقيق" },
-    { path: "/admin/catalog/categories", heading: "تصنيفات الخدمات" },
+    { path: "/admin/catalog/monthly-services", heading: "الخدمات الشهرية" },
+    { path: "/admin/catalog/one-time-services", heading: "خدمات المرة الواحدة" },
   ] as const;
 
   for (const screen of screens) {
@@ -76,35 +77,38 @@ test("opens and dismisses the Admin navigation on mobile", async ({ page }, test
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
 });
 
-test("stacks the pricing journey without horizontal overflow on mobile", async ({
-  page,
-}, testInfo) => {
+test("keeps the pricing workspace within the mobile viewport", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "Mobile pricing coverage runs on mobile.");
   await signInAsAdmin(page);
   await page.goto("/pricing");
 
-  const journey = page.locator(".pricing-journey");
-  await expect(journey).toBeVisible();
+  const layout = page.locator(".pricing-layout");
+  await expect(layout).toBeVisible();
+  await expect(layout.locator(":scope > .pricing-main")).toBeVisible();
 
-  const layout = await journey.evaluate((element) => {
-    const [main, summary] = Array.from(element.children) as HTMLElement[];
-    const journeyRect = element.getBoundingClientRect();
+  const dimensions = await layout.evaluate((element) => {
+    const main = element.querySelector<HTMLElement>(":scope > .pricing-main");
+    if (!main) throw new Error("Pricing workspace is missing its main content region");
+
+    const layoutRect = element.getBoundingClientRect();
     const mainRect = main!.getBoundingClientRect();
-    const summaryRect = summary!.getBoundingClientRect();
 
     return {
       viewportWidth: document.documentElement.clientWidth,
       documentWidth: document.documentElement.scrollWidth,
-      journeyWidth: journeyRect.width,
+      layoutLeft: layoutRect.left,
+      layoutRight: layoutRect.right,
+      layoutWidth: layoutRect.width,
+      mainLeft: mainRect.left,
+      mainRight: mainRect.right,
       mainWidth: mainRect.width,
-      summaryWidth: summaryRect.width,
-      mainBottom: mainRect.bottom,
-      summaryTop: summaryRect.top,
     };
   });
 
-  expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth);
-  expect(layout.mainWidth).toBeGreaterThan(layout.journeyWidth * 0.95);
-  expect(layout.summaryWidth).toBeGreaterThan(layout.journeyWidth * 0.95);
-  expect(layout.summaryTop).toBeGreaterThanOrEqual(layout.mainBottom - 1);
+  expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+  expect(dimensions.layoutLeft).toBeGreaterThanOrEqual(0);
+  expect(dimensions.layoutRight).toBeLessThanOrEqual(dimensions.viewportWidth + 1);
+  expect(dimensions.mainLeft).toBeGreaterThanOrEqual(dimensions.layoutLeft - 1);
+  expect(dimensions.mainRight).toBeLessThanOrEqual(dimensions.layoutRight + 1);
+  expect(dimensions.mainWidth).toBeGreaterThan(dimensions.layoutWidth * 0.95);
 });

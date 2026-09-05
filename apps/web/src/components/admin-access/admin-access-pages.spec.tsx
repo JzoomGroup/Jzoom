@@ -102,6 +102,12 @@ describe("Admin access pages", () => {
     expect(eventLabel("QUOTE_ACTIVATED", "ar")).toBe("تفعيل عرض سعر");
     expect(eventLabel("QUOTE_APPROVED", "ar")).toBe("اعتماد عرض سعر");
     expect(eventLabel("QUOTE_PAYMENT_CONFIRMED", "ar")).toBe("تأكيد دفع عرض سعر");
+    expect(eventLabel("AUTH_UAT_IMPERSONATION_STARTED", "ar")).toBe(
+      "بدء اختبار النظام كمستخدم آخر",
+    );
+    expect(eventLabel("AUTH_UAT_IMPERSONATION_STOPPED", "ar")).toBe(
+      "إنهاء اختبار المستخدم والعودة للأدمن",
+    );
   });
 
   it("localizes system role and scope codes when Arabic source labels are missing", () => {

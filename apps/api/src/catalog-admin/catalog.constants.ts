@@ -4,11 +4,13 @@ export const MANAGE_SERVICE_LEVELS_PERMISSION = "PERM-CONFIGURE-GROWTH-ADVANCED-
 
 export const CATALOG_CODE_PATTERN = /^[A-Z0-9]+(?:-[A-Z0-9]+)*$/;
 
+export const MONTHLY_SERVICE_COMPATIBILITY_CATEGORY = {
+  code: "JZOOM-INTERNAL-MONTHLY",
+  nameAr: "خدمات شهرية",
+  nameEn: "Monthly services",
+} as const;
+
 export const CATALOG_EVENT = {
-  categoryCreated: "CATALOG_MONTHLY_CATEGORY_CREATED",
-  categoryUpdated: "CATALOG_MONTHLY_CATEGORY_UPDATED",
-  categoryStatusChanged: "CATALOG_MONTHLY_CATEGORY_STATUS_CHANGED",
-  categoryReordered: "CATALOG_MONTHLY_CATEGORY_REORDERED",
   serviceCreated: "CATALOG_MONTHLY_SERVICE_CREATED",
   serviceUpdated: "CATALOG_MONTHLY_SERVICE_UPDATED",
   serviceStatusChanged: "CATALOG_MONTHLY_SERVICE_STATUS_CHANGED",

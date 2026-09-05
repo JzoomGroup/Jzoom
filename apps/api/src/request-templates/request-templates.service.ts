@@ -33,7 +33,6 @@ const requestTemplateVersionInclude = {
             select: {
               id: true,
               code: true,
-              category: { select: { id: true, code: true, nameAr: true, nameEn: true } },
               revisions: {
                 orderBy: { version: "desc" as const },
                 take: 1,
@@ -345,7 +344,6 @@ export class RequestTemplatesService {
             select: {
               id: true,
               code: true,
-              category: { select: { id: true, code: true, nameAr: true, nameEn: true } },
               revisions: {
                 orderBy: { version: "desc" },
                 take: 1,

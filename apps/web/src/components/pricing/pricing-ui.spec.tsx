@@ -72,7 +72,6 @@ function studioCatalog(): PricingStudioCatalog {
       {
         id: "monthly-1",
         code: "MONTHLY-OPS",
-        categoryName: "Operations",
         revision: {
           id: "22222222-2222-4222-8222-222222222222",
           version: 1,
@@ -98,7 +97,6 @@ function studioCatalog(): PricingStudioCatalog {
         id: "one-time-1",
         code: "BUILD-WEBSITE",
         serviceLine: "Build",
-        categoryName: "Build",
         revision: {
           id: "44444444-4444-4444-8444-444444444444",
           version: 1,
@@ -392,24 +390,6 @@ describe("PR 6 pricing UI", () => {
     );
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: "DELETE" });
     expect(replaceMock).toHaveBeenCalledWith("/pricing");
-  });
-
-  it("localizes legacy English catalog categories in the Arabic pricing experience", () => {
-    render(
-      <PricingStudio
-        displayName="مسؤول التسعير"
-        isAdmin
-        initialCatalog={studioCatalog()}
-        initialDrafts={[]}
-        locale="ar"
-      />,
-    );
-
-    expect(screen.getAllByText("العمليات").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Operations")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: /خدمات المرة الواحدة/ }));
-    expect(screen.getAllByText("البناء والتطوير").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Build")).not.toBeInTheDocument();
   });
 
   it("creates a new client inside pricing and selects it for the draft", async () => {

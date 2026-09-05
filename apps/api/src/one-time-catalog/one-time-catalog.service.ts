@@ -10,14 +10,16 @@ import { AuthAuditService } from "../auth/audit.service.js";
 import type { RequestMetadata } from "../auth/auth.types.js";
 import { DatabaseService } from "../database/database.service.js";
 import type { CatalogLifecycleStatus } from "../catalog-admin/catalog.dto.js";
-import { ONE_TIME_CATALOG_EVENT, ONE_TIME_SERVICE_PATHS } from "./one-time-catalog.constants.js";
+import {
+  ONE_TIME_CATALOG_EVENT,
+  ONE_TIME_SERVICE_COMPATIBILITY_CATEGORY,
+  ONE_TIME_SERVICE_PATHS,
+} from "./one-time-catalog.constants.js";
 import type {
-  CreateOneTimeCategoryDto,
   CreateOneTimeServiceDto,
   ImportOneTimeCatalogDto,
   ImportOneTimeServiceDto,
   OneTimeTemplateDto,
-  UpdateOneTimeCategoryDto,
   UpdateOneTimeServiceDto,
 } from "./one-time-catalog.dto.js";
 
@@ -85,57 +87,32 @@ export class OneTimeCatalogService {
   ) {}
 
   async getSnapshot() {
-    const [categories, services] = await Promise.all([
-      this.database.prisma.oneTimeServiceCategory.findMany({
-        orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
-        include: { _count: { select: { services: true } } },
-      }),
-      this.database.prisma.oneTimeService.findMany({
-        orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
-        include: {
-          category: true,
-          revisions: {
-            orderBy: { version: "desc" },
-            take: 1,
-            include: {
-              phases: { orderBy: [{ sortOrder: "asc" }, { code: "asc" }] },
-              deliverables: {
-                orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
-                include: {
-                  phase: { select: { id: true, code: true, nameAr: true, nameEn: true } },
-                  tasks: { orderBy: [{ sortOrder: "asc" }, { code: "asc" }] },
-                },
+    const services = await this.database.prisma.oneTimeService.findMany({
+      orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
+      include: {
+        revisions: {
+          orderBy: { version: "desc" },
+          take: 1,
+          include: {
+            phases: { orderBy: [{ sortOrder: "asc" }, { code: "asc" }] },
+            deliverables: {
+              orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
+              include: {
+                phase: { select: { id: true, code: true, nameAr: true, nameEn: true } },
+                tasks: { orderBy: [{ sortOrder: "asc" }, { code: "asc" }] },
               },
             },
           },
         },
-      }),
-    ]);
+      },
+    });
 
     return {
       servicePaths: [...ONE_TIME_SERVICE_PATHS],
-      categories: categories.map((category) => ({
-        id: category.id,
-        code: category.code,
-        nameAr: category.nameAr,
-        nameEn: category.nameEn,
-        description: category.description,
-        status: toLifecycleStatus(category.status),
-        sortOrder: category.sortOrder,
-        serviceCount: category._count.services,
-        archivedAt: category.archivedAt?.toISOString() ?? null,
-      })),
       services: services.map((service) => {
         const revision = service.revisions[0];
         return {
           id: service.id,
-          categoryId: service.categoryId,
-          category: {
-            id: service.category.id,
-            code: service.category.code,
-            nameAr: service.category.nameAr,
-            nameEn: service.category.nameEn,
-          },
           code: service.code,
           serviceLine: service.serviceLine,
           status: toLifecycleStatus(service.status),
@@ -206,7 +183,6 @@ export class OneTimeCatalogService {
       exportedAt: new Date().toISOString(),
       services: snapshot.services.map((service) => ({
         code: service.code,
-        categoryCode: service.category.code,
         serviceLine: service.serviceLine,
         status: service.status,
         sortOrder: service.sortOrder,
@@ -268,26 +244,13 @@ export class OneTimeCatalogService {
       "ONE_TIME_IMPORT_DUPLICATE_CODE",
       "Service codes must be unique inside the import file",
     );
-    const categoryCodes = [...new Set(services.map((service) => service.categoryCode))];
-    const [categories, existingServices] = await Promise.all([
-      this.database.prisma.oneTimeServiceCategory.findMany({
-        where: { code: { in: categoryCodes }, status: { not: "ARCHIVED" } },
-        select: { id: true, code: true, status: true },
-      }),
+    const [category, existingServices] = await Promise.all([
+      this.ensureCompatibilityCategory(),
       this.database.prisma.oneTimeService.findMany({
         where: { code: { in: services.map((service) => service.code) } },
         select: { code: true },
       }),
     ]);
-    const categoriesByCode = new Map(categories.map((category) => [category.code, category]));
-    const missingCategoryCodes = categoryCodes.filter((code) => !categoriesByCode.has(code));
-    if (missingCategoryCodes.length > 0) {
-      throw new BadRequestException({
-        code: "ONE_TIME_IMPORT_CATEGORY_NOT_FOUND",
-        message: "Create or enable the referenced categories before importing services",
-        categoryCodes: missingCategoryCodes,
-      });
-    }
     if (existingServices.length > 0) {
       throw new ConflictException({
         code: "ONE_TIME_IMPORT_SERVICE_EXISTS",
@@ -296,10 +259,6 @@ export class OneTimeCatalogService {
       });
     }
     for (const service of services) {
-      this.assertCategoryAvailable(
-        categoriesByCode.get(service.categoryCode)!.status,
-        service.status === "ACTIVE",
-      );
       this.validateTemplate(service, service.status === "ACTIVE");
     }
 
@@ -307,7 +266,6 @@ export class OneTimeCatalogService {
     const importedIds = await this.database.prisma.$transaction(async (transaction) => {
       const ids: string[] = [];
       for (const service of services) {
-        const category = categoriesByCode.get(service.categoryCode)!;
         const databaseStatus = toDatabaseStatus(service.status);
         const stable = await transaction.oneTimeService.create({
           data: {
@@ -367,7 +325,6 @@ export class OneTimeCatalogService {
     return {
       ...service,
       code: service.code.trim().toUpperCase(),
-      categoryCode: service.categoryCode.trim().toUpperCase(),
       phases: service.phases.map((phase) => ({
         ...phase,
         code: phase.code.trim().toUpperCase(),
@@ -384,160 +341,18 @@ export class OneTimeCatalogService {
     };
   }
 
-  async createCategory(
-    input: CreateOneTimeCategoryDto,
-    actorId: string,
-    metadata: RequestMetadata,
-  ) {
-    const code = input.code.trim().toUpperCase();
-    await this.assertCodeAvailable("category", code);
-    try {
-      const category = await this.database.prisma.$transaction(async (transaction) => {
-        const sortOrder = input.sortOrder ?? 0;
-        await transaction.oneTimeServiceCategory.updateMany({
-          where: { sortOrder: { gte: sortOrder } },
-          data: { sortOrder: { increment: 1 } },
-        });
-        return transaction.oneTimeServiceCategory.create({
-          data: {
-            code,
-            nameAr: input.nameAr.trim(),
-            nameEn: input.nameEn.trim(),
-            description: input.description?.trim() || null,
-            status: input.status ?? "DRAFT",
-            sortOrder,
-          },
-        });
-      });
-      const after = this.categoryAuditView(category);
-      await this.audit.record(
-        {
-          actorId,
-          eventCode: ONE_TIME_CATALOG_EVENT.categoryCreated,
-          entityType: "OneTimeServiceCategory",
-          entityId: category.id,
-          after,
-        },
-        metadata,
-      );
-      return after;
-    } catch (error) {
-      if (isUniqueConstraintError(error)) {
-        throw duplicateCode();
-      }
-      throw error;
-    }
-  }
-
-  async updateCategory(
-    id: string,
-    input: UpdateOneTimeCategoryDto,
-    actorId: string,
-    metadata: RequestMetadata,
-  ) {
-    const existing = await this.requireCategory(id);
-    this.assertNotArchived(existing.status);
-    const before = this.categoryAuditView(existing);
-    const category = await this.database.prisma.oneTimeServiceCategory.update({
-      where: { id },
-      data: {
-        nameAr: input.nameAr.trim(),
-        nameEn: input.nameEn.trim(),
-        description: input.description?.trim() || null,
-      },
-    });
-    const after = this.categoryAuditView(category);
-    await this.audit.record(
-      {
-        actorId,
-        eventCode: ONE_TIME_CATALOG_EVENT.categoryUpdated,
-        entityType: "OneTimeServiceCategory",
-        entityId: id,
-        before,
-        after,
-      },
-      metadata,
-    );
-    return after;
-  }
-
-  async changeCategoryStatus(
-    id: string,
-    status: CatalogLifecycleStatus,
-    reason: string | undefined,
-    actorId: string,
-    metadata: RequestMetadata,
-  ) {
-    const existing = await this.requireCategory(id);
-    const target = toDatabaseStatus(status);
-    assertTransition(existing.status, target);
-    requireReason(target, reason);
-    if (target !== "ACTIVE") {
-      const activeServices = await this.database.prisma.oneTimeService.count({
-        where: { categoryId: id, status: "ACTIVE" },
-      });
-      if (activeServices > 0) {
-        throw new ConflictException({
-          code: "ONE_TIME_CATEGORY_HAS_ACTIVE_SERVICES",
-          message: "Disable or archive active one-time services before changing this category",
-        });
-      }
-    }
-    const category = await this.database.prisma.oneTimeServiceCategory.update({
-      where: { id },
-      data: {
-        status: target,
-        archivedAt: target === "ARCHIVED" ? new Date() : null,
-      },
-    });
-    const after = this.categoryAuditView(category);
-    await this.audit.record(
-      {
-        actorId,
-        eventCode: ONE_TIME_CATALOG_EVENT.categoryStatusChanged,
-        entityType: "OneTimeServiceCategory",
-        entityId: id,
-        before: { status: toLifecycleStatus(existing.status) },
-        after: { status },
-        ...(reason ? { reason } : {}),
-      },
-      metadata,
-    );
-    return after;
-  }
-
-  async reorderCategory(id: string, sortOrder: number, actorId: string, metadata: RequestMetadata) {
-    const existing = await this.requireCategory(id);
-    this.assertNotArchived(existing.status);
-    await this.reorderCategories(existing.id, existing.sortOrder, sortOrder);
-    await this.recordReorder(
-      actorId,
-      ONE_TIME_CATALOG_EVENT.categoryReordered,
-      "OneTimeServiceCategory",
-      id,
-      existing.sortOrder,
-      sortOrder,
-      metadata,
-    );
-    return this.categoryAuditView(await this.requireCategory(id));
-  }
-
   async createService(input: CreateOneTimeServiceDto, actorId: string, metadata: RequestMetadata) {
     const code = input.code.trim().toUpperCase();
-    await this.assertCodeAvailable("service", code);
-    const category = await this.requireCategory(input.categoryId);
+    await this.assertCodeAvailable(code);
+    const category = await this.ensureCompatibilityCategory();
     const stableStatus: DatabaseStatus = input.status ?? "DRAFT";
-    this.assertCategoryAvailable(category.status, stableStatus === "ACTIVE");
     this.validateTemplate(input, stableStatus === "ACTIVE");
 
     try {
       const service = await this.database.prisma.$transaction(async (transaction) => {
         const sortOrder = input.sortOrder ?? 0;
         await transaction.oneTimeService.updateMany({
-          where: {
-            categoryId: category.id,
-            sortOrder: { gte: sortOrder },
-          },
+          where: { sortOrder: { gte: sortOrder } },
           data: { sortOrder: { increment: 1 } },
         });
         const stable = await transaction.oneTimeService.create({
@@ -598,23 +413,11 @@ export class OneTimeCatalogService {
   ) {
     const existing = await this.requireServiceWithRevision(id);
     this.assertNotArchived(existing.status);
-    const category = await this.requireCategory(input.categoryId);
-    this.assertCategoryAvailable(category.status, existing.status === "ACTIVE");
     this.validateTemplate(input, existing.status === "ACTIVE");
     const before = await this.requireServiceView(id);
     const current = existing.revisions[0]!;
     const now = new Date();
     const nextRevisionStatus = existing.status === "DRAFT" ? "DRAFT" : "ACTIVE";
-    const categoryChanged = existing.categoryId !== category.id;
-    const targetOrder = categoryChanged
-      ? ((
-          await this.database.prisma.oneTimeService.aggregate({
-            where: { categoryId: category.id },
-            _max: { sortOrder: true },
-          })
-        )._max.sortOrder ?? -1) + 1
-      : existing.sortOrder;
-
     await this.database.prisma.$transaction(async (transaction) => {
       await transaction.oneTimeServiceRevision.updateMany({
         where: {
@@ -643,21 +446,10 @@ export class OneTimeCatalogService {
         },
       });
       await this.createTemplate(transaction, revision.id, input);
-      if (categoryChanged) {
-        await transaction.oneTimeService.updateMany({
-          where: {
-            categoryId: existing.categoryId,
-            sortOrder: { gt: existing.sortOrder },
-          },
-          data: { sortOrder: { decrement: 1 } },
-        });
-      }
       await transaction.oneTimeService.update({
         where: { id },
         data: {
-          categoryId: category.id,
           serviceLine: input.serviceLine,
-          sortOrder: targetOrder,
         },
       });
     });
@@ -688,7 +480,6 @@ export class OneTimeCatalogService {
     return this.updateService(
       id,
       {
-        categoryId: existing.categoryId,
         serviceLine: existing.serviceLine as (typeof ONE_TIME_SERVICE_PATHS)[number],
         nameAr: revision.nameAr,
         nameEn: revision.nameEn,
@@ -719,7 +510,6 @@ export class OneTimeCatalogService {
     assertTransition(existing.status, target);
     requireReason(target, reason);
     if (target === "ACTIVE") {
-      this.assertCategoryAvailable(existing.category.status, true);
       const current = existing.revisions[0]!;
       this.validateStoredTemplate(current.phases, current.deliverables);
     }
@@ -783,7 +573,7 @@ export class OneTimeCatalogService {
   async reorderService(id: string, sortOrder: number, actorId: string, metadata: RequestMetadata) {
     const existing = await this.requireServiceWithRevision(id);
     this.assertNotArchived(existing.status);
-    await this.reorderServices(existing.id, existing.categoryId, existing.sortOrder, sortOrder);
+    await this.reorderServices(existing.id, existing.sortOrder, sortOrder);
     await this.recordReorder(
       actorId,
       ONE_TIME_CATALOG_EVENT.serviceReordered,
@@ -1035,35 +825,18 @@ export class OneTimeCatalogService {
     }
   }
 
-  private async assertCodeAvailable(type: "category" | "service", codeInput: string) {
+  private async assertCodeAvailable(codeInput: string) {
     const where = { code: { equals: codeInput.trim(), mode: "insensitive" as const } };
-    const existing =
-      type === "category"
-        ? await this.database.prisma.oneTimeServiceCategory.findFirst({ where })
-        : await this.database.prisma.oneTimeService.findFirst({ where });
+    const existing = await this.database.prisma.oneTimeService.findFirst({ where });
     if (existing) {
       throw duplicateCode();
     }
-  }
-
-  private async requireCategory(id: string) {
-    const category = await this.database.prisma.oneTimeServiceCategory.findUnique({
-      where: { id },
-    });
-    if (!category) {
-      throw new NotFoundException({
-        code: "ONE_TIME_CATEGORY_NOT_FOUND",
-        message: "The one-time service category could not be found",
-      });
-    }
-    return category;
   }
 
   private async requireServiceWithRevision(id: string) {
     const service = await this.database.prisma.oneTimeService.findUnique({
       where: { id },
       include: {
-        category: true,
         revisions: {
           orderBy: { version: "desc" },
           include: {
@@ -1080,6 +853,27 @@ export class OneTimeCatalogService {
       });
     }
     return service;
+  }
+
+  private async ensureCompatibilityCategory() {
+    const category = ONE_TIME_SERVICE_COMPATIBILITY_CATEGORY;
+    return this.database.prisma.oneTimeServiceCategory.upsert({
+      where: { code: category.code },
+      create: {
+        code: category.code,
+        nameAr: category.nameAr,
+        nameEn: category.nameEn,
+        description: "Internal compatibility record for uncategorized one-time services.",
+        status: "ACTIVE",
+        sortOrder: 0,
+      },
+      update: {
+        nameAr: category.nameAr,
+        nameEn: category.nameEn,
+        status: "ACTIVE",
+        archivedAt: null,
+      },
+    });
   }
 
   private async requireServiceView(id: string) {
@@ -1103,60 +897,7 @@ export class OneTimeCatalogService {
     }
   }
 
-  private assertCategoryAvailable(status: DatabaseStatus, activeService: boolean): void {
-    if (status === "ARCHIVED" || status === "DISABLED" || (activeService && status !== "ACTIVE")) {
-      throw new ConflictException({
-        code: "ONE_TIME_CATEGORY_NOT_AVAILABLE",
-        message: "The selected category must be active for an active one-time service",
-      });
-    }
-  }
-
-  private categoryAuditView(category: {
-    id: string;
-    code: string;
-    nameAr: string;
-    nameEn: string;
-    description: string | null;
-    status: DatabaseStatus;
-    sortOrder: number;
-  }) {
-    return {
-      id: category.id,
-      code: category.code,
-      nameAr: category.nameAr,
-      nameEn: category.nameEn,
-      description: category.description,
-      status: toLifecycleStatus(category.status),
-      sortOrder: category.sortOrder,
-    };
-  }
-
-  private async reorderCategories(id: string, current: number, target: number): Promise<void> {
-    if (current === target) {
-      return;
-    }
-    await this.database.prisma.$transaction([
-      this.database.prisma.oneTimeServiceCategory.updateMany({
-        where:
-          current < target
-            ? { id: { not: id }, sortOrder: { gt: current, lte: target } }
-            : { id: { not: id }, sortOrder: { gte: target, lt: current } },
-        data: { sortOrder: { increment: current < target ? -1 : 1 } },
-      }),
-      this.database.prisma.oneTimeServiceCategory.update({
-        where: { id },
-        data: { sortOrder: target },
-      }),
-    ]);
-  }
-
-  private async reorderServices(
-    id: string,
-    categoryId: string,
-    current: number,
-    target: number,
-  ): Promise<void> {
+  private async reorderServices(id: string, current: number, target: number): Promise<void> {
     if (current === target) {
       return;
     }
@@ -1166,12 +907,10 @@ export class OneTimeCatalogService {
           current < target
             ? {
                 id: { not: id },
-                categoryId,
                 sortOrder: { gt: current, lte: target },
               }
             : {
                 id: { not: id },
-                categoryId,
                 sortOrder: { gte: target, lt: current },
               },
         data: { sortOrder: { increment: current < target ? -1 : 1 } },

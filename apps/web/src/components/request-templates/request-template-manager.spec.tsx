@@ -48,12 +48,6 @@ function snapshot(): RequestTemplatesSnapshot {
         monthlyService: {
           id: "service-1",
           code: "MS-HR",
-          category: {
-            id: "category-1",
-            code: "HR",
-            nameAr: "الموارد البشرية",
-            nameEn: "Human resources",
-          },
           revisions: [{ nameAr: "الموارد البشرية", nameEn: "Human resources" }],
         },
         latestRevision: {
@@ -84,6 +78,10 @@ describe("RequestTemplateManager", () => {
     expect(screen.getByRole("tab", { name: "النماذج" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByLabelText("الخدمة الرئيسية")).toHaveDisplayValue("الموارد البشرية");
     expect(screen.getByLabelText("بند الخدمة")).toHaveDisplayValue("إعداد سياسة موارد بشرية");
+    const clientPreview = screen.getByTestId("request-template-client-preview");
+    expect(clientPreview).toHaveTextContent("إنشاء طلب جديد");
+    expect(clientPreview).toHaveTextContent("الموارد البشرية");
+    expect(clientPreview).toHaveTextContent("إعداد سياسة موارد بشرية");
 
     fireEvent.click(screen.getByRole("button", { name: "إضافة عنصر" }));
     fireEvent.click(screen.getByRole("button", { name: "رقم" }));

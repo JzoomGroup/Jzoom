@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import LoginPage from "./page";
 import { getRequestLocale } from "../../lib/i18n-server";
 
@@ -24,8 +24,10 @@ describe("LoginPage", () => {
     render(await LoginPage());
 
     expect(screen.getByRole("heading", { name: "Welcome back." })).toBeInTheDocument();
+    const loginCard = screen.getByRole("heading", { name: "Welcome back." }).closest("section");
+    expect(loginCard).not.toBeNull();
     expect(
-      screen.getByRole("img", {
+      within(loginCard!).getByRole("img", {
         name: "مجموعة جزوم لخدمات الأعمال - Jzoom Group Business Services",
       }),
     ).toBeInTheDocument();

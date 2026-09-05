@@ -342,10 +342,9 @@ export class PricingService {
         },
       }),
       this.database.prisma.monthlyService.findMany({
-        where: { status: "ACTIVE", category: { status: "ACTIVE" } },
+        where: { status: "ACTIVE" },
         orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
         include: {
-          category: true,
           revisions: {
             where: this.effectiveRevisionWhere(now),
             orderBy: [{ effectiveFrom: "desc" }, { version: "desc" }],
@@ -361,10 +360,9 @@ export class PricingService {
         },
       }),
       this.database.prisma.oneTimeService.findMany({
-        where: { status: "ACTIVE", category: { status: "ACTIVE" } },
+        where: { status: "ACTIVE" },
         orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
         include: {
-          category: true,
           revisions: {
             where: this.effectiveRevisionWhere(now),
             orderBy: [{ effectiveFrom: "desc" }, { version: "desc" }],
@@ -392,9 +390,6 @@ export class PricingService {
           {
             id: service.id,
             code: service.code,
-            categoryName: service.category.nameEn,
-            categoryNameAr: service.category.nameAr,
-            categoryNameEn: service.category.nameEn,
             revision: {
               id: revision.id,
               version: revision.version,
@@ -424,9 +419,6 @@ export class PricingService {
             id: service.id,
             code: service.code,
             serviceLine: service.serviceLine,
-            categoryName: service.category.nameEn,
-            categoryNameAr: service.category.nameAr,
-            categoryNameEn: service.category.nameEn,
             revision: {
               id: revision.id,
               version: revision.version,
@@ -701,7 +693,7 @@ export class PricingService {
           },
         },
         include: {
-          monthlyService: { include: { category: true } },
+          monthlyService: true,
           levelConfigs: { include: { serviceLevel: true } },
         },
       }),
@@ -711,7 +703,7 @@ export class PricingService {
             in: input.oneTimeSelections.map((selection) => selection.oneTimeServiceRevisionId),
           },
         },
-        include: { oneTimeService: { include: { category: true } } },
+        include: { oneTimeService: true },
       }),
       this.effectiveRules(pricingDate),
     ]);
@@ -740,7 +732,6 @@ export class PricingService {
         revision.effectiveTo,
         revision.visibleInPricing,
         revision.monthlyService.status,
-        revision.monthlyService.category.status,
         pricingDate,
       );
       const level = revision.levelConfigs.find(
@@ -813,7 +804,6 @@ export class PricingService {
         revision.effectiveTo,
         revision.visibleInPricing,
         revision.oneTimeService.status,
-        revision.oneTimeService.category.status,
         pricingDate,
       );
       const quantity = selection.quantity ?? 1;
@@ -1270,14 +1260,12 @@ export class PricingService {
     effectiveTo: Date | null,
     visibleInPricing: boolean,
     serviceStatus: DatabaseStatus,
-    categoryStatus: DatabaseStatus,
     pricingDate: Date,
   ): void {
     if (
       revisionStatus !== "ACTIVE" ||
       !visibleInPricing ||
       serviceStatus !== "ACTIVE" ||
-      categoryStatus !== "ACTIVE" ||
       !effectiveFrom ||
       effectiveFrom > pricingDate ||
       (effectiveTo !== null && effectiveTo <= pricingDate)

@@ -99,6 +99,9 @@ real user file testing.
 - Web root: `GET /`
 - Container/process health from the hosting platform.
 - Worker process is running and logging startup with the configured worker name.
+- Worker logs `outbox_batch_completed` when it claims events and retries failures with a future
+  `availableAt` value.
+- Authenticated Admin operations health: `GET /api/v1/admin/operations-health`.
 
 Readiness must fail closed when PostgreSQL is unavailable.
 

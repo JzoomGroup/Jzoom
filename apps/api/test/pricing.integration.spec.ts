@@ -19,6 +19,7 @@ const describeWithDatabase = process.env.DATABASE_INTEGRATION === "true" ? descr
 
 const environment: ApiEnvironment = {
   nodeEnvironment: "test",
+  deploymentEnvironment: "test",
   port: 4000,
   databaseUrl: process.env.DATABASE_URL ?? "postgresql://user:password@localhost:5432/jzoom",
   openApiEnabled: false,
@@ -31,6 +32,9 @@ const environment: ApiEnvironment = {
     exposeTestTokens: true,
     maxLoginAttempts: 5,
     lockoutMinutes: 15,
+    uatImpersonationEnabled: false,
+    uatImpersonationTtlMinutes: 60,
+    uatImpersonationCookieName: "jzoom_session_uat_admin_return",
   },
 };
 

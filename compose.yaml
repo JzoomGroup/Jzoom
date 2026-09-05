@@ -82,8 +82,10 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-jzoom}:${POSTGRES_PASSWORD:-jzoom_dev_password}@postgres:5432/${POSTGRES_DB:-jzoom}?schema=public
       NODE_ENV: production
       WORKER_NAME: jzoom-worker
+      WORKER_OUTBOX_ENABLED: "true"
     init: true
     restart: unless-stopped
 

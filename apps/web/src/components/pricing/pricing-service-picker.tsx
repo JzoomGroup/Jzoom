@@ -1,10 +1,9 @@
 "use client";
 
-import { Search, SlidersHorizontal } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Search } from "lucide-react";
+import { useState } from "react";
 import { pricingCopy } from "../../i18n/dictionaries/catalog";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
-import { localizedCatalogLabel } from "../../lib/localized-content";
 import type { PricingStudioCatalog } from "../../lib/pricing-types";
 import { EmptyState } from "../premium-os";
 
@@ -53,24 +52,6 @@ function oneTimeName(
     : service.revision.nameEn || service.revision.nameAr;
 }
 
-function categoryName(
-  service: {
-    categoryName: string;
-    categoryNameAr?: string;
-    categoryNameEn?: string;
-  },
-  locale: SupportedLocale,
-): string {
-  return localizedCatalogLabel(
-    {
-      code: service.categoryName,
-      nameAr: service.categoryNameAr,
-      nameEn: service.categoryNameEn || service.categoryName,
-    },
-    locale,
-  );
-}
-
 function description(value: string, locale: SupportedLocale): string {
   if (locale === "en" || /[\u0600-\u06ff]/.test(value)) {
     return value;
@@ -107,30 +88,19 @@ export function PricingServicePicker({
   const t = pricingCopy[locale];
   const [tab, setTab] = useState<ServiceTab>("MONTHLY");
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("ALL");
   const [selectedOnly, setSelectedOnly] = useState(false);
 
-  const activeServices = tab === "MONTHLY" ? catalog.monthlyServices : catalog.oneTimeServices;
-  const categories = useMemo(
-    () =>
-      [...new Set(activeServices.map((service) => categoryName(service, locale)))].sort((a, b) =>
-        a.localeCompare(b, locale === "ar" ? "ar" : "en"),
-      ),
-    [activeServices, locale],
-  );
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const visibleMonthly = catalog.monthlyServices.filter((service) => {
     const selected = monthlySelections.has(service.revision.id);
     return (
       (!selectedOnly || selected) &&
-      (category === "ALL" || categoryName(service, locale) === category) &&
       (!normalizedQuery ||
         searchable([
           service.code,
           service.revision.nameAr,
           service.revision.nameEn,
           service.revision.description,
-          categoryName(service, locale),
         ]).includes(normalizedQuery))
     );
   });
@@ -138,14 +108,12 @@ export function PricingServicePicker({
     const selected = oneTimeSelections.has(service.revision.id);
     return (
       (!selectedOnly || selected) &&
-      (category === "ALL" || categoryName(service, locale) === category) &&
       (!normalizedQuery ||
         searchable([
           service.code,
           service.revision.nameAr,
           service.revision.nameEn,
           service.revision.description,
-          categoryName(service, locale),
         ]).includes(normalizedQuery))
     );
   });
@@ -153,7 +121,6 @@ export function PricingServicePicker({
 
   function changeTab(next: ServiceTab) {
     setTab(next);
-    setCategory("ALL");
     setQuery("");
   }
 
@@ -201,22 +168,6 @@ export function PricingServicePicker({
             onChange={(event) => setQuery(event.target.value)}
           />
         </label>
-        <label className="pricing-category-filter">
-          <SlidersHorizontal aria-hidden="true" size={16} />
-          <span className="sr-only">{t.serviceCategory}</span>
-          <select
-            aria-label={t.serviceCategory}
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
-          >
-            <option value="ALL">{t.allCategories}</option>
-            {categories.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </label>
         <label className="pricing-selected-toggle">
           <input
             checked={selectedOnly}
@@ -256,7 +207,6 @@ export function PricingServicePicker({
                   <span>
                     <small>{service.code}</small>
                     <strong>{name}</strong>
-                    <em>{categoryName(service, locale)}</em>
                   </span>
                 </label>
                 <p>{description(service.revision.description, locale)}</p>
@@ -341,7 +291,6 @@ export function PricingServicePicker({
                   <span>
                     <small>{service.code}</small>
                     <strong>{name}</strong>
-                    <em>{categoryName(service, locale)}</em>
                   </span>
                 </label>
                 <p>{description(service.revision.description, locale)}</p>

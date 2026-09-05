@@ -24,13 +24,11 @@ import {
 import {
   ArchiveCatalogEntryDto,
   CatalogStatusDto,
-  CreateMonthlyCategoryDto,
   CreateMonthlyServiceDto,
   CreateServiceItemDto,
   CreateServiceLevelDto,
   ReorderCatalogEntryDto,
   ReplaceServiceItemInclusionsDto,
-  UpdateMonthlyCategoryDto,
   UpdateMonthlyServiceDto,
   UpdateServiceItemDto,
   UpdateServiceLevelDto,
@@ -49,13 +47,11 @@ function metadata(request: RequestWithId): RequestMetadata {
 const documentedModels = [
   ArchiveCatalogEntryDto,
   CatalogStatusDto,
-  CreateMonthlyCategoryDto,
   CreateMonthlyServiceDto,
   CreateServiceItemDto,
   CreateServiceLevelDto,
   ReorderCatalogEntryDto,
   ReplaceServiceItemInclusionsDto,
-  UpdateMonthlyCategoryDto,
   UpdateMonthlyServiceDto,
   UpdateServiceItemDto,
   UpdateServiceLevelDto,
@@ -74,69 +70,6 @@ export class AdminCatalogController {
   @ApiOperation({ summary: "Return the complete Admin monthly catalog snapshot" })
   getSnapshot() {
     return this.catalog.getSnapshot();
-  }
-
-  @Post("categories")
-  createCategory(@Body() input: CreateMonthlyCategoryDto, @Req() request: RequestWithId) {
-    return this.catalog.createCategory(input, request.auth!.userId, metadata(request));
-  }
-
-  @Put("categories/:id")
-  updateCategory(
-    @Param("id") id: string,
-    @Body() input: UpdateMonthlyCategoryDto,
-    @Req() request: RequestWithId,
-  ) {
-    return this.catalog.updateCategory(id, input, request.auth!.userId, metadata(request));
-  }
-
-  @Patch("categories/:id/status")
-  changeCategoryStatus(
-    @Param("id") id: string,
-    @Body() input: CatalogStatusDto,
-    @Req() request: RequestWithId,
-  ) {
-    return this.catalog.changeCategoryStatus(
-      id,
-      input.status,
-      input.reason,
-      request.auth!.userId,
-      metadata(request),
-    );
-  }
-
-  @Patch("categories/:id/order")
-  reorderCategory(
-    @Param("id") id: string,
-    @Body() input: ReorderCatalogEntryDto,
-    @Req() request: RequestWithId,
-  ) {
-    return this.catalog.reorderCategory(
-      id,
-      input.sortOrder,
-      request.auth!.userId,
-      metadata(request),
-    );
-  }
-
-  @Post("categories/:id/archive")
-  archiveCategory(
-    @Param("id") id: string,
-    @Body() input: ArchiveCatalogEntryDto,
-    @Req() request: RequestWithId,
-  ) {
-    return this.catalog.changeCategoryStatus(
-      id,
-      "ARCHIVED",
-      input.reason,
-      request.auth!.userId,
-      metadata(request),
-    );
-  }
-
-  @Delete("categories/:id")
-  deleteCategory() {
-    return this.catalog.rejectDelete();
   }
 }
 

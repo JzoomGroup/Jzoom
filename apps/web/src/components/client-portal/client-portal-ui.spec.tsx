@@ -69,12 +69,6 @@ function account(): ClientPortalAccount {
         {
           id: "service-1",
           code: "SERVICE-1",
-          category: {
-            id: "category-1",
-            code: "CAT-1",
-            nameAr: "Category",
-            nameEn: "Category",
-          },
           revisionId: "service-revision-1",
           nameAr: "Client Service",
           nameEn: "Client Service",
@@ -256,12 +250,6 @@ function accountWithSubscription(): ClientPortalAccount {
             serviceLine: "Operate",
             domain: "HR",
             description: "Monthly HR operating support.",
-            category: {
-              id: "category-1",
-              code: "HR",
-              nameAr: "الموارد البشرية",
-              nameEn: "Human Resources",
-            },
           },
           serviceLevel: {
             id: "level-1",

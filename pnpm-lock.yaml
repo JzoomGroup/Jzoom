@@ -92,6 +92,9 @@ importers:
       dotenv:
         specifier: ^17.0.0
         version: 17.4.2
+      file-type:
+        specifier: ^21.3.4
+        version: 21.3.4
       pdf-lib:
         specifier: ^1.17.1
         version: 1.17.1
@@ -157,6 +160,9 @@ importers:
       '@jzoom/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@jzoom/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.27(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -173,6 +179,9 @@ importers:
         specifier: ^7.8.0
         version: 7.8.2
     devDependencies:
+      '@jest/globals':
+        specifier: ^29.7.0
+        version: 29.7.0
       '@nestjs/testing':
         specifier: ^11.0.0
         version: 11.1.27(@nestjs/common@11.1.27(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.27)(@nestjs/platform-express@11.1.27)

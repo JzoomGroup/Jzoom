@@ -1,17 +1,5 @@
 import type { CatalogStatus } from "./catalog-types";
 
-export interface OneTimeCategory {
-  id: string;
-  code: string;
-  nameAr: string;
-  nameEn: string;
-  description: string | null;
-  status: CatalogStatus;
-  sortOrder: number;
-  serviceCount: number;
-  archivedAt: string | null;
-}
-
 export interface OneTimeTask {
   id: string;
   code: string;
@@ -52,13 +40,6 @@ export interface OneTimeDeliverable {
 
 export interface OneTimeService {
   id: string;
-  categoryId: string;
-  category: {
-    id: string;
-    code: string;
-    nameAr: string;
-    nameEn: string;
-  };
   code: string;
   serviceLine: string;
   status: CatalogStatus;
@@ -86,7 +67,6 @@ export interface OneTimeService {
 
 export interface OneTimeCatalogSnapshot {
   servicePaths: string[];
-  categories: OneTimeCategory[];
   services: OneTimeService[];
 }
 

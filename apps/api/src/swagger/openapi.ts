@@ -10,13 +10,10 @@ export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
     .addApiKey({ type: "apiKey", in: "header", name: "X-CSRF-Token" }, "csrf")
     .addTag("health", "Process and dependency health checks")
     .addTag("authentication", "Authentication, sessions, and authorization")
-    .addTag(
-      "admin-monthly-catalog",
-      "Admin-only monthly services, items, categories, and package levels",
-    )
+    .addTag("admin-monthly-catalog", "Admin-only monthly services, items, and package levels")
     .addTag(
       "admin-one-time-catalog",
-      "Admin-only one-time services, categories, phases, deliverables, and tasks",
+      "Admin-only one-time services, phases, deliverables, and tasks",
     )
     .addTag("admin-pricing-rules", "Admin-only effective-dated pricing configuration")
     .addTag(

@@ -117,7 +117,6 @@ export class ClientPortalService {
               include: {
                 monthlyService: {
                   include: {
-                    category: true,
                     items: {
                       where: { status: "ACTIVE" },
                       orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
@@ -169,12 +168,6 @@ export class ClientPortalService {
             serviceLine: revision.serviceLine,
             domain: revision.domain,
             description: revision.description,
-            category: {
-              id: revision.monthlyService.category.id,
-              code: revision.monthlyService.category.code,
-              nameAr: revision.monthlyService.category.nameAr,
-              nameEn: revision.monthlyService.category.nameEn,
-            },
           },
           serviceLevel: {
             id: service.serviceLevel.id,
@@ -211,7 +204,6 @@ export class ClientPortalService {
     const services = await this.database.prisma.monthlyService.findMany({
       where: {
         status: "ACTIVE",
-        category: { status: "ACTIVE" },
         revisions: {
           some: {
             status: "ACTIVE",
@@ -225,7 +217,6 @@ export class ClientPortalService {
       },
       orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
       include: {
-        category: true,
         revisions: {
           where: {
             status: "ACTIVE",
@@ -248,12 +239,6 @@ export class ClientPortalService {
             {
               id: service.id,
               code: service.code,
-              category: {
-                id: service.category.id,
-                code: service.category.code,
-                nameAr: service.category.nameAr,
-                nameEn: service.category.nameEn,
-              },
               revisionId: revision.id,
               nameAr: revision.nameAr,
               nameEn: revision.nameEn,
@@ -271,7 +256,6 @@ export class ClientPortalService {
     const services = await this.database.prisma.oneTimeService.findMany({
       where: {
         status: "ACTIVE",
-        category: { status: "ACTIVE" },
         revisions: {
           some: {
             status: "ACTIVE",
@@ -285,7 +269,6 @@ export class ClientPortalService {
       },
       orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
       include: {
-        category: true,
         revisions: {
           where: {
             status: "ACTIVE",
@@ -308,12 +291,6 @@ export class ClientPortalService {
             {
               id: service.id,
               code: service.code,
-              category: {
-                id: service.category.id,
-                code: service.category.code,
-                nameAr: service.category.nameAr,
-                nameEn: service.category.nameEn,
-              },
               revisionId: revision.id,
               nameAr: revision.nameAr,
               nameEn: revision.nameEn,

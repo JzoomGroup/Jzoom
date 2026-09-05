@@ -2,7 +2,7 @@
 
 import { serviceManagerCopy as copy } from "../../i18n/dictionaries/catalog";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { PencilLine } from "lucide-react";
 import type {
   CatalogSnapshot,
@@ -11,7 +11,7 @@ import type {
   ServiceLevel,
 } from "../../lib/catalog-types";
 import { normalizeLocale, type SupportedLocale } from "../../lib/i18n";
-import { localizedCatalogLabel, localizedDescription } from "../../lib/localized-content";
+import { localizedDescription } from "../../lib/localized-content";
 import {
   CatalogFeedback,
   EmptyState,
@@ -65,13 +65,6 @@ function statusLabel(status: CatalogStatus, locale: SupportedLocale): string {
   return statusLabels[status][locale];
 }
 
-function localizedCategoryName(
-  category: { code?: string; nameAr: string; nameEn: string },
-  locale: SupportedLocale,
-): string {
-  return localizedCatalogLabel(category, locale);
-}
-
 function localizedServiceName(service: MonthlyService, locale: SupportedLocale): string {
   return locale === "ar"
     ? service.revision?.nameAr || service.revision?.nameEn || service.code
@@ -116,16 +109,8 @@ export function ServiceManager({
   const t = copy[locale];
   const [editing, setEditing] = useState<MonthlyService | null>(null);
   const [creating, setCreating] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [levelConfigs, setLevelConfigs] = useState<EditableLevelConfig[]>([]);
   const mutation = useCatalogMutation(setSnapshot);
-  const visibleServices = useMemo(
-    () =>
-      snapshot.services.filter(
-        (service) => categoryFilter === "ALL" || service.categoryId === categoryFilter,
-      ),
-    [categoryFilter, snapshot.services],
-  );
   const activeServices = snapshot.services.filter((service) => service.status === "ACTIVE").length;
   const pricingVisibleServices = snapshot.services.filter(
     (service) => service.revision?.visibleInPricing,
@@ -184,7 +169,6 @@ export function ServiceManager({
             sortOrder: Number(form.get("sortOrder") ?? 0),
           }
         : {}),
-      categoryId: String(form.get("categoryId") ?? ""),
       nameAr: String(form.get("nameAr") ?? "").trim(),
       nameEn: String(form.get("nameEn") ?? "").trim(),
       description: String(form.get("description") ?? "").trim(),
@@ -275,22 +259,6 @@ export function ServiceManager({
                 />
               </label>
             ) : null}
-            <label>
-              {t.category}
-              <select name="categoryId" required defaultValue={editing?.categoryId ?? ""}>
-                <option value="" disabled>
-                  {t.selectCategory}
-                </option>
-                {snapshot.categories
-                  .filter((category) => category.status !== "ARCHIVED")
-                  .map((category) => (
-                    <option value={category.id} key={category.id}>
-                      {localizedCategoryName(category, locale)} -{" "}
-                      {statusLabel(category.status, locale)}
-                    </option>
-                  ))}
-              </select>
-            </label>
             <label>
               {t.arabicName}
               <input name="nameAr" required dir="rtl" defaultValue={current?.nameAr} />
@@ -485,31 +453,12 @@ export function ServiceManager({
         </AppDialog>
       ) : null}
 
-      <SectionCard
-        title={t.configuredServices}
-        description={t.records(snapshot.services.length)}
-        action={
-          <label className="compact-filter">
-            {t.category}
-            <select
-              value={categoryFilter}
-              onChange={(event) => setCategoryFilter(event.target.value)}
-            >
-              <option value="ALL">{t.allCategories}</option>
-              {snapshot.categories.map((category) => (
-                <option value={category.id} key={category.id}>
-                  {localizedCategoryName(category, locale)}
-                </option>
-              ))}
-            </select>
-          </label>
-        }
-      >
-        {visibleServices.length === 0 ? (
+      <SectionCard title={t.configuredServices} description={t.records(snapshot.services.length)}>
+        {snapshot.services.length === 0 ? (
           <EmptyState>{t.noMonthlyServices}</EmptyState>
         ) : (
           <div className="service-admin-grid">
-            {visibleServices.map((service) => {
+            {snapshot.services.map((service) => {
               const enabledConfigs =
                 service.revision?.levelConfigs.filter((config) => config.isEnabled) ?? [];
               const revision = service.revision;
@@ -521,9 +470,7 @@ export function ServiceManager({
                       {service.code.slice(0, 2).toUpperCase()}
                     </span>
                     <div className="service-admin-card-title">
-                      <small>
-                        {service.code} - {localizedCategoryName(service.category, locale)}
-                      </small>
+                      <small>{service.code}</small>
                       <h3>{localizedServiceName(service, locale)}</h3>
                       {locale === "en" && revision?.nameAr ? (
                         <p dir="rtl">{revision.nameAr}</p>

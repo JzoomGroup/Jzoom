@@ -67,11 +67,7 @@ const projectInclude = {
   quoteItem: { select: { id: true, lineType: true, sortOrder: true } },
   oneTimeServiceRevision: {
     include: {
-      oneTimeService: {
-        include: {
-          category: true,
-        },
-      },
+      oneTimeService: true,
       phases: { where: { status: "ACTIVE" }, orderBy: { sortOrder: "asc" } },
       deliverables: {
         where: { status: "ACTIVE" },
@@ -643,7 +639,7 @@ export class ProjectsService {
       const revision = await transaction.oneTimeServiceRevision.findUnique({
         where: { id: service.oneTimeServiceRevisionId },
         include: {
-          oneTimeService: { include: { category: true } },
+          oneTimeService: true,
           phases: { where: { status: "ACTIVE" }, orderBy: { sortOrder: "asc" } },
           deliverables: {
             where: { status: "ACTIVE" },
@@ -1060,12 +1056,6 @@ export class ProjectsService {
         id: project.oneTimeServiceRevision.oneTimeService.id,
         code: project.oneTimeServiceRevision.oneTimeService.code,
         serviceLine: project.oneTimeServiceRevision.oneTimeService.serviceLine,
-        category: {
-          id: project.oneTimeServiceRevision.oneTimeService.category.id,
-          code: project.oneTimeServiceRevision.oneTimeService.category.code,
-          nameAr: project.oneTimeServiceRevision.oneTimeService.category.nameAr,
-          nameEn: project.oneTimeServiceRevision.oneTimeService.category.nameEn,
-        },
         revisionId: project.oneTimeServiceRevision.id,
         nameAr: project.oneTimeServiceRevision.nameAr,
         nameEn: project.oneTimeServiceRevision.nameEn,
@@ -1276,7 +1266,7 @@ export class ProjectsService {
     service: ProjectOnboardingTarget,
     revision: Prisma.OneTimeServiceRevisionGetPayload<{
       include: {
-        oneTimeService: { include: { category: true } };
+        oneTimeService: true;
         phases: true;
         deliverables: { include: { phase: true; tasks: true } };
       };
@@ -1295,11 +1285,6 @@ export class ProjectsService {
       description: revision.description,
       durationDays: revision.durationDays,
       estimatedHours: numeric(revision.estimatedHours),
-      category: {
-        code: revision.oneTimeService.category.code,
-        nameAr: revision.oneTimeService.category.nameAr,
-        nameEn: revision.oneTimeService.category.nameEn,
-      },
       phases: revision.phases.map((phase) => ({
         code: phase.code,
         nameAr: phase.nameAr,

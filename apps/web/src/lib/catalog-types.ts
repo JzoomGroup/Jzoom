@@ -1,17 +1,5 @@
 export type CatalogStatus = "DRAFT" | "ACTIVE" | "INACTIVE" | "ARCHIVED";
 
-export interface CatalogCategory {
-  id: string;
-  code: string;
-  nameAr: string;
-  nameEn: string;
-  description: string | null;
-  status: CatalogStatus;
-  sortOrder: number;
-  serviceCount: number;
-  archivedAt: string | null;
-}
-
 export interface ServiceLevel {
   id: string;
   code: string;
@@ -40,13 +28,6 @@ export interface ServiceLevelConfig {
 
 export interface MonthlyService {
   id: string;
-  categoryId: string;
-  category: {
-    id: string;
-    code: string;
-    nameAr: string;
-    nameEn: string;
-  };
   code: string;
   externalId: string | null;
   status: CatalogStatus;
@@ -116,13 +97,12 @@ export interface ServiceItem {
 }
 
 export interface CatalogSnapshot {
-  categories: CatalogCategory[];
   levels: ServiceLevel[];
   services: MonthlyService[];
   items: ServiceItem[];
 }
 
-export type CatalogSection = "overview" | "categories" | "services" | "items" | "levels";
+export type CatalogSection = "overview" | "services" | "items" | "levels";
 
 export interface ApiErrorBody {
   statusCode?: number;

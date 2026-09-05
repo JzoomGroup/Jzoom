@@ -17,7 +17,7 @@ import {
   MinLength,
   ValidateNested,
 } from "class-validator";
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { ApiHideProperty, ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { CATALOG_CODE_PATTERN } from "./catalog.constants.js";
 
 export const catalogStatuses = ["DRAFT", "ACTIVE", "INACTIVE", "ARCHIVED"] as const;
@@ -51,65 +51,6 @@ export class ArchiveCatalogEntryDto {
   @MinLength(3)
   @MaxLength(500)
   reason!: string;
-}
-
-export class CreateMonthlyCategoryDto {
-  @ApiProperty({ type: String, example: "CAT-HR" })
-  @IsString()
-  @Matches(CATALOG_CODE_PATTERN)
-  @MaxLength(60)
-  code!: string;
-
-  @ApiProperty({ type: String })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(160)
-  nameAr!: string;
-
-  @ApiProperty({ type: String })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(160)
-  nameEn!: string;
-
-  @ApiPropertyOptional({ type: String })
-  @IsOptional()
-  @IsString()
-  @MaxLength(2_000)
-  description?: string;
-
-  @ApiPropertyOptional({ enum: ["DRAFT", "ACTIVE"], default: "DRAFT" })
-  @IsOptional()
-  @IsIn(["DRAFT", "ACTIVE"])
-  status?: "DRAFT" | "ACTIVE";
-
-  @ApiPropertyOptional({ type: Number, default: 0 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(100_000)
-  sortOrder?: number;
-}
-
-export class UpdateMonthlyCategoryDto {
-  @ApiProperty({ type: String })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(160)
-  nameAr!: string;
-
-  @ApiProperty({ type: String })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(160)
-  nameEn!: string;
-
-  @ApiPropertyOptional({ type: String })
-  @IsOptional()
-  @IsString()
-  @MaxLength(2_000)
-  description?: string;
 }
 
 export class ServiceLevelConfigDto {
@@ -146,9 +87,10 @@ export class ServiceLevelConfigDto {
 }
 
 class MonthlyServiceFieldsDto {
-  @ApiProperty({ type: String, format: "uuid" })
+  @ApiHideProperty()
+  @IsOptional()
   @IsUUID()
-  categoryId!: string;
+  categoryId?: string;
 
   @ApiProperty({ type: String })
   @IsString()

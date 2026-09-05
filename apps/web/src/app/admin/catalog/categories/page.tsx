@@ -1,5 +1,5 @@
-import { CatalogPage } from "../../../../components/catalog/catalog-page";
+import { redirect } from "next/navigation";
 
 export default function AdminCategoriesPage() {
-  return <CatalogPage section="categories" activePath="/admin/catalog/categories" />;
+  redirect("/admin/catalog/monthly-services");
 }
